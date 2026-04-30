@@ -35,6 +35,7 @@
   }
   body {
     @apply bg-[--color-bg] text-[--color-fg] font-sans antialiased;
+    overflow-x: clip;
   }
   h1, h2, h3, h4 { @apply font-display tracking-tight; }
   ::selection { background: var(--color-accent); color: white; }

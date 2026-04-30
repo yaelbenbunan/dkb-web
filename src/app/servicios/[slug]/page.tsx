@@ -120,7 +120,7 @@ export default async function ServiceDetail({
 
       {/* Body 2/3 + 1/3 */}
       <Container className="grid gap-12 py-20 lg:grid-cols-[2fr_1fr] lg:gap-14">
-        <div className="space-y-16">
+        <div className="min-w-0 space-y-16">
           {/* Intro + bullets */}
           {(service.intro || service.bullets) && (
             <section>
