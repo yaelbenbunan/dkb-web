@@ -48,9 +48,23 @@ export function HeroForm({ services }: Props) {
       </p>
 
       <div className="mt-6 space-y-4">
-        <Field name="name" label="Nombre" required />
-        <Field name="email" label="Email" type="email" required />
-        <Field name="phone" label="Teléfono" type="tel" required />
+        <Field name="name" label="Nombre" placeholder="Tu nombre" required />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field
+            name="email"
+            label="Email"
+            type="email"
+            placeholder="tu@email.com"
+            required
+          />
+          <Field
+            name="phone"
+            label="Teléfono"
+            type="tel"
+            placeholder="+34 600 000 000"
+            required
+          />
+        </div>
 
         <label className="block">
           <span className="text-xs font-semibold uppercase tracking-wider text-[--color-fg-muted]">
@@ -121,18 +135,26 @@ function Field({
   label,
   type = "text",
   required,
+  placeholder,
 }: {
   name: string;
   label: string;
   type?: string;
   required?: boolean;
+  placeholder?: string;
 }) {
   return (
     <label className="block">
       <span className="text-xs font-semibold uppercase tracking-wider text-[--color-fg-muted]">
         {label} {required && <span className="text-[#187bef]">*</span>}
       </span>
-      <input name={name} type={type} required={required} className={inputClass} />
+      <input
+        name={name}
+        type={type}
+        required={required}
+        placeholder={placeholder}
+        className={inputClass}
+      />
     </label>
   );
 }

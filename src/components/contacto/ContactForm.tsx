@@ -36,11 +36,28 @@ export function ContactForm({ services }: Props) {
         }}
         className="space-y-5"
       >
-        <Field name="name" label="Nombre completo" required />
+        <Field
+          name="name"
+          label="Nombre completo"
+          placeholder="Tu nombre"
+          required
+        />
 
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field name="phone" label="Teléfono" type="tel" required />
-          <Field name="email" label="Email" type="email" required />
+          <Field
+            name="phone"
+            label="Teléfono"
+            type="tel"
+            placeholder="+34 600 000 000"
+            required
+          />
+          <Field
+            name="email"
+            label="Email"
+            type="email"
+            placeholder="tu@email.com"
+            required
+          />
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
@@ -144,18 +161,26 @@ function Field({
   label,
   type = "text",
   required,
+  placeholder,
 }: {
   name: string;
   label: string;
   type?: string;
   required?: boolean;
+  placeholder?: string;
 }) {
   return (
     <label className="block">
       <span className="text-xs font-medium uppercase tracking-wider text-[--color-fg-muted]">
         {label} {required && <span className="text-[--color-accent]">*</span>}
       </span>
-      <input name={name} type={type} required={required} className={inputClass} />
+      <input
+        name={name}
+        type={type}
+        required={required}
+        placeholder={placeholder}
+        className={inputClass}
+      />
     </label>
   );
 }
