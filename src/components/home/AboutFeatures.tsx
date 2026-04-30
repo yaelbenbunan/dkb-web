@@ -76,7 +76,7 @@ export function AboutFeatures() {
               <ButtonLink
                 href="/casos-de-exito"
                 size="lg"
-                variant="ghost"
+                variant="outline"
               >
                 Ver casos →
               </ButtonLink>

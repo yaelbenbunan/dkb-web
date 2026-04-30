@@ -23,7 +23,11 @@ export function ContactForm({ services }: Props) {
   }, []);
 
   return (
-    <div className="rounded-3xl border border-[--color-border] bg-[--color-bg-elevated] p-8 sm:p-10">
+    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1f2331] via-[#181b25] to-[#0f1218] p-8 ring-1 ring-[--color-accent]/30 shadow-[0_0_60px_-12px_rgba(24,123,239,0.35)] sm:p-10">
+      <span
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[--color-accent] to-transparent"
+      />
       <form
         ref={formRef}
         action={(fd) => {
@@ -122,7 +126,7 @@ export function ContactForm({ services }: Props) {
 }
 
 const inputClass =
-  "mt-1.5 block w-full rounded-md border border-[--color-border-strong] bg-[--color-bg] px-3 py-2.5 text-sm text-[--color-fg] placeholder:text-[--color-fg-dim] focus:border-[--color-accent] focus:outline-none focus:ring-1 focus:ring-[--color-accent]";
+  "mt-1.5 block w-full rounded-md bg-[#0a0c12] px-3 py-2.5 text-sm text-[--color-fg] placeholder:text-[--color-fg-dim] ring-1 ring-white/[0.06] transition-shadow focus:outline-none focus:ring-2 focus:ring-[--color-accent]";
 
 function Field({
   name,

@@ -13,6 +13,9 @@ interface Props {
   services: ServiceOption[];
 }
 
+const inputClass =
+  "mt-1.5 block w-full rounded-md bg-[#0a0c12] px-3 py-2.5 text-sm text-[--color-fg] placeholder:text-[--color-fg-dim] ring-1 ring-white/[0.06] transition-shadow focus:outline-none focus:ring-2 focus:ring-[--color-accent]";
+
 export function HeroForm({ services }: Props) {
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<{ ok: boolean; error?: string } | null>(
@@ -38,12 +41,10 @@ export function HeroForm({ services }: Props) {
       }}
       className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1f2331] via-[#181b25] to-[#0f1218] p-7 shadow-[0_0_60px_-12px_rgba(24,123,239,0.45),0_25px_50px_-12px_rgba(0,0,0,0.5)] ring-1 ring-[--color-accent]/30"
     >
-      {/* Línea azul superior decorativa */}
       <span
         aria-hidden
         className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[--color-accent] to-transparent"
       />
-      {/* Glow interno sutil */}
       <span
         aria-hidden
         className="pointer-events-none absolute inset-0 rounded-2xl"
@@ -52,61 +53,66 @@ export function HeroForm({ services }: Props) {
             "radial-gradient(ellipse 60% 40% at 50% 0%, rgba(24,123,239,0.12), transparent 70%)",
         }}
       />
-      <p className="text-lg font-semibold text-[--color-fg]">
-        Déjanos ayudarte a crear algo increíble
-      </p>
-      <p className="mt-1 text-sm text-[--color-fg-muted]">
-        Te contestamos en menos de 24 horas.
-      </p>
 
-      <div className="mt-6 space-y-4">
-        <Field name="name" label="Nombre" required />
-        <Field name="email" label="Email" type="email" required />
-        <Field name="phone" label="Teléfono" type="tel" required />
-
-        <label className="block">
-          <span className="text-xs font-medium uppercase tracking-wider text-[--color-fg-muted]">
-            Servicio de interés <span className="text-[--color-accent]">*</span>
-          </span>
-          <select
-            name="service"
-            required
-            defaultValue=""
-            className="mt-1.5 block w-full rounded-md border border-[--color-border-strong] bg-[--color-bg] px-3 py-2.5 text-sm text-[--color-fg] focus:border-[--color-accent] focus:outline-none focus:ring-1 focus:ring-[--color-accent]"
-          >
-            <option value="" disabled>
-              Selecciona un servicio
-            </option>
-            {services.map((s) => (
-              <option key={s.slug} value={s.title}>
-                {s.title}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      <input
-        type="text"
-        name="website"
-        tabIndex={-1}
-        autoComplete="off"
-        className="hidden"
-      />
-
-      <Button type="submit" disabled={pending} size="lg" className="mt-6 w-full">
-        {pending ? "Enviando…" : "Hablemos"}
-      </Button>
-
-      {result && (
-        <p
-          className={`mt-3 text-sm ${result.ok ? "text-emerald-400" : "text-red-400"}`}
-        >
-          {result.ok
-            ? "¡Enviado! Te respondemos en menos de 24h."
-            : result.error}
+      <div className="relative">
+        <p className="text-lg font-semibold text-[--color-fg]">
+          Déjanos ayudarte a crear algo increíble
         </p>
-      )}
+        <p className="mt-1 text-sm text-[--color-fg-muted]">
+          Te contestamos en menos de 24 horas.
+        </p>
+
+        <div className="mt-6 space-y-4">
+          <Field name="name" label="Nombre" required />
+          <Field name="email" label="Email" type="email" required />
+          <Field name="phone" label="Teléfono" type="tel" required />
+
+          <label className="block">
+            <span className="text-xs font-medium uppercase tracking-wider text-[--color-fg-muted]">
+              Servicio de interés <span className="text-[--color-accent]">*</span>
+            </span>
+            <select
+              name="service"
+              required
+              defaultValue=""
+              className={inputClass}
+            >
+              <option value="" disabled>
+                Selecciona un servicio
+              </option>
+              {services.map((s) => (
+                <option key={s.slug} value={s.title}>
+                  {s.title}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <input
+          type="text"
+          name="website"
+          tabIndex={-1}
+          autoComplete="off"
+          className="hidden"
+        />
+
+        <Button type="submit" disabled={pending} size="lg" className="mt-6 w-full">
+          {pending ? "Enviando…" : "¡Quiero hacer algo increíble!"}
+        </Button>
+
+        {result && (
+          <p
+            className={`mt-3 text-sm ${
+              result.ok ? "text-emerald-400" : "text-red-400"
+            }`}
+          >
+            {result.ok
+              ? "¡Enviado! Te respondemos en menos de 24h."
+              : result.error}
+          </p>
+        )}
+      </div>
     </form>
   );
 }
@@ -127,12 +133,7 @@ function Field({
       <span className="text-xs font-medium uppercase tracking-wider text-[--color-fg-muted]">
         {label} {required && <span className="text-[--color-accent]">*</span>}
       </span>
-      <input
-        name={name}
-        type={type}
-        required={required}
-        className="mt-1.5 block w-full rounded-md border border-[--color-border-strong] bg-[--color-bg] px-3 py-2.5 text-sm text-[--color-fg] placeholder:text-[--color-fg-dim] focus:border-[--color-accent] focus:outline-none focus:ring-1 focus:ring-[--color-accent]"
-      />
+      <input name={name} type={type} required={required} className={inputClass} />
     </label>
   );
 }

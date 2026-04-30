@@ -22,7 +22,7 @@ export function Hero() {
         className="-z-30 object-cover object-center"
       />
 
-      {/* Overlay translúcido: deja respirar la foto, pero asegura contraste detrás del texto */}
+      {/* Overlay translúcido para legibilidad */}
       <div
         aria-hidden
         className="absolute inset-0 -z-20"
@@ -39,10 +39,10 @@ export function Hero() {
         style={{ ["--sx" as string]: "20%", ["--sy" as string]: "30%" }}
       />
 
-      {/* Grid decorativo */}
+      {/* Grid sutil */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-50 fade-edges-y"
+        className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-40 fade-edges-y"
       />
 
       {/* Noise grain */}
@@ -51,29 +51,17 @@ export function Hero() {
         className="pointer-events-none absolute inset-0 -z-10 bg-noise opacity-[0.06] mix-blend-overlay"
       />
 
-      <Container className="relative grid gap-14 py-28 md:py-36 lg:grid-cols-[1.3fr_1fr] lg:gap-20">
+      <Container className="relative grid gap-14 py-28 md:py-32 lg:grid-cols-[1.3fr_1fr] lg:gap-20">
         <div className="flex flex-col justify-center">
-          {/* Eyebrow con dot animado */}
-          <p className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
-            <span className="relative inline-flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-[--color-accent] animate-ping-soft" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-[--color-accent]" />
-            </span>
-            dinkbit · España
-          </p>
-
-          {/* Headline con jerarquía marcada: "Hacemos" pequeño, palabra rotante MASIVA, "increíbles" mediano */}
-          <h1 className="mt-8 font-bold leading-[0.95] tracking-tight text-[--color-fg]">
-            <span className="block text-2xl font-medium uppercase tracking-[0.2em] text-[--color-fg-muted] md:text-3xl">
+          {/* Headline tri-línea con misma tipografía. Rotating word es la única en azul. */}
+          <h1 className="font-black leading-[0.95] tracking-tight text-[--color-fg]">
+            <span className="block text-5xl md:text-6xl lg:text-7xl">
               Hacemos
             </span>
-            <span
-              className="mt-3 block font-black leading-[0.9]"
-              style={{ fontSize: "var(--text-display-xl)" }}
-            >
+            <span className="mt-1 block text-5xl md:text-6xl lg:text-7xl">
               <RotatingWord />
             </span>
-            <span className="mt-2 block text-4xl italic text-[--color-fg] md:text-6xl lg:text-7xl">
+            <span className="mt-1 block text-5xl md:text-6xl lg:text-7xl">
               increíbles.
             </span>
           </h1>

@@ -19,10 +19,11 @@ export function RotatingWord() {
 
   return (
     <span
-      className="relative inline-block overflow-hidden align-baseline text-[--color-accent]"
+      className="relative inline-block overflow-hidden align-baseline"
       style={{
+        color: "#3a90f2",
         textShadow:
-          "0 0 32px rgba(24,123,239,0.45), 0 0 8px rgba(24,123,239,0.6)",
+          "0 0 24px rgba(58,144,242,0.55), 0 0 48px rgba(24,123,239,0.4)",
       }}
     >
       <AnimatePresence mode="wait" initial={false}>

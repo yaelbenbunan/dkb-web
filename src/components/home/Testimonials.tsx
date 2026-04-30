@@ -79,25 +79,27 @@ export function Testimonials() {
           </ButtonLink>
         </div>
 
-        <div className="mt-16 grid gap-6 md:grid-cols-3">
-          {/* Rating summary card */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[--color-accent] via-[#1a6fd9] to-[#0f4a9c] p-8 text-white">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 bg-noise opacity-[0.08] mix-blend-overlay"
-            />
-            <p className="relative text-7xl font-black leading-none">5.0</p>
-            <div className="relative mt-4">
-              <Stars count={5} size={20} />
+        <div className="mt-14 grid gap-6 md:grid-cols-3">
+          {/* Rating summary card — sobria, mismo lenguaje que el resto */}
+          <div className="flex flex-col rounded-3xl bg-[--color-bg-elevated] p-8 ring-1 ring-white/[0.05]">
+            <div className="flex items-baseline gap-2">
+              <p className="text-6xl font-black leading-none text-[--color-accent]">
+                5.0
+              </p>
+              <p className="text-sm font-medium text-[--color-fg-muted]">/ 5</p>
             </div>
-            <p className="relative mt-8 text-sm text-white/80">
-              30+ reviews de Google
+            <div className="mt-4">
+              <Stars count={5} size={18} />
+            </div>
+            <p className="mt-auto pt-8 text-sm text-[--color-fg-muted]">
+              <span className="font-semibold text-[--color-fg]">30+ reviews</span>{" "}
+              de Google.
             </p>
             <a
               href={GOOGLE_REVIEWS_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="relative mt-2 inline-flex items-center gap-1 text-sm font-semibold text-white hover:underline"
+              className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[--color-accent] hover:text-[--color-accent-hover]"
             >
               Leer todas →
             </a>
@@ -105,21 +107,21 @@ export function Testimonials() {
 
           {/* Reviews carousel */}
           <div className="md:col-span-2">
-            <div className="relative h-full rounded-3xl border border-[--color-border] bg-[--color-bg-elevated]">
+            <div className="relative h-full rounded-3xl bg-[--color-bg-elevated] ring-1 ring-white/[0.05]">
               <div ref={emblaRef} className="h-full overflow-hidden rounded-3xl">
                 <div className="flex">
                   {TESTIMONIALS.map((t, i) => (
                     <div
                       key={i}
-                      className="min-w-0 flex-[0_0_100%] p-10 sm:p-12"
+                      className="min-w-0 flex-[0_0_100%] p-8 sm:p-10"
                     >
-                      <Stars count={t.rating} size={20} />
-                      <blockquote className="mt-6 text-xl leading-relaxed text-[--color-fg] md:text-2xl">
+                      <Stars count={t.rating} size={16} />
+                      <blockquote className="mt-5 text-base leading-relaxed text-[--color-fg] md:text-lg">
                         <span className="text-[--color-accent]">“</span>
                         {t.body}
                         <span className="text-[--color-accent]">”</span>
                       </blockquote>
-                      <p className="mt-8 text-base font-bold text-[--color-fg]">
+                      <p className="mt-6 text-sm font-bold text-[--color-fg]">
                         — {t.author}
                       </p>
                     </div>

@@ -19,7 +19,7 @@ const variants: Record<Variant, string> = {
   secondary: "bg-[--color-bg-elevated] text-[--color-fg] hover:bg-[--color-border-strong]",
   ghost: "text-[--color-accent] hover:bg-[--color-accent-soft]",
   outline:
-    "border border-[--color-border-strong] text-[--color-fg] hover:border-[--color-accent] hover:text-[--color-accent]",
+    "bg-[--color-bg-elevated] text-[--color-fg] ring-1 ring-[--color-accent]/30 hover:bg-[--color-accent-soft] hover:text-[--color-accent] hover:ring-[--color-accent]",
 };
 const sizes: Record<Size, string> = {
   sm: "h-9 px-3 text-sm",
