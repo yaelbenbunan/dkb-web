@@ -19,9 +19,9 @@ export function CaseSections({ sections }: { sections: CaseSection[] }) {
                     : ""
                 }
               >
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
+                <span className="inline-flex h-7 w-fit items-center rounded-full bg-[#187bef]/15 px-3.5 text-[11px] font-bold uppercase tracking-[0.22em] text-[#3a90f2] ring-1 ring-[#187bef]/35">
                   {section.tag.replace(/-/g, " ")}
-                </p>
+                </span>
                 <h2
                   className="mt-5 font-bold leading-[1.15] tracking-tight"
                   style={{ fontSize: "var(--text-display-md)" }}

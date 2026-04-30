@@ -37,7 +37,7 @@ export default async function CaseDetail({
   const caseStudy = getCaseStudyBySlug(slug);
   if (!caseStudy) notFound();
 
-  const related = getRelatedCases(slug, 4);
+  const related = getRelatedCases(slug, 8);
   const serviceTitleBySlug = Object.fromEntries(
     getAllServices().map((s) => [s.slug, s.title]),
   );
@@ -58,9 +58,9 @@ export default async function CaseDetail({
           />
           <Container>
             <div className="grid gap-8 lg:grid-cols-[auto_1fr] lg:items-start lg:gap-16">
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
+              <span className="inline-flex h-7 w-fit items-center rounded-full bg-[#187bef]/15 px-3.5 text-[11px] font-bold uppercase tracking-[0.22em] text-[#3a90f2] ring-1 ring-[#187bef]/35">
                 El reto
-              </p>
+              </span>
               <p className="max-w-3xl text-lg leading-relaxed text-[--color-fg] md:text-xl">
                 {caseStudy.reto}
               </p>
