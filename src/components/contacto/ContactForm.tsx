@@ -86,7 +86,7 @@ export function ContactForm({ services }: Props) {
             required
             className="mt-1 h-4 w-4 rounded border-slate-300 bg-white text-[#187bef] focus:ring-[#187bef]"
           />
-          <span className="text-xs leading-relaxed text-slate-600">
+          <span className="text-xs leading-relaxed text-[#1e3a8a]">
             Al enviar este formulario aceptas nuestra{" "}
             <Link
               href="/privacidad"
@@ -138,7 +138,7 @@ export function ContactForm({ services }: Props) {
         )}
       </form>
 
-      <p className="mt-6 border-t border-slate-200 pt-6 text-sm text-slate-600">
+      <p className="mt-6 border-t border-[#187bef]/15 pt-6 text-sm text-[#1e3a8a]">
         ¿Prefieres hablar directamente?{" "}
         <a
           href={CONTACT_INFO.calendly}
@@ -171,7 +171,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+      <span className="text-xs font-semibold uppercase tracking-wider text-[#1e3a8a]">
         {label} {required && <span className="text-[--color-accent]">*</span>}
       </span>
       <input
@@ -196,7 +196,7 @@ function TextareaField({
 }) {
   return (
     <label className="block">
-      <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+      <span className="text-xs font-semibold uppercase tracking-wider text-[#1e3a8a]">
         {label} <span className="text-[--color-accent]">*</span>
       </span>
       <textarea name={name} required rows={rows} className={inputClass} />
@@ -219,7 +219,7 @@ function SelectField({
 }) {
   return (
     <label className="block">
-      <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+      <span className="text-xs font-semibold uppercase tracking-wider text-[#1e3a8a]">
         {label} {required && <span className="text-[--color-accent]">*</span>}
       </span>
       <select

@@ -40,10 +40,10 @@ export function HeroForm({ services }: Props) {
       }}
       className="surface-elevated relative rounded-2xl p-7"
     >
-      <p className="text-lg font-bold text-slate-900">
+      <p className="text-lg font-bold text-[#0c1c40]">
         Déjanos ayudarte a crear algo increíble
       </p>
-      <p className="mt-1 text-sm text-slate-600">
+      <p className="mt-1 text-sm text-[#1e3a8a]">
         Te contestamos en menos de 24 horas.
       </p>
 
@@ -67,7 +67,7 @@ export function HeroForm({ services }: Props) {
         </div>
 
         <label className="block">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+          <span className="text-xs font-semibold uppercase tracking-wider text-[#1e3a8a]">
             Servicio de interés <span className="text-[#187bef]">*</span>
           </span>
           <select

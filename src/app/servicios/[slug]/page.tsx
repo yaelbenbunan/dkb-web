@@ -211,11 +211,11 @@ export default async function ServiceDetail({
           <div className="space-y-5">
             {service.ctaBox && (
               <div className="surface-elevated relative rounded-2xl p-7">
-                <p className="text-xl font-bold leading-tight text-slate-900">
+                <p className="text-xl font-bold leading-tight text-[#0c1c40]">
                   {service.ctaBox.title}
                 </p>
                 {service.ctaBox.subtitle && (
-                  <p className="mt-2 text-sm text-slate-600">
+                  <p className="mt-2 text-sm text-[#1e3a8a]">
                     {service.ctaBox.subtitle}
                   </p>
                 )}
