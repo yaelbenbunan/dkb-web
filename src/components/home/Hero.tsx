@@ -22,13 +22,13 @@ export function Hero() {
         className="-z-30 object-cover object-center"
       />
 
-      {/* Overlay con gradiente azul sutil arriba-izq + oscurecido fuerte para legibilidad */}
+      {/* Overlay translúcido: deja respirar la foto, pero asegura contraste detrás del texto */}
       <div
         aria-hidden
         className="absolute inset-0 -z-20"
         style={{
           background:
-            "linear-gradient(135deg, rgba(8,9,13,0.95) 0%, rgba(14,16,21,0.85) 40%, rgba(14,16,21,0.6) 100%)",
+            "linear-gradient(135deg, rgba(8,9,13,0.78) 0%, rgba(14,16,21,0.55) 45%, rgba(14,16,21,0.25) 100%)",
         }}
       />
 

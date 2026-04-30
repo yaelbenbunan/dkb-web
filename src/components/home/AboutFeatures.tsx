@@ -93,7 +93,7 @@ export function AboutFeatures() {
           <ul className="space-y-12">
             {FEATURES.map((f) => (
               <li key={f.title} className="relative flex gap-6">
-                <div className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-[--color-border-strong] bg-[--color-bg-elevated] shadow-[0_0_30px_rgba(24,123,239,0.15)]">
+                <div className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[--color-bg-elevated] ring-1 ring-[--color-accent]/30 shadow-[0_0_30px_rgba(24,123,239,0.2)]">
                   <Image
                     src={f.iconSrc}
                     alt=""

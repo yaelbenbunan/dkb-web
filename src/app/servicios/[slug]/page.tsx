@@ -51,7 +51,7 @@ export default async function ServiceDetail({
           className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-40 fade-edges-y"
         />
         <Container className="grid gap-10 md:grid-cols-[auto_1fr] md:items-end md:gap-12">
-          <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-[--color-border-strong] bg-[--color-bg-elevated] shadow-[0_0_40px_rgba(24,123,239,0.2)]">
+          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-[--color-bg-elevated] shadow-[0_0_40px_rgba(24,123,239,0.25)] ring-1 ring-[--color-accent]/20">
             <Image
               src={`/img/icons/servicios/${service.slug}.png`}
               alt=""
@@ -143,7 +143,7 @@ export default async function ServiceDetail({
                   <li key={c.slug}>
                     <Link
                       href={`/casos-de-exito/${c.slug}`}
-                      className="flex h-24 items-center justify-center rounded-2xl border border-[--color-border] bg-[--color-bg-elevated] p-4 transition-colors hover:border-[--color-accent]"
+                      className="flex h-24 items-center justify-center rounded-2xl bg-[--color-bg-elevated] p-4 ring-1 ring-transparent transition-all hover:-translate-y-0.5 hover:ring-[--color-accent]/40"
                     >
                       {c.clientLogo ? (
                         <Image
@@ -169,30 +169,35 @@ export default async function ServiceDetail({
         {/* Columna der: sticky CTA + menu de servicios */}
         <aside className="lg:sticky lg:top-28 lg:h-max lg:self-start">
           <div className="space-y-6">
-            {/* CTA Box */}
+            {/* CTA Box — fondo azul sólido para destacar */}
             {service.ctaBox && (
-              <div className="rounded-3xl border border-[--color-accent] bg-gradient-to-br from-[--color-accent-soft] to-transparent p-7">
-                <p className="text-xl font-bold leading-tight text-[--color-fg]">
+              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[--color-accent] via-[#1a6fd9] to-[#0f4a9c] p-7 text-white shadow-[0_0_60px_-15px_rgba(24,123,239,0.6)]">
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 bg-noise opacity-[0.08] mix-blend-overlay"
+                />
+                <p className="relative text-xl font-bold leading-tight">
                   {service.ctaBox.title}
                 </p>
                 {service.ctaBox.subtitle && (
-                  <p className="mt-2 text-sm text-[--color-fg-muted]">
+                  <p className="relative mt-2 text-sm text-white/85">
                     {service.ctaBox.subtitle}
                   </p>
                 )}
                 <ButtonLink
                   href={service.ctaBox.buttonHref}
                   size="lg"
-                  className="mt-6 w-full"
+                  variant="ghost"
+                  className="relative mt-6 w-full bg-white text-[--color-accent] hover:bg-white hover:opacity-90"
                 >
-                  {service.ctaBox.buttonText}
+                  {service.ctaBox.buttonText} →
                 </ButtonLink>
               </div>
             )}
 
-            {/* Menu de servicios */}
-            <nav className="rounded-3xl border border-[--color-border] bg-[--color-bg-elevated] p-6">
-              <p className="text-xs font-medium uppercase tracking-[0.2em] text-[--color-fg-muted]">
+            {/* Menu de servicios sin border */}
+            <nav className="rounded-3xl bg-[--color-bg-elevated] p-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[--color-fg-muted]">
                 Otros servicios
               </p>
               <ul className="mt-4 space-y-1">
@@ -204,12 +209,12 @@ export default async function ServiceDetail({
                         href={`/servicios/${s.slug}`}
                         className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
                           isActive
-                            ? "bg-[--color-accent-soft] text-[--color-accent]"
+                            ? "bg-[--color-accent-soft] font-semibold text-[--color-accent]"
                             : "text-[--color-fg-muted] hover:bg-[--color-bg] hover:text-[--color-fg]"
                         }`}
                       >
                         <span>{s.title}</span>
-                        <span className="text-[--color-fg-dim]">→</span>
+                        <span className={isActive ? "text-[--color-accent]" : "text-[--color-fg-dim]"}>→</span>
                       </Link>
                     </li>
                   );

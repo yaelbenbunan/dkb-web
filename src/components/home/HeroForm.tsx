@@ -36,8 +36,22 @@ export function HeroForm({ services }: Props) {
           if (r.ok) formRef.current?.reset();
         });
       }}
-      className="rounded-2xl border border-[--color-border] bg-[--color-bg-elevated] p-7 shadow-2xl shadow-black/40"
+      className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1f2331] via-[#181b25] to-[#0f1218] p-7 shadow-[0_0_60px_-12px_rgba(24,123,239,0.45),0_25px_50px_-12px_rgba(0,0,0,0.5)] ring-1 ring-[--color-accent]/30"
     >
+      {/* Línea azul superior decorativa */}
+      <span
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[--color-accent] to-transparent"
+      />
+      {/* Glow interno sutil */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded-2xl"
+        style={{
+          background:
+            "radial-gradient(ellipse 60% 40% at 50% 0%, rgba(24,123,239,0.12), transparent 70%)",
+        }}
+      />
       <p className="text-lg font-semibold text-[--color-fg]">
         Déjanos ayudarte a crear algo increíble
       </p>

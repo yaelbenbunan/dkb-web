@@ -18,7 +18,13 @@ export function RotatingWord() {
   }, []);
 
   return (
-    <span className="relative inline-block overflow-hidden align-baseline text-[--color-accent]">
+    <span
+      className="relative inline-block overflow-hidden align-baseline text-[--color-accent]"
+      style={{
+        textShadow:
+          "0 0 32px rgba(24,123,239,0.45), 0 0 8px rgba(24,123,239,0.6)",
+      }}
+    >
       <AnimatePresence mode="wait" initial={false}>
         <motion.span
           key={index}

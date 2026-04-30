@@ -19,8 +19,10 @@ export function ServiceFaqs({ faqs }: { faqs: ServiceFaq[] }) {
                 {f.q}
               </span>
               <span
-                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[--color-border-strong] text-[--color-fg-muted] transition-transform ${
-                  isOpen ? "rotate-45 border-[--color-accent] text-[--color-accent]" : ""
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all ${
+                  isOpen
+                    ? "rotate-45 bg-[--color-accent] text-white"
+                    : "bg-[--color-bg-elevated] text-[--color-fg-muted]"
                 }`}
                 aria-hidden
               >

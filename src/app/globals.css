@@ -22,10 +22,10 @@
   --font-sans: var(--font-source-sans), system-ui, sans-serif;
   --font-display: var(--font-source-sans), system-ui, sans-serif;
 
-  /* Tipografía display extra-grande para impactar */
-  --text-display-xl: clamp(3.5rem, 9vw, 8rem);
-  --text-display-lg: clamp(2.75rem, 6.5vw, 5.5rem);
-  --text-display-md: clamp(2.25rem, 4.5vw, 3.75rem);
+  /* Tipografía display escalable */
+  --text-display-xl: clamp(2.75rem, 6.5vw, 5.5rem);
+  --text-display-lg: clamp(2rem, 4vw, 3.25rem);
+  --text-display-md: clamp(1.625rem, 2.75vw, 2.25rem);
 }
 
 @layer base {
