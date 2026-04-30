@@ -8,7 +8,7 @@ export const metadata = {
 export default function NosotrosPage() {
   return (
     <article>
-      <header className="bg-slate-50 py-24">
+      <header className="border-b border-[--color-border] bg-[--color-bg-subtle] py-24">
         <Container>
           <p className="text-sm font-medium text-[--color-accent]">Nosotros</p>
           <h1 className="mt-2 text-4xl font-bold tracking-tight md:text-5xl">
@@ -16,12 +16,8 @@ export default function NosotrosPage() {
           </h1>
         </Container>
       </header>
-      <Container className="prose prose-slate max-w-3xl py-16">
+      <Container className="prose prose-invert max-w-3xl py-16">
         <p>Texto provisional. A redactar con los textos reales del cliente.</p>
-        <h2>Cómo trabajamos</h2>
-        <p>Texto provisional.</p>
-        <h2>Equipo</h2>
-        <p>Texto provisional.</p>
       </Container>
     </article>
   );

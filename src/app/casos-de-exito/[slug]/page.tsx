@@ -30,7 +30,7 @@ export default async function CaseDetail({
 
   return (
     <article>
-      <header className="bg-slate-50 py-24">
+      <header className="border-b border-[--color-border] bg-[--color-bg-subtle] py-24">
         <Container>
           <div className="flex flex-wrap gap-1.5">
             {caseStudy.tags.map((t) => (
@@ -40,7 +40,7 @@ export default async function CaseDetail({
           <h1 className="mt-3 text-4xl font-bold tracking-tight md:text-5xl">
             {caseStudy.title}
           </h1>
-          <p className="mt-4 text-lg text-slate-600">{caseStudy.client}</p>
+          <p className="mt-4 text-lg text-[--color-fg-muted]">{caseStudy.client}</p>
           {caseStudy.metricHeadline && (
             <p className="mt-6 text-2xl font-bold text-[--color-accent]">
               {caseStudy.metricHeadline}
@@ -48,7 +48,7 @@ export default async function CaseDetail({
           )}
         </Container>
       </header>
-      <Container className="prose prose-slate max-w-3xl py-16">
+      <Container className="prose prose-invert max-w-3xl py-16">
         <MDXRemote source={caseStudy.body} />
       </Container>
     </article>

@@ -15,16 +15,18 @@ export function CaseFilters({ caseStudies, serviceTags }: Props) {
     ? caseStudies.filter((c) => c.tags.includes(active))
     : caseStudies;
 
+  const tabBase =
+    "h-9 rounded-full px-4 text-sm font-medium transition-colors";
+  const tabActive = "bg-[--color-accent] text-white";
+  const tabInactive =
+    "bg-[--color-bg-elevated] text-[--color-fg-muted] hover:bg-[--color-border-strong] hover:text-[--color-fg]";
+
   return (
     <>
       <div className="mt-8 flex flex-wrap gap-2">
         <button
           onClick={() => setActive(null)}
-          className={`h-9 rounded-full px-4 text-sm font-medium ${
-            active === null
-              ? "bg-[--color-primary] text-white"
-              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-          }`}
+          className={`${tabBase} ${active === null ? tabActive : tabInactive}`}
         >
           Todos
         </button>
@@ -32,11 +34,7 @@ export function CaseFilters({ caseStudies, serviceTags }: Props) {
           <button
             key={t.slug}
             onClick={() => setActive(t.slug)}
-            className={`h-9 rounded-full px-4 text-sm font-medium ${
-              active === t.slug
-                ? "bg-[--color-primary] text-white"
-                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-            }`}
+            className={`${tabBase} ${active === t.slug ? tabActive : tabInactive}`}
           >
             {t.title}
           </button>
@@ -44,7 +42,9 @@ export function CaseFilters({ caseStudies, serviceTags }: Props) {
       </div>
 
       {filtered.length === 0 ? (
-        <p className="mt-12 text-slate-600">No hay casos para este filtro.</p>
+        <p className="mt-12 text-[--color-fg-muted]">
+          No hay casos para este filtro.
+        </p>
       ) : (
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((c) => (

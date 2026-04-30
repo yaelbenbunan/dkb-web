@@ -7,13 +7,15 @@ export function FeaturedCases() {
   const cases = getAllCaseStudies().slice(0, 3);
   if (cases.length === 0) return null;
   return (
-    <section className="bg-slate-50 py-24">
+    <section className="bg-[--color-bg-subtle] py-24">
       <Container>
         <div className="flex items-end justify-between">
-          <h2 className="text-3xl font-bold tracking-tight">Casos de éxito</h2>
+          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+            Casos de éxito
+          </h2>
           <Link
             href="/casos-de-exito"
-            className="text-sm font-medium text-[--color-accent]"
+            className="text-sm font-medium text-[--color-accent] hover:text-[--color-accent-hover]"
           >
             Ver todos →
           </Link>

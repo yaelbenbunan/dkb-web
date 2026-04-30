@@ -2,24 +2,42 @@
 @plugin "@tailwindcss/typography";
 
 /*
-  Brand tokens (confirmed 2026-04-30):
-  - accent: #187bef (corporate blue from logo)
-  - primary: #0F172A (deep slate, used for dark CTA bands)
+  dkb-web v2 — paleta dark
+  - bg base:        #0b0b0b   (negro casi puro)
+  - bg elevated:    #141414   (cards, secciones contrastadas)
+  - bg subtle:      #0f0f0f   (bandas sutiles)
+  - fg:             #f5f5f5   (texto principal)
+  - fg muted:       #a1a1aa   (texto secundario)
+  - fg dim:         #71717a   (texto desactivado/captions)
+  - accent:         #187bef   (corporate blue)
+  - accent hover:   #2d8af3
+  - border:         #1f1f1f   (sutil)
+  - border strong:  #2a2a2a   (cards definidas)
 */
 @theme {
-  --color-primary: #0F172A;
+  --color-bg: #0b0b0b;
+  --color-bg-elevated: #141414;
+  --color-bg-subtle: #0f0f0f;
+  --color-fg: #f5f5f5;
+  --color-fg-muted: #a1a1aa;
+  --color-fg-dim: #71717a;
   --color-accent: #187bef;
-  --color-bg: #FFFFFF;
-  --color-fg: #0F172A;
+  --color-accent-hover: #2d8af3;
+  --color-border: #1f1f1f;
+  --color-border-strong: #2a2a2a;
 
   --font-sans: var(--font-source-sans), system-ui, sans-serif;
   --font-display: var(--font-source-sans), system-ui, sans-serif;
 }
 
 @layer base {
-  html { color-scheme: light; }
+  html {
+    color-scheme: dark;
+    background: var(--color-bg);
+  }
   body {
     @apply bg-[--color-bg] text-[--color-fg] font-sans antialiased;
   }
-  h1, h2, h3 { @apply font-display tracking-tight; }
+  h1, h2, h3, h4 { @apply font-display tracking-tight; }
+  ::selection { background: var(--color-accent); color: white; }
 }

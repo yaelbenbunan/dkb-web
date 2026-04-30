@@ -44,7 +44,7 @@ export function ContactForm() {
         {pending ? "Enviando…" : "Enviar"}
       </Button>
       {result && (
-        <p className={result.ok ? "text-emerald-700" : "text-red-700"}>
+        <p className={result.ok ? "text-emerald-400" : "text-red-400"}>
           {result.ok
             ? "¡Enviado! Te respondemos en menos de 24h."
             : result.error}
@@ -70,15 +70,15 @@ function Field({
   const Tag = textarea ? "textarea" : "input";
   return (
     <label className="block">
-      <span className="text-sm font-medium text-slate-900">
-        {label} {required && <span className="text-red-500">*</span>}
+      <span className="text-sm font-medium text-[--color-fg]">
+        {label} {required && <span className="text-[--color-accent]">*</span>}
       </span>
       <Tag
         name={name}
         type={textarea ? undefined : type}
         required={required}
         rows={textarea ? 5 : undefined}
-        className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[--color-accent] focus:outline-none focus:ring-1 focus:ring-[--color-accent]"
+        className="mt-1 block w-full rounded-md border border-[--color-border-strong] bg-[--color-bg-elevated] px-3 py-2 text-sm text-[--color-fg] placeholder:text-[--color-fg-dim] focus:border-[--color-accent] focus:outline-none focus:ring-1 focus:ring-[--color-accent]"
       />
     </label>
   );

@@ -2,7 +2,7 @@ import { cn } from "@/lib/cn";
 import Link from "next/link";
 import { type ComponentProps, type ReactNode } from "react";
 
-type Variant = "primary" | "secondary" | "ghost";
+type Variant = "primary" | "secondary" | "ghost" | "outline";
 type Size = "sm" | "md" | "lg";
 
 interface CommonProps {
@@ -13,11 +13,13 @@ interface CommonProps {
 }
 
 const base =
-  "inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[--color-accent] focus-visible:ring-offset-2";
+  "inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[--color-accent] focus-visible:ring-offset-2 focus-visible:ring-offset-[--color-bg]";
 const variants: Record<Variant, string> = {
-  primary: "bg-[--color-accent] text-white hover:opacity-90",
-  secondary: "bg-[--color-primary] text-white hover:opacity-90",
-  ghost: "text-[--color-primary] hover:bg-slate-100",
+  primary: "bg-[--color-accent] text-white hover:bg-[--color-accent-hover]",
+  secondary: "bg-[--color-bg-elevated] text-[--color-fg] hover:bg-[--color-border-strong]",
+  ghost: "text-[--color-fg] hover:bg-[--color-bg-elevated]",
+  outline:
+    "border border-[--color-border-strong] text-[--color-fg] hover:border-[--color-accent] hover:text-[--color-accent]",
 };
 const sizes: Record<Size, string> = {
   sm: "h-9 px-3 text-sm",

@@ -32,18 +32,18 @@ export default async function ServiceDetail({
 
   return (
     <article>
-      <header className="bg-slate-50 py-24">
+      <header className="border-b border-[--color-border] bg-[--color-bg-subtle] py-24">
         <Container>
           <p className="text-sm font-medium text-[--color-accent]">Servicio</p>
           <h1 className="mt-2 text-4xl font-bold tracking-tight md:text-5xl">
             {service.title}
           </h1>
-          <p className="mt-4 max-w-2xl text-lg text-slate-600">
+          <p className="mt-4 max-w-2xl text-lg text-[--color-fg-muted]">
             {service.shortDescription}
           </p>
         </Container>
       </header>
-      <Container className="prose prose-slate max-w-3xl py-16">
+      <Container className="prose prose-invert max-w-3xl py-16">
         <MDXRemote source={service.body} />
       </Container>
     </article>
