@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
+import { ClientLogoSwap } from "./ClientLogoSwap";
 import type { CaseStudy } from "@/lib/types";
 
 interface Props {
@@ -84,12 +84,13 @@ export function CaseHeader({ caseStudy, serviceTitleBySlug }: Props) {
         {(caseStudy.clientLogo || hasSocial) && (
           <div className="flex w-fit flex-col items-center gap-5">
             {caseStudy.clientLogo && (
-              <Image
+              <ClientLogoSwap
                 src={caseStudy.clientLogo}
                 alt={caseStudy.client}
                 width={280}
                 height={140}
-                className="max-h-32 w-auto object-contain md:max-h-40"
+                imgClassName="max-h-32 w-auto object-contain md:max-h-40"
+                staticWhite
               />
             )}
             {hasSocial && caseStudy.social && (

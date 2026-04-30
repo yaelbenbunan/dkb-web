@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
+import { ClientLogoSwap } from "./ClientLogoSwap";
 import type { CaseStudy } from "@/lib/types";
 
 export function RelatedCases({ cases }: { cases: CaseStudy[] }) {
@@ -50,13 +50,15 @@ export function RelatedCases({ cases }: { cases: CaseStudy[] }) {
               aria-label={c.client}
             >
               {c.clientLogo ? (
-                <Image
-                  src={c.clientLogo}
-                  alt={c.client}
-                  width={240}
-                  height={120}
-                  className="max-h-20 w-auto object-contain brightness-0 invert opacity-60 transition-all duration-300 group-hover:scale-110 group-hover:brightness-100 group-hover:invert-0 group-hover:opacity-100 sm:max-h-24"
-                />
+                <span className="transition-transform duration-300 group-hover:scale-110">
+                  <ClientLogoSwap
+                    src={c.clientLogo}
+                    alt={c.client}
+                    width={240}
+                    height={120}
+                    imgClassName="max-h-20 w-auto object-contain sm:max-h-24"
+                  />
+                </span>
               ) : (
                 <span className="text-2xl font-bold text-[--color-fg-muted] transition-colors group-hover:text-[--color-fg]">
                   {c.client}

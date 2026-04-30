@@ -1,9 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import type { CaseStudy } from "@/lib/types";
+import { ClientLogoSwap } from "./ClientLogoSwap";
 
 interface Props {
   caseStudies: CaseStudy[];
@@ -64,12 +64,12 @@ export function CaseFilters({ caseStudies, filterTags = DEFAULT_TABS }: Props) {
                 aria-label={c.client}
               >
                 {c.clientLogo ? (
-                  <Image
+                  <ClientLogoSwap
                     src={c.clientLogo}
                     alt={c.client}
                     width={240}
                     height={120}
-                    className="max-h-20 w-auto object-contain brightness-0 invert opacity-60 transition-all duration-300 group-hover:brightness-100 group-hover:invert-0 group-hover:opacity-100"
+                    imgClassName="max-h-20 w-auto object-contain"
                   />
                 ) : (
                   <span className="text-xl font-bold text-[--color-fg-muted] transition-colors group-hover:text-[--color-fg]">

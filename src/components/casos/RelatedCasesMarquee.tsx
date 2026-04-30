@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import { ClientLogoSwap } from "./ClientLogoSwap";
 import type { CaseStudy } from "@/lib/types";
 
 interface Props {
@@ -36,13 +36,15 @@ export function RelatedCasesMarquee({ cases }: Props) {
             aria-label={c.client}
           >
             {c.clientLogo ? (
-              <Image
-                src={c.clientLogo}
-                alt={c.client}
-                width={180}
-                height={80}
-                className="max-h-14 w-auto object-contain brightness-0 invert opacity-60 transition-all duration-300 group-hover:scale-110 group-hover:brightness-100 group-hover:invert-0 group-hover:opacity-100"
-              />
+              <span className="transition-transform duration-300 group-hover:scale-110">
+                <ClientLogoSwap
+                  src={c.clientLogo}
+                  alt={c.client}
+                  width={180}
+                  height={80}
+                  imgClassName="max-h-14 w-auto object-contain"
+                />
+              </span>
             ) : (
               <span className="text-base font-semibold text-[--color-fg-muted] transition-colors group-hover:text-[--color-fg]">
                 {c.client}
