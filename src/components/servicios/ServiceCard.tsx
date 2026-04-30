@@ -6,7 +6,7 @@ export function ServiceCard({ service }: { service: Service }) {
   return (
     <Link
       href={`/servicios/${service.slug}`}
-      className="group relative flex flex-col rounded-2xl bg-[#16181f] px-6 pb-6 pt-4 ring-1 ring-white/[0.05] transition-all duration-300 hover:-translate-y-1.5 hover:bg-[#1a1d27] hover:ring-[--color-accent]/40 hover:shadow-[0_20px_40px_-15px_rgba(24,123,239,0.4)]"
+      className="surface surface-hover group relative flex flex-col rounded-2xl px-6 pb-6 pt-4 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_20px_40px_-15px_rgba(24,123,239,0.4)]"
     >
       <div className="flex items-start justify-between">
         <Image
@@ -16,7 +16,7 @@ export function ServiceCard({ service }: { service: Service }) {
           height={44}
           className="h-11 w-11"
         />
-        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[--color-bg-elevated] text-[--color-fg-muted] transition-all group-hover:rotate-[-8deg] group-hover:bg-[--color-accent] group-hover:text-white">
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-[--color-fg-muted] transition-all group-hover:rotate-[-8deg] group-hover:bg-[#187bef] group-hover:text-white">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path
               d="M4 10L10 4M10 4H5M10 4V9"

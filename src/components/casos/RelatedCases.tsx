@@ -32,7 +32,7 @@ export function RelatedCases({ cases }: { cases: CaseStudy[] }) {
             <li key={c.slug}>
               <Link
                 href={`/casos-de-exito/${c.slug}`}
-                className="group flex aspect-[4/3] items-center justify-center rounded-2xl border border-[--color-border] bg-[--color-bg-elevated] p-6 transition-all hover:-translate-y-1 hover:border-[--color-accent]"
+                className="surface surface-hover group flex aspect-[4/3] items-center justify-center rounded-2xl p-6 transition-all hover:-translate-y-1"
               >
                 {c.clientLogo ? (
                   <Image

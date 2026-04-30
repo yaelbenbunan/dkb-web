@@ -10,10 +10,8 @@ export function ServiceFaqs({ faqs }: { faqs: ServiceFaq[] }) {
       {faqs.map((f, i) => {
         const isOpen = open === i;
         return (
-          <li
-            key={i}
-            className="rounded-2xl bg-[#16181f] ring-1 ring-white/[0.05] transition-colors"
-          >
+          <li key={i} className="surface rounded-2xl">
+
             <button
               onClick={() => setOpen(isOpen ? null : i)}
               className="flex w-full items-center justify-between gap-6 p-5 text-left"

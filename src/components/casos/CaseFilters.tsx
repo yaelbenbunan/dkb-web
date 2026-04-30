@@ -26,9 +26,9 @@ export function CaseFilters({ caseStudies, filterTags = DEFAULT_TABS }: Props) {
   const tabBase =
     "h-12 rounded-full px-7 text-base font-semibold transition-all";
   const tabActive =
-    "bg-[--color-accent] text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.6)]";
+    "bg-[#187bef] text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.7),inset_0_1px_0_rgba(255,255,255,0.25)]";
   const tabInactive =
-    "bg-[#16181f] text-[--color-fg-muted] ring-1 ring-white/[0.08] hover:bg-[#1a1d27] hover:text-[--color-fg] hover:ring-[--color-accent]/40";
+    "bg-[#187bef]/10 text-[#3a90f2] ring-1 ring-[#187bef]/25 hover:bg-[#187bef]/20 hover:ring-[#187bef]/50";
 
   return (
     <>
@@ -60,7 +60,7 @@ export function CaseFilters({ caseStudies, filterTags = DEFAULT_TABS }: Props) {
             <li key={c.slug}>
               <Link
                 href={`/casos-de-exito/${c.slug}`}
-                className="group flex aspect-[4/3] flex-col items-center justify-center rounded-2xl bg-[#16181f] p-8 ring-1 ring-white/[0.05] transition-all hover:-translate-y-1 hover:bg-[#1a1d27] hover:ring-[--color-accent]/40 hover:shadow-[0_20px_40px_-15px_rgba(24,123,239,0.4)]"
+                className="surface surface-hover group flex aspect-[4/3] flex-col items-center justify-center rounded-2xl p-8 transition-all hover:-translate-y-1 hover:shadow-[0_20px_40px_-15px_rgba(24,123,239,0.4)]"
               >
                 {c.clientLogo ? (
                   <Image
@@ -68,7 +68,7 @@ export function CaseFilters({ caseStudies, filterTags = DEFAULT_TABS }: Props) {
                     alt={c.client}
                     width={240}
                     height={120}
-                    className="max-h-24 w-auto object-contain opacity-75 transition group-hover:opacity-100"
+                    className="max-h-24 w-auto object-contain transition group-hover:scale-105"
                   />
                 ) : (
                   <span className="text-xl font-bold text-[--color-fg]">

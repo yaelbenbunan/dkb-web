@@ -9,6 +9,8 @@ interface Props {
 }
 
 export function CaseHeader({ caseStudy, serviceTitleBySlug }: Props) {
+  const hasSocial = caseStudy.social && hasAnySocial(caseStudy.social);
+
   return (
     <header className="relative isolate overflow-hidden py-20 md:py-24">
       <div
@@ -21,12 +23,11 @@ export function CaseHeader({ caseStudy, serviceTitleBySlug }: Props) {
         className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-30 fade-edges-y"
       />
       <Container className="grid gap-12 md:grid-cols-[1fr_auto] md:items-start md:gap-16">
-        {/* Izq: title → description → social → date → tags */}
+        {/* Izq: title → description → date → tags */}
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
             Caso de éxito
           </p>
-          {/* 1. Título */}
           <h1
             className="mt-6 font-black leading-[0.95] tracking-tight"
             style={{ fontSize: "var(--text-display-lg)" }}
@@ -34,93 +35,14 @@ export function CaseHeader({ caseStudy, serviceTitleBySlug }: Props) {
             {caseStudy.title}
           </h1>
 
-          {/* 2. Descripción */}
           {caseStudy.description && (
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-[--color-fg-muted]">
               {caseStudy.description}
             </p>
           )}
 
-          {/* 3. Iconos sociales */}
-          {caseStudy.social && hasAnySocial(caseStudy.social) && (
-            <div className="mt-7 flex items-center gap-3">
-              {caseStudy.social.website && (
-                <SocialLink
-                  href={caseStudy.social.website}
-                  label="Sitio web"
-                  icon={
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <circle
-                        cx="12"
-                        cy="12"
-                        r="9"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                      />
-                      <path
-                        d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                      />
-                    </svg>
-                  }
-                />
-              )}
-              {caseStudy.social.facebook && (
-                <SocialLink
-                  href={caseStudy.social.facebook}
-                  label="Facebook"
-                  icon={
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M13.5 22v-8h2.7l.4-3.1h-3.1V8.9c0-.9.3-1.5 1.6-1.5h1.7V4.6c-.3 0-1.3-.1-2.5-.1-2.4 0-4.1 1.5-4.1 4.2v2.3H7.5V14h2.7v8h3.3z" />
-                    </svg>
-                  }
-                />
-              )}
-              {caseStudy.social.instagram && (
-                <SocialLink
-                  href={caseStudy.social.instagram}
-                  label="Instagram"
-                  icon={
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <rect
-                        x="3"
-                        y="3"
-                        width="18"
-                        height="18"
-                        rx="5"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                      />
-                      <circle
-                        cx="12"
-                        cy="12"
-                        r="3.5"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                      />
-                      <circle cx="17.5" cy="6.5" r="1" fill="currentColor" />
-                    </svg>
-                  }
-                />
-              )}
-              {caseStudy.social.linkedin && (
-                <SocialLink
-                  href={caseStudy.social.linkedin}
-                  label="LinkedIn"
-                  icon={
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M4.98 3.5C4.98 4.88 3.87 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1s2.48 1.12 2.48 2.5zM.22 8h4.56v14H.22V8zm7.4 0h4.37v1.92h.06c.61-1.15 2.1-2.36 4.32-2.36 4.62 0 5.47 3.04 5.47 7v7.44H17.3v-6.6c0-1.57-.03-3.6-2.19-3.6-2.2 0-2.54 1.72-2.54 3.49V22H7.62V8z" />
-                    </svg>
-                  }
-                />
-              )}
-            </div>
-          )}
-
-          {/* 4. Fecha */}
           {caseStudy.clientSince && (
-            <p className="mt-5 text-sm text-[--color-fg-muted]">
+            <p className="mt-7 text-sm text-[--color-fg-muted]">
               Cliente desde{" "}
               <span className="font-semibold text-[--color-fg]">
                 {caseStudy.clientSince}
@@ -128,14 +50,13 @@ export function CaseHeader({ caseStudy, serviceTitleBySlug }: Props) {
             </p>
           )}
 
-          {/* 5. Etiquetas clickables (servicios) */}
           {caseStudy.tags.length > 0 && (
-            <ul className="mt-5 flex flex-wrap gap-2">
+            <ul className="mt-4 flex flex-wrap gap-2">
               {caseStudy.tags.map((t) => (
                 <li key={t}>
                   <Link
                     href={`/servicios/${t}`}
-                    className="inline-flex h-8 items-center rounded-full bg-[--color-accent-soft] px-4 text-xs font-semibold uppercase tracking-wider text-[--color-accent] ring-1 ring-[--color-accent]/30 transition-all hover:bg-[--color-accent] hover:text-white"
+                    className="inline-flex h-8 items-center rounded-full bg-[#187bef]/15 px-4 text-xs font-semibold uppercase tracking-wider text-[#3a90f2] ring-1 ring-[#187bef]/30 transition-all hover:bg-[#187bef] hover:text-white"
                   >
                     {serviceTitleBySlug[t] ?? t}
                   </Link>
@@ -145,16 +66,93 @@ export function CaseHeader({ caseStudy, serviceTitleBySlug }: Props) {
           )}
         </div>
 
-        {/* Derecha: logo cliente sin caja, más grande */}
-        {caseStudy.clientLogo && (
-          <div className="flex max-h-32 items-center md:max-h-40">
-            <Image
-              src={caseStudy.clientLogo}
-              alt={caseStudy.client}
-              width={280}
-              height={140}
-              className="max-h-32 w-auto object-contain md:max-h-40"
-            />
+        {/* Derecha: logo + iconos sociales debajo */}
+        {(caseStudy.clientLogo || hasSocial) && (
+          <div className="flex flex-col items-start gap-5 md:items-end">
+            {caseStudy.clientLogo && (
+              <Image
+                src={caseStudy.clientLogo}
+                alt={caseStudy.client}
+                width={280}
+                height={140}
+                className="max-h-32 w-auto object-contain md:max-h-40"
+              />
+            )}
+            {hasSocial && caseStudy.social && (
+              <div className="flex items-center gap-3">
+                {caseStudy.social.website && (
+                  <SocialLink
+                    href={caseStudy.social.website}
+                    label="Sitio web"
+                    icon={
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="9"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                        />
+                        <path
+                          d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                        />
+                      </svg>
+                    }
+                  />
+                )}
+                {caseStudy.social.facebook && (
+                  <SocialLink
+                    href={caseStudy.social.facebook}
+                    label="Facebook"
+                    icon={
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M13.5 22v-8h2.7l.4-3.1h-3.1V8.9c0-.9.3-1.5 1.6-1.5h1.7V4.6c-.3 0-1.3-.1-2.5-.1-2.4 0-4.1 1.5-4.1 4.2v2.3H7.5V14h2.7v8h3.3z" />
+                      </svg>
+                    }
+                  />
+                )}
+                {caseStudy.social.instagram && (
+                  <SocialLink
+                    href={caseStudy.social.instagram}
+                    label="Instagram"
+                    icon={
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <rect
+                          x="3"
+                          y="3"
+                          width="18"
+                          height="18"
+                          rx="5"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                        />
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="3.5"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                        />
+                        <circle cx="17.5" cy="6.5" r="1" fill="currentColor" />
+                      </svg>
+                    }
+                  />
+                )}
+                {caseStudy.social.linkedin && (
+                  <SocialLink
+                    href={caseStudy.social.linkedin}
+                    label="LinkedIn"
+                    icon={
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M4.98 3.5C4.98 4.88 3.87 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1s2.48 1.12 2.48 2.5zM.22 8h4.56v14H.22V8zm7.4 0h4.37v1.92h.06c.61-1.15 2.1-2.36 4.32-2.36 4.62 0 5.47 3.04 5.47 7v7.44H17.3v-6.6c0-1.57-.03-3.6-2.19-3.6-2.2 0-2.54 1.72-2.54 3.49V22H7.62V8z" />
+                      </svg>
+                    }
+                  />
+                )}
+              </div>
+            )}
           </div>
         )}
       </Container>
@@ -181,7 +179,7 @@ function SocialLink({
       target="_blank"
       rel="noopener noreferrer"
       aria-label={label}
-      className="flex h-10 w-10 items-center justify-center rounded-full bg-[#16181f] text-[--color-fg-muted] ring-1 ring-white/[0.08] transition-all hover:bg-[--color-accent] hover:text-white hover:ring-[--color-accent]"
+      className="surface flex h-10 w-10 items-center justify-center rounded-full text-[--color-fg-muted] transition-all hover:bg-[#187bef] hover:text-white"
     >
       {icon}
     </a>

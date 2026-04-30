@@ -81,7 +81,7 @@ export function Testimonials() {
 
         <div className="mt-14 grid gap-6 md:grid-cols-3">
           {/* Rating summary card — sobria, mismo lenguaje que el resto */}
-          <div className="flex flex-col rounded-3xl bg-[--color-bg-elevated] p-8 ring-1 ring-white/[0.05]">
+          <div className="surface flex flex-col rounded-3xl p-8">
             <div className="flex items-baseline gap-2">
               <p className="text-6xl font-black leading-none text-[--color-accent]">
                 5.0
@@ -107,7 +107,7 @@ export function Testimonials() {
 
           {/* Reviews carousel */}
           <div className="md:col-span-2">
-            <div className="relative h-full rounded-3xl bg-[--color-bg-elevated] ring-1 ring-white/[0.05]">
+            <div className="surface relative h-full rounded-3xl">
               <div ref={emblaRef} className="h-full overflow-hidden rounded-3xl">
                 <div className="flex">
                   {TESTIMONIALS.map((t, i) => (

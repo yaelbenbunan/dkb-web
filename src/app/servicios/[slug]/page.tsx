@@ -3,6 +3,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/Container";
 import { ServiceFaqs } from "@/components/servicios/ServiceFaqs";
+import { RelatedCasesMarquee } from "@/components/casos/RelatedCasesMarquee";
 import { getAllServices, getServiceBySlug, getAllCaseStudies } from "@/lib/content";
 
 export async function generateStaticParams() {
@@ -37,8 +38,8 @@ export default async function ServiceDetail({
 
   return (
     <article>
-      {/* Hero del servicio con foto de fondo (textura de código) */}
-      <header className="relative isolate overflow-hidden py-24 md:py-28">
+      {/* Hero del servicio: bg image + capas decorativas + chip y línea inferior brillante */}
+      <header className="relative isolate overflow-hidden">
         <Image
           src="/img/servicios/hero-desarrollo-web1.png"
           alt=""
@@ -52,7 +53,7 @@ export default async function ServiceDetail({
           className="absolute inset-0 -z-20"
           style={{
             background:
-              "linear-gradient(180deg, rgba(8,9,13,0.6) 0%, rgba(14,16,21,0.85) 100%)",
+              "linear-gradient(180deg, rgba(8,9,13,0.55) 0%, rgba(14,16,21,0.85) 100%)",
           }}
         />
         <div
@@ -60,40 +61,74 @@ export default async function ServiceDetail({
           className="pointer-events-none absolute inset-0 -z-10 spotlight-accent"
           style={{ ["--sx" as string]: "75%", ["--sy" as string]: "30%" }}
         />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-30 fade-edges-y"
+        />
 
-        <Container className="flex flex-col items-start gap-6">
-          <div className="flex items-center gap-4">
-            <Image
-              src={`/img/icons/servicios/${service.slug}.png`}
-              alt=""
-              width={56}
-              height={56}
-              className="h-14 w-14"
-            />
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
-              Servicio
-            </p>
+        <Container className="relative py-24 md:py-32">
+          {/* Breadcrumb minimal arriba */}
+          <nav className="mb-10 flex items-center gap-2 text-xs text-[--color-fg-dim]">
+            <Link
+              href="/servicios"
+              className="font-medium transition-colors hover:text-[--color-accent]"
+            >
+              Servicios
+            </Link>
+            <span aria-hidden>/</span>
+            <span className="text-[--color-fg-muted]">{service.title}</span>
+          </nav>
+
+          <div className="grid items-end gap-10 md:grid-cols-[auto_1fr] md:gap-12">
+            {/* Icono del servicio en card grande con glow */}
+            <div className="surface flex h-24 w-24 items-center justify-center rounded-3xl shadow-[0_0_50px_rgba(24,123,239,0.35)]">
+              <Image
+                src={`/img/icons/servicios/${service.slug}.png`}
+                alt=""
+                width={64}
+                height={64}
+                className="h-16 w-16"
+              />
+            </div>
+            <div>
+              <p className="inline-flex items-center gap-2 rounded-full bg-[#187bef]/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#3a90f2] ring-1 ring-[#187bef]/30">
+                <span className="relative inline-flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-[#3a90f2] animate-ping-soft" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#3a90f2]" />
+                </span>
+                Servicio
+              </p>
+              <h1
+                className="mt-5 font-black leading-[1] tracking-tight"
+                style={{ fontSize: "var(--text-display-lg)" }}
+              >
+                {service.title}
+              </h1>
+              <p className="mt-5 max-w-2xl text-lg leading-relaxed text-[--color-fg-muted] md:text-xl">
+                {service.shortDescription}
+              </p>
+            </div>
           </div>
-          <h1
-            className="font-black leading-[1] tracking-tight"
-            style={{ fontSize: "var(--text-display-lg)" }}
-          >
-            {service.title}
-          </h1>
-          <p className="max-w-2xl text-lg text-[--color-fg-muted] md:text-xl">
-            {service.shortDescription}
-          </p>
         </Container>
+
+        {/* Línea brillante inferior que separa del cuerpo */}
+        <div
+          aria-hidden
+          className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#187bef]/60 to-transparent"
+        />
       </header>
 
       {/* Body 2/3 + 1/3 */}
       <Container className="grid gap-12 py-20 lg:grid-cols-[2fr_1fr] lg:gap-14">
         <div className="space-y-16">
-          {/* Intro + bullets con check azul */}
+          {/* Intro + bullets */}
           {(service.intro || service.bullets) && (
             <section>
+              <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
+                ¿Qué <span className="text-[#187bef]">ofrecemos</span>?
+              </h2>
               {service.intro && (
-                <p className="text-lg leading-relaxed text-[--color-fg-muted]">
+                <p className="mt-5 text-lg leading-relaxed text-[--color-fg-muted]">
                   {service.intro}
                 </p>
               )}
@@ -104,7 +139,7 @@ export default async function ServiceDetail({
                       key={i}
                       className="flex items-start gap-3 text-[--color-fg]"
                     >
-                      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[--color-accent-soft] text-[--color-accent]">
+                      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#187bef]/15 text-[#3a90f2]">
                         <svg
                           width="13"
                           height="13"
@@ -133,7 +168,7 @@ export default async function ServiceDetail({
             <section>
               <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
                 ¿Qué hace diferente nuestro{" "}
-                <span className="text-[--color-accent]">enfoque</span>?
+                <span className="text-[#187bef]">enfoque</span>?
               </h2>
               <p className="mt-4 text-lg leading-relaxed text-[--color-fg-muted]">
                 {service.diferenciador}
@@ -146,7 +181,7 @@ export default async function ServiceDetail({
             <section>
               <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
                 Preguntas{" "}
-                <span className="text-[--color-accent]">frecuentes</span>
+                <span className="text-[#187bef]">frecuentes</span>
               </h2>
               <div className="mt-6">
                 <ServiceFaqs faqs={service.faqs} />
@@ -154,39 +189,19 @@ export default async function ServiceDetail({
             </section>
           )}
 
-          {/* Casos relacionados */}
+          {/* Casos relacionados — carrusel marquee */}
           {relatedCases.length > 0 && (
             <section>
               <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
-                Casos de <span className="text-[--color-accent]">éxito</span>
+                Casos de <span className="text-[#187bef]">éxito</span>
               </h2>
               <p className="mt-2 text-[--color-fg-muted]">
-                Algunos clientes a los que ayudamos con {service.title.toLowerCase()}.
+                Algunos clientes a los que ayudamos con{" "}
+                {service.title.toLowerCase()}.
               </p>
-              <ul className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3">
-                {relatedCases.map((c) => (
-                  <li key={c.slug}>
-                    <Link
-                      href={`/casos-de-exito/${c.slug}`}
-                      className="group flex aspect-[3/2] items-center justify-center rounded-2xl bg-[#16181f] p-6 ring-1 ring-white/[0.05] transition-all hover:-translate-y-0.5 hover:ring-[--color-accent]/40"
-                    >
-                      {c.clientLogo ? (
-                        <Image
-                          src={c.clientLogo}
-                          alt={c.client}
-                          width={180}
-                          height={80}
-                          className="max-h-16 w-auto object-contain opacity-80 transition group-hover:opacity-100"
-                        />
-                      ) : (
-                        <span className="text-sm font-medium text-[--color-fg]">
-                          {c.client}
-                        </span>
-                      )}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              <div className="mt-8 -mx-6 lg:-mx-8">
+                <RelatedCasesMarquee cases={relatedCases} />
+              </div>
             </section>
           )}
         </div>
@@ -194,14 +209,13 @@ export default async function ServiceDetail({
         {/* Aside sticky */}
         <aside className="lg:sticky lg:top-28 lg:h-max lg:self-start">
           <div className="space-y-5">
-            {/* CTA Box mismo estilo que el formulario del Hero */}
             {service.ctaBox && (
-              <div className="relative rounded-2xl bg-white/90 backdrop-blur-md p-7 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.6),0_0_60px_-10px_rgba(24,123,239,0.4)] ring-1 ring-white/40">
-                <p className="text-xl font-bold leading-tight text-slate-900">
+              <div className="surface-elevated relative rounded-2xl p-7">
+                <p className="text-xl font-bold leading-tight text-[--color-fg]">
                   {service.ctaBox.title}
                 </p>
                 {service.ctaBox.subtitle && (
-                  <p className="mt-2 text-sm text-slate-600">
+                  <p className="mt-2 text-sm text-[--color-fg-muted]">
                     {service.ctaBox.subtitle}
                   </p>
                 )}
@@ -223,8 +237,7 @@ export default async function ServiceDetail({
               </div>
             )}
 
-            {/* Menu de servicios sticky con ring sutil */}
-            <nav className="rounded-2xl bg-[#16181f] p-5 ring-1 ring-white/[0.05]">
+            <nav className="surface rounded-2xl p-5">
               <p className="px-2 text-xs font-semibold uppercase tracking-[0.2em] text-[--color-fg-muted]">
                 Otros servicios
               </p>
@@ -237,12 +250,12 @@ export default async function ServiceDetail({
                         href={`/servicios/${s.slug}`}
                         className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
                           isActive
-                            ? "bg-[--color-accent-soft] font-semibold text-[--color-accent]"
-                            : "text-[--color-fg-muted] hover:bg-white/[0.03] hover:text-[--color-fg]"
+                            ? "bg-[#187bef]/15 font-semibold text-[#3a90f2]"
+                            : "text-[--color-fg-muted] hover:bg-white/[0.04] hover:text-[--color-fg]"
                         }`}
                       >
                         <span>{s.title}</span>
-                        <span className="text-[--color-accent]">→</span>
+                        <span className="text-[#3a90f2]">→</span>
                       </Link>
                     </li>
                   );

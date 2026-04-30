@@ -13,7 +13,7 @@ interface Props {
 }
 
 const inputClass =
-  "mt-1.5 block w-full rounded-md bg-[#f5f6f9] px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 ring-1 ring-slate-200 transition-shadow focus:outline-none focus:ring-2 focus:ring-[--color-accent] focus:bg-white";
+  "surface-input mt-1.5 block w-full rounded-md px-3.5 py-2.5 text-sm text-[--color-fg] placeholder:text-[--color-fg-dim]";
 
 export function HeroForm({ services }: Props) {
   const [pending, startTransition] = useTransition();
@@ -38,12 +38,12 @@ export function HeroForm({ services }: Props) {
           if (r.ok) formRef.current?.reset();
         });
       }}
-      className="relative rounded-2xl bg-white/90 backdrop-blur-md p-7 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.6),0_0_60px_-10px_rgba(24,123,239,0.4)] ring-1 ring-white/40"
+      className="surface-elevated relative rounded-2xl p-7"
     >
-      <p className="text-lg font-bold text-slate-900">
+      <p className="text-lg font-bold text-[--color-fg]">
         Déjanos ayudarte a crear algo increíble
       </p>
-      <p className="mt-1 text-sm text-slate-500">
+      <p className="mt-1 text-sm text-[--color-fg-muted]">
         Te contestamos en menos de 24 horas.
       </p>
 
@@ -53,8 +53,8 @@ export function HeroForm({ services }: Props) {
         <Field name="phone" label="Teléfono" type="tel" required />
 
         <label className="block">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Servicio de interés <span className="text-[--color-accent]">*</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-[--color-fg-muted]">
+            Servicio de interés <span className="text-[#187bef]">*</span>
           </span>
           <select
             name="service"
@@ -104,7 +104,7 @@ export function HeroForm({ services }: Props) {
       {result && (
         <p
           className={`mt-3 text-sm ${
-            result.ok ? "text-emerald-600" : "text-red-600"
+            result.ok ? "text-emerald-400" : "text-red-400"
           }`}
         >
           {result.ok
@@ -129,8 +129,8 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-        {label} {required && <span className="text-[--color-accent]">*</span>}
+      <span className="text-xs font-semibold uppercase tracking-wider text-[--color-fg-muted]">
+        {label} {required && <span className="text-[#187bef]">*</span>}
       </span>
       <input name={name} type={type} required={required} className={inputClass} />
     </label>

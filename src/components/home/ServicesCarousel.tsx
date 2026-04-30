@@ -97,7 +97,7 @@ export function ServicesCarousel({ services }: Props) {
             <Link
               key={s.slug}
               href={`/servicios/${s.slug}`}
-              className="group relative flex w-[280px] shrink-0 flex-col rounded-2xl bg-[#16181f] px-6 pb-6 pt-4 ring-1 ring-white/[0.05] transition-all duration-300 hover:-translate-y-1.5 hover:bg-[#1a1d27] hover:ring-[--color-accent]/40 hover:shadow-[0_20px_40px_-15px_rgba(24,123,239,0.4)] sm:w-[320px]"
+              className="surface surface-hover group relative flex w-[280px] shrink-0 flex-col rounded-2xl px-6 pb-6 pt-4 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_20px_40px_-15px_rgba(24,123,239,0.4)] sm:w-[320px]"
             >
               <div className="flex items-start justify-between">
                 <Image
@@ -107,7 +107,7 @@ export function ServicesCarousel({ services }: Props) {
                   height={44}
                   className="h-11 w-11"
                 />
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[--color-bg-elevated] text-[--color-fg-muted] transition-all group-hover:rotate-[-8deg] group-hover:bg-[--color-accent] group-hover:text-white">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-[--color-fg-muted] transition-all group-hover:rotate-[-8deg] group-hover:bg-[#187bef] group-hover:text-white">
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                     <path
                       d="M4 10L10 4M10 4H5M10 4V9"
@@ -148,7 +148,7 @@ function CarouselButton({
     <button
       onClick={onClick}
       disabled={disabled}
-      className="flex h-12 w-12 items-center justify-center rounded-full border border-[--color-border-strong] bg-[--color-bg-elevated] text-[--color-fg] transition-all hover:scale-105 hover:border-[--color-accent] hover:text-[--color-accent] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:scale-100"
+      className="surface flex h-12 w-12 items-center justify-center rounded-full text-[--color-fg] transition-all hover:scale-105 hover:text-[#3a90f2] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:scale-100"
       {...rest}
     >
       <svg
