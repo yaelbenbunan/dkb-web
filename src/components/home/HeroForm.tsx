@@ -40,10 +40,10 @@ export function HeroForm({ services }: Props) {
       }}
       className="surface-elevated relative rounded-2xl p-7"
     >
-      <p className="text-lg font-bold text-[--color-fg]">
+      <p className="text-lg font-bold text-slate-900">
         Déjanos ayudarte a crear algo increíble
       </p>
-      <p className="mt-1 text-sm text-[--color-fg-muted]">
+      <p className="mt-1 text-sm text-slate-600">
         Te contestamos en menos de 24 horas.
       </p>
 
@@ -67,7 +67,7 @@ export function HeroForm({ services }: Props) {
         </div>
 
         <label className="block">
-          <span className="text-xs font-semibold uppercase tracking-wider text-[--color-fg-muted]">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">
             Servicio de interés <span className="text-[#187bef]">*</span>
           </span>
           <select
@@ -99,7 +99,7 @@ export function HeroForm({ services }: Props) {
       <button
         type="submit"
         disabled={pending}
-        className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-white px-6 text-base font-bold text-[#0c1c40] shadow-[0_8px_24px_-6px_rgba(0,0,0,0.5)] transition-all hover:-translate-y-0.5 hover:bg-[#e8f0ff] hover:shadow-[0_12px_32px_-6px_rgba(58,144,242,0.6)] disabled:opacity-60"
+        className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#187bef] px-6 text-base font-semibold text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.5)] transition-all hover:-translate-y-0.5 hover:bg-[#3a90f2] hover:shadow-[0_12px_32px_-6px_rgba(24,123,239,0.7)] disabled:opacity-60"
       >
         {pending ? "Enviando…" : "¡Quiero hacer algo increíble!"}
         {!pending && (

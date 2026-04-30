@@ -211,17 +211,17 @@ export default async function ServiceDetail({
           <div className="space-y-5">
             {service.ctaBox && (
               <div className="surface-elevated relative rounded-2xl p-7">
-                <p className="text-xl font-bold leading-tight text-[--color-fg]">
+                <p className="text-xl font-bold leading-tight text-slate-900">
                   {service.ctaBox.title}
                 </p>
                 {service.ctaBox.subtitle && (
-                  <p className="mt-2 text-sm text-[--color-fg-muted]">
+                  <p className="mt-2 text-sm text-slate-600">
                     {service.ctaBox.subtitle}
                   </p>
                 )}
                 <Link
                   href={service.ctaBox.buttonHref}
-                  className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-white px-6 text-base font-bold text-[#0c1c40] shadow-[0_8px_24px_-6px_rgba(0,0,0,0.5)] transition-all hover:-translate-y-0.5 hover:bg-[#e8f0ff]"
+                  className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#187bef] px-6 text-base font-semibold text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.5)] transition-all hover:-translate-y-0.5 hover:bg-[#3a90f2]"
                 >
                   {service.ctaBox.buttonText}
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">

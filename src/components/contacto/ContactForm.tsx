@@ -84,13 +84,13 @@ export function ContactForm({ services }: Props) {
             type="checkbox"
             name="privacy"
             required
-            className="mt-1 h-4 w-4 rounded border-[--color-border-strong] bg-[--color-bg] text-[--color-accent] focus:ring-[--color-accent]"
+            className="mt-1 h-4 w-4 rounded border-slate-300 bg-white text-[#187bef] focus:ring-[#187bef]"
           />
-          <span className="text-xs leading-relaxed text-[--color-fg-muted]">
+          <span className="text-xs leading-relaxed text-slate-600">
             Al enviar este formulario aceptas nuestra{" "}
             <Link
               href="/privacidad"
-              className="text-[--color-accent] hover:underline"
+              className="font-semibold text-[#187bef] hover:underline"
             >
               Política de privacidad
             </Link>
@@ -109,7 +109,7 @@ export function ContactForm({ services }: Props) {
         <button
           type="submit"
           disabled={pending}
-          className="mt-2 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-white px-6 text-base font-bold text-[#0c1c40] shadow-[0_8px_24px_-6px_rgba(0,0,0,0.5)] transition-all hover:-translate-y-0.5 hover:bg-[#e8f0ff] hover:shadow-[0_12px_32px_-6px_rgba(58,144,242,0.6)] disabled:opacity-60"
+          className="mt-2 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#187bef] px-6 text-base font-semibold text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.5)] transition-all hover:-translate-y-0.5 hover:bg-[#3a90f2] hover:shadow-[0_12px_32px_-6px_rgba(24,123,239,0.7)] disabled:opacity-60"
         >
           {pending ? "Enviando…" : "Enviar mensaje"}
           {!pending && (
@@ -138,13 +138,13 @@ export function ContactForm({ services }: Props) {
         )}
       </form>
 
-      <p className="mt-6 border-t border-[--color-border] pt-6 text-sm text-[--color-fg-muted]">
+      <p className="mt-6 border-t border-slate-200 pt-6 text-sm text-slate-600">
         ¿Prefieres hablar directamente?{" "}
         <a
           href={CONTACT_INFO.calendly}
           target="_blank"
           rel="noopener noreferrer"
-          className="font-medium text-[--color-accent] hover:text-[--color-accent-hover]"
+          className="font-semibold text-[#187bef] hover:text-[#3a90f2]"
         >
           👉 Agenda una llamada
         </a>
@@ -171,7 +171,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="text-xs font-medium uppercase tracking-wider text-[--color-fg-muted]">
+      <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">
         {label} {required && <span className="text-[--color-accent]">*</span>}
       </span>
       <input
@@ -196,7 +196,7 @@ function TextareaField({
 }) {
   return (
     <label className="block">
-      <span className="text-xs font-medium uppercase tracking-wider text-[--color-fg-muted]">
+      <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">
         {label} <span className="text-[--color-accent]">*</span>
       </span>
       <textarea name={name} required rows={rows} className={inputClass} />
@@ -219,7 +219,7 @@ function SelectField({
 }) {
   return (
     <label className="block">
-      <span className="text-xs font-medium uppercase tracking-wider text-[--color-fg-muted]">
+      <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">
         {label} {required && <span className="text-[--color-accent]">*</span>}
       </span>
       <select
