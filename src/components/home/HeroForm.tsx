@@ -67,7 +67,7 @@ export function HeroForm({ services }: Props) {
         </div>
 
         <label className="block">
-          <span className="text-xs font-semibold uppercase tracking-wider text-[#1e3a8a]">
+          <span className="text-xs font-bold uppercase tracking-wider text-[#187bef]">
             Servicio de interés <span className="text-[#187bef]">*</span>
           </span>
           <select
