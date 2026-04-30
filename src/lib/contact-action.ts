@@ -14,8 +14,11 @@ export async function sendContactEmail(
   const parsed = contactSchema.safeParse({
     name: formData.get("name"),
     email: formData.get("email"),
-    company: formData.get("company"),
+    phone: formData.get("phone"),
+    service: formData.get("service"),
+    source: formData.get("source"),
     message: formData.get("message"),
+    privacy: formData.get("privacy") ?? "",
     website: formData.get("website") ?? "",
     formLoadedAt: Number(formData.get("formLoadedAt")),
   });
@@ -33,7 +36,7 @@ export async function sendContactEmail(
   }
 
   const resend = new Resend(apiKey);
-  const { name, email, company, message } = parsed.data;
+  const { name, email, phone, service, source, message } = parsed.data;
 
   const { error } = await resend.emails.send({
     from,
@@ -43,7 +46,9 @@ export async function sendContactEmail(
     text: [
       `Nombre: ${name}`,
       `Email: ${email}`,
-      `Empresa: ${company || "-"}`,
+      `Teléfono: ${phone}`,
+      `Servicio de interés: ${service}`,
+      `Cómo nos conoció: ${source}`,
       "",
       "Mensaje:",
       message,

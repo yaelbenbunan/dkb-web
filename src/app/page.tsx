@@ -1,15 +1,26 @@
 import { Hero } from "@/components/home/Hero";
-import { ServicesGrid } from "@/components/home/ServicesGrid";
-import { FeaturedCases } from "@/components/home/FeaturedCases";
-import { ContactCTA } from "@/components/home/ContactCTA";
+import { PartnersMarquee } from "@/components/home/PartnersMarquee";
+import { AboutFeatures } from "@/components/home/AboutFeatures";
+import { ServicesCarousel } from "@/components/home/ServicesCarousel";
+import { Testimonials } from "@/components/home/Testimonials";
+import { ContactSection } from "@/components/contacto/ContactSection";
+import { getAllServices } from "@/lib/content";
 
 export default function Home() {
+  const services = getAllServices().map((s) => ({
+    slug: s.slug,
+    title: s.title,
+    shortDescription: s.shortDescription,
+  }));
+
   return (
     <>
       <Hero />
-      <ServicesGrid />
-      <FeaturedCases />
-      <ContactCTA />
+      <PartnersMarquee />
+      <AboutFeatures />
+      <ServicesCarousel services={services} />
+      <Testimonials />
+      <ContactSection />
     </>
   );
 }
