@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Container } from "@/components/ui/Container";
 import { RotatingWord } from "./RotatingWord";
 import { HeroForm } from "./HeroForm";
@@ -10,17 +11,39 @@ export function Hero() {
   }));
 
   return (
-    <section className="relative overflow-hidden">
-      {/* Glow decorativo radial detrás del texto */}
+    <section className="relative isolate overflow-hidden">
+      {/* Imagen de fondo */}
+      <Image
+        src="/img/home/hero-bg.png"
+        alt=""
+        fill
+        priority
+        sizes="100vw"
+        className="-z-20 object-cover object-center"
+      />
+
+      {/* Overlay degradado: oscurece la izquierda (donde va el texto) y suaviza
+          la derecha (donde va el form). Asegura contraste sea cual sea la imagen. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-0"
+        className="absolute inset-0 -z-10"
         style={{
           background:
-            "radial-gradient(ellipse 60% 50% at 20% 20%, rgba(24,123,239,0.18), transparent 70%)",
+            "linear-gradient(90deg, rgba(14,16,21,0.95) 0%, rgba(14,16,21,0.75) 50%, rgba(14,16,21,0.6) 100%)",
         }}
       />
-      <Container className="relative z-10 grid gap-12 py-20 md:py-28 lg:grid-cols-[1.2fr_1fr] lg:gap-16">
+
+      {/* Glow azul decorativo arriba a la izquierda */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{
+          background:
+            "radial-gradient(ellipse 60% 50% at 15% 20%, rgba(24,123,239,0.2), transparent 70%)",
+        }}
+      />
+
+      <Container className="relative grid gap-12 py-24 md:py-32 lg:grid-cols-[1.2fr_1fr] lg:gap-16">
         <div className="flex flex-col justify-center">
           <p className="text-sm font-medium uppercase tracking-widest text-[--color-accent]">
             dinkbit · España

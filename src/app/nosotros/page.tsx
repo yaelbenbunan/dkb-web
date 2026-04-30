@@ -1,24 +1,33 @@
 import { Container } from "@/components/ui/Container";
+import { WhyUs } from "@/components/nosotros/WhyUs";
+import { Counters } from "@/components/nosotros/Counters";
+import { PartnersMarquee } from "@/components/home/PartnersMarquee";
+import { TeamGrid } from "@/components/nosotros/TeamGrid";
 
 export const metadata = {
   title: "Nosotros — dinkbit",
-  description: "Quiénes somos. Agencia digital con sede en España.",
+  description:
+    "Equipo multidisciplinar con 15+ años de experiencia. Diseño, desarrollo, paid media y SEO bajo el mismo techo.",
 };
 
 export default function NosotrosPage() {
   return (
-    <article>
-      <header className="border-b border-[--color-border] bg-[--color-bg-subtle] py-24">
+    <>
+      <header className="border-b border-[--color-border] bg-[--color-bg-subtle] py-20 md:py-24">
         <Container>
-          <p className="text-sm font-medium text-[--color-accent]">Nosotros</p>
-          <h1 className="mt-2 text-4xl font-bold tracking-tight md:text-5xl">
-            Una agencia digital, hecha para construir.
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-[--color-accent]">
+            Nosotros
+          </p>
+          <h1 className="mt-4 text-4xl font-bold leading-[1.05] tracking-tight md:text-6xl">
+            Una agencia digital,{" "}
+            <span className="text-[--color-accent]">hecha para construir.</span>
           </h1>
         </Container>
       </header>
-      <Container className="prose prose-invert max-w-3xl py-16">
-        <p>Texto provisional. A redactar con los textos reales del cliente.</p>
-      </Container>
-    </article>
+      <WhyUs />
+      <Counters />
+      <PartnersMarquee />
+      <TeamGrid />
+    </>
   );
 }

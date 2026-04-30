@@ -1,6 +1,6 @@
 import { Container } from "@/components/ui/Container";
 import { CaseFilters } from "@/components/casos/CaseFilters";
-import { getAllCaseStudies, getAllServices } from "@/lib/content";
+import { getAllCaseStudies } from "@/lib/content";
 
 export const metadata = {
   title: "Casos de éxito — dinkbit",
@@ -10,18 +10,23 @@ export const metadata = {
 
 export default function CasosPage() {
   const caseStudies = getAllCaseStudies();
-  const serviceTags = getAllServices().map((s) => ({
-    slug: s.slug,
-    title: s.title,
-  }));
 
   return (
-    <Container className="py-24">
-      <h1 className="text-4xl font-bold tracking-tight">Casos de éxito</h1>
-      <p className="mt-4 max-w-2xl text-slate-600">
-        Resultados reales de marcas con las que hemos trabajado.
-      </p>
-      <CaseFilters caseStudies={caseStudies} serviceTags={serviceTags} />
-    </Container>
+    <>
+      <header className="border-b border-[--color-border] bg-[--color-bg-subtle] py-20 md:py-24">
+        <Container>
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-[--color-accent]">
+            Casos de éxito
+          </p>
+          <h1 className="mt-4 text-4xl font-bold leading-[1.05] tracking-tight md:text-6xl">
+            Resultados reales de marcas{" "}
+            <span className="text-[--color-accent]">como la tuya.</span>
+          </h1>
+        </Container>
+      </header>
+      <Container className="py-20">
+        <CaseFilters caseStudies={caseStudies} />
+      </Container>
+    </>
   );
 }
