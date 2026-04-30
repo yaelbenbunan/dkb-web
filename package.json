@@ -12,9 +12,12 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@next/mdx": "^16.2.4",
+    "@types/mdx": "^2.0.13",
     "clsx": "^2.1.1",
     "gray-matter": "^4.0.3",
     "next": "^16.2.4",
+    "next-mdx-remote-client": "^2.1.10",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwind-merge": "^3.5.0"
@@ -22,6 +25,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",
     "@tailwindcss/postcss": "^4",
+    "@tailwindcss/typography": "^0.5.19",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^20",
