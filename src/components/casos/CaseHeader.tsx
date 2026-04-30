@@ -12,17 +12,31 @@ export function CaseHeader({ caseStudy, serviceTitleBySlug }: Props) {
   const hasSocial = caseStudy.social && hasAnySocial(caseStudy.social);
 
   return (
-    <header className="relative isolate overflow-hidden py-20 md:py-24">
+    <header className="relative isolate overflow-hidden">
+      {/* Bg azul tintado para destacar */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 spotlight-accent"
-        style={{ ["--sx" as string]: "20%", ["--sy" as string]: "30%" }}
+        className="absolute inset-0 -z-20"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(12,28,64,0.92) 0%, rgba(8,17,42,1) 100%)",
+        }}
+      />
+      {/* Spotlight azul fuerte */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{
+          background:
+            "radial-gradient(ellipse 50% 65% at 20% 30%, rgba(58,144,242,0.4), transparent 65%)",
+        }}
       />
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-30 fade-edges-y"
       />
-      <Container className="grid gap-12 md:grid-cols-[1fr_auto] md:items-start md:gap-16">
+
+      <Container className="relative grid gap-12 py-20 md:grid-cols-[1fr_auto] md:items-center md:gap-16 md:py-24">
         {/* Izq: title → description → date → tags */}
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
@@ -66,9 +80,9 @@ export function CaseHeader({ caseStudy, serviceTitleBySlug }: Props) {
           )}
         </div>
 
-        {/* Derecha: logo + iconos sociales debajo */}
+        {/* Derecha: logo + iconos sociales centrados respecto al logo */}
         {(caseStudy.clientLogo || hasSocial) && (
-          <div className="flex flex-col items-start gap-5 md:items-end">
+          <div className="flex w-fit flex-col items-center gap-5">
             {caseStudy.clientLogo && (
               <Image
                 src={caseStudy.clientLogo}
@@ -79,7 +93,7 @@ export function CaseHeader({ caseStudy, serviceTitleBySlug }: Props) {
               />
             )}
             {hasSocial && caseStudy.social && (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center gap-3">
                 {caseStudy.social.website && (
                   <SocialLink
                     href={caseStudy.social.website}
@@ -156,6 +170,12 @@ export function CaseHeader({ caseStudy, serviceTitleBySlug }: Props) {
           </div>
         )}
       </Container>
+
+      {/* Línea brillante inferior */}
+      <div
+        aria-hidden
+        className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#187bef] to-transparent"
+      />
     </header>
   );
 }

@@ -38,7 +38,7 @@ export default async function ServiceDetail({
 
   return (
     <article>
-      {/* Hero del servicio: bg image + capas decorativas + chip y línea inferior brillante */}
+      {/* Hero del servicio: bg image + overlay azul + glow + línea inferior */}
       <header className="relative isolate overflow-hidden">
         <Image
           src="/img/servicios/hero-desarrollo-web1.png"
@@ -46,75 +46,68 @@ export default async function ServiceDetail({
           fill
           priority
           sizes="100vw"
-          className="-z-30 object-cover object-center opacity-50"
+          className="-z-30 object-cover object-center opacity-45"
         />
+        {/* Overlay con tinte azul corporativo */}
         <div
           aria-hidden
           className="absolute inset-0 -z-20"
           style={{
             background:
-              "linear-gradient(180deg, rgba(8,9,13,0.55) 0%, rgba(14,16,21,0.85) 100%)",
+              "linear-gradient(180deg, rgba(12,28,64,0.7) 0%, rgba(8,17,42,0.92) 100%)",
           }}
         />
+        {/* Spotlight azul */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 spotlight-accent"
-          style={{ ["--sx" as string]: "75%", ["--sy" as string]: "30%" }}
+          className="pointer-events-none absolute inset-0 -z-10"
+          style={{
+            background:
+              "radial-gradient(ellipse 60% 60% at 80% 30%, rgba(58,144,242,0.4), transparent 65%)",
+          }}
         />
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-30 fade-edges-y"
         />
 
-        <Container className="relative py-24 md:py-32">
-          {/* Breadcrumb minimal arriba */}
-          <nav className="mb-10 flex items-center gap-2 text-xs text-[--color-fg-dim]">
-            <Link
-              href="/servicios"
-              className="font-medium transition-colors hover:text-[--color-accent]"
-            >
-              Servicios
-            </Link>
-            <span aria-hidden>/</span>
-            <span className="text-[--color-fg-muted]">{service.title}</span>
-          </nav>
-
-          <div className="grid items-end gap-10 md:grid-cols-[auto_1fr] md:gap-12">
-            {/* Icono del servicio en card grande con glow */}
-            <div className="surface flex h-24 w-24 items-center justify-center rounded-3xl shadow-[0_0_50px_rgba(24,123,239,0.35)]">
+        <Container className="relative py-16 md:py-20">
+          <div className="grid items-center gap-8 md:grid-cols-[auto_1fr] md:gap-10">
+            {/* Icono del servicio en card grande con glow azul */}
+            <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-[#187bef] to-[#0c5ec4] shadow-[0_0_60px_rgba(24,123,239,0.5)]">
               <Image
                 src={`/img/icons/servicios/${service.slug}.png`}
                 alt=""
                 width={64}
                 height={64}
-                className="h-16 w-16"
+                className="h-16 w-16 brightness-0 invert"
               />
             </div>
             <div>
-              <p className="inline-flex items-center gap-2 rounded-full bg-[#187bef]/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#3a90f2] ring-1 ring-[#187bef]/30">
+              <p className="inline-flex items-center gap-2 rounded-full bg-[#187bef]/20 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-white ring-1 ring-[#187bef]/40">
                 <span className="relative inline-flex h-1.5 w-1.5">
-                  <span className="absolute inline-flex h-full w-full rounded-full bg-[#3a90f2] animate-ping-soft" />
-                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#3a90f2]" />
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-white animate-ping-soft" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
                 </span>
                 Servicio
               </p>
               <h1
-                className="mt-5 font-black leading-[1] tracking-tight"
+                className="mt-4 font-black leading-[1] tracking-tight text-white"
                 style={{ fontSize: "var(--text-display-lg)" }}
               >
                 {service.title}
               </h1>
-              <p className="mt-5 max-w-2xl text-lg leading-relaxed text-[--color-fg-muted] md:text-xl">
+              <p className="mt-4 max-w-2xl text-lg leading-relaxed text-[#cfdcf2] md:text-xl">
                 {service.shortDescription}
               </p>
             </div>
           </div>
         </Container>
 
-        {/* Línea brillante inferior que separa del cuerpo */}
+        {/* Línea brillante inferior */}
         <div
           aria-hidden
-          className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#187bef]/60 to-transparent"
+          className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#187bef] to-transparent"
         />
       </header>
 

@@ -154,7 +154,7 @@ export function ContactForm({ services }: Props) {
 }
 
 const inputClass =
-  "surface-input mt-1.5 block w-full rounded-md px-3.5 py-2.5 text-sm text-[--color-fg] placeholder:text-[--color-fg-dim]";
+  "surface-input mt-1.5 block w-full rounded-md px-3.5 py-2.5 text-sm";
 
 function Field({
   name,

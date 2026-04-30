@@ -13,7 +13,7 @@ interface Props {
 }
 
 const inputClass =
-  "surface-input mt-1.5 block w-full rounded-md px-3.5 py-2.5 text-sm text-[--color-fg] placeholder:text-[--color-fg-dim]";
+  "surface-input mt-1.5 block w-full rounded-md px-3.5 py-2.5 text-sm";
 
 export function HeroForm({ services }: Props) {
   const [pending, startTransition] = useTransition();
@@ -145,8 +145,8 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="text-xs font-semibold uppercase tracking-wider text-[--color-fg-muted]">
-        {label} {required && <span className="text-[#187bef]">*</span>}
+      <span className="text-xs font-bold uppercase tracking-wider text-[#187bef]">
+        {label} {required && <span>*</span>}
       </span>
       <input
         name={name}
