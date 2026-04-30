@@ -27,8 +27,8 @@ export default function ServiciosPage() {
             Servicios
           </p>
           <h1
-            className="mt-6 max-w-4xl font-black leading-[0.95] tracking-tight"
-            style={{ fontSize: "var(--text-display-xl)" }}
+            className="mt-6 max-w-3xl font-black leading-[1] tracking-tight"
+            style={{ fontSize: "var(--text-display-lg)" }}
           >
             Todo lo que necesita una marca para{" "}
             <span className="text-[--color-accent]">crecer en digital.</span>

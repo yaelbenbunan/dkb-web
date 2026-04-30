@@ -38,7 +38,7 @@ export function HeroForm({ services }: Props) {
           if (r.ok) formRef.current?.reset();
         });
       }}
-      className="relative rounded-2xl bg-white p-7 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.6),0_0_60px_-10px_rgba(24,123,239,0.4)]"
+      className="relative rounded-2xl bg-white/90 backdrop-blur-md p-7 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.6),0_0_60px_-10px_rgba(24,123,239,0.4)] ring-1 ring-white/40"
     >
       <p className="text-lg font-bold text-slate-900">
         Déjanos ayudarte a crear algo increíble
@@ -85,7 +85,7 @@ export function HeroForm({ services }: Props) {
       <button
         type="submit"
         disabled={pending}
-        className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[--color-accent] px-6 text-base font-semibold text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.6)] transition-all hover:bg-[--color-accent-hover] hover:shadow-[0_12px_32px_-6px_rgba(24,123,239,0.7)] disabled:opacity-60"
+        className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#187bef] px-6 text-base font-semibold text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.6)] transition-all hover:bg-[#3a90f2] hover:shadow-[0_12px_32px_-6px_rgba(24,123,239,0.7)] disabled:opacity-60"
       >
         {pending ? "Enviando…" : "¡Quiero hacer algo increíble!"}
         {!pending && (

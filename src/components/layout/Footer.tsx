@@ -6,7 +6,24 @@ import { CONTACT_INFO } from "@/lib/contact-info";
 
 export function Footer() {
   return (
-    <footer className="relative isolate overflow-hidden bg-[--color-bg-deep] pt-20">
+    <footer className="relative isolate overflow-hidden bg-[#070810] pt-20">
+      {/* Línea superior azul para separar del contenido anterior */}
+      <div
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#187bef]/60 to-transparent"
+      />
+      {/* Spotlight azul en la parte superior */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 spotlight-accent"
+        style={{ ["--sx" as string]: "50%", ["--sy" as string]: "0%" }}
+      />
+      {/* Textura de grid */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-50 fade-edges-y"
+      />
+      {/* Dots sutiles encima */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10 bg-dots opacity-30"

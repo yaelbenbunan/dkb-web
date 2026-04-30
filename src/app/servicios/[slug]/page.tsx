@@ -37,22 +37,22 @@ export default async function ServiceDetail({
 
   return (
     <article>
-      {/* Hero del servicio con foto de fondo + overlay fuerte */}
-      <header className="relative isolate overflow-hidden py-24 md:py-32">
+      {/* Hero del servicio con foto de fondo (textura de código) */}
+      <header className="relative isolate overflow-hidden py-24 md:py-28">
         <Image
-          src="/img/home/hero-bg-alt-meeting.png"
+          src="/img/servicios/hero-desarrollo-web1.png"
           alt=""
           fill
           priority
           sizes="100vw"
-          className="-z-30 object-cover object-center opacity-30"
+          className="-z-30 object-cover object-center opacity-50"
         />
         <div
           aria-hidden
           className="absolute inset-0 -z-20"
           style={{
             background:
-              "linear-gradient(180deg, rgba(8,9,13,0.85) 0%, rgba(14,16,21,0.92) 100%)",
+              "linear-gradient(180deg, rgba(8,9,13,0.6) 0%, rgba(14,16,21,0.85) 100%)",
           }}
         />
         <div
@@ -60,13 +60,9 @@ export default async function ServiceDetail({
           className="pointer-events-none absolute inset-0 -z-10 spotlight-accent"
           style={{ ["--sx" as string]: "75%", ["--sy" as string]: "30%" }}
         />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-30 fade-edges-y"
-        />
 
-        <Container className="grid gap-10 md:grid-cols-[auto_1fr] md:items-end md:gap-12">
-          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-[--color-bg-elevated] shadow-[0_0_40px_rgba(24,123,239,0.3)] ring-1 ring-[--color-accent]/30">
+        <Container className="flex flex-col items-start gap-6">
+          <div className="flex items-center gap-4">
             <Image
               src={`/img/icons/servicios/${service.slug}.png`}
               alt=""
@@ -74,21 +70,19 @@ export default async function ServiceDetail({
               height={56}
               className="h-14 w-14"
             />
-          </div>
-          <div>
             <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
-              {service.title}
-            </p>
-            <h1
-              className="mt-4 font-black leading-[0.95] tracking-tight"
-              style={{ fontSize: "var(--text-display-lg)" }}
-            >
-              {service.titleLong ?? service.title}
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg text-[--color-fg-muted] md:text-xl">
-              {service.shortDescription}
+              Servicio
             </p>
           </div>
+          <h1
+            className="font-black leading-[1] tracking-tight"
+            style={{ fontSize: "var(--text-display-lg)" }}
+          >
+            {service.title}
+          </h1>
+          <p className="max-w-2xl text-lg text-[--color-fg-muted] md:text-xl">
+            {service.shortDescription}
+          </p>
         </Container>
       </header>
 
@@ -174,15 +168,15 @@ export default async function ServiceDetail({
                   <li key={c.slug}>
                     <Link
                       href={`/casos-de-exito/${c.slug}`}
-                      className="flex h-24 items-center justify-center rounded-2xl bg-[#16181f] p-4 ring-1 ring-white/[0.05] transition-all hover:-translate-y-0.5 hover:ring-[--color-accent]/40"
+                      className="group flex aspect-[3/2] items-center justify-center rounded-2xl bg-[#16181f] p-6 ring-1 ring-white/[0.05] transition-all hover:-translate-y-0.5 hover:ring-[--color-accent]/40"
                     >
                       {c.clientLogo ? (
                         <Image
                           src={c.clientLogo}
                           alt={c.client}
-                          width={140}
-                          height={56}
-                          className="max-h-12 w-auto object-contain opacity-80 transition group-hover:opacity-100"
+                          width={180}
+                          height={80}
+                          className="max-h-16 w-auto object-contain opacity-80 transition group-hover:opacity-100"
                         />
                       ) : (
                         <span className="text-sm font-medium text-[--color-fg]">
@@ -200,9 +194,9 @@ export default async function ServiceDetail({
         {/* Aside sticky */}
         <aside className="lg:sticky lg:top-28 lg:h-max lg:self-start">
           <div className="space-y-5">
-            {/* CTA Box estilo formulario blanco */}
+            {/* CTA Box mismo estilo que el formulario del Hero */}
             {service.ctaBox && (
-              <div className="relative overflow-hidden rounded-2xl bg-white p-7 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.6),0_0_60px_-10px_rgba(24,123,239,0.4)]">
+              <div className="relative rounded-2xl bg-white/90 backdrop-blur-md p-7 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.6),0_0_60px_-10px_rgba(24,123,239,0.4)] ring-1 ring-white/40">
                 <p className="text-xl font-bold leading-tight text-slate-900">
                   {service.ctaBox.title}
                 </p>
@@ -213,7 +207,7 @@ export default async function ServiceDetail({
                 )}
                 <Link
                   href={service.ctaBox.buttonHref}
-                  className="mt-6 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[--color-accent] px-6 text-sm font-semibold text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.6)] transition-all hover:bg-[--color-accent-hover]"
+                  className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#187bef] px-6 text-base font-semibold text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.6)] transition-all hover:bg-[#3a90f2]"
                 >
                   {service.ctaBox.buttonText}
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
