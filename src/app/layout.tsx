@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Source_Sans_3 } from "next/font/google";
 import "./globals.css";
+import { Header } from "@/components/layout/Header";
+import { Footer } from "@/components/layout/Footer";
 
 const sourceSans = Source_Sans_3({
   subsets: ["latin"],
@@ -20,7 +22,11 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="es" className={sourceSans.variable}>
-      <body>{children}</body>
+      <body>
+        <Header />
+        <main className="min-h-[calc(100vh-4rem)]">{children}</main>
+        <Footer />
+      </body>
     </html>
   );
 }
