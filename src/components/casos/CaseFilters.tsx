@@ -55,12 +55,13 @@ export function CaseFilters({ caseStudies, filterTags = DEFAULT_TABS }: Props) {
           No hay casos para este filtro todavía.
         </p>
       ) : (
-        <ul className="mt-14 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <ul className="mt-14 grid grid-cols-2 gap-x-8 gap-y-12 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {filtered.map((c) => (
             <li key={c.slug}>
               <Link
                 href={`/casos-de-exito/${c.slug}`}
-                className="surface surface-hover group flex aspect-[4/3] flex-col items-center justify-center rounded-2xl p-8 transition-all hover:-translate-y-1 hover:shadow-[0_20px_40px_-15px_rgba(24,123,239,0.4)]"
+                className="group flex aspect-[3/2] items-center justify-center transition-transform duration-300 hover:scale-105"
+                aria-label={c.client}
               >
                 {c.clientLogo ? (
                   <Image
@@ -68,10 +69,10 @@ export function CaseFilters({ caseStudies, filterTags = DEFAULT_TABS }: Props) {
                     alt={c.client}
                     width={240}
                     height={120}
-                    className="max-h-24 w-auto object-contain transition group-hover:scale-105"
+                    className="max-h-20 w-auto object-contain brightness-0 invert opacity-60 transition-all duration-300 group-hover:brightness-100 group-hover:invert-0 group-hover:opacity-100"
                   />
                 ) : (
-                  <span className="text-xl font-bold text-[--color-fg]">
+                  <span className="text-xl font-bold text-[--color-fg-muted] transition-colors group-hover:text-[--color-fg]">
                     {c.client}
                   </span>
                 )}

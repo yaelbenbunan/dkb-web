@@ -221,7 +221,7 @@ export default async function ServiceDetail({
                 )}
                 <Link
                   href={service.ctaBox.buttonHref}
-                  className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#187bef] px-6 text-base font-semibold text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.6)] transition-all hover:bg-[#3a90f2]"
+                  className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-white px-6 text-base font-bold text-[#0c1c40] shadow-[0_8px_24px_-6px_rgba(0,0,0,0.5)] transition-all hover:-translate-y-0.5 hover:bg-[#e8f0ff]"
                 >
                   {service.ctaBox.buttonText}
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">

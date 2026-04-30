@@ -32,7 +32,7 @@ export function RelatedCasesMarquee({ cases }: Props) {
           <Link
             key={`${c.slug}-${i}`}
             href={`/casos-de-exito/${c.slug}`}
-            className="surface surface-hover group flex aspect-[3/2] w-44 shrink-0 items-center justify-center rounded-2xl p-6 sm:w-56"
+            className="group flex aspect-[3/2] w-40 shrink-0 items-center justify-center sm:w-48"
             aria-label={c.client}
           >
             {c.clientLogo ? (
@@ -41,10 +41,10 @@ export function RelatedCasesMarquee({ cases }: Props) {
                 alt={c.client}
                 width={180}
                 height={80}
-                className="max-h-14 w-auto object-contain opacity-75 transition group-hover:opacity-100"
+                className="max-h-14 w-auto object-contain brightness-0 invert opacity-60 transition-all duration-300 group-hover:scale-110 group-hover:brightness-100 group-hover:invert-0 group-hover:opacity-100"
               />
             ) : (
-              <span className="text-base font-semibold text-[--color-fg]">
+              <span className="text-base font-semibold text-[--color-fg-muted] transition-colors group-hover:text-[--color-fg]">
                 {c.client}
               </span>
             )}
