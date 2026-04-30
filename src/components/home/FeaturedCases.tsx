@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
+import { CaseCard } from "@/components/casos/CaseCard";
+import { getAllCaseStudies } from "@/lib/content";
 
 export function FeaturedCases() {
+  const cases = getAllCaseStudies().slice(0, 3);
+  if (cases.length === 0) return null;
   return (
     <section className="bg-slate-50 py-24">
       <Container>
@@ -14,9 +18,11 @@ export function FeaturedCases() {
             Ver todos →
           </Link>
         </div>
-        <p className="mt-4 text-slate-600">
-          Próximamente, una selección de los proyectos que más nos han marcado.
-        </p>
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {cases.map((c) => (
+            <CaseCard key={c.slug} caseStudy={c} />
+          ))}
+        </div>
       </Container>
     </section>
   );
