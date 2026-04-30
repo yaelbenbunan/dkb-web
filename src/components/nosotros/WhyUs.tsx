@@ -18,35 +18,49 @@ const KPIS = [
 
 export function WhyUs() {
   return (
-    <section className="py-24 md:py-32">
-      <Container className="grid gap-12 lg:grid-cols-2 lg:gap-16">
+    <section className="relative isolate overflow-hidden py-28 md:py-36">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 bg-grid-fine opacity-30 fade-edges-y"
+      />
+      <Container className="grid gap-16 lg:grid-cols-2 lg:gap-20">
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-[--color-accent]">
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
             Por qué dinkbit
           </p>
-          <h2 className="mt-4 text-3xl font-bold leading-[1.1] tracking-tight md:text-4xl">
+          <h2
+            className="mt-6 font-black leading-[0.95] tracking-tight"
+            style={{ fontSize: "var(--text-display-md)" }}
+          >
             Lo que hacemos importa, pero{" "}
-            <span className="text-[--color-accent]">cómo lo hacemos</span> marca
-            la diferencia.
+            <span className="italic text-[--color-accent]">cómo lo hacemos</span>{" "}
+            marca la diferencia.
           </h2>
 
-          <ul className="mt-10 space-y-8">
-            {KPIS.map((k) => (
-              <li key={k.title} className="border-l-2 border-[--color-accent] pl-6">
-                <p className="text-lg font-semibold text-[--color-fg]">{k.title}</p>
+          <ul className="mt-12 space-y-10">
+            {KPIS.map((k, i) => (
+              <li key={k.title} className="relative pl-12">
+                <span className="absolute left-0 top-1 flex h-8 w-8 items-center justify-center rounded-full bg-[--color-accent-soft] font-bold text-[--color-accent]">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <p className="text-xl font-bold text-[--color-fg]">{k.title}</p>
                 <p className="mt-2 text-[--color-fg-muted]">{k.body}</p>
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="relative aspect-[4/5] overflow-hidden rounded-3xl border border-[--color-border] bg-[--color-bg-elevated] sm:aspect-[5/6] lg:aspect-auto lg:min-h-[600px]">
+        <div className="relative aspect-[4/5] overflow-hidden rounded-3xl bg-[--color-bg-elevated] sm:aspect-[5/6] lg:aspect-auto lg:min-h-[600px]">
           <Image
             src="/img/nosotros/mosaico-oficina.png"
             alt="Equipo dinkbit en la oficina"
             fill
             sizes="(min-width: 1024px) 50vw, 100vw"
             className="object-cover"
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-[--color-bg-deep]/60 via-transparent to-[--color-accent]/10"
           />
         </div>
       </Container>

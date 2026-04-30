@@ -6,11 +6,19 @@ import type { CaseStudy } from "@/lib/types";
 export function RelatedCases({ cases }: { cases: CaseStudy[] }) {
   if (cases.length === 0) return null;
   return (
-    <section className="border-t border-[--color-border] bg-[--color-bg-subtle] py-20 md:py-24">
+    <section className="relative isolate overflow-hidden bg-[--color-bg-deep] py-24 md:py-32">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 bg-dots opacity-30"
+      />
       <Container>
         <div className="flex items-end justify-between">
-          <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
-            Otros casos de éxito
+          <h2
+            className="font-black leading-[1.05] tracking-tight"
+            style={{ fontSize: "var(--text-display-md)" }}
+          >
+            Otros{" "}
+            <span className="italic text-[--color-accent]">casos de éxito.</span>
           </h2>
           <Link
             href="/casos-de-exito"

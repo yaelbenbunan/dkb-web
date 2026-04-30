@@ -13,14 +13,28 @@ export const metadata = {
 export default function NosotrosPage() {
   return (
     <>
-      <header className="border-b border-[--color-border] bg-[--color-bg-subtle] py-20 md:py-24">
+      <header className="relative isolate overflow-hidden py-28 md:py-36">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 spotlight-accent"
+          style={{ ["--sx" as string]: "70%", ["--sy" as string]: "30%" }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-50 fade-edges-y"
+        />
         <Container>
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-[--color-accent]">
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
             Nosotros
           </p>
-          <h1 className="mt-4 text-4xl font-bold leading-[1.05] tracking-tight md:text-6xl">
+          <h1
+            className="mt-8 max-w-5xl font-black leading-[0.92] tracking-tight"
+            style={{ fontSize: "var(--text-display-xl)" }}
+          >
             Una agencia digital,{" "}
-            <span className="text-[--color-accent]">hecha para construir.</span>
+            <span className="italic text-[--color-accent]">
+              hecha para construir.
+            </span>
           </h1>
         </Container>
       </header>

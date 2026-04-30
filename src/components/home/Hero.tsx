@@ -12,55 +12,80 @@ export function Hero() {
 
   return (
     <section className="relative isolate overflow-hidden">
-      {/* Imagen de fondo */}
+      {/* Foto de fondo */}
       <Image
         src="/img/home/hero-bg.png"
         alt=""
         fill
         priority
         sizes="100vw"
-        className="-z-20 object-cover object-center"
+        className="-z-30 object-cover object-center"
       />
 
-      {/* Overlay degradado: oscurece la izquierda (donde va el texto) y suaviza
-          la derecha (donde va el form). Asegura contraste sea cual sea la imagen. */}
+      {/* Overlay con gradiente azul sutil arriba-izq + oscurecido fuerte para legibilidad */}
       <div
         aria-hidden
-        className="absolute inset-0 -z-10"
+        className="absolute inset-0 -z-20"
         style={{
           background:
-            "linear-gradient(90deg, rgba(14,16,21,0.95) 0%, rgba(14,16,21,0.75) 50%, rgba(14,16,21,0.6) 100%)",
+            "linear-gradient(135deg, rgba(8,9,13,0.95) 0%, rgba(14,16,21,0.85) 40%, rgba(14,16,21,0.6) 100%)",
         }}
       />
 
-      {/* Glow azul decorativo arriba a la izquierda */}
+      {/* Spotlight radial azul */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10"
-        style={{
-          background:
-            "radial-gradient(ellipse 60% 50% at 15% 20%, rgba(24,123,239,0.2), transparent 70%)",
-        }}
+        className="pointer-events-none absolute inset-0 -z-10 spotlight-accent"
+        style={{ ["--sx" as string]: "20%", ["--sy" as string]: "30%" }}
       />
 
-      <Container className="relative grid gap-12 py-24 md:py-32 lg:grid-cols-[1.2fr_1fr] lg:gap-16">
+      {/* Grid decorativo */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-50 fade-edges-y"
+      />
+
+      {/* Noise grain */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 bg-noise opacity-[0.06] mix-blend-overlay"
+      />
+
+      <Container className="relative grid gap-14 py-28 md:py-36 lg:grid-cols-[1.3fr_1fr] lg:gap-20">
         <div className="flex flex-col justify-center">
-          <p className="text-sm font-medium uppercase tracking-widest text-[--color-accent]">
+          {/* Eyebrow con dot animado */}
+          <p className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
+            <span className="relative inline-flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-[--color-accent] animate-ping-soft" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-[--color-accent]" />
+            </span>
             dinkbit · España
           </p>
-          <h1 className="mt-5 text-4xl font-bold leading-[1.1] tracking-tight text-[--color-fg] md:text-6xl lg:text-7xl">
-            Hacemos
-            <br />
-            <RotatingWord />
-            <br />
-            increíbles.
+
+          {/* Headline con jerarquía marcada: "Hacemos" pequeño, palabra rotante MASIVA, "increíbles" mediano */}
+          <h1 className="mt-8 font-bold leading-[0.95] tracking-tight text-[--color-fg]">
+            <span className="block text-2xl font-medium uppercase tracking-[0.2em] text-[--color-fg-muted] md:text-3xl">
+              Hacemos
+            </span>
+            <span
+              className="mt-3 block font-black leading-[0.9]"
+              style={{ fontSize: "var(--text-display-xl)" }}
+            >
+              <RotatingWord />
+            </span>
+            <span className="mt-2 block text-4xl italic text-[--color-fg] md:text-6xl lg:text-7xl">
+              increíbles.
+            </span>
           </h1>
-          <p className="mt-8 max-w-xl text-lg leading-relaxed text-[--color-fg-muted]">
-            Somos un equipo multidisciplinar, donde la innovación y la
-            creatividad se unen para crear soluciones que impulsan tu marca y te
-            ayudan a conseguir los mejores resultados.
+
+          <p className="mt-10 max-w-xl text-lg leading-relaxed text-[--color-fg-muted] md:text-xl">
+            Somos un equipo <span className="text-[--color-fg]">multidisciplinar</span>,
+            donde la <span className="text-[--color-accent]">innovación</span> y la{" "}
+            <span className="text-[--color-accent]">creatividad</span> se unen para crear
+            soluciones que impulsan tu marca y te ayudan a conseguir los mejores resultados.
           </p>
         </div>
+
         <div className="flex items-center">
           <div className="w-full">
             <HeroForm services={services} />

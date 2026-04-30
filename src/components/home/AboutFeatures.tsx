@@ -32,27 +32,44 @@ const FEATURES: Feature[] = [
 
 export function AboutFeatures() {
   return (
-    <section className="relative overflow-hidden py-24 md:py-32">
-      <Container className="grid gap-16 lg:grid-cols-2 lg:gap-20">
+    <section className="relative isolate overflow-hidden py-28 md:py-40">
+      {/* Spotlight azul a la derecha */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 spotlight-accent"
+        style={{ ["--sx" as string]: "85%", ["--sy" as string]: "50%" }}
+      />
+      {/* Grid sutil */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 bg-grid-fine opacity-40 fade-edges-y"
+      />
+
+      <Container className="grid gap-20 lg:grid-cols-2 lg:gap-24">
         {/* Columna izquierda: Sobre dinkbit + globo */}
         <div className="relative">
-          <Globe
-            className="pointer-events-none absolute -left-12 -top-16 hidden h-[420px] w-[420px] opacity-60 md:block"
-          />
+          <Globe className="pointer-events-none absolute -left-20 -top-24 hidden h-[480px] w-[480px] opacity-70 md:block" />
+
           <div className="relative">
-            <p className="text-xs font-medium uppercase tracking-[0.2em] text-[--color-accent]">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
               Sobre dinkbit
             </p>
-            <h2 className="mt-4 text-3xl font-bold leading-[1.1] tracking-tight md:text-5xl">
-              Soluciones digitales <span className="text-[--color-accent]">end-to-end</span> para
-              marcas que quieren <span className="text-[--color-accent]">crecer</span>.
+            <h2
+              className="mt-6 font-black leading-[0.95] tracking-tight"
+              style={{ fontSize: "var(--text-display-lg)" }}
+            >
+              Soluciones digitales{" "}
+              <span className="text-[--color-accent]">end-to-end</span>
+              <br />
+              para marcas que quieren{" "}
+              <span className="italic text-[--color-accent]">crecer.</span>
             </h2>
-            <p className="mt-6 max-w-md text-[--color-fg-muted]">
+            <p className="mt-8 max-w-md text-lg text-[--color-fg-muted]">
               Diseñamos, desarrollamos y activamos proyectos digitales pensados
               para generar resultados medibles. Sin humo: análisis, ejecución e
               iteración constante.
             </p>
-            <div className="mt-8 flex flex-wrap items-center gap-4">
+            <div className="mt-10 flex flex-wrap items-center gap-4">
               <ButtonLink href="/nosotros" size="lg">
                 Conócenos
               </ButtonLink>
@@ -60,24 +77,8 @@ export function AboutFeatures() {
                 href="/casos-de-exito"
                 size="lg"
                 variant="ghost"
-                className="gap-2"
               >
-                Ver casos
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 14 14"
-                  fill="none"
-                  className="transition-transform group-hover:translate-x-0.5"
-                >
-                  <path
-                    d="M3 7h8m0 0L7 3m4 4l-4 4"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+                Ver casos →
               </ButtonLink>
             </div>
           </div>
@@ -85,15 +86,14 @@ export function AboutFeatures() {
 
         {/* Columna derecha: timeline 3 features */}
         <div className="relative">
-          {/* Línea vertical detrás de los iconos */}
           <div
             aria-hidden
             className="absolute left-7 top-7 h-[calc(100%-3.5rem)] w-px bg-gradient-to-b from-[--color-accent] via-[--color-border-strong] to-transparent"
           />
-          <ul className="space-y-10">
+          <ul className="space-y-12">
             {FEATURES.map((f) => (
               <li key={f.title} className="relative flex gap-6">
-                <div className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-[--color-border-strong] bg-[--color-bg-elevated]">
+                <div className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-[--color-border-strong] bg-[--color-bg-elevated] shadow-[0_0_30px_rgba(24,123,239,0.15)]">
                   <Image
                     src={f.iconSrc}
                     alt=""
@@ -103,7 +103,7 @@ export function AboutFeatures() {
                   />
                 </div>
                 <div className="pt-2">
-                  <p className="text-lg font-semibold text-[--color-fg]">
+                  <p className="text-2xl font-bold text-[--color-fg]">
                     {f.title}
                   </p>
                   <p className="mt-2 text-[--color-fg-muted]">{f.description}</p>

@@ -2,37 +2,30 @@
 @plugin "@tailwindcss/typography";
 
 /*
-  dkb-web v2 — paleta dark
-  Subido desde #0b0b0b a una gama con tinte azul sutil para que el accent
-  resuene mejor sin perder profundidad.
-
-  - bg base:        #0e1015   (dark cool, slight blue undertone)
-  - bg elevated:    #171a22   (cards, secciones contrastadas)
-  - bg subtle:      #13151c   (bandas sutiles)
-  - fg:             #f5f5f7   (texto principal)
-  - fg muted:       #a1a3ad   (texto secundario)
-  - fg dim:         #6c6f7a   (texto desactivado/captions)
-  - accent:         #187bef   (corporate blue)
-  - accent hover:   #3a90f2
-  - accent soft:    rgba(24,123,239,0.12) (fondos sutiles, hover de tabs)
-  - border:         #23262e   (sutil)
-  - border strong:  #2f3340   (cards definidas)
+  dkb-web v2 — paleta dark con énfasis en jerarquía visual
 */
 @theme {
   --color-bg: #0e1015;
   --color-bg-elevated: #171a22;
   --color-bg-subtle: #13151c;
+  --color-bg-deep: #08090d;
   --color-fg: #f5f5f7;
   --color-fg-muted: #a1a3ad;
   --color-fg-dim: #6c6f7a;
   --color-accent: #187bef;
   --color-accent-hover: #3a90f2;
   --color-accent-soft: rgba(24, 123, 239, 0.12);
+  --color-accent-glow: rgba(24, 123, 239, 0.5);
   --color-border: #23262e;
   --color-border-strong: #2f3340;
 
   --font-sans: var(--font-source-sans), system-ui, sans-serif;
   --font-display: var(--font-source-sans), system-ui, sans-serif;
+
+  /* Tipografía display extra-grande para impactar */
+  --text-display-xl: clamp(3.5rem, 9vw, 8rem);
+  --text-display-lg: clamp(2.75rem, 6.5vw, 5.5rem);
+  --text-display-md: clamp(2.25rem, 4.5vw, 3.75rem);
 }
 
 @layer base {
@@ -47,7 +40,51 @@
   ::selection { background: var(--color-accent); color: white; }
 }
 
-/* Marquee infinito (logos partners). Duplica el contenido y desplaza -50%. */
+/* ──────────────────────────────────────────────────────────────────────────
+   Texturas y fondos decorativos (composables, todos -z dentro de relative).
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* Grid sutil estilo blueprint */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+.bg-grid-fine {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Patrón de puntos */
+.bg-dots {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* Noise SVG inline (textura grain). Escala 1x1 con turbulencia. */
+.bg-noise {
+  background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.4 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/></svg>");
+  background-size: 200px 200px;
+}
+
+/* Spotlight radial decorativo en azul */
+.spotlight-accent {
+  background: radial-gradient(
+    ellipse 60% 50% at var(--sx, 50%) var(--sy, 30%),
+    rgba(24, 123, 239, 0.22),
+    transparent 70%
+  );
+}
+
+/* Mask de fade arriba/abajo para fondos que se desvanecen en los bordes */
+.fade-edges-y {
+  mask-image: linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%);
+}
+
+/* Marquee infinito (logos partners) */
 @keyframes marquee {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
@@ -57,8 +94,15 @@
 }
 .animate-marquee:hover { animation-play-state: paused; }
 
-/* Counters: aparición */
-@keyframes count-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+/* Pulse del dot animado en CTA boxes */
+@keyframes ping-soft {
+  0% { transform: scale(1); opacity: 0.6; }
+  75%, 100% { transform: scale(2.2); opacity: 0; }
+}
+.animate-ping-soft { animation: ping-soft 2s ease-out infinite; }
+
+/* Underline animado bajo enlaces destacados */
+@keyframes draw-underline {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
 }

@@ -8,16 +8,19 @@ export function CaseSections({ sections }: { sections: CaseSection[] }) {
     <div className="space-y-24 py-20 md:space-y-32 md:py-28">
       {sections.map((section, idx) => (
         <Container key={`${section.tag}-${idx}`}>
-          <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
+          <div className="grid gap-12 lg:grid-cols-2 lg:gap-20">
             {/* Izq: texto */}
             <div>
-              <p className="text-xs font-medium uppercase tracking-[0.2em] text-[--color-accent]">
+              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
                 {section.tag.replace(/-/g, " ")}
               </p>
-              <h2 className="mt-4 text-2xl font-bold leading-tight tracking-tight md:text-3xl">
+              <h2
+                className="mt-6 font-black leading-[1.05] tracking-tight"
+                style={{ fontSize: "var(--text-display-md)" }}
+              >
                 {section.title}
               </h2>
-              <div className="mt-6 space-y-4 text-[--color-fg-muted]">
+              <div className="mt-8 space-y-5 text-lg text-[--color-fg-muted]">
                 {section.body
                   .split(/\n\n+/)
                   .map((p, i) => (

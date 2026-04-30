@@ -16,33 +16,40 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 export function TeamGrid() {
-  // Orden distinto en cada render del cliente. SSR sirve el orden fijo, cliente
-  // hidrata con orden aleatorio (acepta hydration mismatch silencioso).
   const members = useMemo(() => shuffle(TEAM), []);
 
   return (
-    <section className="py-24 md:py-32">
+    <section className="relative isolate overflow-hidden py-28 md:py-36">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 bg-grid-fine opacity-30 fade-edges-y"
+      />
       <Container>
-        <div className="max-w-3xl">
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-[--color-accent]">
+        <div className="max-w-4xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
             Conoce a nuestro equipo
           </p>
-          <h2 className="mt-4 text-3xl font-bold leading-[1.1] tracking-tight md:text-4xl">
-            Lo que hacemos importa, pero quién lo hace marca la diferencia.
+          <h2
+            className="mt-6 font-black leading-[0.95] tracking-tight"
+            style={{ fontSize: "var(--text-display-md)" }}
+          >
+            Lo que hacemos importa, pero{" "}
+            <span className="italic text-[--color-accent]">quién lo hace</span>{" "}
+            marca la diferencia.
           </h2>
         </div>
 
-        <div className="mt-16 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="mt-20 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
           {members.map((m, i) => (
             <motion.div
               key={m.name}
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.4, delay: i * 0.05, ease: "easeOut" }}
+              transition={{ duration: 0.45, delay: i * 0.06, ease: "easeOut" }}
               className="group flex flex-col items-center text-center"
             >
-              <div className="aspect-square w-full overflow-hidden rounded-2xl border border-[--color-border] bg-[--color-bg-elevated] transition-colors group-hover:border-[--color-accent]">
+              <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-[--color-bg-elevated] transition-all group-hover:-translate-y-1">
                 <Image
                   src={m.avatar}
                   alt={m.name}
@@ -50,8 +57,12 @@ export function TeamGrid() {
                   height={300}
                   className="h-full w-full object-cover"
                 />
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[--color-bg-deep]/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100"
+                />
               </div>
-              <p className="mt-4 text-base font-semibold text-[--color-fg]">
+              <p className="mt-5 text-base font-bold text-[--color-fg]">
                 {m.name}
               </p>
               <p className="text-sm text-[--color-fg-muted]">{m.role}</p>
@@ -59,13 +70,13 @@ export function TeamGrid() {
           ))}
         </div>
 
-        <p className="mt-12 text-center text-sm text-[--color-fg-muted]">
+        <p className="mt-16 text-center text-sm text-[--color-fg-muted]">
           ¿Buscas al equipo en México?{" "}
           <a
             href="https://dinkbit.com/es/equipo"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-medium text-[--color-accent] hover:text-[--color-accent-hover]"
+            className="font-semibold text-[--color-accent] hover:text-[--color-accent-hover]"
           >
             Conócelos →
           </a>

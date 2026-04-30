@@ -13,19 +13,19 @@ export function RotatingWord() {
     setMounted(true);
     const id = setInterval(() => {
       setIndex((i) => (i + 1) % WORDS.length);
-    }, 2200);
+    }, 2400);
     return () => clearInterval(id);
   }, []);
 
   return (
-    <span className="relative inline-block align-baseline text-[--color-accent]">
+    <span className="relative inline-block overflow-hidden align-baseline text-[--color-accent]">
       <AnimatePresence mode="wait" initial={false}>
         <motion.span
           key={index}
-          initial={mounted ? { y: 28, opacity: 0 } : false}
+          initial={mounted ? { y: "100%", opacity: 0 } : false}
           animate={{ y: 0, opacity: 1 }}
-          exit={{ y: -28, opacity: 0 }}
-          transition={{ duration: 0.35, ease: "easeOut" }}
+          exit={{ y: "-100%", opacity: 0 }}
+          transition={{ duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] }}
           className="inline-block"
         >
           {WORDS[index]}

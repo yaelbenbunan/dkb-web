@@ -6,14 +6,14 @@ import { Container } from "@/components/ui/Container";
 import { ButtonLink } from "@/components/ui/Button";
 import { TESTIMONIALS, GOOGLE_REVIEWS_URL } from "@/lib/testimonials";
 
-function Stars({ count = 5, max = 5 }: { count?: number; max?: number }) {
+function Stars({ count = 5, max = 5, size = 18 }: { count?: number; max?: number; size?: number }) {
   return (
     <div className="flex gap-1">
       {Array.from({ length: max }).map((_, i) => (
         <svg
           key={i}
-          width="18"
-          height="18"
+          width={size}
+          height={size}
           viewBox="0 0 20 20"
           fill={i < count ? "#187bef" : "rgba(24,123,239,0.25)"}
         >
@@ -43,42 +43,61 @@ export function Testimonials() {
   }, [emblaApi, onSelect]);
 
   return (
-    <section className="py-24 md:py-32">
+    <section className="relative isolate overflow-hidden py-28 md:py-36">
+      {/* Spotlight detrás del bloque */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 spotlight-accent"
+        style={{ ["--sx" as string]: "70%", ["--sy" as string]: "40%" }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 bg-grid-fine opacity-30 fade-edges-y"
+      />
+
       <Container>
-        {/* Header */}
-        <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
+        <div className="flex flex-col items-start justify-between gap-8 md:flex-row md:items-end">
           <div>
-            <p className="text-xs font-medium uppercase tracking-[0.2em] text-[--color-accent]">
-              ★ Testimonios
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
+              <span aria-hidden>★</span> Testimonios
             </p>
-            <h2 className="mt-4 text-3xl font-bold leading-[1.1] tracking-tight md:text-5xl">
-              Opiniones de nuestros clientes.
+            <h2
+              className="mt-6 font-black leading-[0.95] tracking-tight"
+              style={{ fontSize: "var(--text-display-lg)" }}
+            >
+              Opiniones de{" "}
+              <span className="italic text-[--color-accent]">nuestros clientes.</span>
             </h2>
           </div>
           <ButtonLink
             href={GOOGLE_REVIEWS_URL}
             target="_blank"
             rel="noopener noreferrer"
-            size="md"
+            size="lg"
           >
-            Ver en Google
+            Ver en Google →
           </ButtonLink>
         </div>
 
-        {/* Contenido */}
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
+        <div className="mt-16 grid gap-6 md:grid-cols-3">
           {/* Rating summary card */}
-          <div className="rounded-2xl border border-[--color-border] bg-[--color-bg-elevated] p-8">
-            <p className="text-6xl font-bold text-[--color-fg]">5.0</p>
-            <Stars count={5} />
-            <p className="mt-6 text-sm text-[--color-fg-muted]">
-              30+ Reviews de Google
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[--color-accent] via-[#1a6fd9] to-[#0f4a9c] p-8 text-white">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 bg-noise opacity-[0.08] mix-blend-overlay"
+            />
+            <p className="relative text-7xl font-black leading-none">5.0</p>
+            <div className="relative mt-4">
+              <Stars count={5} size={20} />
+            </div>
+            <p className="relative mt-8 text-sm text-white/80">
+              30+ reviews de Google
             </p>
             <a
               href={GOOGLE_REVIEWS_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-[--color-accent] hover:text-[--color-accent-hover]"
+              className="relative mt-2 inline-flex items-center gap-1 text-sm font-semibold text-white hover:underline"
             >
               Leer todas →
             </a>
@@ -86,19 +105,21 @@ export function Testimonials() {
 
           {/* Reviews carousel */}
           <div className="md:col-span-2">
-            <div className="relative h-full rounded-2xl border border-[--color-border] bg-[--color-bg-elevated]">
-              <div ref={emblaRef} className="h-full overflow-hidden rounded-2xl">
+            <div className="relative h-full rounded-3xl border border-[--color-border] bg-[--color-bg-elevated]">
+              <div ref={emblaRef} className="h-full overflow-hidden rounded-3xl">
                 <div className="flex">
                   {TESTIMONIALS.map((t, i) => (
                     <div
                       key={i}
-                      className="min-w-0 flex-[0_0_100%] p-8 sm:p-10"
+                      className="min-w-0 flex-[0_0_100%] p-10 sm:p-12"
                     >
-                      <Stars count={t.rating} />
-                      <blockquote className="mt-6 text-lg leading-relaxed text-[--color-fg]">
-                        “{t.body}”
+                      <Stars count={t.rating} size={20} />
+                      <blockquote className="mt-6 text-xl leading-relaxed text-[--color-fg] md:text-2xl">
+                        <span className="text-[--color-accent]">“</span>
+                        {t.body}
+                        <span className="text-[--color-accent]">”</span>
                       </blockquote>
-                      <p className="mt-6 font-semibold text-[--color-fg]">
+                      <p className="mt-8 text-base font-bold text-[--color-fg]">
                         — {t.author}
                       </p>
                     </div>
@@ -106,14 +127,13 @@ export function Testimonials() {
                 </div>
               </div>
 
-              {/* Controles */}
               <div className="absolute bottom-6 right-6 flex gap-2">
                 <button
                   onClick={() => emblaApi?.scrollPrev()}
                   aria-label="Anterior"
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-[--color-border-strong] bg-[--color-bg] text-[--color-fg] hover:border-[--color-accent] hover:text-[--color-accent]"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-[--color-border-strong] bg-[--color-bg] text-[--color-fg] hover:border-[--color-accent] hover:text-[--color-accent]"
                 >
-                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                     <path
                       d="M11 7H3m0 0l4-4m-4 4l4 4"
                       stroke="currentColor"
@@ -126,9 +146,9 @@ export function Testimonials() {
                 <button
                   onClick={() => emblaApi?.scrollNext()}
                   aria-label="Siguiente"
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-[--color-border-strong] bg-[--color-bg] text-[--color-fg] hover:border-[--color-accent] hover:text-[--color-accent]"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-[--color-border-strong] bg-[--color-bg] text-[--color-fg] hover:border-[--color-accent] hover:text-[--color-accent]"
                 >
-                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                     <path
                       d="M3 7h8m0 0L7 3m4 4l-4 4"
                       stroke="currentColor"
@@ -140,8 +160,7 @@ export function Testimonials() {
                 </button>
               </div>
 
-              {/* Dots */}
-              <div className="absolute bottom-9 left-8 flex gap-1.5">
+              <div className="absolute bottom-9 left-10 flex gap-1.5">
                 {TESTIMONIALS.map((_, i) => (
                   <button
                     key={i}
@@ -149,7 +168,7 @@ export function Testimonials() {
                     aria-label={`Testimonio ${i + 1}`}
                     className={`h-1.5 rounded-full transition-all ${
                       selected === i
-                        ? "w-6 bg-[--color-accent]"
+                        ? "w-8 bg-[--color-accent]"
                         : "w-1.5 bg-[--color-border-strong]"
                     }`}
                   />

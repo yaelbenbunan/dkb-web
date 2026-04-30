@@ -15,20 +15,24 @@ export function ContactSection({ bare = false }: Props) {
   }));
 
   const content = (
-    <Container className="grid gap-12 lg:grid-cols-[2fr_3fr] lg:gap-16">
+    <Container className="grid gap-14 lg:grid-cols-[2fr_3fr] lg:gap-20">
       {/* Info Panel */}
       <div>
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-[--color-accent]">
+        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
           Hablemos
         </p>
-        <h2 className="mt-4 text-3xl font-bold leading-[1.1] tracking-tight md:text-5xl">
-          <span className="text-[--color-accent]">Contáctanos</span>
+        <h2
+          className="mt-6 font-black leading-[0.95] tracking-tight"
+          style={{ fontSize: "var(--text-display-lg)" }}
+        >
+          <span className="text-[--color-accent]">Contáctanos.</span>
         </h2>
-        <p className="mt-5 max-w-md text-[--color-fg-muted]">
-          Cuéntanos tu proyecto. Te respondemos en menos de 24 horas.
+        <p className="mt-6 max-w-md text-lg text-[--color-fg-muted]">
+          Cuéntanos tu proyecto. Te respondemos en{" "}
+          <span className="text-[--color-fg]">menos de 24 horas</span>.
         </p>
 
-        <ul className="mt-10 space-y-5">
+        <ul className="mt-12 space-y-4">
           <ContactCard
             icon={
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -102,7 +106,16 @@ export function ContactSection({ bare = false }: Props) {
   if (bare) return content;
 
   return (
-    <section className="py-24 md:py-32">
+    <section className="relative isolate overflow-hidden bg-[--color-bg-deep] py-28 md:py-36">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 spotlight-accent"
+        style={{ ["--sx" as string]: "20%", ["--sy" as string]: "40%" }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-40 fade-edges-y"
+      />
       {content}
     </section>
   );
@@ -127,13 +140,13 @@ function ContactCard({
         href={href}
         target={external ? "_blank" : undefined}
         rel={external ? "noopener noreferrer" : undefined}
-        className="group flex items-start gap-4 rounded-2xl border border-[--color-border] bg-[--color-bg-elevated] p-5 transition-colors hover:border-[--color-accent]"
+        className="group flex items-start gap-4 rounded-2xl border border-[--color-border] bg-[--color-bg-elevated] p-5 transition-all hover:-translate-y-0.5 hover:border-[--color-accent]"
       >
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[--color-bg] text-[--color-accent]">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[--color-accent-soft] text-[--color-accent]">
           {icon}
         </span>
         <span className="min-w-0">
-          <span className="block text-xs font-medium uppercase tracking-wider text-[--color-fg-muted]">
+          <span className="block text-xs font-semibold uppercase tracking-wider text-[--color-fg-muted]">
             {label}
           </span>
           <span className="mt-1 block text-base font-medium text-[--color-fg] group-hover:text-[--color-accent]">

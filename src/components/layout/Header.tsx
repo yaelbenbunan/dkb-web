@@ -7,7 +7,7 @@ import { MobileMenu } from "./MobileMenu";
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-40 border-b border-[--color-border] bg-[#0e1015]/85 backdrop-blur-md">
+    <header className="sticky top-0 z-40 bg-[#0e1015]/80 backdrop-blur-xl">
       <Container className="flex h-20 items-center justify-between">
         <Link href="/" className="flex items-center" aria-label="dinkbit — inicio">
           <Image

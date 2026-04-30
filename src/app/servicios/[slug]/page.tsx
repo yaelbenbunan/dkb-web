@@ -40,23 +40,37 @@ export default async function ServiceDetail({
   return (
     <article>
       {/* Hero del servicio */}
-      <header className="border-b border-[--color-border] bg-[--color-bg-subtle] py-20 md:py-24">
-        <Container className="grid gap-8 md:grid-cols-[auto_1fr] md:items-end md:gap-10">
-          <Image
-            src={`/img/icons/servicios/${service.slug}.png`}
-            alt=""
-            width={72}
-            height={72}
-            className="h-16 w-16"
-          />
+      <header className="relative isolate overflow-hidden py-24 md:py-32">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 spotlight-accent"
+          style={{ ["--sx" as string]: "80%", ["--sy" as string]: "30%" }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-40 fade-edges-y"
+        />
+        <Container className="grid gap-10 md:grid-cols-[auto_1fr] md:items-end md:gap-12">
+          <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-[--color-border-strong] bg-[--color-bg-elevated] shadow-[0_0_40px_rgba(24,123,239,0.2)]">
+            <Image
+              src={`/img/icons/servicios/${service.slug}.png`}
+              alt=""
+              width={56}
+              height={56}
+              className="h-14 w-14"
+            />
+          </div>
           <div>
-            <p className="text-xs font-medium uppercase tracking-[0.2em] text-[--color-accent]">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
               {service.title}
             </p>
-            <h1 className="mt-3 text-4xl font-bold leading-[1.05] tracking-tight md:text-5xl">
+            <h1
+              className="mt-4 font-black leading-[0.95] tracking-tight"
+              style={{ fontSize: "var(--text-display-lg)" }}
+            >
               {service.titleLong ?? service.title}
             </h1>
-            <p className="mt-4 max-w-2xl text-lg text-[--color-fg-muted]">
+            <p className="mt-6 max-w-2xl text-lg text-[--color-fg-muted] md:text-xl">
               {service.shortDescription}
             </p>
           </div>

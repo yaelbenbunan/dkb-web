@@ -10,18 +10,30 @@ interface Props {
 
 export function CaseHeader({ caseStudy, serviceTitleBySlug }: Props) {
   return (
-    <header className="border-b border-[--color-border] bg-[--color-bg-subtle] py-20 md:py-24">
-      <Container className="grid gap-10 md:grid-cols-[1fr_auto] md:items-start md:gap-16">
+    <header className="relative isolate overflow-hidden py-24 md:py-32">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 spotlight-accent"
+        style={{ ["--sx" as string]: "20%", ["--sy" as string]: "30%" }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-40 fade-edges-y"
+      />
+      <Container className="grid gap-12 md:grid-cols-[1fr_auto] md:items-start md:gap-16">
         {/* Izq: cliente + descripción */}
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-[--color-accent]">
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
             Caso de éxito
           </p>
-          <h1 className="mt-4 text-4xl font-bold leading-[1.05] tracking-tight md:text-6xl">
+          <h1
+            className="mt-6 font-black leading-[0.92] tracking-tight"
+            style={{ fontSize: "var(--text-display-xl)" }}
+          >
             {caseStudy.title}
           </h1>
           {caseStudy.description && (
-            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-[--color-fg-muted]">
+            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-[--color-fg-muted] md:text-xl">
               {caseStudy.description}
             </p>
           )}
