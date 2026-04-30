@@ -1,10 +1,15 @@
-import { Container } from "@/components/ui/Container";
+import { Hero } from "@/components/home/Hero";
+import { ServicesGrid } from "@/components/home/ServicesGrid";
+import { FeaturedCases } from "@/components/home/FeaturedCases";
+import { ContactCTA } from "@/components/home/ContactCTA";
 
 export default function Home() {
   return (
-    <Container className="py-24">
-      <h1 className="text-4xl font-bold">Hola.</h1>
-      <p className="mt-4 text-slate-600">Trabajando en la home…</p>
-    </Container>
+    <>
+      <Hero />
+      <ServicesGrid />
+      <FeaturedCases />
+      <ContactCTA />
+    </>
   );
 }
