@@ -199,7 +199,7 @@ export default async function ServiceDetail({
                 Algunos clientes a los que ayudamos con{" "}
                 {service.title.toLowerCase()}.
               </p>
-              <div className="mt-8 -mx-6 lg:-mx-8">
+              <div className="mt-8 overflow-hidden">
                 <RelatedCasesMarquee cases={relatedCases} />
               </div>
             </section>

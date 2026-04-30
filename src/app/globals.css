@@ -96,39 +96,63 @@
 
 /* ──────────────────────────────────────────────────────────────────────────
    Superficie unificada para cards + formularios.
-   Tono dark translúcido intermedio: más claro que el bg base (#0e1015) y
-   ligeramente más claro que las cards previas (#16181f), con backdrop-blur
-   para que se vea "elevado" y con cierta transparencia.
+   Tono grisáceo translúcido (más claro que el bg base) con borde visible y
+   reflejo azulado sutil. Pensado para que destaque sobre el fondo sin volver
+   al blanco — un glassmorphism templado.
    ────────────────────────────────────────────────────────────────────────── */
 .surface {
-  background-color: rgba(29, 33, 47, 0.72);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-}
-.surface-hover {
-  transition: background-color 200ms, box-shadow 200ms, transform 200ms;
-}
-.surface-hover:hover {
-  background-color: rgba(34, 39, 56, 0.85);
-  box-shadow: inset 0 0 0 1px rgba(24, 123, 239, 0.45);
+  background-color: rgba(38, 44, 60, 0.7);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 4px 18px rgba(0, 0, 0, 0.25),
+    0 0 32px -10px rgba(24, 123, 239, 0.15);
 }
 
-/* Variante "elevated" para formularios principales: misma base + glow azul */
-.surface-elevated {
-  background-color: rgba(29, 33, 47, 0.78);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+.surface-hover {
+  transition: background-color 220ms, box-shadow 220ms, transform 220ms;
+}
+.surface-hover:hover {
+  background-color: rgba(46, 54, 76, 0.82);
   box-shadow:
-    inset 0 0 0 1px rgba(24, 123, 239, 0.28),
-    0 25px 50px -12px rgba(0, 0, 0, 0.55),
-    0 0 60px -10px rgba(24, 123, 239, 0.32);
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 0 0 1px rgba(24, 123, 239, 0.5),
+    0 8px 24px rgba(0, 0, 0, 0.3),
+    0 0 50px -10px rgba(24, 123, 239, 0.4);
+}
+
+/* Variante "elevated" para formularios principales: más claro + glow azul fuerte */
+.surface-elevated {
+  position: relative;
+  background-color: rgba(48, 56, 78, 0.78);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 0 0 1px rgba(24, 123, 239, 0.45),
+    0 25px 60px -15px rgba(0, 0, 0, 0.7),
+    0 0 100px -20px rgba(24, 123, 239, 0.5);
+}
+/* Reflejo azulado superior decorativo sobre la elevated */
+.surface-elevated::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 80% 40% at 50% 0%,
+    rgba(24, 123, 239, 0.18),
+    transparent 70%
+  );
 }
 
 /* Inputs internos del form (un poco más oscuros que la superficie) */
 .surface-input {
-  background-color: rgba(10, 12, 18, 0.7);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  background-color: rgba(14, 17, 26, 0.75);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   transition: box-shadow 150ms;
 }
 .surface-input:focus {

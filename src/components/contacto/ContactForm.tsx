@@ -23,11 +23,7 @@ export function ContactForm({ services }: Props) {
   }, []);
 
   return (
-    <div className="surface-elevated relative overflow-hidden rounded-3xl p-8 sm:p-10">
-      <span
-        aria-hidden
-        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[--color-accent] to-transparent"
-      />
+    <div className="surface-elevated relative rounded-3xl p-8 sm:p-10">
       <form
         ref={formRef}
         action={(fd) => {
