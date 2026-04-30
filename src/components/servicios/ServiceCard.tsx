@@ -6,20 +6,34 @@ export function ServiceCard({ service }: { service: Service }) {
   return (
     <Link
       href={`/servicios/${service.slug}`}
-      className="group block rounded-2xl border border-[--color-border] bg-[--color-bg-elevated] p-6 transition-colors hover:border-[--color-accent]"
+      className="group relative flex flex-col rounded-2xl bg-[#16181f] px-6 pb-6 pt-4 ring-1 ring-white/[0.05] transition-all duration-300 hover:-translate-y-1.5 hover:bg-[#1a1d27] hover:ring-[--color-accent]/40 hover:shadow-[0_20px_40px_-15px_rgba(24,123,239,0.4)]"
     >
-      <Image
-        src={`/img/icons/servicios/${service.slug}.png`}
-        alt=""
-        width={40}
-        height={40}
-        className="h-10 w-10"
-      />
-      <p className="mt-4 text-lg font-semibold text-[--color-fg]">{service.title}</p>
-      <p className="mt-2 text-sm text-[--color-fg-muted]">
+      <div className="flex items-start justify-between">
+        <Image
+          src={`/img/icons/servicios/${service.slug}.png`}
+          alt=""
+          width={44}
+          height={44}
+          className="h-11 w-11"
+        />
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[--color-bg-elevated] text-[--color-fg-muted] transition-all group-hover:rotate-[-8deg] group-hover:bg-[--color-accent] group-hover:text-white">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path
+              d="M4 10L10 4M10 4H5M10 4V9"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
+      </div>
+      <p className="mt-6 text-xl font-bold leading-tight text-[--color-fg]">
+        {service.title}
+      </p>
+      <p className="mt-2 text-sm leading-relaxed text-[--color-fg-muted]">
         {service.shortDescription}
       </p>
-      <p className="mt-4 text-sm font-medium text-[--color-accent]">Conocer más →</p>
     </Link>
   );
 }

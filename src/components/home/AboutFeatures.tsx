@@ -69,16 +69,20 @@ export function AboutFeatures() {
               para generar resultados medibles. Sin humo: análisis, ejecución e
               iteración constante.
             </p>
-            <div className="mt-10 flex flex-wrap items-center gap-4">
-              <ButtonLink href="/nosotros" size="lg">
-                Conócenos
+            <div className="mt-10 flex flex-wrap items-center gap-3">
+              <ButtonLink
+                href="/nosotros"
+                size="lg"
+                className="shadow-[0_8px_24px_-6px_rgba(24,123,239,0.5)]"
+              >
+                Conócenos →
               </ButtonLink>
               <ButtonLink
                 href="/casos-de-exito"
                 size="lg"
                 variant="outline"
               >
-                Ver casos →
+                Casos de éxito →
               </ButtonLink>
             </div>
           </div>

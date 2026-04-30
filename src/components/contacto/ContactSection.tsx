@@ -140,9 +140,9 @@ function ContactCard({
         href={href}
         target={external ? "_blank" : undefined}
         rel={external ? "noopener noreferrer" : undefined}
-        className="group flex items-start gap-4 rounded-2xl border border-[--color-border] bg-[--color-bg-elevated] p-5 transition-all hover:-translate-y-0.5 hover:border-[--color-accent]"
+        className="group flex items-start gap-4 rounded-2xl bg-[--color-bg-elevated] p-5 ring-1 ring-white/[0.05] transition-all hover:-translate-y-0.5 hover:ring-[--color-accent]/40"
       >
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[--color-accent-soft] text-[--color-accent]">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[--color-accent] text-white shadow-[0_8px_20px_-6px_rgba(24,123,239,0.6)]">
           {icon}
         </span>
         <span className="min-w-0">

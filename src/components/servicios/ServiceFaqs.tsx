@@ -6,42 +6,49 @@ import type { ServiceFaq } from "@/lib/types";
 export function ServiceFaqs({ faqs }: { faqs: ServiceFaq[] }) {
   const [open, setOpen] = useState<number | null>(0);
   return (
-    <ul className="divide-y divide-[--color-border]">
+    <ul className="space-y-3">
       {faqs.map((f, i) => {
         const isOpen = open === i;
         return (
-          <li key={i}>
+          <li
+            key={i}
+            className="rounded-2xl bg-[#16181f] ring-1 ring-white/[0.05] transition-colors"
+          >
             <button
               onClick={() => setOpen(isOpen ? null : i)}
-              className="flex w-full items-center justify-between gap-6 py-5 text-left"
+              className="flex w-full items-center justify-between gap-6 p-5 text-left"
             >
-              <span className="text-base font-medium text-[--color-fg]">
+              <span className="text-base font-semibold text-[--color-fg] md:text-lg">
                 {f.q}
               </span>
               <span
                 className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all ${
                   isOpen
                     ? "rotate-45 bg-[--color-accent] text-white"
-                    : "bg-[--color-bg-elevated] text-[--color-fg-muted]"
+                    : "bg-[--color-accent-soft] text-[--color-accent]"
                 }`}
                 aria-hidden
               >
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <svg width="14" height="14" viewBox="0 0 12 12" fill="none">
                   <path
                     d="M6 1v10M1 6h10"
                     stroke="currentColor"
-                    strokeWidth="1.6"
+                    strokeWidth="1.8"
                     strokeLinecap="round"
                   />
                 </svg>
               </span>
             </button>
             <div
-              className={`grid overflow-hidden text-[--color-fg-muted] transition-[grid-template-rows] duration-300 ${
-                isOpen ? "grid-rows-[1fr] pb-5" : "grid-rows-[0fr]"
+              className={`grid overflow-hidden transition-[grid-template-rows] duration-300 ${
+                isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
               }`}
             >
-              <div className="min-h-0 leading-relaxed">{f.a}</div>
+              <div className="min-h-0">
+                <p className="px-5 pb-5 leading-relaxed text-[--color-fg-muted]">
+                  {f.a}
+                </p>
+              </div>
             </div>
           </li>
         );

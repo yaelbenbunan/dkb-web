@@ -19,7 +19,7 @@ const variants: Record<Variant, string> = {
   secondary: "bg-[--color-bg-elevated] text-[--color-fg] hover:bg-[--color-border-strong]",
   ghost: "text-[--color-accent] hover:bg-[--color-accent-soft]",
   outline:
-    "bg-[--color-bg-elevated] text-[--color-fg] ring-1 ring-[--color-accent]/30 hover:bg-[--color-accent-soft] hover:text-[--color-accent] hover:ring-[--color-accent]",
+    "bg-white/[0.04] text-[--color-fg] ring-1 ring-white/[0.18] backdrop-blur-sm hover:bg-[--color-accent-soft] hover:text-[--color-accent] hover:ring-[--color-accent]/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]",
 };
 const sizes: Record<Size, string> = {
   sm: "h-9 px-3 text-sm",

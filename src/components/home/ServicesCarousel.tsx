@@ -35,7 +35,7 @@ export function ServicesCarousel({ services }: Props) {
   }, [emblaApi, onSelect]);
 
   return (
-    <section className="relative isolate overflow-hidden bg-[--color-bg-deep] py-28 md:py-36">
+    <section className="relative isolate overflow-hidden bg-[--color-bg-deep] py-20 md:py-24">
       {/* Grid sutil de fondo */}
       <div
         aria-hidden
@@ -97,7 +97,7 @@ export function ServicesCarousel({ services }: Props) {
             <Link
               key={s.slug}
               href={`/servicios/${s.slug}`}
-              className="group relative flex w-[280px] shrink-0 flex-col rounded-2xl bg-[#16181f] px-6 pb-6 pt-5 ring-1 ring-white/[0.05] transition-all duration-300 hover:-translate-y-1.5 hover:bg-[#1a1d27] hover:ring-[--color-accent]/40 hover:shadow-[0_20px_40px_-15px_rgba(24,123,239,0.4)] sm:w-[320px]"
+              className="group relative flex w-[280px] shrink-0 flex-col rounded-2xl bg-[#16181f] px-6 pb-6 pt-4 ring-1 ring-white/[0.05] transition-all duration-300 hover:-translate-y-1.5 hover:bg-[#1a1d27] hover:ring-[--color-accent]/40 hover:shadow-[0_20px_40px_-15px_rgba(24,123,239,0.4)] sm:w-[320px]"
             >
               <div className="flex items-start justify-between">
                 <Image
@@ -119,7 +119,7 @@ export function ServicesCarousel({ services }: Props) {
                   </svg>
                 </span>
               </div>
-              <p className="mt-8 text-xl font-bold leading-tight text-[--color-fg]">
+              <p className="mt-6 text-xl font-bold leading-tight text-[--color-fg]">
                 {s.title}
               </p>
               <p className="mt-2 text-sm leading-relaxed text-[--color-fg-muted]">

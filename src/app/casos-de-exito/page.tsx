@@ -13,7 +13,7 @@ export default function CasosPage() {
 
   return (
     <>
-      <header className="relative isolate overflow-hidden py-28 md:py-36">
+      <header className="relative isolate overflow-hidden py-16 md:py-20">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 -z-10 spotlight-accent"
@@ -23,21 +23,20 @@ export default function CasosPage() {
           aria-hidden
           className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-40 fade-edges-y"
         />
-        <Container>
+        <Container className="text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
             Casos de éxito
           </p>
           <h1
-            className="mt-8 max-w-5xl font-black leading-[0.92] tracking-tight"
+            className="mx-auto mt-6 max-w-4xl font-black leading-[0.95] tracking-tight"
             style={{ fontSize: "var(--text-display-xl)" }}
           >
-            Resultados{" "}
-            <span className="italic text-[--color-accent]">reales</span>{" "}
-            de marcas como la tuya.
+            Resultados <span className="text-[--color-accent]">reales</span> de
+            marcas como la tuya.
           </h1>
         </Container>
       </header>
-      <Container className="py-20">
+      <Container className="pb-24 md:pb-28">
         <CaseFilters caseStudies={caseStudies} />
       </Container>
     </>

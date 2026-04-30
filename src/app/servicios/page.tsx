@@ -11,16 +11,37 @@ export const metadata = {
 export default function ServiciosPage() {
   const services = getAllServices();
   return (
-    <Container className="py-24">
-      <h1 className="text-4xl font-bold tracking-tight">Servicios</h1>
-      <p className="mt-4 max-w-2xl text-slate-600">
-        Todo lo que necesita una marca para crecer en digital.
-      </p>
-      <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {services.map((s) => (
-          <ServiceCard key={s.slug} service={s} />
-        ))}
-      </div>
-    </Container>
+    <>
+      <header className="relative isolate overflow-hidden py-20 md:py-24">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 spotlight-accent"
+          style={{ ["--sx" as string]: "30%", ["--sy" as string]: "40%" }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-40 fade-edges-y"
+        />
+        <Container>
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
+            Servicios
+          </p>
+          <h1
+            className="mt-6 max-w-4xl font-black leading-[0.95] tracking-tight"
+            style={{ fontSize: "var(--text-display-xl)" }}
+          >
+            Todo lo que necesita una marca para{" "}
+            <span className="text-[--color-accent]">crecer en digital.</span>
+          </h1>
+        </Container>
+      </header>
+      <Container className="pb-24 md:pb-28">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {services.map((s) => (
+            <ServiceCard key={s.slug} service={s} />
+          ))}
+        </div>
+      </Container>
+    </>
   );
 }

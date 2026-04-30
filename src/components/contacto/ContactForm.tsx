@@ -93,9 +93,24 @@ export function ContactForm({ services }: Props) {
           className="hidden"
         />
 
-        <Button type="submit" disabled={pending} size="lg" className="w-full">
+        <button
+          type="submit"
+          disabled={pending}
+          className="mt-2 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[--color-accent] px-6 text-base font-semibold text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.6)] transition-all hover:bg-[--color-accent-hover] hover:shadow-[0_12px_32px_-6px_rgba(24,123,239,0.7)] disabled:opacity-60"
+        >
           {pending ? "Enviando…" : "Enviar mensaje"}
-        </Button>
+          {!pending && (
+            <svg width="16" height="16" viewBox="0 0 14 14" fill="none">
+              <path
+                d="M3 7h8m0 0L7 3m4 4l-4 4"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
+        </button>
 
         {result && (
           <p

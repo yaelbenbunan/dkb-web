@@ -2,7 +2,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/Container";
-import { ButtonLink } from "@/components/ui/Button";
 import { ServiceFaqs } from "@/components/servicios/ServiceFaqs";
 import { getAllServices, getServiceBySlug, getAllCaseStudies } from "@/lib/content";
 
@@ -34,24 +33,40 @@ export default async function ServiceDetail({
   if (!service) notFound();
 
   const allServices = getAllServices();
-  // Casos relacionados con este servicio (que tengan este tag)
   const relatedCases = getAllCaseStudies().filter((c) => c.tags.includes(slug));
 
   return (
     <article>
-      {/* Hero del servicio */}
+      {/* Hero del servicio con foto de fondo + overlay fuerte */}
       <header className="relative isolate overflow-hidden py-24 md:py-32">
+        <Image
+          src="/img/home/hero-bg-alt-meeting.png"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="-z-30 object-cover object-center opacity-30"
+        />
+        <div
+          aria-hidden
+          className="absolute inset-0 -z-20"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(8,9,13,0.85) 0%, rgba(14,16,21,0.92) 100%)",
+          }}
+        />
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 -z-10 spotlight-accent"
-          style={{ ["--sx" as string]: "80%", ["--sy" as string]: "30%" }}
+          style={{ ["--sx" as string]: "75%", ["--sy" as string]: "30%" }}
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-40 fade-edges-y"
+          className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-30 fade-edges-y"
         />
+
         <Container className="grid gap-10 md:grid-cols-[auto_1fr] md:items-end md:gap-12">
-          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-[--color-bg-elevated] shadow-[0_0_40px_rgba(24,123,239,0.25)] ring-1 ring-[--color-accent]/20">
+          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-[--color-bg-elevated] shadow-[0_0_40px_rgba(24,123,239,0.3)] ring-1 ring-[--color-accent]/30">
             <Image
               src={`/img/icons/servicios/${service.slug}.png`}
               alt=""
@@ -79,9 +94,8 @@ export default async function ServiceDetail({
 
       {/* Body 2/3 + 1/3 */}
       <Container className="grid gap-12 py-20 lg:grid-cols-[2fr_1fr] lg:gap-14">
-        {/* Columna izq: contenido */}
         <div className="space-y-16">
-          {/* Intro + bullets */}
+          {/* Intro + bullets con check azul */}
           {(service.intro || service.bullets) && (
             <section>
               {service.intro && (
@@ -96,7 +110,22 @@ export default async function ServiceDetail({
                       key={i}
                       className="flex items-start gap-3 text-[--color-fg]"
                     >
-                      <span className="mt-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[--color-accent]" />
+                      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[--color-accent-soft] text-[--color-accent]">
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 14 14"
+                          fill="none"
+                        >
+                          <path
+                            d="M3 7.5L6 10.5L11 4.5"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </span>
                       <span>{b}</span>
                     </li>
                   ))}
@@ -109,7 +138,8 @@ export default async function ServiceDetail({
           {service.diferenciador && (
             <section>
               <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
-                ¿Qué hace diferente nuestro enfoque?
+                ¿Qué hace diferente nuestro{" "}
+                <span className="text-[--color-accent]">enfoque</span>?
               </h2>
               <p className="mt-4 text-lg leading-relaxed text-[--color-fg-muted]">
                 {service.diferenciador}
@@ -121,7 +151,8 @@ export default async function ServiceDetail({
           {service.faqs && service.faqs.length > 0 && (
             <section>
               <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
-                Preguntas frecuentes
+                Preguntas{" "}
+                <span className="text-[--color-accent]">frecuentes</span>
               </h2>
               <div className="mt-6">
                 <ServiceFaqs faqs={service.faqs} />
@@ -133,7 +164,7 @@ export default async function ServiceDetail({
           {relatedCases.length > 0 && (
             <section>
               <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
-                Casos de éxito
+                Casos de <span className="text-[--color-accent]">éxito</span>
               </h2>
               <p className="mt-2 text-[--color-fg-muted]">
                 Algunos clientes a los que ayudamos con {service.title.toLowerCase()}.
@@ -143,15 +174,15 @@ export default async function ServiceDetail({
                   <li key={c.slug}>
                     <Link
                       href={`/casos-de-exito/${c.slug}`}
-                      className="flex h-24 items-center justify-center rounded-2xl bg-[--color-bg-elevated] p-4 ring-1 ring-transparent transition-all hover:-translate-y-0.5 hover:ring-[--color-accent]/40"
+                      className="flex h-24 items-center justify-center rounded-2xl bg-[#16181f] p-4 ring-1 ring-white/[0.05] transition-all hover:-translate-y-0.5 hover:ring-[--color-accent]/40"
                     >
                       {c.clientLogo ? (
                         <Image
                           src={c.clientLogo}
                           alt={c.client}
-                          width={120}
-                          height={48}
-                          className="max-h-12 w-auto object-contain opacity-70 transition hover:opacity-100"
+                          width={140}
+                          height={56}
+                          className="max-h-12 w-auto object-contain opacity-80 transition group-hover:opacity-100"
                         />
                       ) : (
                         <span className="text-sm font-medium text-[--color-fg]">
@@ -166,38 +197,41 @@ export default async function ServiceDetail({
           )}
         </div>
 
-        {/* Columna der: sticky CTA + menu de servicios */}
+        {/* Aside sticky */}
         <aside className="lg:sticky lg:top-28 lg:h-max lg:self-start">
-          <div className="space-y-6">
-            {/* CTA Box — fondo azul sólido para destacar */}
+          <div className="space-y-5">
+            {/* CTA Box estilo formulario blanco */}
             {service.ctaBox && (
-              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[--color-accent] via-[#1a6fd9] to-[#0f4a9c] p-7 text-white shadow-[0_0_60px_-15px_rgba(24,123,239,0.6)]">
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0 bg-noise opacity-[0.08] mix-blend-overlay"
-                />
-                <p className="relative text-xl font-bold leading-tight">
+              <div className="relative overflow-hidden rounded-2xl bg-white p-7 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.6),0_0_60px_-10px_rgba(24,123,239,0.4)]">
+                <p className="text-xl font-bold leading-tight text-slate-900">
                   {service.ctaBox.title}
                 </p>
                 {service.ctaBox.subtitle && (
-                  <p className="relative mt-2 text-sm text-white/85">
+                  <p className="mt-2 text-sm text-slate-600">
                     {service.ctaBox.subtitle}
                   </p>
                 )}
-                <ButtonLink
+                <Link
                   href={service.ctaBox.buttonHref}
-                  size="lg"
-                  variant="ghost"
-                  className="relative mt-6 w-full bg-white text-[--color-accent] hover:bg-white hover:opacity-90"
+                  className="mt-6 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[--color-accent] px-6 text-sm font-semibold text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.6)] transition-all hover:bg-[--color-accent-hover]"
                 >
-                  {service.ctaBox.buttonText} →
-                </ButtonLink>
+                  {service.ctaBox.buttonText}
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path
+                      d="M3 7h8m0 0L7 3m4 4l-4 4"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </Link>
               </div>
             )}
 
-            {/* Menu de servicios sin border */}
-            <nav className="rounded-3xl bg-[--color-bg-elevated] p-6">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[--color-fg-muted]">
+            {/* Menu de servicios sticky con ring sutil */}
+            <nav className="rounded-2xl bg-[#16181f] p-5 ring-1 ring-white/[0.05]">
+              <p className="px-2 text-xs font-semibold uppercase tracking-[0.2em] text-[--color-fg-muted]">
                 Otros servicios
               </p>
               <ul className="mt-4 space-y-1">
@@ -210,11 +244,11 @@ export default async function ServiceDetail({
                         className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
                           isActive
                             ? "bg-[--color-accent-soft] font-semibold text-[--color-accent]"
-                            : "text-[--color-fg-muted] hover:bg-[--color-bg] hover:text-[--color-fg]"
+                            : "text-[--color-fg-muted] hover:bg-white/[0.03] hover:text-[--color-fg]"
                         }`}
                       >
                         <span>{s.title}</span>
-                        <span className={isActive ? "text-[--color-accent]" : "text-[--color-fg-dim]"}>→</span>
+                        <span className="text-[--color-accent]">→</span>
                       </Link>
                     </li>
                   );

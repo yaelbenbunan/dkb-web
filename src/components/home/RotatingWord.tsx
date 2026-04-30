@@ -19,20 +19,19 @@ export function RotatingWord() {
 
   return (
     <span
-      className="relative inline-block overflow-hidden align-baseline"
+      className="relative inline-block align-baseline"
       style={{
         color: "#3a90f2",
-        textShadow:
-          "0 0 24px rgba(58,144,242,0.55), 0 0 48px rgba(24,123,239,0.4)",
+        textShadow: "0 0 28px rgba(58,144,242,0.4)",
       }}
     >
       <AnimatePresence mode="wait" initial={false}>
         <motion.span
           key={index}
-          initial={mounted ? { y: "100%", opacity: 0 } : false}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: "-100%", opacity: 0 }}
-          transition={{ duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] }}
+          initial={mounted ? { opacity: 0, scale: 0.96 } : false}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.96 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
           className="inline-block"
         >
           {WORDS[index]}

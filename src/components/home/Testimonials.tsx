@@ -43,7 +43,7 @@ export function Testimonials() {
   }, [emblaApi, onSelect]);
 
   return (
-    <section className="relative isolate overflow-hidden py-28 md:py-36">
+    <section className="relative isolate overflow-hidden py-20 md:py-24">
       {/* Spotlight detrás del bloque */}
       <div
         aria-hidden

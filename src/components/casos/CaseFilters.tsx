@@ -7,7 +7,6 @@ import type { CaseStudy } from "@/lib/types";
 
 interface Props {
   caseStudies: CaseStudy[];
-  /** Tags expuestos como tabs (subset de los servicios). Por defecto los 4 del doc. */
   filterTags?: { slug: string; title: string }[];
 }
 
@@ -25,14 +24,15 @@ export function CaseFilters({ caseStudies, filterTags = DEFAULT_TABS }: Props) {
     : caseStudies;
 
   const tabBase =
-    "h-10 rounded-full px-5 text-sm font-medium transition-colors";
-  const tabActive = "bg-[--color-accent] text-white";
+    "h-12 rounded-full px-7 text-base font-semibold transition-all";
+  const tabActive =
+    "bg-[--color-accent] text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.6)]";
   const tabInactive =
-    "bg-[--color-bg-elevated] text-[--color-fg-muted] hover:bg-[--color-border-strong] hover:text-[--color-fg]";
+    "bg-[#16181f] text-[--color-fg-muted] ring-1 ring-white/[0.08] hover:bg-[#1a1d27] hover:text-[--color-fg] hover:ring-[--color-accent]/40";
 
   return (
     <>
-      <div className="mt-8 flex flex-wrap gap-2">
+      <div className="flex flex-wrap justify-center gap-3">
         <button
           onClick={() => setActive(null)}
           className={`${tabBase} ${active === null ? tabActive : tabInactive}`}
@@ -51,24 +51,24 @@ export function CaseFilters({ caseStudies, filterTags = DEFAULT_TABS }: Props) {
       </div>
 
       {filtered.length === 0 ? (
-        <p className="mt-16 text-[--color-fg-muted]">
+        <p className="mt-16 text-center text-[--color-fg-muted]">
           No hay casos para este filtro todavía.
         </p>
       ) : (
-        <ul className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <ul className="mt-14 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {filtered.map((c) => (
             <li key={c.slug}>
               <Link
                 href={`/casos-de-exito/${c.slug}`}
-                className="group flex aspect-[4/3] flex-col items-center justify-center rounded-2xl border border-[--color-border] bg-[--color-bg-elevated] p-6 transition-all hover:-translate-y-1 hover:border-[--color-accent]"
+                className="group flex aspect-[4/3] flex-col items-center justify-center rounded-2xl bg-[#16181f] p-8 ring-1 ring-white/[0.05] transition-all hover:-translate-y-1 hover:bg-[#1a1d27] hover:ring-[--color-accent]/40 hover:shadow-[0_20px_40px_-15px_rgba(24,123,239,0.4)]"
               >
                 {c.clientLogo ? (
                   <Image
                     src={c.clientLogo}
                     alt={c.client}
-                    width={160}
-                    height={64}
-                    className="max-h-14 w-auto object-contain opacity-80 transition group-hover:opacity-100"
+                    width={240}
+                    height={120}
+                    className="max-h-24 w-auto object-contain opacity-75 transition group-hover:opacity-100"
                   />
                 ) : (
                   <span className="text-xl font-bold text-[--color-fg]">
