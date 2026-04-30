@@ -40,10 +40,10 @@ export function HeroForm({ services }: Props) {
       }}
       className="surface-elevated relative rounded-2xl p-7"
     >
-      <p className="text-lg font-bold text-[#0c1c40]">
+      <p className="text-lg font-bold text-[#187bef]">
         Déjanos ayudarte a crear algo increíble
       </p>
-      <p className="mt-1 text-sm text-[#1e3a8a]">
+      <p className="mt-1 text-sm text-[#187bef]">
         Te contestamos en menos de 24 horas.
       </p>
 

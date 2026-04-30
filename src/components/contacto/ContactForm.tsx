@@ -86,7 +86,7 @@ export function ContactForm({ services }: Props) {
             required
             className="mt-1 h-4 w-4 rounded border-slate-300 bg-white text-[#187bef] focus:ring-[#187bef]"
           />
-          <span className="text-xs leading-relaxed text-[#1e3a8a]">
+          <span className="text-xs leading-relaxed text-[#187bef]">
             Al enviar este formulario aceptas nuestra{" "}
             <Link
               href="/privacidad"
@@ -138,7 +138,7 @@ export function ContactForm({ services }: Props) {
         )}
       </form>
 
-      <p className="mt-6 border-t border-[#187bef]/15 pt-6 text-sm text-[#1e3a8a]">
+      <p className="mt-6 border-t border-[#187bef]/15 pt-6 text-sm text-[#187bef]">
         ¿Prefieres hablar directamente?{" "}
         <a
           href={CONTACT_INFO.calendly}
