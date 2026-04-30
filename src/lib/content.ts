@@ -1,7 +1,14 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import matter from "gray-matter";
-import type { Service, CaseStudy } from "./types";
+import type {
+  Service,
+  CaseStudy,
+  CaseSection,
+  ServiceFaq,
+  ServiceCtaBox,
+  CaseSocial,
+} from "./types";
 
 const ROOT = join(process.cwd(), "src/content");
 
@@ -24,9 +31,15 @@ export function getAllServices(): Service[] {
     .map(({ data, body }) => ({
       slug: String(data.slug),
       title: String(data.title),
+      titleLong: data.titleLong as string | undefined,
       shortDescription: String(data.shortDescription ?? ""),
       heroImage: data.heroImage as string | undefined,
       order: Number(data.order ?? 999),
+      intro: data.intro as string | undefined,
+      bullets: data.bullets as string[] | undefined,
+      diferenciador: data.diferenciador as string | undefined,
+      faqs: data.faqs as ServiceFaq[] | undefined,
+      ctaBox: data.ctaBox as ServiceCtaBox | undefined,
       body,
     }))
     .sort((a, b) => a.order - b.order);
@@ -42,10 +55,15 @@ export function getAllCaseStudies(): CaseStudy[] {
       slug: String(data.slug),
       title: String(data.title),
       client: String(data.client ?? ""),
+      clientLogo: data.clientLogo as string | undefined,
+      description: data.description as string | undefined,
+      reto: data.reto as string | undefined,
       tags: (data.tags as string[]) ?? [],
-      heroImage: data.heroImage as string | undefined,
       metricHeadline: data.metricHeadline as string | undefined,
+      social: data.social as CaseSocial | undefined,
+      clientSince: data.clientSince as string | undefined,
       publishedAt: String(data.publishedAt ?? new Date().toISOString()),
+      sections: data.sections as CaseSection[] | undefined,
       body,
     }))
     .sort((a, b) => (a.publishedAt < b.publishedAt ? 1 : -1));
@@ -53,4 +71,20 @@ export function getAllCaseStudies(): CaseStudy[] {
 
 export function getCaseStudyBySlug(slug: string): CaseStudy | undefined {
   return getAllCaseStudies().find((c) => c.slug === slug);
+}
+
+/**
+ * Returns up to `limit` other case studies that share at least one tag with the
+ * given case. Excludes the case itself.
+ */
+export function getRelatedCases(slug: string, limit = 3): CaseStudy[] {
+  const all = getAllCaseStudies();
+  const current = all.find((c) => c.slug === slug);
+  if (!current) return [];
+  return all
+    .filter(
+      (c) =>
+        c.slug !== slug && c.tags.some((t) => current.tags.includes(t)),
+    )
+    .slice(0, limit);
 }

@@ -7,31 +7,31 @@ import { MobileMenu } from "./MobileMenu";
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-40 border-b border-[--color-border] bg-[#0b0b0b]/80 backdrop-blur-md">
-      <Container className="flex h-16 items-center justify-between">
+    <header className="sticky top-0 z-40 border-b border-[--color-border] bg-[#0e1015]/85 backdrop-blur-md">
+      <Container className="flex h-20 items-center justify-between">
         <Link href="/" className="flex items-center" aria-label="dinkbit — inicio">
           <Image
             src="/img/logo/dinkbit.svg"
             alt="dinkbit"
-            width={108}
-            height={28}
+            width={140}
+            height={36}
             priority
-            className="h-7 w-auto"
+            className="h-9 w-auto"
           />
         </Link>
-        <nav className="hidden items-center gap-8 md:flex">
+        <nav className="hidden items-center gap-10 md:flex">
           {NAV_ITEMS.filter((i) => i.href !== "/contacto").map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="text-sm text-[--color-fg-muted] transition-colors hover:text-[--color-fg]"
+              className="text-base text-[--color-fg-muted] transition-colors hover:text-[--color-fg]"
             >
               {item.label}
             </Link>
           ))}
         </nav>
         <div className="hidden md:block">
-          <ButtonLink href="/contacto" size="sm">
+          <ButtonLink href="/contacto" size="md">
             Contacto
           </ButtonLink>
         </div>

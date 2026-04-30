@@ -23,7 +23,7 @@ export function MobileMenu() {
         </svg>
       </button>
       {open && (
-        <div className="absolute inset-x-0 top-16 border-b border-[--color-border] bg-[--color-bg-elevated]">
+        <div className="absolute inset-x-0 top-20 border-b border-[--color-border] bg-[--color-bg-elevated]">
           <nav className="flex flex-col p-4">
             {NAV_ITEMS.map((item) => (
               <Link
