@@ -20,7 +20,7 @@ const PILLARS = [
   {
     label: "Personalización",
     title: "Soluciones a medida",
-    body: "Entendemos qué necesita cada cliente y diseñamos una propuesta 100% personalizada con seguimiento cercano hasta lograr el resultado —o hacer todo lo posible para conseguirlo—.",
+    body: "Entendemos qué necesita cada cliente y diseñamos una propuesta 100% personalizada, acompañándole hasta lograr el resultado —o hacer todo lo posible para conseguirlo—.",
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
         <path
@@ -108,7 +108,7 @@ export function WhyUs() {
               <h3 className="relative mt-2 text-xl font-bold leading-tight text-[--color-fg]">
                 {p.title}
               </h3>
-              <p className="relative mt-3 text-sm leading-relaxed text-[--color-fg-muted]">
+              <p className="relative mt-3 text-base leading-relaxed text-[--color-fg-muted]">
                 {p.body}
               </p>
             </li>

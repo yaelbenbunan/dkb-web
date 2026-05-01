@@ -72,7 +72,9 @@ export function Manifesto() {
           <span className="italic text-[--color-accent]">
             Construimos relaciones largas
           </span>{" "}
-          con marcas que quieren un partner, no un proveedor.
+          con marcas que{" "}
+          <span className="italic text-[--color-accent]">quieren un partner</span>
+          , no un proveedor.
         </p>
         <p className="mt-6 text-sm font-semibold uppercase tracking-[0.25em] text-[--color-fg-muted]">
           — El equipo dinkbit España
