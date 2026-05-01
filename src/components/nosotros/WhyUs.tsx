@@ -20,7 +20,7 @@ const PILLARS = [
   {
     label: "Personalización",
     title: "Soluciones a medida",
-    body: "Escuchamos a cada cliente, entendemos qué necesita y diseñamos una propuesta 100% personalizada con seguimiento cercano hasta lograr el resultado —o hacer todo lo posible para conseguirlo—.",
+    body: "Entendemos qué necesita cada cliente y diseñamos una propuesta 100% personalizada con seguimiento cercano hasta lograr el resultado —o hacer todo lo posible para conseguirlo—.",
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
         <path

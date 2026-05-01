@@ -29,13 +29,13 @@ export function HeaderStats() {
             />
           )}
 
-          <div className="flex items-center gap-2">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#187bef]/15 ring-1 ring-[#187bef]/35">
             <Image
               src={s.icon}
               alt=""
-              width={20}
-              height={20}
-              className="h-5 w-5 opacity-80"
+              width={32}
+              height={32}
+              className="h-7 w-7"
             />
           </div>
 
