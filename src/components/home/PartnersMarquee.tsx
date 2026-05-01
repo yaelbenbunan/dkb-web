@@ -2,11 +2,16 @@ import Image from "next/image";
 import { Container } from "@/components/ui/Container";
 import { PARTNERS } from "@/lib/partners";
 
+interface Props {
+  heading?: string;
+  /** Subtítulo opcional, p.ej. para la sección de nosotros con frase de alianzas */
+  subheading?: string;
+}
+
 export function PartnersMarquee({
   heading = "Nuestros partners",
-}: {
-  heading?: string;
-}) {
+  subheading,
+}: Props) {
   return (
     <section className="relative overflow-hidden bg-[--color-bg-subtle] py-16">
       <div
@@ -14,9 +19,23 @@ export function PartnersMarquee({
         className="pointer-events-none absolute inset-0 bg-dots opacity-40"
       />
       <Container>
-        <p className="text-center text-sm font-semibold uppercase tracking-[0.25em] text-[--color-fg-muted]">
-          {heading}
-        </p>
+        {subheading ? (
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
+              {heading}
+            </p>
+            <h2
+              className="mt-4 font-bold leading-[1.15] tracking-tight"
+              style={{ fontSize: "var(--text-display-md)" }}
+            >
+              {subheading}
+            </h2>
+          </div>
+        ) : (
+          <p className="text-center text-sm font-semibold uppercase tracking-[0.25em] text-[--color-fg-muted]">
+            {heading}
+          </p>
+        )}
       </Container>
 
       <div className="relative mt-10 overflow-hidden">

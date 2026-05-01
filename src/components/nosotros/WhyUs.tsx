@@ -19,27 +19,12 @@ const PILLARS = [
   },
   {
     label: "Personalización",
-    title: "No ofrecemos soluciones estándar",
-    body: "Cuando un cliente nos contrata, nos gusta escucharle, entender qué necesita y diseñar una propuesta a medida. 100% personalizada y con seguimiento cercano hasta lograr el resultado —o hacer todo lo posible para conseguirlo—.",
+    title: "Soluciones a medida",
+    body: "Escuchamos a cada cliente, entendemos qué necesita y diseñamos una propuesta 100% personalizada con seguimiento cercano hasta lograr el resultado —o hacer todo lo posible para conseguirlo—.",
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
         <path
-          d="M12 20l-5-5 5-5M7 15h10a4 4 0 004-4V5"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M3 9l3-3 3 3M6 6v9"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          opacity="0"
-        />
-        <path
-          d="M14 4l5 5-5 5M19 9H9"
+          d="M14 4l5 5-5 5M19 9H9M10 14l-5 5 5 5M5 19h11"
           stroke="currentColor"
           strokeWidth="1.6"
           strokeLinecap="round"
@@ -49,18 +34,23 @@ const PILLARS = [
     ),
   },
   {
-    label: "Largo plazo",
-    title: "Pensamos a largo plazo",
-    body: "No vendemos resultados de un mes ni atajos que comprometan tu negocio mañana. Cada decisión la tomamos pensando en cómo te ayudará a crecer hoy, pero también dentro de tres años.",
+    label: "Experiencia",
+    title: "Nunca partimos de cero",
+    body: "Más de 15 años en el sector nos dan aprendizajes y patrones validados. Cada cliente —grande o pequeño— se beneficia de todo lo aprendido en proyectos anteriores.",
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
         <path
-          d="M12 7v5l3 2"
+          d="M3 12l2 2 4-4M3 19l2 2 4-4M3 5l2 2 4-4"
           stroke="currentColor"
           strokeWidth="1.6"
           strokeLinecap="round"
           strokeLinejoin="round"
+        />
+        <path
+          d="M13 6h8M13 13h8M13 20h8"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
         />
       </svg>
     ),

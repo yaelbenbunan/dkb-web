@@ -1,6 +1,5 @@
 import { Container } from "@/components/ui/Container";
 import { WhyUs } from "@/components/nosotros/WhyUs";
-import { Process } from "@/components/nosotros/Process";
 import { Manifesto } from "@/components/nosotros/Manifesto";
 import { Counters } from "@/components/nosotros/Counters";
 import { PartnersMarquee } from "@/components/home/PartnersMarquee";
@@ -60,9 +59,11 @@ export default function NosotrosPage() {
       <WhyUs />
       <TeamGrid />
       <Counters />
-      <Process />
       <Manifesto />
-      <PartnersMarquee />
+      <PartnersMarquee
+        heading="Alianzas estratégicas"
+        subheading="Trabajamos con quienes hacen posible el ecosistema digital."
+      />
     </>
   );
 }
