@@ -18,7 +18,7 @@ const FEATURES: Feature[] = [
   },
   {
     iconSrc: "/img/icons/features/internacional.png",
-    title: "Equipo internacional",
+    title: "Presencia internacional",
     description:
       "Sucursales en España y México: combinamos talento local con capacidad de escalar a más mercados.",
   },
