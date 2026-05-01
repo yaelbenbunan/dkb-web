@@ -46,16 +46,6 @@ export function NavLink({ href, children }: Props) {
         }`}
       />
 
-      {/* Dot pulse pequeño cuando activo */}
-      {isActive && (
-        <span
-          aria-hidden
-          className="absolute -top-0.5 left-1/2 inline-flex h-1.5 w-1.5 -translate-x-1/2"
-        >
-          <span className="absolute inline-flex h-full w-full rounded-full bg-[#3a90f2] animate-ping-soft" />
-          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#3a90f2]" />
-        </span>
-      )}
     </Link>
   );
 }

@@ -29,18 +29,18 @@ export function PartnersMarquee({
           className="pointer-events-none absolute inset-y-0 right-0 z-10 w-32 bg-gradient-to-l from-[--color-bg-subtle] to-transparent"
         />
 
-        <div className="flex w-max animate-marquee gap-16 will-change-transform">
+        <div className="flex w-max animate-marquee gap-10 will-change-transform">
           {[...PARTNERS, ...PARTNERS].map((p, i) => (
             <div
               key={`${p.name}-${i}`}
-              className="flex h-40 w-64 shrink-0 items-center justify-center sm:h-48 sm:w-80"
+              className="flex h-24 w-44 shrink-0 items-center justify-center sm:h-28 sm:w-48"
             >
               <Image
                 src={p.src}
                 alt={p.name}
                 width={342}
                 height={164}
-                className="max-h-32 w-auto object-contain opacity-60 grayscale transition hover:opacity-100 hover:grayscale-0 sm:max-h-40"
+                className="h-16 w-auto object-contain opacity-60 grayscale transition hover:opacity-100 hover:grayscale-0 sm:h-20"
               />
             </div>
           ))}

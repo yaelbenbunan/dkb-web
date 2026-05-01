@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { Container } from "@/components/ui/Container";
 import { WhyUs } from "@/components/nosotros/WhyUs";
 import { Process } from "@/components/nosotros/Process";
@@ -16,30 +15,13 @@ export const metadata = {
 export default function NosotrosPage() {
   return (
     <>
-      {/* Hero con foto de la oficina como bg + overlay azul */}
       <header className="relative isolate overflow-hidden">
-        <Image
-          src="/img/nosotros/mosaico-oficina.png"
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className="-z-30 object-cover object-center opacity-30"
-        />
-        <div
-          aria-hidden
-          className="absolute inset-0 -z-20"
-          style={{
-            background:
-              "linear-gradient(135deg, rgba(8,9,13,0.72) 0%, rgba(12,28,64,0.7) 50%, rgba(14,16,21,0.4) 100%)",
-          }}
-        />
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 -z-10"
           style={{
             background:
-              "radial-gradient(ellipse 60% 70% at 25% 30%, rgba(58,144,242,0.32), transparent 65%)",
+              "radial-gradient(ellipse 60% 70% at 25% 30%, rgba(58,144,242,0.28), transparent 65%)",
           }}
         />
         <div
@@ -56,19 +38,19 @@ export default function NosotrosPage() {
             Nosotros
           </p>
           <h1
-            className="mt-8 max-w-5xl font-black leading-[0.92] tracking-tight"
+            className="mt-8 max-w-5xl font-black leading-[0.95] tracking-tight"
             style={{ fontSize: "var(--text-display-xl)" }}
           >
-            Una agencia digital,{" "}
+            Una agencia digital,
+            <br />
             <span className="italic text-[#3a90f2]">hecha para construir.</span>
           </h1>
-          <p className="mt-8 max-w-2xl text-lg leading-relaxed text-[#cfdcf2] md:text-xl">
+          <p className="mt-8 max-w-2xl text-lg leading-relaxed text-[--color-fg-muted] md:text-xl">
             Diseño, desarrollo y campañas bajo el mismo techo. Más de 15 años
             ayudando a marcas a crecer con estrategia, datos y creatividad.
           </p>
         </Container>
 
-        {/* Línea brillante inferior */}
         <div
           aria-hidden
           className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#187bef] to-transparent"
@@ -76,10 +58,10 @@ export default function NosotrosPage() {
       </header>
 
       <WhyUs />
-      <Manifesto />
+      <TeamGrid />
       <Counters />
       <Process />
-      <TeamGrid />
+      <Manifesto />
       <PartnersMarquee />
     </>
   );

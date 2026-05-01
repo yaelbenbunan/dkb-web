@@ -25,17 +25,19 @@ export function TeamGrid() {
         className="pointer-events-none absolute inset-0 -z-10 bg-grid-fine opacity-30 fade-edges-y"
       />
       <Container>
-        <div className="max-w-4xl">
+        <div>
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
             Conoce a nuestro equipo
           </p>
           <h2
-            className="mt-6 font-black leading-[0.95] tracking-tight"
+            className="mt-6 font-black leading-[1.05] tracking-tight"
             style={{ fontSize: "var(--text-display-md)" }}
           >
             Lo que hacemos importa, pero{" "}
-            <span className="italic text-[--color-accent]">quién lo hace</span>{" "}
-            marca la diferencia.
+            <span className="italic text-[--color-accent]">
+              quién lo hace marca la diferencia
+            </span>
+            .
           </h2>
         </div>
 
