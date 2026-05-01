@@ -68,13 +68,14 @@ export function Manifesto() {
           className="mx-auto mt-6 max-w-4xl font-bold leading-[1.15] tracking-tight text-[--color-fg]"
           style={{ fontSize: "var(--text-display-md)" }}
         >
-          No nos limitamos a entregar proyectos.{" "}
+          No nos limitamos a entregar proyectos.
+          <br />
+          Construimos relaciones largas con marcas que{" "}
           <span className="italic text-[--color-accent]">
-            Construimos relaciones largas
-          </span>{" "}
-          con marcas que{" "}
-          <span className="italic text-[--color-accent]">quieren un partner</span>
-          , no un proveedor.
+            quieren un partner
+          </span>
+          ,{" "}
+          <span className="whitespace-nowrap">no un proveedor.</span>
         </p>
         <p className="mt-6 text-sm font-semibold uppercase tracking-[0.25em] text-[--color-fg-muted]">
           — El equipo dinkbit España
