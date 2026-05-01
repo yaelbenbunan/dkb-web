@@ -16,7 +16,10 @@ export default function Home() {
   return (
     <>
       <Hero />
-      <PartnersMarquee />
+      <PartnersMarquee
+        heading="Alianzas estratégicas"
+        subheading="Trabajamos con quienes hacen posible el ecosistema digital."
+      />
       <AboutFeatures />
       <ServicesCarousel services={services} />
       <Testimonials />

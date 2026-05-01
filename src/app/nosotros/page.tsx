@@ -1,8 +1,7 @@
 import { Container } from "@/components/ui/Container";
 import { WhyUs } from "@/components/nosotros/WhyUs";
 import { Manifesto } from "@/components/nosotros/Manifesto";
-import { Counters } from "@/components/nosotros/Counters";
-import { PartnersMarquee } from "@/components/home/PartnersMarquee";
+import { HeaderStats } from "@/components/nosotros/HeaderStats";
 import { TeamGrid } from "@/components/nosotros/TeamGrid";
 
 export const metadata = {
@@ -28,7 +27,7 @@ export default function NosotrosPage() {
           className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-25 fade-edges-y"
         />
 
-        <Container className="relative py-24 md:py-32">
+        <Container className="relative py-24 md:py-28">
           <p className="inline-flex items-center gap-2 rounded-full bg-[#187bef]/15 px-3 py-1 text-xs font-bold uppercase tracking-[0.25em] text-[#3a90f2] ring-1 ring-[#187bef]/30">
             <span className="relative inline-flex h-1.5 w-1.5">
               <span className="absolute inline-flex h-full w-full rounded-full bg-[#3a90f2] animate-ping-soft" />
@@ -44,10 +43,8 @@ export default function NosotrosPage() {
             <br />
             <span className="italic text-[#3a90f2]">hecha para construir.</span>
           </h1>
-          <p className="mt-8 max-w-2xl text-lg leading-relaxed text-[--color-fg-muted] md:text-xl">
-            Diseño, desarrollo y campañas bajo el mismo techo. Más de 15 años
-            ayudando a marcas a crecer con estrategia, datos y creatividad.
-          </p>
+
+          <HeaderStats />
         </Container>
 
         <div
@@ -58,12 +55,7 @@ export default function NosotrosPage() {
 
       <WhyUs />
       <TeamGrid />
-      <Counters />
       <Manifesto />
-      <PartnersMarquee
-        heading="Alianzas estratégicas"
-        subheading="Trabajamos con quienes hacen posible el ecosistema digital."
-      />
     </>
   );
 }
