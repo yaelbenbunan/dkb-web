@@ -71,7 +71,10 @@ export default async function CaseDetail({
 
       {/* Soluciones por servicio */}
       {caseStudy.sections && caseStudy.sections.length > 0 && (
-        <CaseSections sections={caseStudy.sections} />
+        <CaseSections
+          sections={caseStudy.sections}
+          websiteUrl={caseStudy.social?.website}
+        />
       )}
 
       <RelatedCases cases={related} />

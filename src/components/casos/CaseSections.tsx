@@ -9,8 +9,25 @@ function normalize(image: string | CaseImage): { src: string; mockup: MockupKind
   return { src: image.src, mockup: image.mockup ?? "none", alt: image.alt ?? "" };
 }
 
-export function CaseSections({ sections }: { sections: CaseSection[] }) {
+function hostFromUrl(url?: string): string {
+  if (!url) return "";
+  try {
+    return new URL(url).host.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
+export function CaseSections({
+  sections,
+  websiteUrl,
+}: {
+  sections: CaseSection[];
+  websiteUrl?: string;
+}) {
   if (!sections.length) return null;
+  const domain = hostFromUrl(websiteUrl);
+
   return (
     <div className="space-y-20 py-16 md:space-y-28 md:py-20">
       {sections.map((section, idx) => {
@@ -45,7 +62,7 @@ export function CaseSections({ sections }: { sections: CaseSection[] }) {
                 </div>
               </div>
 
-              {/* Der: galería de mockups. Cada imagen se renderiza en su frame. */}
+              {/* Der: galería de mockups */}
               <div className="space-y-6">
                 {images.length > 0 ? (
                   images.map((img, i) => (
@@ -54,6 +71,7 @@ export function CaseSections({ sections }: { sections: CaseSection[] }) {
                       kind={img.mockup}
                       src={img.src}
                       alt={img.alt}
+                      domain={domain}
                       priority={idx === 0 && i === 0}
                     />
                   ))
@@ -77,11 +95,13 @@ function MockupFrame({
   kind,
   src,
   alt,
+  domain,
   priority,
 }: {
   kind: MockupKind;
   src: string;
   alt: string;
+  domain?: string;
   priority?: boolean;
 }) {
   if (kind === "desktop") {
@@ -92,9 +112,11 @@ function MockupFrame({
           <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />
           <span className="h-3 w-3 rounded-full bg-[#febc2e]" />
           <span className="h-3 w-3 rounded-full bg-[#28c840]" />
-          <span className="ml-3 hidden flex-1 rounded-md bg-white/[0.05] px-3 py-1 text-xs text-white/40 sm:block">
-            sodacrowd.com
-          </span>
+          {domain && (
+            <span className="ml-3 hidden flex-1 truncate rounded-md bg-white/[0.05] px-3 py-1 text-xs text-white/40 sm:block">
+              {domain}
+            </span>
+          )}
         </div>
         <Image
           src={src}
