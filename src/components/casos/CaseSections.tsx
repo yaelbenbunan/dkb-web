@@ -149,6 +149,33 @@ function MockupFrame({
     );
   }
 
+  if (kind === "mobile-tilt") {
+    return (
+      <div className="mx-auto py-8" style={{ perspective: "1400px" }}>
+        <div
+          className="group mx-auto w-full max-w-[260px] rounded-[2rem] bg-[#1a1d27] p-2 ring-1 ring-white/[0.08] shadow-[0_40px_70px_-20px_rgba(0,0,0,0.75),0_0_60px_-10px_rgba(24,123,239,0.25)]"
+          style={{
+            transform:
+              "rotateY(-18deg) rotateX(6deg) rotateZ(-3deg)",
+            transformStyle: "preserve-3d",
+          }}
+        >
+          <div className="relative overflow-hidden rounded-[1.6rem] bg-[#0e1015]">
+            <span className="absolute left-1/2 top-2 z-10 h-1.5 w-16 -translate-x-1/2 rounded-full bg-black/80" />
+            <Image
+              src={src}
+              alt={alt}
+              width={400}
+              height={800}
+              priority={priority}
+              className="h-auto w-full object-cover"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-hidden rounded-2xl shadow-[0_25px_50px_-15px_rgba(0,0,0,0.5)]">
       <Image
