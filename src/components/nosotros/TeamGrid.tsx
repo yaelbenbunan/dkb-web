@@ -19,7 +19,7 @@ export function TeamGrid() {
   const members = useMemo(() => shuffle(TEAM), []);
 
   return (
-    <section className="relative isolate overflow-hidden py-28 md:py-36">
+    <section className="relative isolate overflow-hidden py-20 md:py-24">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10 bg-grid-fine opacity-30 fade-edges-y"

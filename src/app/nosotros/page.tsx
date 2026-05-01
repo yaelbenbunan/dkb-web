@@ -40,8 +40,8 @@ export default function NosotrosPage() {
       </header>
       <WhyUs />
       <Counters />
-      <PartnersMarquee />
       <TeamGrid />
+      <PartnersMarquee />
     </>
   );
 }
