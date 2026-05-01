@@ -15,6 +15,7 @@ const DEFAULT_TABS = [
   { slug: "ecommerce", title: "Ecommerce" },
   { slug: "sem", title: "SEM" },
   { slug: "social-paid-media", title: "Social & Paid Media" },
+  { slug: "email-mkt", title: "Email marketing" },
 ];
 
 export function CaseFilters({ caseStudies, filterTags = DEFAULT_TABS }: Props) {

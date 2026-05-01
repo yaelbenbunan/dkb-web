@@ -25,11 +25,22 @@ export interface Service {
   body: string;
 }
 
+export type MockupKind = "desktop" | "mobile" | "none";
+
+export interface CaseImage {
+  src: string;
+  /** Frame estilo browser/teléfono. Por defecto "none" (sin frame, solo rounded) */
+  mockup?: MockupKind;
+  /** Texto alternativo opcional */
+  alt?: string;
+}
+
 export interface CaseSection {
   tag: string;
   title: string;
   body: string;
-  images?: string[];
+  /** Acepta strings (sin frame) o objetos {src, mockup} para frame específico */
+  images?: Array<string | CaseImage>;
 }
 
 export interface CaseSocial {
@@ -38,6 +49,8 @@ export interface CaseSocial {
   instagram?: string;
   linkedin?: string;
   twitter?: string;
+  youtube?: string;
+  tiktok?: string;
 }
 
 export interface CaseStudy {

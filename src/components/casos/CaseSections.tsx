@@ -1,17 +1,25 @@
 import Image from "next/image";
 import { Container } from "@/components/ui/Container";
-import type { CaseSection } from "@/lib/types";
+import type { CaseImage, CaseSection, MockupKind } from "@/lib/types";
+
+function normalize(image: string | CaseImage): { src: string; mockup: MockupKind; alt: string } {
+  if (typeof image === "string") {
+    return { src: image, mockup: "none", alt: "" };
+  }
+  return { src: image.src, mockup: image.mockup ?? "none", alt: image.alt ?? "" };
+}
 
 export function CaseSections({ sections }: { sections: CaseSection[] }) {
   if (!sections.length) return null;
   return (
     <div className="space-y-20 py-16 md:space-y-28 md:py-20">
       {sections.map((section, idx) => {
-        const hasMultipleImages = (section.images?.length ?? 0) > 1;
+        const images = (section.images ?? []).map(normalize);
+        const hasMultipleImages = images.length > 1;
         return (
           <Container key={`${section.tag}-${idx}`}>
             <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
-              {/* Izq: texto. Sticky cuando hay 2+ imágenes para que se mantenga visible mientras scroleas. */}
+              {/* Izq: texto. Sticky cuando hay 2+ imágenes. */}
               <div
                 className={
                   hasMultipleImages
@@ -37,23 +45,17 @@ export function CaseSections({ sections }: { sections: CaseSection[] }) {
                 </div>
               </div>
 
-              {/* Der: galería. Stacked, sin bordes — solo rounded + soft shadow. */}
-              <div className="space-y-4">
-                {section.images && section.images.length > 0 ? (
-                  section.images.map((src, i) => (
-                    <div
-                      key={src}
-                      className="overflow-hidden rounded-2xl shadow-[0_25px_50px_-15px_rgba(0,0,0,0.5)]"
-                    >
-                      <Image
-                        src={src}
-                        alt=""
-                        width={1200}
-                        height={800}
-                        className="h-auto w-full object-cover"
-                        priority={idx === 0 && i === 0}
-                      />
-                    </div>
+              {/* Der: galería de mockups. Cada imagen se renderiza en su frame. */}
+              <div className="space-y-6">
+                {images.length > 0 ? (
+                  images.map((img, i) => (
+                    <MockupFrame
+                      key={`${img.src}-${i}`}
+                      kind={img.mockup}
+                      src={img.src}
+                      alt={img.alt}
+                      priority={idx === 0 && i === 0}
+                    />
                   ))
                 ) : (
                   <div className="flex aspect-[4/3] items-center justify-center rounded-2xl bg-[--color-bg-subtle] ring-1 ring-white/[0.05]">
@@ -67,6 +69,74 @@ export function CaseSections({ sections }: { sections: CaseSection[] }) {
           </Container>
         );
       })}
+    </div>
+  );
+}
+
+function MockupFrame({
+  kind,
+  src,
+  alt,
+  priority,
+}: {
+  kind: MockupKind;
+  src: string;
+  alt: string;
+  priority?: boolean;
+}) {
+  if (kind === "desktop") {
+    return (
+      <div className="overflow-hidden rounded-2xl bg-[#1a1d27] ring-1 ring-white/[0.08] shadow-[0_25px_50px_-15px_rgba(0,0,0,0.6)]">
+        {/* Browser chrome */}
+        <div className="flex items-center gap-2 border-b border-white/[0.06] bg-[#13151c] px-4 py-3">
+          <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />
+          <span className="h-3 w-3 rounded-full bg-[#febc2e]" />
+          <span className="h-3 w-3 rounded-full bg-[#28c840]" />
+          <span className="ml-3 hidden flex-1 rounded-md bg-white/[0.05] px-3 py-1 text-xs text-white/40 sm:block">
+            sodacrowd.com
+          </span>
+        </div>
+        <Image
+          src={src}
+          alt={alt}
+          width={1600}
+          height={1000}
+          priority={priority}
+          className="h-auto w-full object-cover"
+        />
+      </div>
+    );
+  }
+
+  if (kind === "mobile") {
+    return (
+      <div className="mx-auto w-full max-w-[280px] rounded-[2rem] bg-[#1a1d27] p-2 ring-1 ring-white/[0.08] shadow-[0_25px_50px_-15px_rgba(0,0,0,0.7)]">
+        {/* Phone notch */}
+        <div className="relative overflow-hidden rounded-[1.6rem] bg-[#0e1015]">
+          <span className="absolute left-1/2 top-2 z-10 h-1.5 w-16 -translate-x-1/2 rounded-full bg-black/80" />
+          <Image
+            src={src}
+            alt={alt}
+            width={400}
+            height={800}
+            priority={priority}
+            className="h-auto w-full object-cover"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-2xl shadow-[0_25px_50px_-15px_rgba(0,0,0,0.5)]">
+      <Image
+        src={src}
+        alt={alt}
+        width={1200}
+        height={800}
+        priority={priority}
+        className="h-auto w-full object-cover"
+      />
     </div>
   );
 }

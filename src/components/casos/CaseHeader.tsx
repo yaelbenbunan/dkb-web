@@ -166,6 +166,28 @@ export function CaseHeader({ caseStudy, serviceTitleBySlug }: Props) {
                     }
                   />
                 )}
+                {caseStudy.social.youtube && (
+                  <SocialLink
+                    href={caseStudy.social.youtube}
+                    label="YouTube"
+                    icon={
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M23.5 6.2a3 3 0 00-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 00.5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 002.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 002.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z" />
+                      </svg>
+                    }
+                  />
+                )}
+                {caseStudy.social.tiktok && (
+                  <SocialLink
+                    href={caseStudy.social.tiktok}
+                    label="TikTok"
+                    icon={
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19.6 6.5a5.7 5.7 0 01-3.4-1.1A5.7 5.7 0 0114 1h-3.5v13.6a2.6 2.6 0 11-2.6-2.6c.3 0 .5 0 .8.1V8.5a6.2 6.2 0 00-.8-.1 6.1 6.1 0 106.1 6.1V8a9 9 0 005.6 1.9V6.4a5.7 5.7 0 01-.0.1z" />
+                      </svg>
+                    }
+                  />
+                )}
               </div>
             )}
           </div>
