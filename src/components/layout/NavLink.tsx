@@ -16,7 +16,7 @@ export function NavLink({ href, children }: Props) {
   return (
     <Link
       href={href}
-      className={`group relative inline-flex h-16 items-center px-1 text-base font-medium transition-colors ${
+      className={`group relative inline-flex h-16 items-center px-2 text-base font-medium transition-colors ${
         isActive
           ? "text-[#3a90f2]"
           : "text-[--color-fg-muted] hover:text-[--color-fg]"

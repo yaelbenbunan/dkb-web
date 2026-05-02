@@ -222,7 +222,7 @@ function SocialLink({
       target="_blank"
       rel="noopener noreferrer"
       aria-label={label}
-      className="surface flex h-10 w-10 items-center justify-center rounded-full text-[--color-fg-muted] transition-all hover:bg-[#187bef] hover:text-white"
+      className="group flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.06] text-[--color-fg-muted] ring-1 ring-white/[0.08] transition-all duration-300 hover:-translate-y-0.5 hover:scale-110 hover:bg-[#187bef] hover:text-white hover:ring-[#187bef] hover:shadow-[0_8px_24px_-6px_rgba(24,123,239,0.6)]"
     >
       {icon}
     </a>

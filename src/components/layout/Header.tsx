@@ -22,7 +22,7 @@ export function Header() {
               className="h-9 w-auto"
             />
           </Link>
-          <nav className="hidden items-center gap-2 md:flex">
+          <nav className="hidden items-center gap-8 md:flex lg:gap-10">
             {NAV_ITEMS.map((item) => (
               <NavLink key={item.href} href={item.href}>
                 {item.label}
