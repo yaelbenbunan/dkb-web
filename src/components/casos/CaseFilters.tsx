@@ -15,6 +15,7 @@ const DEFAULT_TABS = [
   { slug: "ecommerce", title: "Ecommerce" },
   { slug: "sem", title: "SEM" },
   { slug: "social-paid-media", title: "Social & Paid Media" },
+  { slug: "diseno-grafico", title: "Diseño gráfico" },
   { slug: "email-mkt", title: "Email marketing" },
 ];
 
@@ -68,9 +69,9 @@ export function CaseFilters({ caseStudies, filterTags = DEFAULT_TABS }: Props) {
                   <ClientLogoSwap
                     src={c.clientLogo}
                     alt={c.client}
-                    width={240}
-                    height={120}
-                    imgClassName="max-h-20 w-auto object-contain"
+                    width={320}
+                    height={160}
+                    imgClassName="max-h-28 w-auto object-contain sm:max-h-32"
                   />
                 ) : (
                   <span className="text-xl font-bold text-[--color-fg-muted] transition-colors group-hover:text-[--color-fg]">

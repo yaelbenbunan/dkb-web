@@ -46,7 +46,7 @@ export function RelatedCases({ cases }: { cases: CaseStudy[] }) {
             <Link
               key={`${c.slug}-${i}`}
               href={`/casos-de-exito/${c.slug}`}
-              className="group flex h-28 w-52 shrink-0 items-center justify-center sm:h-32 sm:w-60"
+              className="group flex h-32 w-60 shrink-0 items-center justify-center sm:h-36 sm:w-72"
               aria-label={c.client}
             >
               {c.clientLogo ? (
@@ -54,9 +54,9 @@ export function RelatedCases({ cases }: { cases: CaseStudy[] }) {
                   <ClientLogoSwap
                     src={c.clientLogo}
                     alt={c.client}
-                    width={240}
-                    height={120}
-                    imgClassName="max-h-20 w-auto object-contain sm:max-h-24"
+                    width={320}
+                    height={160}
+                    imgClassName="max-h-24 w-auto object-contain sm:max-h-28"
                   />
                 </span>
               ) : (

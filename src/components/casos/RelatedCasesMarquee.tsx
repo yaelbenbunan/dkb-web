@@ -27,12 +27,12 @@ export function RelatedCasesMarquee({ cases }: Props) {
         className="pointer-events-none absolute inset-y-0 right-0 z-10 w-20 bg-gradient-to-l from-[--color-bg] to-transparent"
       />
 
-      <div className="flex w-max animate-marquee gap-5 will-change-transform">
+      <div className="flex w-max animate-marquee gap-8 will-change-transform">
         {items.map((c, i) => (
           <Link
             key={`${c.slug}-${i}`}
             href={`/casos-de-exito/${c.slug}`}
-            className="group flex aspect-[3/2] w-40 shrink-0 items-center justify-center sm:w-48"
+            className="group flex aspect-[3/2] w-52 shrink-0 items-center justify-center sm:w-60"
             aria-label={c.client}
           >
             {c.clientLogo ? (
@@ -40,9 +40,9 @@ export function RelatedCasesMarquee({ cases }: Props) {
                 <ClientLogoSwap
                   src={c.clientLogo}
                   alt={c.client}
-                  width={180}
-                  height={80}
-                  imgClassName="max-h-14 w-auto object-contain"
+                  width={240}
+                  height={120}
+                  imgClassName="max-h-20 w-auto object-contain sm:max-h-24"
                 />
               </span>
             ) : (

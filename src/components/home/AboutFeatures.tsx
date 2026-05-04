@@ -26,7 +26,7 @@ const FEATURES: Feature[] = [
     iconSrc: "/img/icons/features/multidisciplinar.png",
     title: "Equipo multidisciplinar",
     description:
-      "Diseño, desarrollo, paid media, SEO y contenido en un mismo equipo. Una sola conversación para todo lo que necesita tu marca.",
+      "Tenemos especialistas dedicados en cada servicio y no subcontratamos nada: así garantizamos que cada entrega cumpla nuestros estándares de calidad.",
   },
 ];
 
