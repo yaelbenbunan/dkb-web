@@ -21,7 +21,7 @@ export function MobileMenu() {
         aria-label={open ? "Cerrar menú" : "Abrir menú"}
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="relative z-50 inline-flex h-10 w-10 items-center justify-center rounded-md text-white hover:bg-white/10"
+        className="relative z-50 inline-flex h-10 w-10 items-center justify-center rounded-md text-fg hover:bg-border"
       >
         <span className="sr-only">Menú</span>
         <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
@@ -41,14 +41,14 @@ export function MobileMenu() {
             onClick={() => setOpen(false)}
             className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm"
           />
-          <div className="fixed inset-x-0 top-20 z-40 border-b border-border bg-bg shadow-2xl">
+          <div className="fixed inset-x-0 top-20 z-40 border-b border-border bg-bg-elevated shadow-2xl">
             <nav className="flex flex-col gap-1 p-4">
               {NAV_ITEMS.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={() => setOpen(false)}
-                  className="rounded-md px-3 py-3 text-base font-medium text-white/80 hover:bg-white/5 hover:text-white"
+                  className="rounded-md px-3 py-3 text-base font-medium text-fg-muted hover:bg-border/60 hover:text-fg"
                 >
                   {item.label}
                 </Link>
