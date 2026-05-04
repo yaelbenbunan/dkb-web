@@ -9,7 +9,7 @@ import { MobileMenu } from "./MobileMenu";
 export function Header() {
   return (
     <header
-      className="sticky top-0 z-40 backdrop-blur-xl"
+      className="sticky top-0 z-40 border-b border-border/60 backdrop-blur-xl"
       style={{ backgroundColor: "var(--header-bg)" }}
     >
       <Container className="flex h-20 items-center justify-between gap-8">

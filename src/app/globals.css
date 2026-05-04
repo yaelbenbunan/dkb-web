@@ -59,34 +59,38 @@
 }
 
 [data-theme="light"] {
-  --color-bg: #fafafa;
+  /* Tinte azulado discreto sobre el blanco base — la web respira con la marca */
+  --color-bg: #f4f7fc;
   --color-bg-elevated: #ffffff;
-  --color-bg-subtle: #f3f4f6;
-  --color-bg-deep: #ececef;
+  --color-bg-subtle: #eef2f9;
+  /* Footer / "deep" más diferenciado para que rompa con la sección previa */
+  --color-bg-deep: #dbe4f1;
   --color-fg: #0a0a0a;
   --color-fg-muted: #475569;
   --color-fg-dim: #64748b;
-  --color-border: #e5e7eb;
-  --color-border-strong: #d1d5db;
+  --color-border: #d8dfeb;
+  --color-border-strong: #c4cdde;
 
   --grid-line: rgba(15, 23, 42, 0.06);
   --grid-line-fine: rgba(15, 23, 42, 0.04);
   --dots-color: rgba(15, 23, 42, 0.08);
 
-  --surface-bg: rgba(255, 255, 255, 0.85);
-  --surface-bg-hover: rgba(255, 255, 255, 0.95);
+  /* Surfaces con tinte azul muy sutil para que las cards no parezcan papel
+     blanco recortado — coherente con la identidad. */
+  --surface-bg: rgba(228, 236, 252, 0.7);
+  --surface-bg-hover: rgba(213, 227, 252, 0.85);
   --surface-shadow:
-    0 1px 0 rgba(15, 23, 42, 0.04) inset,
-    0 0 0 1px rgba(15, 23, 42, 0.06),
-    0 8px 24px -8px rgba(15, 23, 42, 0.12),
-    0 0 32px -10px rgba(24, 123, 239, 0.18);
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 0 0 1px rgba(24, 123, 239, 0.16),
+    0 8px 24px -8px rgba(15, 23, 42, 0.1),
+    0 0 32px -10px rgba(24, 123, 239, 0.22);
   --surface-shadow-hover:
-    0 1px 0 rgba(255, 255, 255, 0.6) inset,
-    0 0 0 1px rgba(24, 123, 239, 0.45),
-    0 12px 30px -8px rgba(15, 23, 42, 0.18),
-    0 0 50px -10px rgba(24, 123, 239, 0.35);
+    0 1px 0 rgba(255, 255, 255, 0.8) inset,
+    0 0 0 1px rgba(24, 123, 239, 0.55),
+    0 12px 30px -8px rgba(15, 23, 42, 0.15),
+    0 0 50px -10px rgba(24, 123, 239, 0.4);
   --noise-opacity: 0.025;
-  --header-bg: rgba(250, 250, 250, 0.85);
+  --header-bg: rgba(244, 247, 252, 0.88);
   /* Logos blancos → invertirlos a negros mediante filter */
   --logo-filter: invert(1) brightness(0);
   --hero-overlay: linear-gradient(
@@ -278,10 +282,16 @@
 .client-logo-bw img {
   transition: filter 240ms ease;
 }
-/* Solo la primera img (logo blanco que se ve por defecto) se invierte —
-   la segunda (color, visible en hover) se queda como está. */
+/* En light invertimos la primera img (logo blanco) a negro, y ocultamos la
+   segunda img (color), porque muchos logos del catálogo (sodacrowd, talleres
+   positivos, adamo, etc.) tienen versión "color" que en realidad es blanca →
+   sobre fondo claro desaparecerían en el hover. Mantenemos negro siempre. */
 [data-theme="light"] .client-logo-bw img:first-child {
   filter: var(--logo-filter);
+  opacity: 1 !important;
+}
+[data-theme="light"] .client-logo-bw img:nth-child(2) {
+  display: none;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
