@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { motion } from "motion/react";
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Container } from "@/components/ui/Container";
 import { TEAM } from "@/lib/team";
 
@@ -16,7 +16,11 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 export function TeamGrid() {
-  const members = useMemo(() => shuffle(TEAM), []);
+  const [members, setMembers] = useState(TEAM);
+
+  useEffect(() => {
+    setMembers(shuffle(TEAM));
+  }, []);
 
   return (
     <section className="relative isolate overflow-hidden py-20 md:py-24">

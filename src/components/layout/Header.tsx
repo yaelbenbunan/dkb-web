@@ -22,7 +22,7 @@ export function Header() {
               className="h-9 w-auto"
             />
           </Link>
-          <nav className="hidden items-center gap-8 md:flex lg:gap-10">
+          <nav className="hidden items-center gap-8 lg:flex lg:gap-10">
             {NAV_ITEMS.map((item) => (
               <NavLink key={item.href} href={item.href}>
                 {item.label}
@@ -32,7 +32,7 @@ export function Header() {
         </div>
 
         {/* Derecha: iconos RRSS */}
-        <div className="hidden items-center gap-2 md:flex">
+        <div className="hidden items-center gap-2 lg:flex">
           <SocialIcon
             href={CONTACT_INFO.socials.instagram}
             label="Instagram"
