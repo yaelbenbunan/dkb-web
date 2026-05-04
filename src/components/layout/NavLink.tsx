@@ -17,19 +17,18 @@ export function NavLink({ href, children }: Props) {
     <Link
       href={href}
       className={`group relative inline-flex h-16 items-center whitespace-nowrap px-2 text-base font-medium transition-colors ${
-        isActive
-          ? "text-[#3a90f2]"
-          : "text-fg-muted hover:text-fg"
+        isActive ? "" : "text-fg-muted hover:text-fg"
       }`}
+      style={isActive ? { color: "var(--nav-active-fg)" } : undefined}
     >
-      {/* Glow detrás del texto activo */}
+      {/* Glow detrás del texto activo (alpha menor en light para que se lea) */}
       {isActive && (
         <span
           aria-hidden
           className="absolute inset-x-0 top-1/2 -z-10 h-8 -translate-y-1/2 rounded-full"
           style={{
             background:
-              "radial-gradient(ellipse 80% 100% at 50% 50%, rgba(58,144,242,0.35), transparent 70%)",
+              "radial-gradient(ellipse 80% 100% at 50% 50%, var(--nav-active-glow), transparent 70%)",
           }}
         />
       )}

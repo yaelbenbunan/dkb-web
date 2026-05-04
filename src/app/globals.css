@@ -56,6 +56,9 @@
   --social-pill-ring: rgba(255, 255, 255, 0.08);
   /* Gradient que rellena los números de stats. En dark va de blanco a azul. */
   --stat-gradient: linear-gradient(135deg, #ffffff 0%, #3a90f2 70%, #187bef 100%);
+  /* Glow azul detrás del item activo del nav. */
+  --nav-active-glow: rgba(58, 144, 242, 0.35);
+  --nav-active-fg: #3a90f2;
 }
 
 [data-theme="light"] {
@@ -99,18 +102,27 @@
     rgba(250, 250, 250, 0.78) 45%,
     rgba(250, 250, 250, 0.55) 100%
   );
-  /* CaseHeader en light: azul corporativo conservado pero saturación baja */
-  --case-header-bg: linear-gradient(
-    135deg,
-    rgba(232, 240, 254, 1) 0%,
-    rgba(213, 228, 252, 1) 100%
-  );
+  /* CaseHeader en light: base casi neutra para legibilidad del texto, con un
+     halo azul concentrado en el lado del logo (derecha en desktop). Así la
+     marca sigue presente sin pelear con el texto principal. */
+  --case-header-bg:
+    radial-gradient(
+      ellipse 55% 85% at 92% 50%,
+      rgba(187, 213, 252, 0.9) 0%,
+      rgba(208, 226, 252, 0.5) 35%,
+      transparent 70%
+    ),
+    linear-gradient(180deg, #f7faff 0%, #f1f5fc 100%);
   --case-header-fg: #0a0a0a;
   --case-header-fg-muted: #475569;
   --social-pill-bg: rgba(15, 23, 42, 0.05);
   --social-pill-ring: rgba(15, 23, 42, 0.1);
   /* En light el gradient va de negro a azul para que destaque sobre fondo claro. */
   --stat-gradient: linear-gradient(135deg, #0a0a0a 0%, #187bef 70%, #0c5fc4 100%);
+  /* En light bajamos la intensidad del glow del nav activo y oscurecemos el texto
+     para que la palabra sea totalmente legible. */
+  --nav-active-glow: rgba(24, 123, 239, 0.14);
+  --nav-active-fg: #0c5fc4;
 }
 
 @theme inline {
