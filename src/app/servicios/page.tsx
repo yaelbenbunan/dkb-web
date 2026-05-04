@@ -23,7 +23,7 @@ export default function ServiciosPage() {
           className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-40 fade-edges-y"
         />
         <Container>
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent">
             Servicios
           </p>
           <h1
@@ -31,7 +31,7 @@ export default function ServiciosPage() {
             style={{ fontSize: "var(--text-display-lg)" }}
           >
             Todo lo que necesita una marca para{" "}
-            <span className="text-[--color-accent]">crecer en digital.</span>
+            <span className="text-accent">crecer en digital.</span>
           </h1>
         </Container>
       </header>

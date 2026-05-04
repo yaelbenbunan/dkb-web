@@ -53,7 +53,7 @@ export function CaseFilters({ caseStudies, filterTags = DEFAULT_TABS }: Props) {
       </div>
 
       {filtered.length === 0 ? (
-        <p className="mt-16 text-center text-[--color-fg-muted]">
+        <p className="mt-16 text-center text-fg-muted">
           No hay casos para este filtro todavía.
         </p>
       ) : (
@@ -74,7 +74,7 @@ export function CaseFilters({ caseStudies, filterTags = DEFAULT_TABS }: Props) {
                     imgClassName="max-h-28 w-auto object-contain sm:max-h-32"
                   />
                 ) : (
-                  <span className="text-xl font-bold text-[--color-fg-muted] transition-colors group-hover:text-[--color-fg]">
+                  <span className="text-xl font-bold text-fg-muted transition-colors group-hover:text-fg">
                     {c.client}
                   </span>
                 )}

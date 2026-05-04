@@ -172,7 +172,7 @@ function Field({
   return (
     <label className="block">
       <span className="text-xs font-bold uppercase tracking-wider text-[#187bef]">
-        {label} {required && <span className="text-[--color-accent]">*</span>}
+        {label} {required && <span className="text-accent">*</span>}
       </span>
       <input
         name={name}
@@ -197,7 +197,7 @@ function TextareaField({
   return (
     <label className="block">
       <span className="text-xs font-bold uppercase tracking-wider text-[#187bef]">
-        {label} <span className="text-[--color-accent]">*</span>
+        {label} <span className="text-accent">*</span>
       </span>
       <textarea name={name} required rows={rows} className={inputClass} />
     </label>
@@ -220,7 +220,7 @@ function SelectField({
   return (
     <label className="block">
       <span className="text-xs font-bold uppercase tracking-wider text-[#187bef]">
-        {label} {required && <span className="text-[--color-accent]">*</span>}
+        {label} {required && <span className="text-accent">*</span>}
       </span>
       <select
         name={name}

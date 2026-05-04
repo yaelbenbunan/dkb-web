@@ -18,18 +18,18 @@ export function ContactSection({ bare = false }: Props) {
     <Container className="grid gap-14 lg:grid-cols-[2fr_3fr] lg:gap-20">
       {/* Info Panel */}
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
+        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent">
           Hablemos
         </p>
         <h2
           className="mt-6 font-black leading-[0.95] tracking-tight"
           style={{ fontSize: "var(--text-display-lg)" }}
         >
-          <span className="text-[--color-accent]">Contáctanos.</span>
+          <span className="text-accent">Contáctanos.</span>
         </h2>
-        <p className="mt-6 max-w-md text-lg text-[--color-fg-muted]">
+        <p className="mt-6 max-w-md text-lg text-fg-muted">
           Cuéntanos tu proyecto. Te respondemos en{" "}
-          <span className="text-[--color-fg]">menos de 24 horas</span>.
+          <span className="text-fg">menos de 24 horas</span>.
         </p>
 
         <ul className="mt-12 space-y-4">
@@ -106,7 +106,7 @@ export function ContactSection({ bare = false }: Props) {
   if (bare) return content;
 
   return (
-    <section className="relative isolate overflow-hidden bg-[--color-bg-deep] py-28 md:py-36">
+    <section className="relative isolate overflow-hidden bg-bg-deep py-28 md:py-36">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10 spotlight-accent"
@@ -146,10 +146,10 @@ function ContactCard({
           {icon}
         </span>
         <span className="min-w-0">
-          <span className="block text-xs font-semibold uppercase tracking-wider text-[--color-fg-muted]">
+          <span className="block text-xs font-semibold uppercase tracking-wider text-fg-muted">
             {label}
           </span>
-          <span className="mt-1 block text-base font-medium text-[--color-fg] group-hover:text-[--color-accent]">
+          <span className="mt-1 block text-base font-medium text-fg group-hover:text-accent">
             {value}
           </span>
         </span>

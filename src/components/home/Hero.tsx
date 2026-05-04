@@ -22,14 +22,11 @@ export function Hero() {
         className="-z-30 object-cover object-center"
       />
 
-      {/* Overlay translúcido para legibilidad */}
+      {/* Overlay translúcido para legibilidad — cambia según el tema */}
       <div
         aria-hidden
         className="absolute inset-0 -z-20"
-        style={{
-          background:
-            "linear-gradient(135deg, rgba(8,9,13,0.78) 0%, rgba(14,16,21,0.55) 45%, rgba(14,16,21,0.25) 100%)",
-        }}
+        style={{ background: "var(--hero-overlay)" }}
       />
 
       {/* Spotlight radial azul */}
@@ -54,7 +51,7 @@ export function Hero() {
       <Container className="relative grid gap-14 py-28 md:py-32 lg:grid-cols-[1.3fr_1fr] lg:gap-20">
         <div className="flex flex-col justify-center">
           {/* Headline tri-línea con misma tipografía. Rotating word es la única en azul. */}
-          <h1 className="font-black leading-[0.95] tracking-tight text-[--color-fg]">
+          <h1 className="font-black leading-[0.95] tracking-tight text-fg">
             <span className="block text-5xl md:text-6xl lg:text-7xl">
               Hacemos
             </span>
@@ -66,10 +63,10 @@ export function Hero() {
             </span>
           </h1>
 
-          <p className="mt-10 max-w-xl text-lg leading-relaxed text-[--color-fg-muted] md:text-xl">
-            Somos un equipo <span className="text-[--color-fg]">multidisciplinar</span>,
-            donde la <span className="text-[--color-accent]">innovación</span> y la{" "}
-            <span className="text-[--color-accent]">creatividad</span> se unen para crear
+          <p className="mt-10 max-w-xl text-lg leading-relaxed text-fg-muted md:text-xl">
+            Somos un equipo <span className="text-fg">multidisciplinar</span>,
+            donde la <span className="text-accent">innovación</span> y la{" "}
+            <span className="text-accent">creatividad</span> se unen para crear
             soluciones que impulsan tu marca y te ayudan a conseguir los mejores resultados.
           </p>
         </div>

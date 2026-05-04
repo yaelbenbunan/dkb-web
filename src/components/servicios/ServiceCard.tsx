@@ -16,7 +16,7 @@ export function ServiceCard({ service }: { service: Service }) {
           height={44}
           className="h-11 w-11"
         />
-        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-[--color-fg-muted] transition-all group-hover:rotate-[-8deg] group-hover:bg-[#187bef] group-hover:text-white">
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-fg-muted transition-all group-hover:rotate-[-8deg] group-hover:bg-[#187bef] group-hover:text-white">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path
               d="M4 10L10 4M10 4H5M10 4V9"
@@ -28,10 +28,10 @@ export function ServiceCard({ service }: { service: Service }) {
           </svg>
         </span>
       </div>
-      <p className="mt-6 text-xl font-bold leading-tight text-[--color-fg]">
+      <p className="mt-6 text-xl font-bold leading-tight text-fg">
         {service.title}
       </p>
-      <p className="mt-2 text-sm leading-relaxed text-[--color-fg-muted]">
+      <p className="mt-2 text-sm leading-relaxed text-fg-muted">
         {service.shortDescription}
       </p>
     </Link>

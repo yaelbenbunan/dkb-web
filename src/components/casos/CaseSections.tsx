@@ -53,7 +53,7 @@ export function CaseSections({
                 >
                   {section.title}
                 </h2>
-                <div className="mt-6 space-y-4 text-base leading-relaxed text-[--color-fg-muted] md:text-lg">
+                <div className="mt-6 space-y-4 text-base leading-relaxed text-fg-muted md:text-lg">
                   {section.body
                     .split(/\n\n+/)
                     .map((p, i) => (
@@ -76,8 +76,8 @@ export function CaseSections({
                     />
                   ))
                 ) : (
-                  <div className="flex aspect-[4/3] items-center justify-center rounded-2xl bg-[--color-bg-subtle] ring-1 ring-white/[0.05]">
-                    <p className="text-sm text-[--color-fg-dim]">
+                  <div className="flex aspect-[4/3] items-center justify-center rounded-2xl bg-bg-subtle ring-1 ring-white/[0.05]">
+                    <p className="text-sm text-fg-dim">
                       Imágenes próximamente
                     </p>
                   </div>

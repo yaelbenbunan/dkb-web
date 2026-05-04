@@ -51,7 +51,7 @@ export function AboutFeatures() {
           <Globe className="pointer-events-none absolute -left-20 -top-24 hidden h-[480px] w-[480px] opacity-70 md:block" />
 
           <div className="relative">
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent">
               Sobre dinkbit
             </p>
             <h2
@@ -59,12 +59,12 @@ export function AboutFeatures() {
               style={{ fontSize: "var(--text-display-lg)" }}
             >
               Soluciones digitales{" "}
-              <span className="text-[--color-accent]">end-to-end</span>
+              <span className="text-accent">end-to-end</span>
               <br />
               para marcas que quieren{" "}
-              <span className="italic text-[--color-accent]">crecer.</span>
+              <span className="italic text-accent">crecer.</span>
             </h2>
-            <p className="mt-8 max-w-md text-lg text-[--color-fg-muted]">
+            <p className="mt-8 max-w-md text-lg text-fg-muted">
               Diseñamos, desarrollamos y activamos proyectos digitales pensados
               para generar resultados medibles. Sin humo: análisis, ejecución e
               iteración constante.
@@ -92,12 +92,12 @@ export function AboutFeatures() {
         <div className="relative">
           <div
             aria-hidden
-            className="absolute left-7 top-7 h-[calc(100%-3.5rem)] w-px bg-gradient-to-b from-[--color-accent] via-[--color-border-strong] to-transparent"
+            className="absolute left-7 top-7 h-[calc(100%-3.5rem)] w-px bg-gradient-to-b from-accent via-border-strong to-transparent"
           />
           <ul className="space-y-12">
             {FEATURES.map((f) => (
               <li key={f.title} className="relative flex gap-6">
-                <div className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[--color-bg-elevated] ring-1 ring-[--color-accent]/30 shadow-[0_0_30px_rgba(24,123,239,0.2)]">
+                <div className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-bg-elevated ring-1 ring-accent/30 shadow-[0_0_30px_rgba(24,123,239,0.2)]">
                   <Image
                     src={f.iconSrc}
                     alt=""
@@ -107,10 +107,10 @@ export function AboutFeatures() {
                   />
                 </div>
                 <div className="pt-2">
-                  <p className="text-2xl font-bold text-[--color-fg]">
+                  <p className="text-2xl font-bold text-fg">
                     {f.title}
                   </p>
-                  <p className="mt-2 text-[--color-fg-muted]">{f.description}</p>
+                  <p className="mt-2 text-fg-muted">{f.description}</p>
                 </div>
               </li>
             ))}

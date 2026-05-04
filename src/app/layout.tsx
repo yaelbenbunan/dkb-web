@@ -21,7 +21,16 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="es" className={sourceSans.variable}>
+    <html
+      lang="es"
+      className={sourceSans.variable}
+      data-theme="dark"
+      suppressHydrationWarning
+    >
+      <head>
+        {/* Aplica el tema desde localStorage antes del paint para evitar flash */}
+        <script src="/theme-bootstrap.js" />
+      </head>
       <body>
         <Header />
         <main className="min-h-[calc(100vh-5rem)]">{children}</main>

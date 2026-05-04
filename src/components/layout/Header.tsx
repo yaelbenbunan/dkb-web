@@ -8,7 +8,10 @@ import { MobileMenu } from "./MobileMenu";
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-40 bg-[#0e1015]/80 backdrop-blur-xl">
+    <header
+      className="sticky top-0 z-40 backdrop-blur-xl"
+      style={{ backgroundColor: "var(--header-bg)" }}
+    >
       <Container className="flex h-20 items-center justify-between gap-8">
         {/* Izquierda: logo + menu */}
         <div className="flex items-center gap-12">
@@ -94,7 +97,7 @@ function SocialIcon({
       target="_blank"
       rel="noopener noreferrer"
       aria-label={label}
-      className="flex h-10 w-10 items-center justify-center rounded-full text-[--color-fg-muted] transition-all hover:bg-[#187bef]/15 hover:text-[#3a90f2]"
+      className="flex h-10 w-10 items-center justify-center rounded-full text-fg-muted transition-all hover:bg-[#187bef]/15 hover:text-[#3a90f2]"
     >
       {icon}
     </a>

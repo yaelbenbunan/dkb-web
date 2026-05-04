@@ -9,7 +9,7 @@ export function RelatedCases({ cases }: { cases: CaseStudy[] }) {
   const items = [...cases, ...cases];
 
   return (
-    <section className="relative isolate overflow-hidden bg-[--color-bg-deep] py-20 md:py-24">
+    <section className="relative isolate overflow-hidden bg-bg-deep py-20 md:py-24">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10 bg-dots opacity-30"
@@ -20,11 +20,11 @@ export function RelatedCases({ cases }: { cases: CaseStudy[] }) {
           style={{ fontSize: "var(--text-display-md)" }}
         >
           Otros{" "}
-          <span className="italic text-[--color-accent]">casos de éxito.</span>
+          <span className="italic text-accent">casos de éxito.</span>
         </h2>
         <Link
           href="/casos-de-exito"
-          className="text-sm font-semibold text-[--color-accent] hover:text-[--color-accent-hover]"
+          className="text-sm font-semibold text-accent hover:text-accent-hover"
         >
           Ver todos →
         </Link>
@@ -34,11 +34,11 @@ export function RelatedCases({ cases }: { cases: CaseStudy[] }) {
       <div className="relative overflow-hidden">
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-y-0 left-0 z-10 w-32 bg-gradient-to-r from-[--color-bg-deep] to-transparent"
+          className="pointer-events-none absolute inset-y-0 left-0 z-10 w-32 bg-gradient-to-r from-bg-deep to-transparent"
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-y-0 right-0 z-10 w-32 bg-gradient-to-l from-[--color-bg-deep] to-transparent"
+          className="pointer-events-none absolute inset-y-0 right-0 z-10 w-32 bg-gradient-to-l from-bg-deep to-transparent"
         />
 
         <div className="flex w-max animate-marquee gap-16 will-change-transform py-4">
@@ -60,7 +60,7 @@ export function RelatedCases({ cases }: { cases: CaseStudy[] }) {
                   />
                 </span>
               ) : (
-                <span className="text-2xl font-bold text-[--color-fg-muted] transition-colors group-hover:text-[--color-fg]">
+                <span className="text-2xl font-bold text-fg-muted transition-colors group-hover:text-fg">
                   {c.client}
                 </span>
               )}

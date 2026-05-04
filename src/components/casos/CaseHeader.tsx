@@ -13,14 +13,11 @@ export function CaseHeader({ caseStudy, serviceTitleBySlug }: Props) {
 
   return (
     <header className="relative isolate overflow-hidden">
-      {/* Bg azul tintado para destacar */}
+      {/* Bg azul tintado para destacar — claro u oscuro según el tema */}
       <div
         aria-hidden
         className="absolute inset-0 -z-20"
-        style={{
-          background:
-            "linear-gradient(135deg, rgba(12,28,64,0.92) 0%, rgba(8,17,42,1) 100%)",
-        }}
+        style={{ background: "var(--case-header-bg)" }}
       />
       {/* Spotlight azul fuerte */}
       <div
@@ -39,26 +36,38 @@ export function CaseHeader({ caseStudy, serviceTitleBySlug }: Props) {
       <Container className="relative grid gap-12 py-20 md:grid-cols-[1fr_auto] md:items-center md:gap-16 md:py-24">
         {/* Izq: title → description → date → tags */}
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent">
             Caso de éxito
           </p>
           <h1
             className="mt-6 font-black leading-[0.95] tracking-tight"
-            style={{ fontSize: "var(--text-display-lg)" }}
+            style={{
+              fontSize: "var(--text-display-lg)",
+              color: "var(--case-header-fg)",
+            }}
           >
             {caseStudy.title}
           </h1>
 
           {caseStudy.description && (
-            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-[--color-fg-muted]">
+            <p
+              className="mt-6 max-w-2xl text-lg leading-relaxed"
+              style={{ color: "var(--case-header-fg-muted)" }}
+            >
               {caseStudy.description}
             </p>
           )}
 
           {caseStudy.clientSince && (
-            <p className="mt-7 text-sm text-[--color-fg-muted]">
+            <p
+              className="mt-7 text-sm"
+              style={{ color: "var(--case-header-fg-muted)" }}
+            >
               Cliente desde{" "}
-              <span className="font-semibold text-[--color-fg]">
+              <span
+                className="font-semibold"
+                style={{ color: "var(--case-header-fg)" }}
+              >
                 {caseStudy.clientSince}
               </span>
             </p>
@@ -222,7 +231,12 @@ function SocialLink({
       target="_blank"
       rel="noopener noreferrer"
       aria-label={label}
-      className="group flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.06] text-[--color-fg-muted] ring-1 ring-white/[0.08] transition-all duration-300 hover:-translate-y-0.5 hover:scale-110 hover:bg-[#187bef] hover:text-white hover:ring-[#187bef] hover:shadow-[0_8px_24px_-6px_rgba(24,123,239,0.6)]"
+      className="group flex h-11 w-11 items-center justify-center rounded-full transition-all duration-300 hover:-translate-y-0.5 hover:scale-110 hover:bg-[#187bef] hover:text-white hover:ring-[#187bef] hover:shadow-[0_8px_24px_-6px_rgba(24,123,239,0.6)]"
+      style={{
+        backgroundColor: "var(--social-pill-bg)",
+        boxShadow: "inset 0 0 0 1px var(--social-pill-ring)",
+        color: "var(--case-header-fg-muted)",
+      }}
     >
       {icon}
     </a>

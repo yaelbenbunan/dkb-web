@@ -52,7 +52,7 @@ export function TeamGrid() {
               style={{ fontSize: "var(--text-display-md)" }}
             >
               Lo que hacemos importa, pero{" "}
-              <span className="italic text-[--color-accent]">
+              <span className="italic text-accent">
                 quién lo hace marca la diferencia
               </span>
               .
@@ -70,7 +70,7 @@ export function TeamGrid() {
               transition={{ duration: 0.45, delay: i * 0.06, ease: "easeOut" }}
               className="group flex flex-col items-center text-center"
             >
-              <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-[--color-bg-elevated] ring-1 ring-white/[0.05] transition-all duration-300 group-hover:-translate-y-1 group-hover:ring-[#187bef]/40 group-hover:shadow-[0_20px_40px_-15px_rgba(24,123,239,0.45)]">
+              <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-bg-elevated ring-1 ring-white/[0.05] transition-all duration-300 group-hover:-translate-y-1 group-hover:ring-[#187bef]/40 group-hover:shadow-[0_20px_40px_-15px_rgba(24,123,239,0.45)]">
                 <Image
                   src={m.avatar}
                   alt={m.name}
@@ -93,7 +93,7 @@ export function TeamGrid() {
                   className="absolute left-1/2 top-3 h-1 w-8 -translate-x-1/2 rounded-full bg-[#3a90f2] opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                 />
               </div>
-              <p className="mt-5 text-base font-bold text-[--color-fg] transition-colors group-hover:text-[#3a90f2]">
+              <p className="mt-5 text-base font-bold text-fg transition-colors group-hover:text-[#3a90f2]">
                 {m.name}
               </p>
               <p className="text-xs font-medium uppercase tracking-wider text-[#3a90f2]/80">
@@ -103,13 +103,13 @@ export function TeamGrid() {
           ))}
         </div>
 
-        <p className="mt-16 text-center text-sm text-[--color-fg-muted]">
+        <p className="mt-16 text-center text-sm text-fg-muted">
           ¿Buscas al equipo en México?{" "}
           <a
             href="https://dinkbit.com/es/equipo"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-semibold text-[--color-accent] hover:text-[--color-accent-hover]"
+            className="font-semibold text-accent hover:text-accent-hover"
           >
             Conócelos →
           </a>

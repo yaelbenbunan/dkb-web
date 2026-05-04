@@ -20,11 +20,11 @@ export function RelatedCasesMarquee({ cases }: Props) {
       {/* Fades laterales */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-y-0 left-0 z-10 w-20 bg-gradient-to-r from-[--color-bg] to-transparent"
+        className="pointer-events-none absolute inset-y-0 left-0 z-10 w-20 bg-gradient-to-r from-bg to-transparent"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-y-0 right-0 z-10 w-20 bg-gradient-to-l from-[--color-bg] to-transparent"
+        className="pointer-events-none absolute inset-y-0 right-0 z-10 w-20 bg-gradient-to-l from-bg to-transparent"
       />
 
       <div className="flex w-max animate-marquee gap-8 will-change-transform">
@@ -46,7 +46,7 @@ export function RelatedCasesMarquee({ cases }: Props) {
                 />
               </span>
             ) : (
-              <span className="text-base font-semibold text-[--color-fg-muted] transition-colors group-hover:text-[--color-fg]">
+              <span className="text-base font-semibold text-fg-muted transition-colors group-hover:text-fg">
                 {c.client}
               </span>
             )}

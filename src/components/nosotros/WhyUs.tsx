@@ -72,7 +72,7 @@ export function WhyUs() {
 
       <Container>
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent">
             Por qué dinkbit
           </p>
           <h2
@@ -80,7 +80,7 @@ export function WhyUs() {
             style={{ fontSize: "var(--text-display-md)" }}
           >
             Tres cosas que nos{" "}
-            <span className="italic text-[--color-accent]">definen</span>.
+            <span className="italic text-accent">definen</span>.
           </h2>
         </div>
 
@@ -105,10 +105,10 @@ export function WhyUs() {
               <p className="relative mt-6 text-[10px] font-bold uppercase tracking-[0.25em] text-[#3a90f2]">
                 {p.label}
               </p>
-              <h3 className="relative mt-2 text-xl font-bold leading-tight text-[--color-fg]">
+              <h3 className="relative mt-2 text-xl font-bold leading-tight text-fg">
                 {p.title}
               </h3>
-              <p className="relative mt-3 text-base leading-relaxed text-[--color-fg-muted]">
+              <p className="relative mt-3 text-base leading-relaxed text-fg-muted">
                 {p.body}
               </p>
             </li>

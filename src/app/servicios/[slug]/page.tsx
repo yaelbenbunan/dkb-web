@@ -121,7 +121,7 @@ export default async function ServiceDetail({
                 ¿Qué <span className="text-[#187bef]">ofrecemos</span>?
               </h2>
               {service.intro && (
-                <p className="mt-5 text-lg leading-relaxed text-[--color-fg-muted]">
+                <p className="mt-5 text-lg leading-relaxed text-fg-muted">
                   {service.intro}
                 </p>
               )}
@@ -130,7 +130,7 @@ export default async function ServiceDetail({
                   {service.bullets.map((b, i) => (
                     <li
                       key={i}
-                      className="flex items-start gap-3 text-[--color-fg]"
+                      className="flex items-start gap-3 text-fg"
                     >
                       <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#187bef]/15 text-[#3a90f2]">
                         <svg
@@ -163,7 +163,7 @@ export default async function ServiceDetail({
                 ¿Qué hace diferente nuestro{" "}
                 <span className="text-[#187bef]">enfoque</span>?
               </h2>
-              <p className="mt-4 text-lg leading-relaxed text-[--color-fg-muted]">
+              <p className="mt-4 text-lg leading-relaxed text-fg-muted">
                 {service.diferenciador}
               </p>
             </section>
@@ -188,7 +188,7 @@ export default async function ServiceDetail({
               <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
                 Casos de <span className="text-[#187bef]">éxito</span>
               </h2>
-              <p className="mt-2 text-[--color-fg-muted]">
+              <p className="mt-2 text-fg-muted">
                 Algunos clientes a los que ayudamos con{" "}
                 {service.title.toLowerCase()}.
               </p>
@@ -231,7 +231,7 @@ export default async function ServiceDetail({
             )}
 
             <nav className="surface rounded-2xl p-5">
-              <p className="px-2 text-xs font-semibold uppercase tracking-[0.2em] text-[--color-fg-muted]">
+              <p className="px-2 text-xs font-semibold uppercase tracking-[0.2em] text-fg-muted">
                 Otros servicios
               </p>
               <ul className="mt-4 space-y-1">
@@ -244,7 +244,7 @@ export default async function ServiceDetail({
                         className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
                           isActive
                             ? "bg-[#187bef]/15 font-semibold text-[#3a90f2]"
-                            : "text-[--color-fg-muted] hover:bg-white/[0.04] hover:text-[--color-fg]"
+                            : "text-fg-muted hover:bg-white/[0.04] hover:text-fg"
                         }`}
                       >
                         <span>{s.title}</span>

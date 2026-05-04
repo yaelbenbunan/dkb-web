@@ -41,7 +41,7 @@ export function MobileMenu() {
             onClick={() => setOpen(false)}
             className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm"
           />
-          <div className="fixed inset-x-0 top-20 z-40 border-b border-white/10 bg-[#0e1015] shadow-2xl">
+          <div className="fixed inset-x-0 top-20 z-40 border-b border-border bg-bg shadow-2xl">
             <nav className="flex flex-col gap-1 p-4">
               {NAV_ITEMS.map((item) => (
                 <Link

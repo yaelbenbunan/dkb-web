@@ -51,7 +51,7 @@ export default async function CaseDetail({
 
       {/* Reto */}
       {caseStudy.reto && (
-        <section className="relative isolate overflow-hidden bg-[--color-bg-deep] py-16 md:py-20">
+        <section className="relative isolate overflow-hidden bg-bg-deep py-16 md:py-20">
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0 -z-10 bg-grid-fine opacity-40"
@@ -61,7 +61,7 @@ export default async function CaseDetail({
               <span className="inline-flex h-7 w-fit items-center rounded-full bg-[#187bef]/15 px-3.5 text-[11px] font-bold uppercase tracking-[0.22em] text-[#3a90f2] ring-1 ring-[#187bef]/35">
                 El reto
               </span>
-              <p className="max-w-3xl text-lg leading-relaxed text-[--color-fg] md:text-xl">
+              <p className="max-w-3xl text-lg leading-relaxed text-fg md:text-xl">
                 {caseStudy.reto}
               </p>
             </div>

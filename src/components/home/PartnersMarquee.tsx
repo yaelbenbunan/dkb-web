@@ -13,7 +13,7 @@ export function PartnersMarquee({
   subheading,
 }: Props) {
   return (
-    <section className="relative overflow-hidden bg-[--color-bg-subtle] py-16">
+    <section className="relative overflow-hidden bg-bg-subtle py-16">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-dots opacity-40"
@@ -21,7 +21,7 @@ export function PartnersMarquee({
       <Container>
         {subheading ? (
           <div className="mx-auto max-w-2xl text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent">
               {heading}
             </p>
             <h2
@@ -32,7 +32,7 @@ export function PartnersMarquee({
             </h2>
           </div>
         ) : (
-          <p className="text-center text-sm font-semibold uppercase tracking-[0.25em] text-[--color-fg-muted]">
+          <p className="text-center text-sm font-semibold uppercase tracking-[0.25em] text-fg-muted">
             {heading}
           </p>
         )}
@@ -41,11 +41,11 @@ export function PartnersMarquee({
       <div className="relative mt-10 overflow-hidden">
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-y-0 left-0 z-10 w-32 bg-gradient-to-r from-[--color-bg-subtle] to-transparent"
+          className="pointer-events-none absolute inset-y-0 left-0 z-10 w-32 bg-gradient-to-r from-bg-subtle to-transparent"
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-y-0 right-0 z-10 w-32 bg-gradient-to-l from-[--color-bg-subtle] to-transparent"
+          className="pointer-events-none absolute inset-y-0 right-0 z-10 w-32 bg-gradient-to-l from-bg-subtle to-transparent"
         />
 
         <div className="flex w-max animate-marquee gap-10 will-change-transform">
@@ -59,7 +59,7 @@ export function PartnersMarquee({
                 alt={p.name}
                 width={342}
                 height={164}
-                className="h-16 w-auto object-contain opacity-60 grayscale transition hover:opacity-100 hover:grayscale-0 sm:h-20"
+                className="partner-logo h-16 w-auto object-contain sm:h-20"
               />
             </div>
           ))}

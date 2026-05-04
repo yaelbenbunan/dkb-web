@@ -35,7 +35,7 @@ export function ServicesCarousel({ services }: Props) {
   }, [emblaApi, onSelect]);
 
   return (
-    <section className="relative isolate overflow-hidden bg-[--color-bg-deep] py-20 md:py-24">
+    <section className="relative isolate overflow-hidden bg-bg-deep py-20 md:py-24">
       {/* Grid sutil de fondo */}
       <div
         aria-hidden
@@ -51,7 +51,7 @@ export function ServicesCarousel({ services }: Props) {
       <Container>
         <div className="grid gap-10 md:grid-cols-[1.6fr_1fr] md:items-end">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent">
               Nuestros servicios
             </p>
             <h2
@@ -59,16 +59,16 @@ export function ServicesCarousel({ services }: Props) {
               style={{ fontSize: "var(--text-display-lg)" }}
             >
               Estrategias{" "}
-              <span className="text-[--color-accent]">integrales</span>{" "}
+              <span className="text-accent">integrales</span>{" "}
               para garantizar{" "}
-              <span className="italic text-[--color-accent]">resultados</span>{" "}
+              <span className="italic text-accent">resultados</span>{" "}
               exitosos.
             </h2>
           </div>
-          <p className="text-lg text-[--color-fg-muted]">
+          <p className="text-lg text-fg-muted">
             Diseñamos, desarrollamos y activamos cada palanca digital con un
             objetivo claro:{" "}
-            <span className="text-[--color-fg]">
+            <span className="text-fg">
               convertir tu marca en un negocio que crece de forma sostenida.
             </span>
           </p>
@@ -107,7 +107,7 @@ export function ServicesCarousel({ services }: Props) {
                   height={44}
                   className="h-11 w-11"
                 />
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-[--color-fg-muted] transition-all group-hover:rotate-[-8deg] group-hover:bg-[#187bef] group-hover:text-white">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-fg-muted transition-all group-hover:rotate-[-8deg] group-hover:bg-[#187bef] group-hover:text-white">
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                     <path
                       d="M4 10L10 4M10 4H5M10 4V9"
@@ -119,10 +119,10 @@ export function ServicesCarousel({ services }: Props) {
                   </svg>
                 </span>
               </div>
-              <p className="mt-6 text-xl font-bold leading-tight text-[--color-fg]">
+              <p className="mt-6 text-xl font-bold leading-tight text-fg">
                 {s.title}
               </p>
-              <p className="mt-2 text-sm leading-relaxed text-[--color-fg-muted]">
+              <p className="mt-2 text-sm leading-relaxed text-fg-muted">
                 {s.shortDescription}
               </p>
             </Link>
@@ -148,7 +148,7 @@ function CarouselButton({
     <button
       onClick={onClick}
       disabled={disabled}
-      className="surface flex h-12 w-12 items-center justify-center rounded-full text-[--color-fg] transition-all hover:scale-105 hover:text-[#3a90f2] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:scale-100"
+      className="surface flex h-12 w-12 items-center justify-center rounded-full text-fg transition-all hover:scale-105 hover:text-[#3a90f2] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:scale-100"
       {...rest}
     >
       <svg

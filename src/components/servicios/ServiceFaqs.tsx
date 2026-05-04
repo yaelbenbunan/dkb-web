@@ -16,14 +16,14 @@ export function ServiceFaqs({ faqs }: { faqs: ServiceFaq[] }) {
               onClick={() => setOpen(isOpen ? null : i)}
               className="flex w-full items-center justify-between gap-6 p-5 text-left"
             >
-              <span className="text-base font-semibold text-[--color-fg] md:text-lg">
+              <span className="text-base font-semibold text-fg md:text-lg">
                 {f.q}
               </span>
               <span
                 className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all ${
                   isOpen
-                    ? "rotate-45 bg-[--color-accent] text-white"
-                    : "bg-[--color-accent-soft] text-[--color-accent]"
+                    ? "rotate-45 bg-accent text-white"
+                    : "bg-accent-soft text-accent"
                 }`}
                 aria-hidden
               >
@@ -43,7 +43,7 @@ export function ServiceFaqs({ faqs }: { faqs: ServiceFaq[] }) {
               }`}
             >
               <div className="min-h-0">
-                <p className="px-5 pb-5 leading-relaxed text-[--color-fg-muted]">
+                <p className="px-5 pb-5 leading-relaxed text-fg-muted">
                   {f.a}
                 </p>
               </div>

@@ -36,18 +36,20 @@ export function ClientLogoSwap({
 
   if (staticWhite) {
     return (
-      <Image
-        src={whiteSrc}
-        alt={alt}
-        width={width}
-        height={height}
-        className={imgClassName}
-      />
+      <span className="client-logo-bw inline-flex">
+        <Image
+          src={whiteSrc}
+          alt={alt}
+          width={width}
+          height={height}
+          className={imgClassName}
+        />
+      </span>
     );
   }
 
   return (
-    <span className="relative inline-flex">
+    <span className="client-logo-bw relative inline-flex">
       <Image
         src={whiteSrc}
         alt={alt}

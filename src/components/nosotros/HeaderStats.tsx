@@ -43,8 +43,7 @@ export function HeaderStats() {
             className="font-black leading-none transition-transform duration-500 group-hover:scale-105"
             style={{
               fontSize: "clamp(2rem, 4vw, 3rem)",
-              background:
-                "linear-gradient(135deg, #ffffff 0%, #3a90f2 70%, #187bef 100%)",
+              background: "var(--stat-gradient)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",
@@ -54,7 +53,7 @@ export function HeaderStats() {
             <AnimatedCounter end={s.value} />
           </p>
 
-          <p className="text-xs font-medium uppercase tracking-wider text-[--color-fg-muted]">
+          <p className="text-xs font-medium uppercase tracking-wider text-fg-muted">
             {s.label}
           </p>
         </li>

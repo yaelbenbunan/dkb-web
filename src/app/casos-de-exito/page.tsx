@@ -24,14 +24,14 @@ export default function CasosPage() {
           className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-40 fade-edges-y"
         />
         <Container className="text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--color-accent]">
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent">
             Casos de éxito
           </p>
           <h1
             className="mx-auto mt-6 max-w-4xl font-black leading-[0.95] tracking-tight"
             style={{ fontSize: "var(--text-display-xl)" }}
           >
-            Resultados <span className="text-[--color-accent]">reales</span> de
+            Resultados <span className="text-accent">reales</span> de
             marcas como la tuya.
           </h1>
         </Container>

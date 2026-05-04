@@ -19,7 +19,7 @@ export function NavLink({ href, children }: Props) {
       className={`group relative inline-flex h-16 items-center whitespace-nowrap px-2 text-base font-medium transition-colors ${
         isActive
           ? "text-[#3a90f2]"
-          : "text-[--color-fg-muted] hover:text-[--color-fg]"
+          : "text-fg-muted hover:text-fg"
       }`}
     >
       {/* Glow detrás del texto activo */}

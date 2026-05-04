@@ -13,13 +13,13 @@ interface CommonProps {
 }
 
 const base =
-  "inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[--color-accent] focus-visible:ring-offset-2 focus-visible:ring-offset-[--color-bg]";
+  "inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg";
 const variants: Record<Variant, string> = {
   primary: "bg-[#187bef] text-white hover:bg-[#3a90f2]",
-  secondary: "bg-[--color-bg-elevated] text-[--color-fg] hover:bg-[--color-border-strong]",
-  ghost: "text-[--color-accent] hover:bg-[--color-accent-soft]",
+  secondary: "bg-bg-elevated text-fg hover:bg-border-strong",
+  ghost: "text-accent hover:bg-accent-soft",
   outline:
-    "bg-[#1a1d27] text-[--color-fg] ring-1 ring-[#187bef]/40 hover:bg-[#187bef]/15 hover:ring-[#187bef] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_4px_12px_-2px_rgba(0,0,0,0.3)]",
+    "bg-bg-elevated text-fg ring-1 ring-[#187bef]/40 hover:bg-[#187bef]/15 hover:ring-[#187bef]",
 };
 const sizes: Record<Size, string> = {
   sm: "h-9 px-3 text-sm",

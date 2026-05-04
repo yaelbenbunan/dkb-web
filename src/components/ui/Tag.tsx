@@ -9,8 +9,8 @@ export function Tag({
     <span
       className={`inline-flex h-7 items-center rounded-full px-3 text-xs font-medium transition-colors ${
         active
-          ? "bg-[--color-accent] text-white"
-          : "surface text-[--color-fg-muted]"
+          ? "bg-accent text-white"
+          : "surface text-fg-muted"
       }`}
     >
       {children}
