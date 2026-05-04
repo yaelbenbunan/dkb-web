@@ -1,9 +1,8 @@
 "use client";
 
 import useEmblaCarousel from "embla-carousel-react";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Container } from "@/components/ui/Container";
-import { ButtonLink } from "@/components/ui/Button";
 import { TESTIMONIALS, GOOGLE_REVIEWS_URL } from "@/lib/testimonials";
 
 function Stars({ count = 5, max = 5, size = 18 }: { count?: number; max?: number; size?: number }) {
@@ -26,21 +25,12 @@ function Stars({ count = 5, max = 5, size = 18 }: { count?: number; max?: number
 
 export function Testimonials() {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: "start" });
-  const [selected, setSelected] = useState(0);
-
-  const onSelect = useCallback(() => {
-    if (!emblaApi) return;
-    setSelected(emblaApi.selectedScrollSnap());
-  }, [emblaApi]);
 
   useEffect(() => {
     if (!emblaApi) return;
-    onSelect();
-    emblaApi.on("select", onSelect);
-    emblaApi.on("reInit", onSelect);
     const id = setInterval(() => emblaApi.scrollNext(), 7000);
     return () => clearInterval(id);
-  }, [emblaApi, onSelect]);
+  }, [emblaApi]);
 
   return (
     <section className="relative isolate overflow-hidden py-20 md:py-24">
@@ -56,27 +46,17 @@ export function Testimonials() {
       />
 
       <Container>
-        <div className="flex flex-col items-start justify-between gap-8 md:flex-row md:items-end">
-          <div>
-            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.25em] text-accent">
-              <span aria-hidden>★</span> Testimonios
-            </p>
-            <h2
-              className="mt-6 font-black leading-[0.95] tracking-tight"
-              style={{ fontSize: "var(--text-display-lg)" }}
-            >
-              Opiniones de{" "}
-              <span className="italic text-accent">nuestros clientes.</span>
-            </h2>
-          </div>
-          <ButtonLink
-            href={GOOGLE_REVIEWS_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            size="lg"
+        <div>
+          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.25em] text-accent">
+            <span aria-hidden>★</span> Testimonios
+          </p>
+          <h2
+            className="mt-6 font-black leading-[0.95] tracking-tight"
+            style={{ fontSize: "var(--text-display-lg)" }}
           >
-            Ver en Google →
-          </ButtonLink>
+            Opiniones de{" "}
+            <span className="italic text-accent">nuestros clientes.</span>
+          </h2>
         </div>
 
         <div className="mt-14 grid gap-6 md:grid-cols-3">
@@ -162,20 +142,6 @@ export function Testimonials() {
                 </button>
               </div>
 
-              <div className="absolute bottom-9 left-10 flex gap-1.5">
-                {TESTIMONIALS.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => emblaApi?.scrollTo(i)}
-                    aria-label={`Testimonio ${i + 1}`}
-                    className={`h-1.5 rounded-full transition-all ${
-                      selected === i
-                        ? "w-8 bg-accent"
-                        : "w-1.5 bg-border-strong"
-                    }`}
-                  />
-                ))}
-              </div>
             </div>
           </div>
         </div>

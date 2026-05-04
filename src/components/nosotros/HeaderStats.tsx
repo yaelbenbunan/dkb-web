@@ -3,9 +3,9 @@ import { AnimatedCounter } from "./AnimatedCounter";
 
 const STATS = [
   { icon: "/img/icons/counters/experiencia.svg", value: 15, label: "años en el sector", prefix: "+" },
-  { icon: "/img/icons/counters/webs.svg", value: 80, label: "webs desarrolladas", prefix: "+" },
-  { icon: "/img/icons/counters/clientes.svg", value: 130, label: "clientes satisfechos", prefix: "+" },
-  { icon: "/img/icons/counters/cafe.svg", value: 3000, label: "cafés", prefix: "+" },
+  { icon: "/img/icons/counters/webs.svg", value: 400, label: "webs desarrolladas", prefix: "+" },
+  { icon: "/img/icons/counters/clientes.svg", value: 600, label: "clientes satisfechos", prefix: "+" },
+  { icon: "/img/icons/counters/cafe.svg", value: 5000, label: "cafés", prefix: "+" },
 ];
 
 /**
