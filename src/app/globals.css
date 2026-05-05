@@ -59,6 +59,16 @@
   /* Glow azul detrás del item activo del nav. */
   --nav-active-glow: rgba(58, 144, 242, 0.35);
   --nav-active-fg: #3a90f2;
+  /* Mockups (browser/phone). En dark hacemos el cuerpo del dispositivo gris
+     medio para que destaque sobre el bg muy oscuro de la página. */
+  --mockup-body: #2a2e38;
+  --mockup-chrome-bg: #1f222b;
+  --mockup-screen-bg: #15181f;
+  --mockup-ring: rgba(255, 255, 255, 0.12);
+  --mockup-shadow: 0 25px 50px -15px rgba(0, 0, 0, 0.6);
+  --mockup-shadow-tilt:
+    0 40px 70px -20px rgba(0, 0, 0, 0.75),
+    0 0 60px -10px rgba(24, 123, 239, 0.25);
 }
 
 [data-theme="light"] {
@@ -123,6 +133,16 @@
      para que la palabra sea totalmente legible. */
   --nav-active-glow: rgba(24, 123, 239, 0.14);
   --nav-active-fg: #0c5fc4;
+  /* Mockups en light: dispositivos siguen oscuros (parecen pantallas reales),
+     pero con sombra más suave y ring sutil. */
+  --mockup-body: #1f2330;
+  --mockup-chrome-bg: #14161e;
+  --mockup-screen-bg: #0e1015;
+  --mockup-ring: rgba(15, 23, 42, 0.18);
+  --mockup-shadow: 0 30px 60px -20px rgba(15, 23, 42, 0.35);
+  --mockup-shadow-tilt:
+    0 40px 80px -25px rgba(15, 23, 42, 0.4),
+    0 0 60px -10px rgba(24, 123, 239, 0.18);
 }
 
 @theme inline {

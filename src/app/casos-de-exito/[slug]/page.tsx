@@ -57,10 +57,11 @@ export default async function CaseDetail({
             className="pointer-events-none absolute inset-0 -z-10 bg-grid-fine opacity-40"
           />
           <Container>
-            <div className="grid gap-8 lg:grid-cols-[auto_1fr] lg:items-start lg:gap-16">
-              <span className="inline-flex h-7 w-fit items-center rounded-full bg-[#187bef]/15 px-3.5 text-[11px] font-bold uppercase tracking-[0.22em] text-[#3a90f2] ring-1 ring-[#187bef]/35">
+            <div className="grid gap-6 lg:grid-cols-[auto_1fr] lg:items-start lg:gap-16">
+              <h2 className="flex w-fit items-center gap-3 text-xs font-bold uppercase tracking-[0.3em] text-accent">
+                <span aria-hidden className="h-px w-10 bg-accent" />
                 El reto
-              </span>
+              </h2>
               <p className="max-w-3xl text-lg leading-relaxed text-fg md:text-xl">
                 {caseStudy.reto}
               </p>

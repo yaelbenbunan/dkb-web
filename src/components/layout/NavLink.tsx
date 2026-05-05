@@ -16,8 +16,8 @@ export function NavLink({ href, children }: Props) {
   return (
     <Link
       href={href}
-      className={`group relative inline-flex h-16 items-center whitespace-nowrap px-2 text-base font-medium transition-colors ${
-        isActive ? "" : "text-fg-muted hover:text-fg"
+      className={`group relative inline-flex h-16 items-center whitespace-nowrap px-2 text-base font-semibold transition-colors ${
+        isActive ? "" : "text-fg hover:text-accent"
       }`}
       style={isActive ? { color: "var(--nav-active-fg)" } : undefined}
     >

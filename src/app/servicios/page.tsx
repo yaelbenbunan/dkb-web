@@ -31,7 +31,7 @@ export default function ServiciosPage() {
             style={{ fontSize: "var(--text-display-lg)" }}
           >
             Todo lo que necesita una marca para{" "}
-            <span className="text-accent">crecer en digital.</span>
+            <span className="text-accent">crecer en la era digital.</span>
           </h1>
         </Container>
       </header>

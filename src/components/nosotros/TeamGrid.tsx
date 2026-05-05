@@ -68,9 +68,9 @@ export function TeamGrid() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-50px" }}
               transition={{ duration: 0.45, delay: i * 0.06, ease: "easeOut" }}
-              className="group flex flex-col items-center text-center"
+              className="flex flex-col items-center text-center"
             >
-              <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-bg-elevated ring-1 ring-white/[0.05] transition-all duration-300 group-hover:-translate-y-1 group-hover:ring-[#187bef]/40 group-hover:shadow-[0_20px_40px_-15px_rgba(24,123,239,0.45)]">
+              <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-bg-elevated ring-1 ring-white/[0.05]">
                 <Image
                   src={m.avatar}
                   alt={m.name}
@@ -78,22 +78,8 @@ export function TeamGrid() {
                   height={300}
                   className="h-full w-full object-cover"
                 />
-                {/* Glow azul sutil al hacer hover */}
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                  style={{
-                    background:
-                      "linear-gradient(180deg, rgba(24,123,239,0) 50%, rgba(24,123,239,0.25) 100%)",
-                  }}
-                />
-                {/* Indicador azul que aparece arriba en hover */}
-                <span
-                  aria-hidden
-                  className="absolute left-1/2 top-3 h-1 w-8 -translate-x-1/2 rounded-full bg-[#3a90f2] opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                />
               </div>
-              <p className="mt-5 text-base font-bold text-fg transition-colors group-hover:text-[#3a90f2]">
+              <p className="mt-5 text-base font-bold text-fg">
                 {m.name}
               </p>
               <p className="text-xs font-medium uppercase tracking-wider text-[#3a90f2]/80">

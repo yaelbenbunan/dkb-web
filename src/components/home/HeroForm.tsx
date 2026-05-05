@@ -41,10 +41,10 @@ export function HeroForm({ services }: Props) {
       className="surface-elevated relative rounded-2xl p-7"
     >
       <p className="text-lg font-bold text-[#0c1c40]">
-        Déjanos ayudarte a crear algo increíble
+        ¡Te ayudamos a crecer!
       </p>
       <p className="mt-1 text-sm text-[#1e293b]">
-        Te contestamos en menos de 24 horas.
+        Una persona del equipo contactará contigo en menos de 24 horas.
       </p>
 
       <div className="mt-6 space-y-4">
@@ -85,8 +85,8 @@ export function HeroForm({ services }: Props) {
               </option>
             ))}
             <option value="Varios servicios">Varios servicios</option>
-            <option value="Quiero que me recomendéis">
-              Quiero que me recomendéis
+            <option value="Busco recomendaciones">
+              Busco recomendaciones
             </option>
           </select>
         </label>
@@ -105,7 +105,7 @@ export function HeroForm({ services }: Props) {
         disabled={pending}
         className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#187bef] px-6 text-base font-semibold text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.5)] transition-all hover:-translate-y-0.5 hover:bg-[#3a90f2] hover:shadow-[0_12px_32px_-6px_rgba(24,123,239,0.7)] disabled:opacity-60"
       >
-        {pending ? "Enviando…" : "¡Quiero hacer algo increíble!"}
+        {pending ? "Enviando…" : "¡Quiero crear algo increíble!"}
         {!pending && (
           <svg width="16" height="16" viewBox="0 0 14 14" fill="none">
             <path

@@ -106,9 +106,19 @@ function MockupFrame({
 }) {
   if (kind === "desktop") {
     return (
-      <div className="overflow-hidden rounded-2xl bg-[#1a1d27] ring-1 ring-white/[0.08] shadow-[0_25px_50px_-15px_rgba(0,0,0,0.6)]">
+      <div
+        className="overflow-hidden rounded-2xl ring-1"
+        style={{
+          backgroundColor: "var(--mockup-body)",
+          boxShadow: "var(--mockup-shadow)",
+          ["--tw-ring-color" as string]: "var(--mockup-ring)",
+        }}
+      >
         {/* Browser chrome */}
-        <div className="flex items-center gap-2 border-b border-white/[0.06] bg-[#13151c] px-4 py-3">
+        <div
+          className="flex items-center gap-2 border-b border-white/[0.06] px-4 py-3"
+          style={{ backgroundColor: "var(--mockup-chrome-bg)" }}
+        >
           <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />
           <span className="h-3 w-3 rounded-full bg-[#febc2e]" />
           <span className="h-3 w-3 rounded-full bg-[#28c840]" />
@@ -132,9 +142,19 @@ function MockupFrame({
 
   if (kind === "mobile") {
     return (
-      <div className="mx-auto w-full max-w-[280px] rounded-[2rem] bg-[#1a1d27] p-2 ring-1 ring-white/[0.08] shadow-[0_25px_50px_-15px_rgba(0,0,0,0.7)]">
+      <div
+        className="mx-auto w-full max-w-[280px] rounded-[2rem] p-2 ring-1"
+        style={{
+          backgroundColor: "var(--mockup-body)",
+          boxShadow: "var(--mockup-shadow)",
+          ["--tw-ring-color" as string]: "var(--mockup-ring)",
+        }}
+      >
         {/* Phone notch */}
-        <div className="relative overflow-hidden rounded-[1.6rem] bg-[#0e1015]">
+        <div
+          className="relative overflow-hidden rounded-[1.6rem]"
+          style={{ backgroundColor: "var(--mockup-screen-bg)" }}
+        >
           <span className="absolute left-1/2 top-2 z-10 h-1.5 w-16 -translate-x-1/2 rounded-full bg-black/80" />
           <Image
             src={src}
@@ -153,14 +173,19 @@ function MockupFrame({
     return (
       <div className="mx-auto py-8" style={{ perspective: "1400px" }}>
         <div
-          className="group mx-auto w-full max-w-[260px] rounded-[2rem] bg-[#1a1d27] p-2 ring-1 ring-white/[0.08] shadow-[0_40px_70px_-20px_rgba(0,0,0,0.75),0_0_60px_-10px_rgba(24,123,239,0.25)]"
+          className="group mx-auto w-full max-w-[260px] rounded-[2rem] p-2 ring-1"
           style={{
-            transform:
-              "rotateY(-18deg) rotateX(6deg) rotateZ(-3deg)",
+            backgroundColor: "var(--mockup-body)",
+            boxShadow: "var(--mockup-shadow-tilt)",
+            ["--tw-ring-color" as string]: "var(--mockup-ring)",
+            transform: "rotateY(-18deg) rotateX(6deg) rotateZ(-3deg)",
             transformStyle: "preserve-3d",
           }}
         >
-          <div className="relative overflow-hidden rounded-[1.6rem] bg-[#0e1015]">
+          <div
+            className="relative overflow-hidden rounded-[1.6rem]"
+            style={{ backgroundColor: "var(--mockup-screen-bg)" }}
+          >
             <span className="absolute left-1/2 top-2 z-10 h-1.5 w-16 -translate-x-1/2 rounded-full bg-black/80" />
             <Image
               src={src}

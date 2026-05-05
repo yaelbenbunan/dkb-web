@@ -69,7 +69,7 @@ export function ContactForm({ services }: Props) {
             options={[
               ...services.map((s) => ({ value: s.title, label: s.title })),
               { value: "Varios servicios", label: "Varios servicios" },
-              { value: "Quiero que me recomendéis", label: "Quiero que me recomendéis" },
+              { value: "Busco recomendaciones", label: "Busco recomendaciones" },
             ]}
           />
           <SelectField
