@@ -22,15 +22,17 @@ export function RotatingWord() {
       className="relative inline-block align-baseline"
       style={{
         color: "#3a90f2",
-        textShadow: "0 0 28px rgba(58,144,242,0.4)",
+        textShadow:
+          "0 0 12px rgba(58,144,242,0.55), 0 0 38px rgba(58,144,242,0.45), 0 0 80px rgba(24,123,239,0.35)",
+        filter: "drop-shadow(0 6px 30px rgba(24,123,239,0.4))",
       }}
     >
       <AnimatePresence mode="wait" initial={false}>
         <motion.span
           key={index}
-          initial={mounted ? { opacity: 0, scale: 0.96 } : false}
+          initial={mounted ? { opacity: 0, scale: 0.94 } : false}
           animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.96 }}
+          exit={{ opacity: 0, scale: 0.94 }}
           transition={{ duration: 0.35, ease: "easeOut" }}
           className="inline-block"
         >
