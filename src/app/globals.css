@@ -106,11 +106,15 @@
   --header-bg: rgba(244, 247, 252, 0.88);
   /* Logos blancos → invertirlos a negros mediante filter */
   --logo-filter: invert(1) brightness(0);
+  /* Overlay light: bajamos la opacidad respecto al original (era casi blanco
+     opaco a 0.92). Ahora la foto se aprecia. Asimétrico: más cubierto a la
+     izquierda donde está el texto (legibilidad) y más translúcido a la
+     derecha donde está el formulario. */
   --hero-overlay: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.92) 0%,
-    rgba(250, 250, 250, 0.78) 45%,
-    rgba(250, 250, 250, 0.55) 100%
+    100deg,
+    rgba(244, 247, 252, 0.85) 0%,
+    rgba(244, 247, 252, 0.62) 40%,
+    rgba(244, 247, 252, 0.4) 100%
   );
   /* CaseHeader en light: base casi neutra para legibilidad del texto, con un
      halo azul concentrado en el lado del logo (derecha en desktop). Así la

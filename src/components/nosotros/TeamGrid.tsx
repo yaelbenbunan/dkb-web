@@ -115,7 +115,7 @@ function TeamGroup({
                     alt={m.name}
                     width={300}
                     height={300}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-cover object-top"
                   />
                 ) : (
                   <span className="text-3xl font-bold text-fg-muted">
@@ -146,45 +146,45 @@ function TeamGroup({
 
 export function TeamGrid() {
   return (
-    <>
-      <TeamGroup
-        members={TEAM}
-        eyebrow="Conoce a nuestro equipo"
-        heading={
-          <>
-            Lo que hacemos importa, pero{" "}
-            <span className="italic text-accent">
-              quién lo hace marca la diferencia
-            </span>
-            .
-          </>
-        }
-        cta={
-          <>
-            ¿Buscas al equipo en México?{" "}
-            <a
-              href="#equipo-mexico"
-              className="font-semibold text-accent hover:text-accent-hover"
-            >
-              Conócelos →
-            </a>
-          </>
-        }
-      />
+    <TeamGroup
+      members={TEAM}
+      eyebrow="Conoce a nuestro equipo"
+      heading={
+        <>
+          Lo que hacemos importa, pero{" "}
+          <span className="italic text-accent">
+            quién lo hace marca la diferencia
+          </span>
+          .
+        </>
+      }
+      cta={
+        <>
+          ¿Buscas al equipo en México?{" "}
+          <a
+            href="/nosotros/mexico"
+            className="font-semibold text-accent hover:text-accent-hover"
+          >
+            Conócelos →
+          </a>
+        </>
+      }
+    />
+  );
+}
 
-      <TeamGroup
-        id="equipo-mexico"
-        members={TEAM_MEXICO}
-        eyebrow="Equipo en México"
-        heading={
-          <>
-            Nuestros compañeros de{" "}
-            <span className="italic text-accent">dinkbit México</span>
-          </>
-        }
-        shuffleClient={false}
-        withDecor={false}
-      />
-    </>
+export function TeamGridMexico() {
+  return (
+    <TeamGroup
+      members={TEAM_MEXICO}
+      eyebrow="Equipo en México"
+      heading={
+        <>
+          Nuestros compañeros de{" "}
+          <span className="italic text-accent">dinkbit México</span>
+        </>
+      }
+      shuffleClient={false}
+    />
   );
 }
