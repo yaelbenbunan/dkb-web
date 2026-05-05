@@ -54,7 +54,6 @@ export const TEAM_MEXICO: TeamMember[] = [
   { name: "Nimrod Holguin", role: "Frontend developer", avatar: "/img/equipo/mexico/nimrod-holguin.png" },
   { name: "Oscar Abundis", role: "Marketing & branding designer", avatar: "/img/equipo/mexico/oscar-abundis.png" },
   { name: "Oscar Aguayo", role: "Digital administrator", avatar: "/img/equipo/mexico/oscar-aguayo.png" },
-  { name: "Rina Schatz", role: "Marketing & branding designer", avatar: "" },
   { name: "Roberto Vargas", role: "Marketing & branding designer", avatar: "/img/equipo/mexico/roberto-vargas.png" },
   { name: "Sinahi Amaya", role: "Project manager", avatar: "/img/equipo/mexico/sinahi-amaya.png" },
   { name: "Sylvia Harari", role: "Digital trainee", avatar: "/img/equipo/mexico/sylvia-harari.png" },

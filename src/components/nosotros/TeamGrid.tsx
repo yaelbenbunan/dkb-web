@@ -178,8 +178,8 @@ export function TeamGrid() {
         eyebrow="Equipo en México"
         heading={
           <>
-            Las personas detrás de{" "}
-            <span className="italic text-accent">dinkbit en México</span>.
+            Nuestros compañeros de{" "}
+            <span className="italic text-accent">dinkbit México</span>
           </>
         }
         shuffleClient={false}

@@ -258,12 +258,15 @@
    Mantenemos su look azul-claro en ambos temas (decisión de diseño). */
 .surface-elevated {
   position: relative;
-  background-color: rgba(255, 255, 255, 0.96);
+  /* Off-white con un tinte azul-grisáceo muy ligero. Evita el contraste
+     extremo del blanco puro sobre el bg oscuro del Hero, mantiene la
+     legibilidad y se siente coherente con la paleta de marca. */
+  background-color: rgba(232, 238, 248, 0.95);
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
   box-shadow:
-    inset 0 0 0 1px rgba(58, 144, 242, 0.2),
-    0 25px 60px -15px rgba(0, 0, 0, 0.4);
+    inset 0 0 0 1px rgba(58, 144, 242, 0.18),
+    0 25px 60px -15px rgba(0, 0, 0, 0.35);
 }
 
 .surface-input {
