@@ -26,7 +26,7 @@ const FEATURES: Feature[] = [
     iconSrc: "/img/icons/features/multidisciplinar.png",
     title: "Equipo multidisciplinar",
     description:
-      "Especialistas senior con visión 360º del negocio digital. Trabajamos como una extensión de tu equipo: misma exigencia, criterio propio y foco en lo que mueve resultados.",
+      "Un especialista del equipo en cada disciplina, todo in-house. Así controlamos la calidad de principio a fin.",
   },
 ];
 
