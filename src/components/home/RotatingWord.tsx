@@ -22,9 +22,8 @@ export function RotatingWord() {
       className="relative inline-block align-baseline"
       style={{
         color: "#3a90f2",
-        textShadow:
-          "0 0 12px rgba(58,144,242,0.55), 0 0 38px rgba(58,144,242,0.45), 0 0 80px rgba(24,123,239,0.35)",
-        filter: "drop-shadow(0 6px 30px rgba(24,123,239,0.4))",
+        textShadow: "0 0 18px rgba(58,144,242,0.22), 0 0 42px rgba(24,123,239,0.14)",
+        filter: "drop-shadow(0 3px 14px rgba(24,123,239,0.18))",
       }}
     >
       <AnimatePresence mode="wait" initial={false}>

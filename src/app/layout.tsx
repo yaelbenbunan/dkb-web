@@ -3,6 +3,7 @@ import { Source_Sans_3 } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { CookieBanner } from "@/components/legal/CookieBanner";
 
 const sourceSans = Source_Sans_3({
   subsets: ["latin"],
@@ -35,6 +36,7 @@ export default function RootLayout({
         <Header />
         <main className="min-h-[calc(100vh-5rem)]">{children}</main>
         <Footer />
+        <CookieBanner />
       </body>
     </html>
   );

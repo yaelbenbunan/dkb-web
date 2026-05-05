@@ -39,7 +39,7 @@ export function RelatedCasesMarquee({ cases }: Props) {
           {cases.map((c) => (
             <div
               key={c.slug}
-              className="min-w-0 flex-[0_0_50%] px-3 sm:flex-[0_0_33.333%] md:flex-[0_0_25%]"
+              className="min-w-0 flex-[0_0_33.333%] px-1.5 sm:flex-[0_0_25%] md:flex-[0_0_20%]"
             >
               <Link
                 href={`/casos-de-exito/${c.slug}`}

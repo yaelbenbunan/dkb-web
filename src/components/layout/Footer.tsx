@@ -4,6 +4,13 @@ import { Container } from "@/components/ui/Container";
 import { NAV_ITEMS } from "@/lib/nav";
 import { CONTACT_INFO } from "@/lib/contact-info";
 import { ThemeToggle } from "./ThemeToggle";
+import { CookieSettingsButton } from "@/components/legal/CookieSettingsButton";
+
+const LEGAL_LINKS = [
+  { href: "/aviso-legal", label: "Aviso legal" },
+  { href: "/privacidad", label: "Privacidad" },
+  { href: "/cookies", label: "Cookies" },
+];
 
 export function Footer() {
   return (
@@ -29,8 +36,8 @@ export function Footer() {
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10 bg-dots opacity-30"
       />
-      <Container className="grid gap-12 pb-16 md:grid-cols-4">
-        <div className="md:col-span-2">
+      <Container className="grid gap-12 pb-16 md:grid-cols-2 lg:grid-cols-5">
+        <div className="lg:col-span-2">
           <Link href="/" aria-label="dinkbit — inicio">
             <Image
               src="/img/logo/dinkbit.svg"
@@ -95,10 +102,36 @@ export function Footer() {
             </li>
           </ul>
         </div>
+
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-fg-dim">
+            Legal
+          </p>
+          <ul className="mt-4 space-y-3 text-base text-fg-muted">
+            {LEGAL_LINKS.map((l) => (
+              <li key={l.href}>
+                <Link
+                  href={l.href}
+                  className="transition-colors hover:text-accent"
+                >
+                  {l.label}
+                </Link>
+              </li>
+            ))}
+            <li>
+              <CookieSettingsButton
+                variant="link"
+                className="text-base text-fg-muted"
+              >
+                Gestionar cookies
+              </CookieSettingsButton>
+            </li>
+          </ul>
+        </div>
       </Container>
 
-      <Container className="flex flex-col items-start gap-6 border-t border-border/60 py-6 text-xs text-fg-dim md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-6">
+      <Container className="flex flex-col items-start gap-4 border-t border-border/60 py-6 text-xs text-fg-dim md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-1 md:flex-row md:items-center md:gap-6">
           <span>
             © {new Date().getFullYear()} dinkbit. Todos los derechos reservados.
           </span>
