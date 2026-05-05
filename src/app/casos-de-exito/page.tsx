@@ -28,8 +28,8 @@ export default function CasosPage() {
             Casos de éxito
           </p>
           <h1
-            className="mx-auto mt-6 max-w-4xl font-black leading-[0.95] tracking-tight"
-            style={{ fontSize: "var(--text-display-xl)" }}
+            className="mx-auto mt-6 max-w-3xl font-black leading-[1.05] tracking-tight"
+            style={{ fontSize: "var(--text-display-md)" }}
           >
             Resultados <span className="text-accent">reales</span> de
             marcas como la tuya.

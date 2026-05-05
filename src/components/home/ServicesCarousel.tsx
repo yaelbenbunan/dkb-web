@@ -13,12 +13,12 @@ interface Props {
 
 export function ServicesCarousel({ services }: Props) {
   const [emblaRef, emblaApi] = useEmblaCarousel({
-    loop: false,
+    loop: true,
     align: "start",
     dragFree: false,
     containScroll: "trimSnaps",
   });
-  const [canPrev, setCanPrev] = useState(false);
+  const [canPrev, setCanPrev] = useState(true);
   const [canNext, setCanNext] = useState(true);
 
   const onSelect = useCallback(() => {
@@ -32,6 +32,9 @@ export function ServicesCarousel({ services }: Props) {
     onSelect();
     emblaApi.on("select", onSelect);
     emblaApi.on("reInit", onSelect);
+    // Auto-avance cada 5s. Pausa al hacer hover sobre el track.
+    const id = setInterval(() => emblaApi.scrollNext(), 5000);
+    return () => clearInterval(id);
   }, [emblaApi, onSelect]);
 
   return (
