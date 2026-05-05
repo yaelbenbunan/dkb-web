@@ -1,17 +1,21 @@
 import Image from "next/image";
 
 /**
- * Renders the client logo swapping between white (default) and color (hover).
+ * Logo cliente con swap default → hover.
  *
- * Convention: `src` points to the COLOR version inside `/img/casos/logos/logos-color/`.
- * The white version is auto-derived by replacing the segment with `/logos-blancos/`.
+ * Convención: `src` apunta a la versión POSITIVA (color/marca), normalmente
+ * `/img/casos/{slug}/logo/positivo.png`. La versión NEGATIVA (B&N para
+ * contraste) se deriva sustituyendo `positivo.` por `negativo.` en el path.
  *
- * Both files must exist with the same filename in their respective folders.
+ * - Default: muestra el negativo (en dark se ve blanco, en light se invierte
+ *   a negro vía CSS filter en `.client-logo-bw`).
+ * - Hover: muestra el positivo (color de marca). En light desactivamos el
+ *   swap porque algunos positivos son blancos sobre fondo claro.
  *
- * Usage requires the parent to have the `group` class so `group-hover:` triggers.
+ * El padre debe llevar la clase `group` para que `group-hover:` dispare.
  */
-function toWhitePath(src: string): string {
-  return src.replace("/logos-color/", "/logos-blancos/");
+function toNegativePath(src: string): string {
+  return src.replace("positivo.", "negativo.");
 }
 
 interface Props {
@@ -20,7 +24,7 @@ interface Props {
   width: number;
   height: number;
   imgClassName?: string;
-  /** When true, only render the white version (no hover swap). For static contexts. */
+  /** Si true, sólo renderiza la versión negativa (sin swap). Para contextos estáticos. */
   staticWhite?: boolean;
 }
 
@@ -32,13 +36,13 @@ export function ClientLogoSwap({
   imgClassName,
   staticWhite,
 }: Props) {
-  const whiteSrc = toWhitePath(src);
+  const negativeSrc = toNegativePath(src);
 
   if (staticWhite) {
     return (
       <span className="client-logo-bw inline-flex">
         <Image
-          src={whiteSrc}
+          src={negativeSrc}
           alt={alt}
           width={width}
           height={height}
@@ -51,7 +55,7 @@ export function ClientLogoSwap({
   return (
     <span className="client-logo-bw relative inline-flex">
       <Image
-        src={whiteSrc}
+        src={negativeSrc}
         alt={alt}
         width={width}
         height={height}

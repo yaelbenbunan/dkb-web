@@ -18,7 +18,7 @@ export default function Home() {
       <Hero />
       <PartnersMarquee
         heading="Alianzas estratégicas"
-        subheading="Trabajamos con quienes hacen posible el ecosistema digital."
+        subheading="Trabajamos con quienes hacen posible el ecosistema digital"
       />
       <AboutFeatures />
       <ServicesCarousel services={services} />

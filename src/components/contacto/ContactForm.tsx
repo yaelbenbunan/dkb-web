@@ -66,7 +66,11 @@ export function ContactForm({ services }: Props) {
             label="¿Qué servicio te interesa?"
             required
             placeholder="Selecciona un servicio"
-            options={services.map((s) => ({ value: s.title, label: s.title }))}
+            options={[
+              ...services.map((s) => ({ value: s.title, label: s.title })),
+              { value: "Varios servicios", label: "Varios servicios" },
+              { value: "Quiero que me recomendéis", label: "Quiero que me recomendéis" },
+            ]}
           />
           <SelectField
             name="source"

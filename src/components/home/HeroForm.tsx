@@ -84,6 +84,10 @@ export function HeroForm({ services }: Props) {
                 {s.title}
               </option>
             ))}
+            <option value="Varios servicios">Varios servicios</option>
+            <option value="Quiero que me recomendéis">
+              Quiero que me recomendéis
+            </option>
           </select>
         </label>
       </div>
