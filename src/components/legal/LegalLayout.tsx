@@ -53,7 +53,27 @@ export function LegalLayout({
           </p>
         )}
 
-        <div className="prose prose-lg mt-12 max-w-none prose-headings:font-black prose-headings:tracking-tight prose-h2:mt-12 prose-h2:text-2xl prose-h3:text-xl prose-a:text-[#187bef] prose-a:no-underline hover:prose-a:underline prose-strong:text-fg dark:prose-invert">
+        <div
+          className="prose prose-lg mt-12 max-w-none prose-headings:font-black prose-headings:tracking-tight prose-h2:mt-12 prose-h2:text-2xl prose-h3:text-xl prose-a:no-underline hover:prose-a:underline"
+          style={
+            {
+              "--tw-prose-body": "var(--color-fg)",
+              "--tw-prose-headings": "var(--color-fg)",
+              "--tw-prose-lead": "var(--color-fg)",
+              "--tw-prose-bold": "var(--color-fg)",
+              "--tw-prose-links": "#187bef",
+              "--tw-prose-counters": "var(--color-fg-muted)",
+              "--tw-prose-bullets": "var(--color-fg-muted)",
+              "--tw-prose-hr": "var(--color-border)",
+              "--tw-prose-quotes": "var(--color-fg)",
+              "--tw-prose-quote-borders": "var(--color-border)",
+              "--tw-prose-captions": "var(--color-fg-muted)",
+              "--tw-prose-code": "var(--color-fg)",
+              "--tw-prose-th-borders": "var(--color-border)",
+              "--tw-prose-td-borders": "var(--color-border)",
+            } as React.CSSProperties
+          }
+        >
           {children}
         </div>
       </Container>

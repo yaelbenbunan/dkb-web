@@ -108,14 +108,14 @@ function TeamGroup({
               }
               className="flex flex-col items-center text-center"
             >
-              <div className="relative flex aspect-[3/4] w-full items-center justify-center overflow-hidden rounded-2xl bg-bg-elevated ring-1 ring-white/[0.05]">
+              <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-2xl bg-bg-elevated ring-1 ring-white/[0.05]">
                 {m.avatar ? (
                   <Image
                     src={m.avatar}
                     alt={m.name}
                     width={300}
                     height={400}
-                    className="h-full w-full object-cover object-center"
+                    className="h-full w-full object-cover object-top"
                   />
                 ) : (
                   <span className="text-3xl font-bold text-fg-muted">
