@@ -47,7 +47,7 @@ export function Footer() {
               className="h-9 w-auto"
             />
           </Link>
-          <p className="mt-6 max-w-sm text-base leading-relaxed text-fg-muted">
+          <p className="mt-6 max-w-sm text-base leading-relaxed text-fg">
             Agencia digital en España.{" "}
             <span className="text-fg">
               Diseño, desarrollo y campañas
@@ -57,7 +57,7 @@ export function Footer() {
         </div>
 
         <nav>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-fg-dim">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-fg-muted">
             Navegación
           </p>
           <ul className="mt-4 space-y-3">
@@ -65,7 +65,7 @@ export function Footer() {
               <li key={i.href}>
                 <Link
                   href={i.href}
-                  className="text-base text-fg-muted transition-colors hover:text-accent"
+                  className="text-base text-fg transition-colors hover:text-accent"
                 >
                   {i.label}
                 </Link>
@@ -75,10 +75,10 @@ export function Footer() {
         </nav>
 
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-fg-dim">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-fg-muted">
             Contacto
           </p>
-          <ul className="mt-4 space-y-3 text-base text-fg-muted">
+          <ul className="mt-4 space-y-3 text-base text-fg">
             <li>
               <a
                 href={`mailto:${CONTACT_INFO.email}`}
@@ -95,7 +95,7 @@ export function Footer() {
                 {CONTACT_INFO.phone}
               </a>
             </li>
-            <li className="pt-2 text-sm leading-relaxed text-fg-dim">
+            <li className="pt-2 text-sm leading-relaxed text-fg-muted">
               {CONTACT_INFO.address.line1}
               <br />
               {CONTACT_INFO.address.line2}
@@ -104,10 +104,10 @@ export function Footer() {
         </div>
 
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-fg-dim">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-fg-muted">
             Legal
           </p>
-          <ul className="mt-4 space-y-3 text-base text-fg-muted">
+          <ul className="mt-4 space-y-3 text-base text-fg">
             {LEGAL_LINKS.map((l) => (
               <li key={l.href}>
                 <Link
@@ -121,7 +121,7 @@ export function Footer() {
             <li>
               <CookieSettingsButton
                 variant="link"
-                className="text-base text-fg-muted"
+                className="text-base text-fg"
               >
                 Gestionar cookies
               </CookieSettingsButton>
@@ -130,7 +130,7 @@ export function Footer() {
         </div>
       </Container>
 
-      <Container className="flex flex-col items-start gap-4 border-t border-border/60 py-6 text-xs text-fg-dim md:flex-row md:items-center md:justify-between">
+      <Container className="flex flex-col items-start gap-4 border-t border-border/60 py-6 text-xs text-fg-muted md:flex-row md:items-center md:justify-between">
         <div className="flex flex-col gap-1 md:flex-row md:items-center md:gap-6">
           <span>
             © {new Date().getFullYear()} dinkbit. Todos los derechos reservados.

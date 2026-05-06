@@ -4,6 +4,7 @@ import { AboutFeatures } from "@/components/home/AboutFeatures";
 import { ServicesCarousel } from "@/components/home/ServicesCarousel";
 import { Testimonials } from "@/components/home/Testimonials";
 import { ContactSection } from "@/components/contacto/ContactSection";
+import { Reveal } from "@/components/ui/Reveal";
 import { getAllServices } from "@/lib/content";
 
 export default function Home() {
@@ -16,14 +17,24 @@ export default function Home() {
   return (
     <>
       <Hero />
-      <PartnersMarquee
-        heading="Alianzas estratégicas"
-        subheading="Trabajamos con quienes hacen posible el ecosistema digital"
-      />
-      <AboutFeatures />
-      <ServicesCarousel services={services} />
-      <Testimonials />
-      <ContactSection />
+      <Reveal>
+        <PartnersMarquee
+          heading="Alianzas estratégicas"
+          subheading="Trabajamos con quienes hacen posible el ecosistema digital"
+        />
+      </Reveal>
+      <Reveal>
+        <AboutFeatures />
+      </Reveal>
+      <Reveal>
+        <ServicesCarousel services={services} />
+      </Reveal>
+      <Reveal>
+        <Testimonials />
+      </Reveal>
+      <Reveal>
+        <ContactSection />
+      </Reveal>
     </>
   );
 }

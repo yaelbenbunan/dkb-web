@@ -3,6 +3,7 @@ import { WhyUs } from "@/components/nosotros/WhyUs";
 import { Manifesto } from "@/components/nosotros/Manifesto";
 import { HeaderStats } from "@/components/nosotros/HeaderStats";
 import { TeamGrid } from "@/components/nosotros/TeamGrid";
+import { Reveal } from "@/components/ui/Reveal";
 
 export const metadata = {
   title: "Nosotros — dinkbit",
@@ -53,9 +54,15 @@ export default function NosotrosPage() {
         />
       </header>
 
-      <WhyUs />
-      <TeamGrid />
-      <Manifesto />
+      <Reveal>
+        <WhyUs />
+      </Reveal>
+      <Reveal>
+        <TeamGrid />
+      </Reveal>
+      <Reveal>
+        <Manifesto />
+      </Reveal>
     </>
   );
 }

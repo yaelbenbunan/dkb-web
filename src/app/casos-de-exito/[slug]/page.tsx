@@ -3,6 +3,7 @@ import { Container } from "@/components/ui/Container";
 import { CaseHeader } from "@/components/casos/CaseHeader";
 import { CaseSections } from "@/components/casos/CaseSections";
 import { RelatedCases } from "@/components/casos/RelatedCases";
+import { Reveal } from "@/components/ui/Reveal";
 import {
   getAllCaseStudies,
   getCaseStudyBySlug,
@@ -51,34 +52,40 @@ export default async function CaseDetail({
 
       {/* Reto */}
       {caseStudy.reto && (
-        <section className="relative isolate overflow-hidden bg-bg-deep py-16 md:py-20">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 -z-10 bg-grid-fine opacity-40"
-          />
-          <Container>
-            <div className="grid gap-6 lg:grid-cols-[auto_1fr] lg:items-start lg:gap-16">
-              <h2 className="flex w-fit items-center gap-3 text-xs font-bold uppercase tracking-[0.3em] text-accent">
-                <span aria-hidden className="h-px w-10 bg-accent" />
-                El reto
-              </h2>
-              <p className="max-w-3xl text-lg leading-relaxed text-fg md:text-xl">
-                {caseStudy.reto}
-              </p>
-            </div>
-          </Container>
-        </section>
+        <Reveal>
+          <section className="relative isolate overflow-hidden bg-bg-deep py-16 md:py-20">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 -z-10 bg-grid-fine opacity-40"
+            />
+            <Container>
+              <div className="grid gap-6 lg:grid-cols-[auto_1fr] lg:items-start lg:gap-16">
+                <h2 className="flex w-fit items-center gap-3 text-xs font-bold uppercase tracking-[0.3em] text-accent">
+                  <span aria-hidden className="h-px w-10 bg-accent" />
+                  El reto
+                </h2>
+                <p className="max-w-3xl text-lg leading-relaxed text-fg md:text-xl">
+                  {caseStudy.reto}
+                </p>
+              </div>
+            </Container>
+          </section>
+        </Reveal>
       )}
 
       {/* Soluciones por servicio */}
       {caseStudy.sections && caseStudy.sections.length > 0 && (
-        <CaseSections
-          sections={caseStudy.sections}
-          websiteUrl={caseStudy.social?.website}
-        />
+        <Reveal>
+          <CaseSections
+            sections={caseStudy.sections}
+            websiteUrl={caseStudy.social?.website}
+          />
+        </Reveal>
       )}
 
-      <RelatedCases cases={related} />
+      <Reveal>
+        <RelatedCases cases={related} />
+      </Reveal>
     </article>
   );
 }
