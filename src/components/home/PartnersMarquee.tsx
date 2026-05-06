@@ -52,14 +52,14 @@ export function PartnersMarquee({
           {[...PARTNERS, ...PARTNERS].map((p, i) => (
             <div
               key={`${p.name}-${i}`}
-              className="flex h-24 w-44 shrink-0 items-center justify-center sm:h-28 sm:w-48"
+              className="group flex h-24 w-44 shrink-0 items-center justify-center transition-transform duration-300 hover:-translate-y-1.5 sm:h-28 sm:w-48"
             >
               <Image
                 src={p.src}
                 alt={p.name}
                 width={342}
                 height={164}
-                className={`${p.noFilter ? "" : "partner-logo "}h-16 w-auto object-contain sm:h-20`}
+                className={`${p.noFilter ? "" : "partner-logo "}h-16 w-auto object-contain transition-transform duration-300 group-hover:scale-110 sm:h-20`}
               />
             </div>
           ))}

@@ -1,4 +1,5 @@
 import { Container } from "@/components/ui/Container";
+import { Reveal } from "@/components/ui/Reveal";
 
 const PILLARS = [
   {
@@ -86,10 +87,13 @@ export function WhyUs() {
 
         <ul className="mt-16 grid gap-6 md:grid-cols-3">
           {PILLARS.map((p, i) => (
-            <li
-              key={p.title}
-              className="surface surface-hover group relative flex flex-col rounded-3xl p-8 transition-transform duration-300 hover:-translate-y-1.5"
-            >
+            <li key={p.title} className="contents">
+              <Reveal
+                delay={i * 0.1}
+                distance={32}
+                scale
+                className="surface surface-hover group relative flex flex-col rounded-3xl p-8 transition-transform duration-300 hover:-translate-y-1.5"
+              >
               {/* Número grande de fondo */}
               <span
                 aria-hidden
@@ -111,6 +115,7 @@ export function WhyUs() {
               <p className="relative mt-3 text-base leading-relaxed text-fg-muted">
                 {p.body}
               </p>
+              </Reveal>
             </li>
           ))}
         </ul>

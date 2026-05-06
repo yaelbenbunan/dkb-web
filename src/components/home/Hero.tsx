@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { Container } from "@/components/ui/Container";
+import { Reveal } from "@/components/ui/Reveal";
 import { RotatingWord } from "./RotatingWord";
 import { HeroForm } from "./HeroForm";
 import { getAllServices } from "@/lib/content";
@@ -52,30 +53,38 @@ export function Hero() {
         <div className="flex flex-col justify-center">
           {/* Headline tri-línea con misma tipografía. Rotating word es la única en azul. */}
           <h1 className="font-black leading-[0.95] tracking-tight text-fg">
-            <span className="block text-5xl md:text-6xl lg:text-7xl">
-              Hacemos
-            </span>
-            <span className="mt-1 block text-5xl md:text-6xl lg:text-7xl">
-              <RotatingWord />
-            </span>
-            <span className="mt-1 block text-5xl md:text-6xl lg:text-7xl">
-              increíbles
-            </span>
+            <Reveal from="up" distance={32} duration={0.7}>
+              <span className="block text-5xl md:text-6xl lg:text-7xl">
+                Hacemos
+              </span>
+            </Reveal>
+            <Reveal from="up" distance={32} duration={0.7} delay={0.12}>
+              <span className="mt-1 block text-5xl md:text-6xl lg:text-7xl">
+                <RotatingWord />
+              </span>
+            </Reveal>
+            <Reveal from="up" distance={32} duration={0.7} delay={0.24}>
+              <span className="mt-1 block text-5xl md:text-6xl lg:text-7xl">
+                increíbles
+              </span>
+            </Reveal>
           </h1>
 
-          <p className="mt-10 max-w-xl text-lg leading-relaxed text-fg-muted md:text-xl">
-            Somos un equipo <span className="text-fg">multidisciplinar</span>,
-            donde la <span className="text-accent">innovación</span> y la{" "}
-            <span className="text-accent">creatividad</span> se unen para crear
-            soluciones que impulsan tu marca y te ayudan a conseguir los mejores resultados.
-          </p>
+          <Reveal from="up" distance={24} duration={0.7} delay={0.4}>
+            <p className="mt-10 max-w-xl text-lg leading-relaxed text-fg-muted md:text-xl">
+              Somos un equipo <span className="text-fg">multidisciplinar</span>,
+              donde la <span className="text-accent">innovación</span> y la{" "}
+              <span className="text-accent">creatividad</span> se unen para crear
+              soluciones que impulsan tu marca y te ayudan a conseguir los mejores resultados.
+            </p>
+          </Reveal>
         </div>
 
-        <div className="flex items-center">
+        <Reveal from="right" distance={48} duration={0.8} delay={0.2} className="flex items-center">
           <div className="w-full">
             <HeroForm services={services} />
           </div>
-        </div>
+        </Reveal>
       </Container>
     </section>
   );
