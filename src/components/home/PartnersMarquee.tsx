@@ -59,7 +59,7 @@ export function PartnersMarquee({
                 alt={p.name}
                 width={342}
                 height={164}
-                className="partner-logo h-16 w-auto object-contain sm:h-20"
+                className={`${p.noFilter ? "" : "partner-logo "}h-16 w-auto object-contain sm:h-20`}
               />
             </div>
           ))}

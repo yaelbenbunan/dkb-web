@@ -39,7 +39,12 @@ export default function ServiciosPage() {
       <Container className="pb-24 md:pb-28">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {services.map((s, i) => (
-            <Reveal key={s.slug} delay={Math.min(i, 6) * 0.06} y={20}>
+            <Reveal
+              key={s.slug}
+              delay={Math.min(i, 6) * 0.08}
+              distance={28}
+              scale
+            >
               <ServiceCard service={s} />
             </Reveal>
           ))}
