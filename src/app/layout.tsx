@@ -4,6 +4,7 @@ import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { CookieBanner } from "@/components/legal/CookieBanner";
+import { ScrollProgress } from "@/components/ui/ScrollProgress";
 
 const sourceSans = Source_Sans_3({
   subsets: ["latin"],
@@ -33,6 +34,7 @@ export default function RootLayout({
         <script src="/theme-bootstrap.js" />
       </head>
       <body>
+        <ScrollProgress />
         <Header />
         <main className="min-h-[calc(100vh-5rem)]">{children}</main>
         <Footer />

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { Container } from "@/components/ui/Container";
 import { Reveal } from "@/components/ui/Reveal";
+import { Parallax } from "@/components/ui/Parallax";
 import { RotatingWord } from "./RotatingWord";
 import { HeroForm } from "./HeroForm";
 import { getAllServices } from "@/lib/content";
@@ -13,15 +14,17 @@ export function Hero() {
 
   return (
     <section className="relative isolate overflow-hidden">
-      {/* Foto de fondo */}
-      <Image
-        src="/img/home/hero-bg.png"
-        alt=""
-        fill
-        priority
-        sizes="100vw"
-        className="-z-30 object-cover object-center"
-      />
+      {/* Foto de fondo con parallax suave */}
+      <Parallax offset={60} className="absolute inset-0 -z-30">
+        <Image
+          src="/img/home/hero-bg.png"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-center"
+        />
+      </Parallax>
 
       {/* Overlay translúcido para legibilidad — cambia según el tema */}
       <div
@@ -30,12 +33,14 @@ export function Hero() {
         style={{ background: "var(--hero-overlay)" }}
       />
 
-      {/* Spotlight radial azul */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 spotlight-accent"
-        style={{ ["--sx" as string]: "20%", ["--sy" as string]: "30%" }}
-      />
+      {/* Spotlight radial azul con parallax */}
+      <Parallax offset={120} className="pointer-events-none absolute inset-0 -z-10">
+        <div
+          aria-hidden
+          className="absolute inset-0 spotlight-accent"
+          style={{ ["--sx" as string]: "20%", ["--sy" as string]: "30%" }}
+        />
+      </Parallax>
 
       {/* Grid sutil */}
       <div
