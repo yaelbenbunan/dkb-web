@@ -3,7 +3,7 @@
 import { Resend } from "resend";
 import { z } from "zod";
 
-export const leadSchema = z
+const leadSchema = z
   .object({
     name: z.string().min(2, "Demasiado corto"),
     email: z.email("Email inválido"),
@@ -17,9 +17,7 @@ export const leadSchema = z
     path: ["formLoadedAt"],
   });
 
-export type LeadInput = z.infer<typeof leadSchema>;
-
-export interface LeadActionResult {
+interface LeadActionResult {
   ok: boolean;
   error?: string;
 }

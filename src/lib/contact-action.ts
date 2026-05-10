@@ -3,7 +3,7 @@
 import { Resend } from "resend";
 import { contactSchema } from "./validation";
 
-export interface ContactActionResult {
+interface ContactActionResult {
   ok: boolean;
   error?: string;
 }
