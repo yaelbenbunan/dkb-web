@@ -59,16 +59,24 @@ export default async function OpengraphImage() {
         >
           <div
             style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "0 0.28em",
               fontSize: 84,
               fontWeight: 900,
               lineHeight: 1.05,
               letterSpacing: "-0.03em",
-              maxWidth: 900,
+              maxWidth: 1000,
             }}
           >
-            Soluciones digitales{" "}
-            <span style={{ color: "#187bef" }}>end-to-end</span> para marcas que
-            quieren crecer.
+            <span>Soluciones</span>
+            <span>digitales</span>
+            <span style={{ color: "#187bef" }}>end-to-end</span>
+            <span>para</span>
+            <span>marcas</span>
+            <span>que</span>
+            <span>quieren</span>
+            <span>crecer.</span>
           </div>
           <div
             style={{
