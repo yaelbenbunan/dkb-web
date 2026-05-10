@@ -18,3 +18,34 @@ export const contactSchema = z
   });
 
 export type ContactInput = z.infer<typeof contactSchema>;
+
+export type ContactFieldName =
+  | "name"
+  | "email"
+  | "phone"
+  | "service"
+  | "source"
+  | "message"
+  | "privacy";
+
+export type ContactFieldErrors = Partial<Record<ContactFieldName, string>>;
+
+export interface ContactActionResult {
+  ok: boolean;
+  error?: string;
+  fieldErrors?: ContactFieldErrors;
+}
+
+const FIELD_KEYS: ContactFieldName[] = [
+  "name",
+  "email",
+  "phone",
+  "service",
+  "source",
+  "message",
+  "privacy",
+];
+
+export function isContactFieldName(key: unknown): key is ContactFieldName {
+  return typeof key === "string" && (FIELD_KEYS as string[]).includes(key);
+}

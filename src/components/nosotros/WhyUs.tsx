@@ -97,16 +97,16 @@ export function WhyUs() {
               {/* Número grande de fondo */}
               <span
                 aria-hidden
-                className="pointer-events-none absolute right-6 top-4 text-7xl font-black leading-none text-white/[0.04] transition-colors group-hover:text-[#187bef]/15"
+                className="pointer-events-none absolute right-6 top-4 text-7xl font-black leading-none text-white/[0.04] transition-colors group-hover:text-accent/15"
               >
                 0{i + 1}
               </span>
 
-              <span className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#187bef] to-[#0c5ec4] text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.55)]">
+              <span className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-[#0c5ec4] text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.55)]">
                 {p.icon}
               </span>
 
-              <p className="relative mt-6 text-[10px] font-bold uppercase tracking-[0.25em] text-[#3a90f2]">
+              <p className="relative mt-6 text-[10px] font-bold uppercase tracking-[0.25em] text-accent-hover">
                 {p.label}
               </p>
               <h3 className="relative mt-2 text-xl font-bold leading-tight text-fg">

@@ -73,7 +73,7 @@ function TeamGroup({
           />
           <div
             aria-hidden
-            className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#187bef]/40 to-transparent"
+            className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent"
           />
         </>
       )}
@@ -81,8 +81,8 @@ function TeamGroup({
       <Container>
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.25em] text-[#3a90f2]">
-              <span className="inline-block h-px w-8 bg-[#3a90f2]" />
+            <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.25em] text-accent-hover">
+              <span className="inline-block h-px w-8 bg-accent-hover" />
               {eyebrow}
             </p>
             <h2
@@ -124,7 +124,7 @@ function TeamGroup({
                 )}
               </div>
               <p className="mt-5 text-base font-bold text-fg">{m.name}</p>
-              <p className="text-xs font-medium uppercase tracking-wider text-[#3a90f2]/80">
+              <p className="text-xs font-medium uppercase tracking-wider text-accent-hover/80">
                 {m.role}
               </p>
             </motion.div>
@@ -137,7 +137,7 @@ function TeamGroup({
       {withDecor && (
         <div
           aria-hidden
-          className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#187bef]/40 to-transparent"
+          className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent"
         />
       )}
     </section>

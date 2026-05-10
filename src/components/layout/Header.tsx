@@ -97,7 +97,7 @@ function SocialIcon({
       target="_blank"
       rel="noopener noreferrer"
       aria-label={label}
-      className="flex h-10 w-10 items-center justify-center rounded-full text-fg-muted transition-all hover:bg-[#187bef]/15 hover:text-[#3a90f2]"
+      className="flex h-10 w-10 items-center justify-center rounded-full text-fg-muted transition-all hover:bg-accent/15 hover:text-accent-hover"
     >
       {icon}
     </a>

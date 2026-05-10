@@ -40,8 +40,8 @@ export function NavLink({ href, children }: Props) {
         aria-hidden
         className={`absolute inset-x-0 -bottom-px h-0.5 origin-center transition-transform duration-300 ${
           isActive
-            ? "scale-x-100 bg-gradient-to-r from-transparent via-[#3a90f2] to-transparent"
-            : "scale-x-0 bg-gradient-to-r from-transparent via-[#187bef] to-transparent group-hover:scale-x-100"
+            ? "scale-x-100 bg-gradient-to-r from-transparent via-accent-hover to-transparent"
+            : "scale-x-0 bg-gradient-to-r from-transparent via-accent to-transparent group-hover:scale-x-100"
         }`}
       />
 

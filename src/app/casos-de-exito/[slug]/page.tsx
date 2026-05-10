@@ -23,9 +23,25 @@ export async function generateMetadata({
   const { slug } = await params;
   const c = getCaseStudyBySlug(slug);
   if (!c) return {};
+  const description =
+    c.description ?? c.metricHeadline ?? `Caso de éxito: ${c.client}`;
+  const url = `/casos-de-exito/${c.slug}`;
   return {
-    title: `${c.title} — dinkbit`,
-    description: c.description ?? c.client,
+    title: c.title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "article",
+      url,
+      title: c.title,
+      description,
+      siteName: "dinkbit",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: c.title,
+      description,
+    },
   };
 }
 

@@ -74,7 +74,7 @@ export default async function ServiceDetail({
         <Container className="relative py-16 md:py-20">
           <div className="grid items-center gap-8 md:grid-cols-[auto_1fr] md:gap-10">
             {/* Icono del servicio en card grande con glow azul */}
-            <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-[#187bef] to-[#0c5ec4] shadow-[0_0_60px_rgba(24,123,239,0.5)]">
+            <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-accent to-[#0c5ec4] shadow-[0_0_60px_rgba(24,123,239,0.5)]">
               <Image
                 src={`/img/icons/servicios/${service.slug}.png`}
                 alt=""
@@ -84,7 +84,7 @@ export default async function ServiceDetail({
               />
             </div>
             <div>
-              <p className="inline-flex items-center gap-2 rounded-full bg-[#187bef]/20 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-white ring-1 ring-[#187bef]/40">
+              <p className="inline-flex items-center gap-2 rounded-full bg-accent/20 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-white ring-1 ring-accent/40">
                 <span className="relative inline-flex h-1.5 w-1.5">
                   <span className="absolute inline-flex h-full w-full rounded-full bg-white animate-ping-soft" />
                   <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
@@ -107,7 +107,7 @@ export default async function ServiceDetail({
         {/* Línea brillante inferior */}
         <div
           aria-hidden
-          className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#187bef] to-transparent"
+          className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-accent to-transparent"
         />
       </header>
 
@@ -118,7 +118,7 @@ export default async function ServiceDetail({
           {(service.intro || service.bullets) && (
             <section>
               <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
-                ¿Qué <span className="text-[#187bef]">ofrecemos</span>?
+                ¿Qué <span className="text-accent">ofrecemos</span>?
               </h2>
               {service.intro && (
                 <p className="mt-5 text-lg leading-relaxed text-fg-muted">
@@ -132,7 +132,7 @@ export default async function ServiceDetail({
                       key={i}
                       className="flex items-start gap-3 text-fg"
                     >
-                      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#187bef]/15 text-[#3a90f2]">
+                      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent-hover">
                         <svg
                           width="13"
                           height="13"
@@ -161,7 +161,7 @@ export default async function ServiceDetail({
             <section>
               <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
                 ¿Qué hace diferente nuestro{" "}
-                <span className="text-[#187bef]">enfoque</span>?
+                <span className="text-accent">enfoque</span>?
               </h2>
               <p className="mt-4 text-lg leading-relaxed text-fg-muted">
                 {service.diferenciador}
@@ -174,7 +174,7 @@ export default async function ServiceDetail({
             <section>
               <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
                 Preguntas{" "}
-                <span className="text-[#187bef]">frecuentes</span>
+                <span className="text-accent">frecuentes</span>
               </h2>
               <div className="mt-6">
                 <ServiceFaqs faqs={service.faqs} />
@@ -186,7 +186,7 @@ export default async function ServiceDetail({
           {relatedCases.length > 0 && (
             <section>
               <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
-                Casos de <span className="text-[#187bef]">éxito</span>
+                Casos de <span className="text-accent">éxito</span>
               </h2>
               <p className="mt-2 text-fg-muted">
                 Algunos clientes a los que ayudamos con{" "}
@@ -208,13 +208,13 @@ export default async function ServiceDetail({
                   {service.ctaBox.title}
                 </p>
                 {service.ctaBox.subtitle && (
-                  <p className="mt-2 text-sm text-[#1e293b]">
+                  <p className="mt-2 text-sm text-slate-800">
                     {service.ctaBox.subtitle}
                   </p>
                 )}
                 <Link
                   href={service.ctaBox.buttonHref}
-                  className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#187bef] px-6 text-base font-semibold text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.5)] transition-all hover:-translate-y-0.5 hover:bg-[#3a90f2]"
+                  className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-accent px-6 text-base font-semibold text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.5)] transition-all hover:-translate-y-0.5 hover:bg-accent-hover"
                 >
                   {service.ctaBox.buttonText}
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -243,12 +243,12 @@ export default async function ServiceDetail({
                         href={`/servicios/${s.slug}`}
                         className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
                           isActive
-                            ? "bg-[#187bef]/15 font-semibold text-[#3a90f2]"
+                            ? "bg-accent/15 font-semibold text-accent-hover"
                             : "text-fg-muted hover:bg-white/[0.04] hover:text-fg"
                         }`}
                       >
                         <span>{s.title}</span>
-                        <span className="text-[#3a90f2]">→</span>
+                        <span className="text-accent-hover">→</span>
                       </Link>
                     </li>
                   );

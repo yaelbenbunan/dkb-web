@@ -79,7 +79,7 @@ export function CaseHeader({ caseStudy, serviceTitleBySlug }: Props) {
                 <li key={t}>
                   <Link
                     href={`/servicios/${t}`}
-                    className="inline-flex h-8 items-center rounded-full bg-[#187bef]/15 px-4 text-xs font-semibold uppercase tracking-wider text-[#3a90f2] ring-1 ring-[#187bef]/30 transition-all hover:bg-[#187bef] hover:text-white"
+                    className="inline-flex h-8 items-center rounded-full bg-accent/15 px-4 text-xs font-semibold uppercase tracking-wider text-accent-hover ring-1 ring-accent/30 transition-all hover:bg-accent hover:text-white"
                   >
                     {serviceTitleBySlug[t] ?? t}
                   </Link>
@@ -206,7 +206,7 @@ export function CaseHeader({ caseStudy, serviceTitleBySlug }: Props) {
       {/* Línea brillante inferior */}
       <div
         aria-hidden
-        className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#187bef] to-transparent"
+        className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-accent to-transparent"
       />
     </header>
   );
@@ -231,7 +231,7 @@ function SocialLink({
       target="_blank"
       rel="noopener noreferrer"
       aria-label={label}
-      className="group flex h-11 w-11 items-center justify-center rounded-full transition-all duration-300 hover:-translate-y-0.5 hover:scale-110 hover:bg-[#187bef] hover:text-white hover:ring-[#187bef] hover:shadow-[0_8px_24px_-6px_rgba(24,123,239,0.6)]"
+      className="group flex h-11 w-11 items-center justify-center rounded-full transition-all duration-300 hover:-translate-y-0.5 hover:scale-110 hover:bg-accent hover:text-white hover:ring-accent hover:shadow-[0_8px_24px_-6px_rgba(24,123,239,0.6)]"
       style={{
         backgroundColor: "var(--social-pill-bg)",
         boxShadow: "inset 0 0 0 1px var(--social-pill-ring)",

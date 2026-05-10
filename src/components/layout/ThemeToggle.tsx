@@ -41,7 +41,7 @@ export function ThemeToggle() {
       type="button"
       onClick={toggle}
       aria-label={showSun ? "Cambiar a modo oscuro" : "Cambiar a modo claro"}
-      className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-bg-elevated px-4 text-sm font-medium text-fg-muted transition-colors hover:border-[#187bef]/50 hover:text-fg"
+      className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-bg-elevated px-4 text-sm font-medium text-fg-muted transition-colors hover:border-accent/50 hover:text-fg"
     >
       {showSun ? (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">

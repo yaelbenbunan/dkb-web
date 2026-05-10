@@ -28,9 +28,9 @@ export function CaseFilters({ caseStudies, filterTags = DEFAULT_TABS }: Props) {
   const tabBase =
     "h-12 rounded-full px-7 text-base font-semibold transition-all";
   const tabActive =
-    "bg-[#187bef] text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.7),inset_0_1px_0_rgba(255,255,255,0.25)]";
+    "bg-accent text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.7),inset_0_1px_0_rgba(255,255,255,0.25)]";
   const tabInactive =
-    "bg-[#187bef]/10 text-[#3a90f2] ring-1 ring-[#187bef]/25 hover:bg-[#187bef]/20 hover:ring-[#187bef]/50";
+    "bg-accent/10 text-accent-hover ring-1 ring-accent/25 hover:bg-accent/20 hover:ring-accent/50";
 
   return (
     <>

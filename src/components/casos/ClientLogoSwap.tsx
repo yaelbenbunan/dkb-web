@@ -4,7 +4,7 @@ import Image from "next/image";
  * Logo cliente con swap default → hover.
  *
  * Convención: `src` apunta a la versión POSITIVA (color/marca), normalmente
- * `/img/casos/{slug}/logo/positivo.png`. La versión NEGATIVA (B&N para
+ * `/img/casos/{slug}/logo/positivo.webp`. La versión NEGATIVA (B&N para
  * contraste) se deriva sustituyendo `positivo.` por `negativo.` en el path.
  *
  * - Default: muestra el negativo (en dark se ve blanco, en light se invierte

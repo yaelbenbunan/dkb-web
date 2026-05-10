@@ -44,18 +44,18 @@ export function Manifesto() {
       {/* Línea brillante azul arriba y abajo */}
       <div
         aria-hidden
-        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#187bef]/60 to-transparent"
+        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/60 to-transparent"
       />
       <div
         aria-hidden
-        className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#187bef]/60 to-transparent"
+        className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-accent/60 to-transparent"
       />
 
       <Container className="relative text-center">
         {/* Comillas grandes con glow azul */}
         <span
           aria-hidden
-          className="mx-auto block text-8xl font-black leading-none text-[#3a90f2] md:text-9xl"
+          className="mx-auto block text-8xl font-black leading-none text-accent-hover md:text-9xl"
           style={{
             textShadow:
               "0 0 40px rgba(58,144,242,0.6), 0 0 80px rgba(24,123,239,0.3)",

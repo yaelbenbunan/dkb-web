@@ -135,7 +135,7 @@ function BannerView({
         <button
           type="button"
           onClick={onAcceptAll}
-          className="h-11 rounded-lg bg-[#187bef] px-5 text-sm font-semibold text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.5)] transition-all hover:-translate-y-0.5 hover:bg-[#3a90f2] sm:order-3"
+          className="h-11 rounded-lg bg-accent px-5 text-sm font-semibold text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.5)] transition-all hover:-translate-y-0.5 hover:bg-accent-hover sm:order-3"
         >
           Aceptar todas
         </button>
@@ -212,7 +212,7 @@ function SettingsView({
         <button
           type="button"
           onClick={onSave}
-          className="h-11 rounded-lg bg-[#187bef] px-5 text-sm font-semibold text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.5)] transition-all hover:-translate-y-0.5 hover:bg-[#3a90f2]"
+          className="h-11 rounded-lg bg-accent px-5 text-sm font-semibold text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.5)] transition-all hover:-translate-y-0.5 hover:bg-accent-hover"
         >
           Guardar selección
         </button>
@@ -244,7 +244,7 @@ function ToggleRow({
       </div>
       <label
         className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
-          checked ? "bg-[#187bef]" : "bg-border-strong"
+          checked ? "bg-accent" : "bg-border-strong"
         } ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
       >
         <input

@@ -25,11 +25,11 @@ export function HeaderStats() {
           {i > 0 && (
             <span
               aria-hidden
-              className="absolute left-0 top-1/2 hidden h-12 w-px -translate-y-1/2 bg-gradient-to-b from-transparent via-[#187bef]/30 to-transparent sm:block"
+              className="absolute left-0 top-1/2 hidden h-12 w-px -translate-y-1/2 bg-gradient-to-b from-transparent via-accent/30 to-transparent sm:block"
             />
           )}
 
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#187bef]/15 ring-1 ring-[#187bef]/35">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/15 ring-1 ring-accent/35">
             <Image
               src={s.icon}
               alt=""

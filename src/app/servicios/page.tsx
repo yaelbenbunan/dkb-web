@@ -44,6 +44,7 @@ export default function ServiciosPage() {
               delay={Math.min(i, 6) * 0.08}
               distance={28}
               scale
+              className="h-full"
             >
               <ServiceCard service={s} />
             </Reveal>

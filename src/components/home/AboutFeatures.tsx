@@ -60,8 +60,7 @@ export function AboutFeatures() {
               style={{ fontSize: "var(--text-display-lg)" }}
             >
               Soluciones digitales{" "}
-              <span className="text-accent">end-to-end</span>
-              <br />
+              <span className="whitespace-nowrap text-accent">end-to-end</span>{" "}
               para marcas que quieren{" "}
               <span className="italic text-accent">crecer.</span>
             </h2>

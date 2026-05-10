@@ -26,12 +26,12 @@ export function LegalLayout({
       />
       <div
         aria-hidden
-        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#187bef]/40 to-transparent"
+        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent"
       />
 
       <Container className="max-w-3xl">
-        <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.25em] text-[#3a90f2]">
-          <span className="inline-block h-px w-8 bg-[#3a90f2]" />
+        <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.25em] text-accent-hover">
+          <span className="inline-block h-px w-8 bg-accent-hover" />
           {eyebrow}
         </p>
         <h1
@@ -61,7 +61,7 @@ export function LegalLayout({
               "--tw-prose-headings": "var(--color-fg)",
               "--tw-prose-lead": "var(--color-fg)",
               "--tw-prose-bold": "var(--color-fg)",
-              "--tw-prose-links": "#187bef",
+              "--tw-prose-links": "var(--color-accent)",
               "--tw-prose-counters": "var(--color-fg-muted)",
               "--tw-prose-bullets": "var(--color-fg-muted)",
               "--tw-prose-hr": "var(--color-border)",

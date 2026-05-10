@@ -18,7 +18,7 @@ export function Footer() {
       {/* Línea superior azul para separar del contenido anterior */}
       <div
         aria-hidden
-        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#187bef]/60 to-transparent"
+        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/60 to-transparent"
       />
       {/* Spotlight azul en la parte superior */}
       <div

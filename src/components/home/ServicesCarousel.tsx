@@ -110,7 +110,7 @@ export function ServicesCarousel({ services }: Props) {
                   height={44}
                   className="h-11 w-11"
                 />
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-fg-muted transition-all group-hover:rotate-[-8deg] group-hover:bg-[#187bef] group-hover:text-white">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-fg-muted transition-all group-hover:rotate-[-8deg] group-hover:bg-accent group-hover:text-white">
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                     <path
                       d="M4 10L10 4M10 4H5M10 4V9"
@@ -151,7 +151,7 @@ function CarouselButton({
     <button
       onClick={onClick}
       disabled={disabled}
-      className="surface flex h-12 w-12 items-center justify-center rounded-full text-fg transition-all hover:scale-105 hover:text-[#3a90f2] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:scale-100"
+      className="surface flex h-12 w-12 items-center justify-center rounded-full text-fg transition-all hover:scale-105 hover:text-accent-hover disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:scale-100"
       {...rest}
     >
       <svg

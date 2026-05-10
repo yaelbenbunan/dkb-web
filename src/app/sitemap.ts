@@ -7,9 +7,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes = [
     "",
     "/nosotros",
+    "/nosotros/mexico",
     "/servicios",
     "/casos-de-exito",
     "/contacto",
+    "/privacidad",
+    "/cookies",
+    "/aviso-legal",
   ].map((path) => ({ url: `${SITE}${path}`, lastModified: new Date() }));
   const services = getAllServices().map((s) => ({
     url: `${SITE}/servicios/${s.slug}`,

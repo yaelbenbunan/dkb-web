@@ -1,12 +1,12 @@
 "use server";
 
 import { Resend } from "resend";
-import { contactSchema } from "./validation";
-
-interface ContactActionResult {
-  ok: boolean;
-  error?: string;
-}
+import {
+  contactSchema,
+  isContactFieldName,
+  type ContactActionResult,
+  type ContactFieldErrors,
+} from "./validation";
 
 export async function sendContactEmail(
   formData: FormData,
@@ -24,7 +24,18 @@ export async function sendContactEmail(
   });
 
   if (!parsed.success) {
-    return { ok: false, error: "Datos inválidos. Revisa los campos." };
+    const fieldErrors: ContactFieldErrors = {};
+    for (const issue of parsed.error.issues) {
+      const key = issue.path[0];
+      if (isContactFieldName(key) && !fieldErrors[key]) {
+        fieldErrors[key] = issue.message;
+      }
+    }
+    return {
+      ok: false,
+      error: "Revisa los campos marcados.",
+      fieldErrors,
+    };
   }
 
   const apiKey = process.env.RESEND_API_KEY;

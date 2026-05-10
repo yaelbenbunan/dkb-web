@@ -1,11 +1,17 @@
+import dynamic from "next/dynamic";
 import { Hero } from "@/components/home/Hero";
 import { PartnersMarquee } from "@/components/home/PartnersMarquee";
 import { AboutFeatures } from "@/components/home/AboutFeatures";
 import { ServicesCarousel } from "@/components/home/ServicesCarousel";
-import { Testimonials } from "@/components/home/Testimonials";
-import { ContactSection } from "@/components/contacto/ContactSection";
 import { Reveal } from "@/components/ui/Reveal";
 import { getAllServices } from "@/lib/content";
+
+const Testimonials = dynamic(() =>
+  import("@/components/home/Testimonials").then((m) => m.Testimonials),
+);
+const ContactSection = dynamic(() =>
+  import("@/components/contacto/ContactSection").then((m) => m.ContactSection),
+);
 
 export default function Home() {
   const services = getAllServices().map((s) => ({

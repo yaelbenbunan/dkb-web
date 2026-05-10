@@ -29,10 +29,10 @@ export default function NosotrosPage() {
         />
 
         <Container className="relative py-24 md:py-28">
-          <p className="inline-flex items-center gap-2 rounded-full bg-[#187bef]/15 px-3 py-1 text-xs font-bold uppercase tracking-[0.25em] text-[#3a90f2] ring-1 ring-[#187bef]/30">
+          <p className="inline-flex items-center gap-2 rounded-full bg-accent/15 px-3 py-1 text-xs font-bold uppercase tracking-[0.25em] text-accent-hover ring-1 ring-accent/30">
             <span className="relative inline-flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-[#3a90f2] animate-ping-soft" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#3a90f2]" />
+              <span className="absolute inline-flex h-full w-full rounded-full bg-accent-hover animate-ping-soft" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-accent-hover" />
             </span>
             Nosotros
           </p>
@@ -42,7 +42,7 @@ export default function NosotrosPage() {
           >
             Una agencia digital,
             <br />
-            <span className="italic text-[#3a90f2]">hecha para construir.</span>
+            <span className="italic text-accent-hover">hecha para construir.</span>
           </h1>
 
           <HeaderStats />
@@ -50,7 +50,7 @@ export default function NosotrosPage() {
 
         <div
           aria-hidden
-          className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#187bef] to-transparent"
+          className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-accent to-transparent"
         />
       </header>
 

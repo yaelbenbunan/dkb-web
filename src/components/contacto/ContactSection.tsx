@@ -142,7 +142,7 @@ function ContactCard({
         rel={external ? "noopener noreferrer" : undefined}
         className="surface surface-hover group flex items-start gap-4 rounded-2xl p-5 transition-all hover:-translate-y-0.5"
       >
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#187bef]/15 text-[#187bef] ring-1 ring-[#187bef]/30">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent ring-1 ring-accent/30">
           {icon}
         </span>
         <span className="min-w-0">

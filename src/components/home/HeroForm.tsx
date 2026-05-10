@@ -43,7 +43,7 @@ export function HeroForm({ services }: Props) {
       <p className="text-lg font-bold text-[#0c1c40]">
         ¡Te ayudamos a crecer!
       </p>
-      <p className="mt-1 text-sm text-[#1e293b]">
+      <p className="mt-1 text-sm text-slate-800">
         Una persona del equipo contactará contigo en menos de 24 horas.
       </p>
 
@@ -67,8 +67,8 @@ export function HeroForm({ services }: Props) {
         </div>
 
         <label className="block">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#187bef]">
-            Servicio de interés <span className="text-[#187bef]">*</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-accent">
+            Servicio de interés <span className="text-accent">*</span>
           </span>
           <select
             name="service"
@@ -103,7 +103,7 @@ export function HeroForm({ services }: Props) {
       <button
         type="submit"
         disabled={pending}
-        className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#187bef] px-6 text-base font-semibold text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.5)] transition-all hover:-translate-y-0.5 hover:bg-[#3a90f2] hover:shadow-[0_12px_32px_-6px_rgba(24,123,239,0.7)] disabled:opacity-60"
+        className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-accent px-6 text-base font-semibold text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.5)] transition-all hover:-translate-y-0.5 hover:bg-accent-hover hover:shadow-[0_12px_32px_-6px_rgba(24,123,239,0.7)] disabled:opacity-60"
       >
         {pending ? "Enviando…" : "¡Quiero crear algo increíble!"}
         {!pending && (
@@ -119,17 +119,24 @@ export function HeroForm({ services }: Props) {
         )}
       </button>
 
-      {result && (
-        <p
-          className={`mt-3 text-sm ${
-            result.ok ? "text-emerald-400" : "text-red-400"
-          }`}
-        >
-          {result.ok
-            ? "¡Enviado! Te respondemos en menos de 24h."
-            : result.error}
-        </p>
-      )}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="mt-3 min-h-[1.25rem]"
+      >
+        {result && (
+          <p
+            className={`text-sm ${
+              result.ok ? "text-emerald-600" : "text-red-600"
+            }`}
+          >
+            {result.ok
+              ? "¡Enviado! Te respondemos en menos de 24h."
+              : result.error}
+          </p>
+        )}
+      </div>
     </form>
   );
 }
@@ -149,7 +156,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="text-xs font-bold uppercase tracking-wider text-[#187bef]">
+      <span className="text-xs font-bold uppercase tracking-wider text-accent">
         {label} {required && <span>*</span>}
       </span>
       <input
