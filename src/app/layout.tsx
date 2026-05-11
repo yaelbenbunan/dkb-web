@@ -6,6 +6,10 @@ import { Footer } from "@/components/layout/Footer";
 import { CookieBanner } from "@/components/legal/CookieBanner";
 import { ScrollProgress } from "@/components/ui/ScrollProgress";
 import { Analytics } from "@/components/analytics/Analytics";
+import { GTM } from "@/components/analytics/GTM";
+import { GTMNoScript } from "@/components/analytics/GTMNoScript";
+import { LinkTracker } from "@/components/analytics/LinkTracker";
+import { WhatsAppBubble } from "@/components/layout/WhatsAppBubble";
 
 const sourceSans = Source_Sans_3({
   subsets: ["latin"],
@@ -84,14 +88,18 @@ export default function RootLayout({
       <head>
         {/* Aplica el tema desde localStorage antes del paint para evitar flash */}
         <script src="/theme-bootstrap.js" />
+        <GTM />
       </head>
       <body>
+        <GTMNoScript />
         <ScrollProgress />
         <Header />
         <main className="min-h-[calc(100vh-5rem)]">{children}</main>
         <Footer />
+        <WhatsAppBubble />
         <CookieBanner />
         <Analytics />
+        <LinkTracker />
       </body>
     </html>
   );
