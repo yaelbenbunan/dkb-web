@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { sendLead } from "@/lib/lead-action";
+import { track } from "@/lib/gtm";
 
 interface ServiceOption {
   slug: string;
@@ -35,7 +36,13 @@ export function HeroForm({ services }: Props) {
         startTransition(async () => {
           const r = await sendLead(fd);
           setResult(r);
-          if (r.ok) formRef.current?.reset();
+          if (r.ok) {
+            track("generate_lead", {
+              form_location: "hero_home",
+              service: String(fd.get("service") ?? ""),
+            });
+            formRef.current?.reset();
+          }
         });
       }}
       className="surface-elevated relative rounded-2xl p-7"
