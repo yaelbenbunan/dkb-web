@@ -4,6 +4,8 @@ import Script from "next/script";
 import { useEffect } from "react";
 import {
   CONSENT_CHANGED_EVENT,
+  CONSENT_STORAGE_KEY,
+  CONSENT_VERSION,
   type ConsentState,
   readConsent,
 } from "@/lib/cookies-consent";
@@ -30,13 +32,26 @@ export function GTM() {
         {`
           window.dataLayer = window.dataLayer || [];
           window.gtag = window.gtag || function(){ window.dataLayer.push(arguments); };
-          window.gtag('consent', 'default', {
-            ad_storage: 'denied',
-            ad_user_data: 'denied',
-            ad_personalization: 'denied',
-            analytics_storage: 'denied',
-            wait_for_update: 500,
-          });
+          (function(){
+            var a='denied', m='denied';
+            try {
+              var raw = localStorage.getItem('${CONSENT_STORAGE_KEY}');
+              if (raw) {
+                var p = JSON.parse(raw);
+                if (p && p.version === ${CONSENT_VERSION}) {
+                  a = p.analytics ? 'granted' : 'denied';
+                  m = p.marketing ? 'granted' : 'denied';
+                }
+              }
+            } catch(e) {}
+            window.gtag('consent', 'default', {
+              ad_storage: m,
+              ad_user_data: m,
+              ad_personalization: m,
+              analytics_storage: a,
+              wait_for_update: 500,
+            });
+          })();
         `}
       </Script>
       <Script id="gtm-init" strategy="afterInteractive">
