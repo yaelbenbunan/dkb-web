@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { sendContactEmail } from "@/lib/contact-action";
 import { SOURCE_OPTIONS, CONTACT_INFO } from "@/lib/contact-info";
+import { track } from "@/lib/gtm";
 import type {
   ContactActionResult,
   ContactFieldErrors,
@@ -50,7 +51,10 @@ export function ContactForm({ services }: Props) {
           startTransition(async () => {
             const r = await sendContactEmail(fd);
             setResult(r);
-            if (r.ok) formRef.current?.reset();
+            if (r.ok) {
+              track("generate_lead", { form_location: "contact_long" });
+              formRef.current?.reset();
+            }
           });
         }}
         className="space-y-5"
