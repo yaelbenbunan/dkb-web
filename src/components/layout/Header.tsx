@@ -34,16 +34,8 @@ export function Header() {
           </nav>
         </div>
 
-        {/* Derecha: CTA llamada + iconos RRSS (desktop) */}
+        {/* Derecha: iconos RRSS + CTA llamada (desktop) */}
         <div className="hidden items-center gap-3 lg:flex">
-          <a
-            href={`tel:${CONTACT_INFO.phoneE164}`}
-            aria-label={`Llamar a ${CONTACT_INFO.phone}`}
-            className="inline-flex h-10 items-center gap-2 rounded-full bg-accent px-4 text-sm font-semibold text-white shadow-[0_6px_18px_-6px_rgba(24,123,239,0.6)] transition-all hover:-translate-y-0.5 hover:bg-accent-hover"
-          >
-            <PhoneIcon />
-            <span>¡Llámanos!</span>
-          </a>
           <SocialIcon
             href={CONTACT_INFO.socials.instagram}
             label="Instagram"
@@ -82,6 +74,14 @@ export function Header() {
               </svg>
             }
           />
+          <a
+            href={`tel:${CONTACT_INFO.phoneE164}`}
+            aria-label={`Llamar a ${CONTACT_INFO.phone}`}
+            className="ml-1 inline-flex h-10 items-center gap-2 rounded-full bg-accent px-4 text-sm font-semibold text-white shadow-[0_6px_18px_-6px_rgba(24,123,239,0.6)] transition-all hover:-translate-y-0.5 hover:bg-accent-hover"
+          >
+            <PhoneIcon />
+            <span>¡Llámanos!</span>
+          </a>
         </div>
 
         {/* Llamada (mobile) — siempre visible junto al hamburguesa */}
