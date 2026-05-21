@@ -3,6 +3,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/Container";
 import { ServiceFaqs } from "@/components/servicios/ServiceFaqs";
+import { ServiceCtaForm } from "@/components/servicios/ServiceCtaForm";
 import { RelatedCasesMarquee } from "@/components/casos/RelatedCasesMarquee";
 import { getAllServices, getServiceBySlug, getAllCaseStudies } from "@/lib/content";
 
@@ -202,33 +203,7 @@ export default async function ServiceDetail({
         {/* Aside sticky */}
         <aside className="lg:sticky lg:top-28 lg:h-max lg:self-start">
           <div className="space-y-5">
-            {service.ctaBox && (
-              <div className="surface-elevated relative rounded-2xl p-7">
-                <p className="text-xl font-bold leading-tight text-[#0c1c40]">
-                  {service.ctaBox.title}
-                </p>
-                {service.ctaBox.subtitle && (
-                  <p className="mt-2 text-sm text-slate-800">
-                    {service.ctaBox.subtitle}
-                  </p>
-                )}
-                <Link
-                  href={service.ctaBox.buttonHref}
-                  className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-accent px-6 text-base font-semibold text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.5)] transition-all hover:-translate-y-0.5 hover:bg-accent-hover"
-                >
-                  {service.ctaBox.buttonText}
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <path
-                      d="M3 7h8m0 0L7 3m4 4l-4 4"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </Link>
-              </div>
-            )}
+            <ServiceCtaForm serviceTitle={service.title} />
 
             <nav className="surface rounded-2xl p-5">
               <p className="px-2 text-xs font-semibold uppercase tracking-[0.2em] text-fg-muted">

@@ -34,8 +34,16 @@ export function Header() {
           </nav>
         </div>
 
-        {/* Derecha: iconos RRSS */}
-        <div className="hidden items-center gap-2 lg:flex">
+        {/* Derecha: CTA llamada + iconos RRSS (desktop) */}
+        <div className="hidden items-center gap-3 lg:flex">
+          <a
+            href={`tel:${CONTACT_INFO.phoneE164}`}
+            aria-label={`Llamar a ${CONTACT_INFO.phone}`}
+            className="inline-flex h-10 items-center gap-2 rounded-full bg-accent px-4 text-sm font-semibold text-white shadow-[0_6px_18px_-6px_rgba(24,123,239,0.6)] transition-all hover:-translate-y-0.5 hover:bg-accent-hover"
+          >
+            <PhoneIcon />
+            <span>{CONTACT_INFO.phone}</span>
+          </a>
           <SocialIcon
             href={CONTACT_INFO.socials.instagram}
             label="Instagram"
@@ -76,9 +84,33 @@ export function Header() {
           />
         </div>
 
-        <MobileMenu />
+        {/* Llamada (mobile) — siempre visible junto al hamburguesa */}
+        <div className="flex items-center gap-2 lg:hidden">
+          <a
+            href={`tel:${CONTACT_INFO.phoneE164}`}
+            aria-label={`Llamar a ${CONTACT_INFO.phone}`}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-accent text-white shadow-[0_6px_18px_-6px_rgba(24,123,239,0.6)] transition-all hover:bg-accent-hover"
+          >
+            <PhoneIcon />
+          </a>
+          <MobileMenu />
+        </div>
       </Container>
     </header>
+  );
+}
+
+function PhoneIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M22 16.92v3a2 2 0 01-2.18 2 19.86 19.86 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.86 19.86 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16.92z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 

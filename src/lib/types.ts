@@ -3,13 +3,6 @@ export interface ServiceFaq {
   a: string;
 }
 
-export interface ServiceCtaBox {
-  title: string;
-  subtitle?: string;
-  buttonText: string;
-  buttonHref: string;
-}
-
 export interface Service {
   slug: string;
   title: string;
@@ -21,7 +14,6 @@ export interface Service {
   bullets?: string[];
   diferenciador?: string;
   faqs?: ServiceFaq[];
-  ctaBox?: ServiceCtaBox;
   body: string;
 }
 

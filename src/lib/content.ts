@@ -6,7 +6,6 @@ import type {
   CaseStudy,
   CaseSection,
   ServiceFaq,
-  ServiceCtaBox,
   CaseSocial,
 } from "./types";
 
@@ -39,7 +38,6 @@ export function getAllServices(): Service[] {
       bullets: data.bullets as string[] | undefined,
       diferenciador: data.diferenciador as string | undefined,
       faqs: data.faqs as ServiceFaq[] | undefined,
-      ctaBox: data.ctaBox as ServiceCtaBox | undefined,
       body,
     }))
     .sort((a, b) => a.order - b.order);
