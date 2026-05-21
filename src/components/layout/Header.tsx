@@ -42,7 +42,7 @@ export function Header() {
             className="inline-flex h-10 items-center gap-2 rounded-full bg-accent px-4 text-sm font-semibold text-white shadow-[0_6px_18px_-6px_rgba(24,123,239,0.6)] transition-all hover:-translate-y-0.5 hover:bg-accent-hover"
           >
             <PhoneIcon />
-            <span>{CONTACT_INFO.phone}</span>
+            <span>¡Llámanos!</span>
           </a>
           <SocialIcon
             href={CONTACT_INFO.socials.instagram}
