@@ -7,6 +7,9 @@ import {
   isPaletteSlug,
   isTypographySlug,
   isSectorSlug,
+  getPalette,
+  getTypography,
+  getSectorLabel,
 } from "@/lib/preview-themes";
 
 describe("preview-themes catalog", () => {
@@ -54,5 +57,31 @@ describe("preview-themes catalog", () => {
   it("isSectorSlug guards correctly", () => {
     expect(isSectorSlug("salud")).toBe(true);
     expect(isSectorSlug("nope")).toBe(false);
+  });
+
+  it("getPalette returns the matching palette", () => {
+    const p = getPalette("pastel-suave");
+    expect(p?.slug).toBe("pastel-suave");
+  });
+
+  it("getPalette returns undefined for unknown slug", () => {
+    expect(getPalette("no-existe")).toBeUndefined();
+  });
+
+  it("getTypography returns the matching typography", () => {
+    const t = getTypography("moderna-sans");
+    expect(t?.slug).toBe("moderna-sans");
+  });
+
+  it("getTypography returns undefined for unknown slug", () => {
+    expect(getTypography("no-existe")).toBeUndefined();
+  });
+
+  it("getSectorLabel returns the label for known slug", () => {
+    expect(getSectorLabel("salud")).toBe("Salud");
+  });
+
+  it("getSectorLabel falls back to the slug for unknown values", () => {
+    expect(getSectorLabel("inventado")).toBe("inventado");
   });
 });

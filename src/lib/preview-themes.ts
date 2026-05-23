@@ -15,8 +15,17 @@ export interface Typography {
   bodyVar: string;
 }
 
+export type SectorSlug =
+  | "salud"
+  | "educacion"
+  | "restauracion"
+  | "moda"
+  | "tecnologia"
+  | "servicios"
+  | "otro";
+
 export interface Sector {
-  slug: string;
+  slug: SectorSlug;
   label: string;
 }
 
@@ -100,7 +109,7 @@ export const SECTORS: Sector[] = [
   { slug: "otro", label: "Otro" },
 ];
 
-export const SECTOR_ICONS: Record<string, string> = {
+export const SECTOR_ICONS: Record<SectorSlug, string> = {
   salud: "🩺",
   educacion: "🎓",
   restauracion: "🍽️",
@@ -112,7 +121,7 @@ export const SECTOR_ICONS: Record<string, string> = {
 
 const PALETTE_SLUGS = new Set(PALETTES.map((p) => p.slug));
 const TYPO_SLUGS = new Set(TYPOGRAPHIES.map((t) => t.slug));
-const SECTOR_SLUGS = new Set(SECTORS.map((s) => s.slug));
+const SECTOR_SLUGS = new Set<string>(SECTORS.map((s) => s.slug));
 
 export function isPaletteSlug(v: unknown): v is string {
   return typeof v === "string" && PALETTE_SLUGS.has(v);
