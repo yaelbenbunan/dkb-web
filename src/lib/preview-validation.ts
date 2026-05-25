@@ -68,3 +68,34 @@ export const previewRatingSchema = z
     comment: z.string().trim().max(500).optional().or(z.literal("")),
   });
 export type PreviewRatingInput = z.infer<typeof previewRatingSchema>;
+
+// ---- v2: AI generation schemas ----
+
+export const copyResponseSchema = z.object({
+  heroHeadline: z.string().trim().min(8).max(80),
+  heroTagline: z.string().trim().min(20).max(220),
+  ctaText: z.string().trim().min(1).max(40),
+  sectionTitle: z.string().trim().min(2).max(60),
+  offerings: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1).max(80),
+        blurb: z.string().trim().min(20).max(160),
+      }),
+    )
+    .min(1)
+    .max(6),
+});
+export type CopyResponse = z.infer<typeof copyResponseSchema>;
+
+export const previewGenerateInputSchema = z.object({
+  businessType: z.enum(["informativa", "ecommerce"]),
+  ecommerceKind: z.enum(["productos", "servicios"]).optional(),
+  businessName: z.string().trim().min(2).max(60),
+  sector: z.string().refine(isSectorSlug),
+  offerings: z.array(z.string().trim().min(1).max(80)).min(1).max(6),
+  palette: z.string().refine(isPaletteSlug),
+  typography: z.string().refine(isTypographySlug),
+  valueProp: z.string().trim().min(20).max(500),
+});
+export type PreviewGenerateInput = z.infer<typeof previewGenerateInputSchema>;

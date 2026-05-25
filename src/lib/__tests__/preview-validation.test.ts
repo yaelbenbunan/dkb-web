@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   previewLeadSchema,
   previewRatingSchema,
+  copyResponseSchema,
+  previewGenerateInputSchema,
 } from "@/lib/preview-validation";
 
 const validLead = {
@@ -140,6 +142,85 @@ describe("previewRatingSchema", () => {
     const r = previewRatingSchema.safeParse({
       ...validRating,
       rating: "meh",
+    });
+    expect(r.success).toBe(false);
+  });
+});
+
+const validCopyResponse = {
+  heroHeadline: "Tu negocio, en su mejor versión",
+  heroTagline: "Diseñamos webs que enamoran y venden desde el primer clic.",
+  ctaText: "Empezar ahora",
+  sectionTitle: "Lo que hacemos",
+  offerings: [
+    { name: "Asesoría", blurb: "Te ayudamos a definir la estrategia digital correcta." },
+  ],
+};
+
+describe("copyResponseSchema", () => {
+  it("accepts a valid response", () => {
+    expect(copyResponseSchema.safeParse(validCopyResponse).success).toBe(true);
+  });
+
+  it("rejects too-short headline", () => {
+    const r = copyResponseSchema.safeParse({
+      ...validCopyResponse,
+      heroHeadline: "Hi",
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("rejects empty offerings", () => {
+    const r = copyResponseSchema.safeParse({
+      ...validCopyResponse,
+      offerings: [],
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("rejects more than 6 offerings", () => {
+    const r = copyResponseSchema.safeParse({
+      ...validCopyResponse,
+      offerings: Array.from({ length: 7 }, (_, i) => ({
+        name: `n${i}`,
+        blurb: "Una descripción larga de al menos 20 chars.",
+      })),
+    });
+    expect(r.success).toBe(false);
+  });
+});
+
+const validGenerateInput = {
+  businessType: "ecommerce" as const,
+  ecommerceKind: "productos" as const,
+  businessName: "La Tiendita",
+  sector: "moda",
+  offerings: ["camisetas", "gorras"],
+  palette: "pastel-suave",
+  typography: "moderna-sans",
+  valueProp:
+    "Hacemos prendas artesanales con materiales sostenibles desde 2010.",
+};
+
+describe("previewGenerateInputSchema", () => {
+  it("accepts valid input", () => {
+    expect(previewGenerateInputSchema.safeParse(validGenerateInput).success).toBe(
+      true,
+    );
+  });
+
+  it("rejects unknown sector", () => {
+    const r = previewGenerateInputSchema.safeParse({
+      ...validGenerateInput,
+      sector: "ufo",
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("rejects too-short valueProp", () => {
+    const r = previewGenerateInputSchema.safeParse({
+      ...validGenerateInput,
+      valueProp: "corto",
     });
     expect(r.success).toBe(false);
   });
