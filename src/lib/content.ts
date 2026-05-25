@@ -31,6 +31,8 @@ export function getAllServices(): Service[] {
       slug: String(data.slug),
       title: String(data.title),
       titleLong: data.titleLong as string | undefined,
+      heroTitle: data.heroTitle as string | undefined,
+      heroSubtitle: data.heroSubtitle as string | undefined,
       shortDescription: String(data.shortDescription ?? ""),
       heroImage: data.heroImage as string | undefined,
       order: Number(data.order ?? 999),
