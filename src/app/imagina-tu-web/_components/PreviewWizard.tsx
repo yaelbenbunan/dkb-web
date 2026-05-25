@@ -11,6 +11,9 @@ import { StepTypography } from "./steps/StepTypography";
 import { StepFinal } from "./steps/StepFinal";
 import { WebPreview, type WebPreviewData } from "./WebPreview";
 import { RatingBar } from "./RatingBar";
+import { generatePreview } from "@/lib/preview-generate-action";
+import { PreviewLoading } from "./PreviewLoading";
+import type { CopyResponse } from "@/lib/preview-validation";
 
 interface WizardState {
   businessType: "informativa" | "ecommerce" | null;
@@ -52,6 +55,11 @@ export function PreviewWizard() {
   const [pending, startTransition] = useTransition();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [leadId, setLeadId] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [generated, setGenerated] = useState<{
+    copy: CopyResponse | null;
+    heroImageDataUrl: string | null;
+  } | null>(null);
   const loadedAt = useRef(Date.now());
 
   useEffect(() => {
@@ -123,13 +131,46 @@ export function PreviewWizard() {
           businessType: state.businessType,
         });
         setLeadId(r.leadId);
+        setGenerating(true);
+        track("preview_generate_start", { leadId: r.leadId });
+        const startedAt = Date.now();
+        const result = await generatePreview({
+          businessType: state.businessType!,
+          ecommerceKind: state.ecommerceKind ?? undefined,
+          businessName: state.businessName,
+          sector: state.sector,
+          offerings: state.offerings,
+          palette: state.palette,
+          typography: state.typography,
+          valueProp: state.valueProp,
+        });
+        setGenerated({
+          copy: result.copy,
+          heroImageDataUrl: result.heroImageDataUrl,
+        });
+        setGenerating(false);
+        const durationMs = Date.now() - startedAt;
+        if (!result.copy && !result.heroImageDataUrl) {
+          track("preview_generate_fail", {
+            leadId: r.leadId,
+            reason: result.error ?? "both_null",
+            durationMs,
+          });
+        } else {
+          track("preview_generate_success", {
+            leadId: r.leadId,
+            hadCopy: !!result.copy,
+            hadImage: !!result.heroImageDataUrl,
+            durationMs,
+          });
+        }
       } else {
         setSubmitError(r.error ?? "No se pudo enviar.");
       }
     });
   };
 
-  // Once we have a leadId, show the preview + rating
+  // After submit: show loading, then preview + rating
   if (leadId && state.businessType) {
     const data: WebPreviewData = {
       businessType: state.businessType,
@@ -141,15 +182,28 @@ export function PreviewWizard() {
       typography: state.typography,
       valueProp: state.valueProp,
     };
+
+    if (generating || !generated) {
+      return (
+        <div className="space-y-6">
+          <PreviewLoading />
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-6">
         <p className="rounded-lg border border-accent/30 bg-accent/5 px-4 py-3 text-sm text-fg-muted">
           ⚡ <strong className="text-fg">Esta es una vista rápida</strong>{" "}
           generada con tus respuestas. Tu web real sería 100% personalizada:
-          imágenes, textos propios, animaciones, más secciones y muchísimo más
-          detalle.
+          imágenes propias, copy adaptado a tu marca, animaciones, más
+          secciones y muchísimo más detalle.
         </p>
-        <WebPreview data={data} />
+        <WebPreview
+          data={data}
+          copy={generated.copy}
+          heroImageDataUrl={generated.heroImageDataUrl}
+        />
         <RatingBar
           leadId={leadId}
           contact={{ name: state.name, email: state.email, phone: state.phone }}
