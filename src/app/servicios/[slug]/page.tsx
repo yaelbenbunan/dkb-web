@@ -96,10 +96,10 @@ export default async function ServiceDetail({
                 className="mt-4 font-black leading-[1] tracking-tight text-white"
                 style={{ fontSize: "var(--text-display-lg)" }}
               >
-                {service.title}
+                {service.heroTitle ?? service.title}
               </h1>
               <p className="mt-4 max-w-2xl text-lg leading-relaxed text-[#cfdcf2] md:text-xl">
-                {service.shortDescription}
+                {service.heroSubtitle ?? service.shortDescription}
               </p>
             </div>
           </div>
