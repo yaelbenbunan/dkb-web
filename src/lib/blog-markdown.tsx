@@ -15,6 +15,10 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { ReactNode } from "react";
+import {
+  TeamShowcase,
+  type TeamShowcaseEntry,
+} from "@/components/blog/TeamShowcase";
 
 export interface Heading {
   id: string;
@@ -22,13 +26,23 @@ export interface Heading {
   level: 2 | 3;
 }
 
+type ImageSize = "sm" | "md" | "lg";
+type ImageAlign = "left" | "right" | "center";
+
+interface ImageOptions {
+  size: ImageSize;
+  align: ImageAlign;
+  tilt: boolean;
+}
+
 interface Block {
-  kind: "h2" | "h3" | "p" | "quote" | "ul" | "image";
+  kind: "h2" | "h3" | "p" | "quote" | "ul" | "image" | "embed-team";
   text?: string;
   items?: string[];
   src?: string;
   alt?: string;
   id?: string;
+  imageOpts?: ImageOptions;
 }
 
 function slugify(text: string): string {
@@ -41,6 +55,22 @@ function slugify(text: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
+function parseImageOptions(raw?: string): ImageOptions {
+  const opts: ImageOptions = { size: "lg", align: "center", tilt: false };
+  if (!raw) return opts;
+  for (const part of raw.split(",").map((s) => s.trim())) {
+    const [k, v] = part.split("=").map((s) => s.trim());
+    if (k === "size" && (v === "sm" || v === "md" || v === "lg")) opts.size = v;
+    else if (
+      k === "align" &&
+      (v === "left" || v === "right" || v === "center")
+    )
+      opts.align = v;
+    else if (k === "tilt" && v === "true") opts.tilt = true;
+  }
+  return opts;
+}
+
 function parseBlocks(body: string): Block[] {
   const lines = body.replace(/\r\n/g, "\n").split("\n");
   const blocks: Block[] = [];
@@ -49,6 +79,13 @@ function parseBlocks(body: string): Block[] {
     const line = lines[i];
 
     if (!line.trim()) {
+      i++;
+      continue;
+    }
+
+    // Embed: [[team]] en su propia línea → showcase del equipo
+    if (line.trim() === "[[team]]") {
+      blocks.push({ kind: "embed-team" });
       i++;
       continue;
     }
@@ -67,10 +104,17 @@ function parseBlocks(body: string): Block[] {
       continue;
     }
 
-    // Imagen block (línea exclusivamente con ![alt](src))
-    const imgMatch = line.match(/^!\[(.*?)\]\((.+?)\)\s*$/);
+    // Imagen block: ![alt](src) o ![alt](src "size=md,align=right,tilt=true")
+    const imgMatch = line.match(
+      /^!\[(.*?)\]\(([^"\s]+?)(?:\s+"([^"]*)")?\)\s*$/,
+    );
     if (imgMatch) {
-      blocks.push({ kind: "image", alt: imgMatch[1], src: imgMatch[2] });
+      blocks.push({
+        kind: "image",
+        alt: imgMatch[1],
+        src: imgMatch[2],
+        imageOpts: parseImageOptions(imgMatch[3]),
+      });
       i++;
       continue;
     }
@@ -223,7 +267,13 @@ export function extractHeadings(body: string): Heading[] {
     }));
 }
 
-export function PostBody({ body }: { body: string }) {
+export function PostBody({
+  body,
+  team,
+}: {
+  body: string;
+  team?: TeamShowcaseEntry[];
+}) {
   const blocks = parseBlocks(body);
   let paragraphCount = 0;
 
@@ -292,25 +342,71 @@ export function PostBody({ body }: { body: string }) {
           );
         }
         if (b.kind === "image") {
+          const opts = b.imageOpts ?? {
+            size: "lg" as const,
+            align: "center" as const,
+            tilt: false,
+          };
+          const isFloat =
+            (opts.align === "left" || opts.align === "right") &&
+            opts.size !== "lg";
+
+          // Tamaños y wrappers según opciones
+          const figureCls =
+            opts.size === "lg"
+              ? "my-14 md:-mx-12 md:my-20 lg:-mx-24"
+              : opts.size === "md"
+                ? isFloat
+                  ? opts.align === "right"
+                    ? "my-8 md:float-right md:my-3 md:ml-8 md:mr-0 md:w-[60%]"
+                    : "my-8 md:float-left md:my-3 md:mr-8 md:ml-0 md:w-[60%]"
+                  : "mx-auto my-10 max-w-[520px]"
+                : // sm
+                  isFloat
+                  ? opts.align === "right"
+                    ? "my-8 md:float-right md:my-3 md:ml-8 md:mr-0 md:w-[40%] md:max-w-[300px]"
+                    : "my-8 md:float-left md:my-3 md:mr-8 md:ml-0 md:w-[40%] md:max-w-[300px]"
+                  : "mx-auto my-10 max-w-[320px]";
+
+          const rotation = opts.tilt
+            ? opts.align === "right"
+              ? "md:rotate-[1.5deg]"
+              : "md:-rotate-[1.5deg]"
+            : "";
+
+          const sizesAttr = isFloat
+            ? "(max-width: 768px) 100vw, 480px"
+            : opts.size === "lg"
+              ? "(max-width: 768px) 100vw, 900px"
+              : opts.size === "md"
+                ? "(max-width: 768px) 100vw, 520px"
+                : "(max-width: 768px) 100vw, 320px";
+
           return (
-            <figure key={key} className="my-14 md:-mx-12 md:my-20 lg:-mx-24">
-              <div className="overflow-hidden rounded-2xl ring-1 ring-white/[0.05]">
+            <figure key={key} className={figureCls}>
+              <div
+                className={`overflow-hidden rounded-3xl shadow-[0_25px_50px_-15px_rgba(0,0,0,0.55)] ring-1 ring-white/[0.06] transition-transform ${rotation}`}
+              >
                 <Image
                   src={b.src!}
                   alt={b.alt ?? ""}
                   width={2000}
                   height={1300}
-                  sizes="(max-width: 768px) 100vw, 900px"
+                  sizes={sizesAttr}
                   className="h-auto w-full"
                 />
               </div>
               {b.alt && (
-                <figcaption className="mt-4 text-center text-sm text-fg-dim">
+                <figcaption className="mt-3 text-center text-sm text-fg-dim">
                   {b.alt}
                 </figcaption>
               )}
             </figure>
           );
+        }
+        if (b.kind === "embed-team") {
+          if (!team || team.length === 0) return null;
+          return <TeamShowcase key={key} entries={team} />;
         }
         // párrafo
         paragraphCount++;

@@ -119,7 +119,7 @@ export default async function BlogPostPage({
       <Container className="py-16 md:py-24">
         <div className="grid gap-14 lg:grid-cols-[1fr_240px] lg:gap-20">
           <div className="min-w-0 max-w-2xl">
-            <PostBody body={post.body} />
+            <PostBody body={post.body} team={post.team} />
 
             {/* Cierre CTA */}
             <div className="mt-20 rounded-2xl border border-accent/30 bg-accent/10 p-8 md:p-10">

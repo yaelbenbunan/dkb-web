@@ -10,6 +10,7 @@ import type {
   BlogPost,
   BlogAuthor,
   BlogCoverStyle,
+  BlogTeamEntry,
 } from "./types";
 
 const ROOT = join(process.cwd(), "src/content");
@@ -119,6 +120,7 @@ export function getAllPosts(): BlogPost[] {
         featured: Boolean(data.featured),
         readingMinutes,
         body,
+        team: data.team as BlogTeamEntry[] | undefined,
       };
     })
     .sort((a, b) => (a.publishedAt < b.publishedAt ? 1 : -1));
