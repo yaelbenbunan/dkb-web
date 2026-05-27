@@ -340,3 +340,20 @@
   filter: none;
   opacity: 1;
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Blog — drop cap en el primer párrafo del cuerpo del post.
+   Solo aplica desde md hacia arriba para no romper el ritmo en móvil.
+   ────────────────────────────────────────────────────────────────────────── */
+@media (min-width: 768px) {
+  .post-first-p::first-letter {
+    float: left;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 4.5em;
+    line-height: 0.85;
+    padding-right: 0.12em;
+    padding-top: 0.08em;
+    color: var(--color-accent);
+    font-weight: 900;
+  }
+}
