@@ -17,7 +17,7 @@ export function Hero() {
       {/* Foto de fondo con parallax suave */}
       <Parallax offset={60} className="absolute inset-0 -z-30">
         <Image
-          src="/img/home/hero-bg.png"
+          src="/img/home/hero-bg.webp"
           alt=""
           fill
           priority

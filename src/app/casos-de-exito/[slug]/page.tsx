@@ -1,3 +1,4 @@
+import Script from "next/script";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/Container";
 import { CaseHeader } from "@/components/casos/CaseHeader";
@@ -5,11 +6,17 @@ import { CaseSections } from "@/components/casos/CaseSections";
 import { RelatedCases } from "@/components/casos/RelatedCases";
 import { Reveal } from "@/components/ui/Reveal";
 import {
+  Breadcrumbs,
+  buildBreadcrumbSchema,
+} from "@/components/ui/Breadcrumbs";
+import {
   getAllCaseStudies,
   getCaseStudyBySlug,
   getRelatedCases,
   getAllServices,
 } from "@/lib/content";
+
+const SITE_URL = "https://dinkbit.es";
 
 export async function generateStaticParams() {
   return getAllCaseStudies().map((c) => ({ slug: c.slug }));
@@ -59,8 +66,60 @@ export default async function CaseDetail({
     getAllServices().map((s) => [s.slug, s.title]),
   );
 
+  const breadcrumbItems = [
+    { label: "Inicio", href: "/" },
+    { label: "Casos de éxito", href: "/casos-de-exito" },
+    { label: caseStudy.title },
+  ];
+
+  const description =
+    caseStudy.description ??
+    caseStudy.metricHeadline ??
+    `Caso de éxito: ${caseStudy.client}`;
+
+  const articleSchema = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: caseStudy.title,
+    description,
+    url: `${SITE_URL}/casos-de-exito/${caseStudy.slug}`,
+    datePublished: caseStudy.publishedAt,
+    inLanguage: "es-ES",
+    image: `${SITE_URL}/casos-de-exito/${caseStudy.slug}/opengraph-image`,
+    author: { "@type": "Organization", name: "dinkbit", url: SITE_URL },
+    publisher: {
+      "@type": "Organization",
+      name: "dinkbit",
+      url: SITE_URL,
+      logo: { "@type": "ImageObject", url: `${SITE_URL}/icon.png` },
+    },
+    about: caseStudy.client
+      ? { "@type": "Organization", name: caseStudy.client }
+      : undefined,
+    keywords: caseStudy.tags?.join(", "),
+  };
+
+  const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbItems);
+
   return (
     <article>
+      <Script
+        id={`ld-article-${caseStudy.slug}`}
+        type="application/ld+json"
+        strategy="beforeInteractive"
+      >
+        {JSON.stringify(articleSchema).replace(/</g, "\\u003c")}
+      </Script>
+      <Script
+        id={`ld-breadcrumb-${caseStudy.slug}`}
+        type="application/ld+json"
+        strategy="beforeInteractive"
+      >
+        {JSON.stringify(breadcrumbSchema).replace(/</g, "\\u003c")}
+      </Script>
+      <Container className="pt-8">
+        <Breadcrumbs items={breadcrumbItems} />
+      </Container>
       <CaseHeader
         caseStudy={caseStudy}
         serviceTitleBySlug={serviceTitleBySlug}
