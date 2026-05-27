@@ -19,7 +19,12 @@ export interface Service {
   body: string;
 }
 
-export type MockupKind = "desktop" | "mobile" | "mobile-tilt" | "none";
+export type MockupKind =
+  | "desktop"
+  | "mobile"
+  | "mobile-tilt"
+  | "brand"
+  | "none";
 
 export interface CaseImage {
   src: string;
