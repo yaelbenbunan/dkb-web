@@ -219,6 +219,28 @@ function MockupFrame({
     );
   }
 
+  if (kind === "brand") {
+    return (
+      <div
+        className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-2xl p-10 ring-1 sm:p-14"
+        style={{
+          backgroundColor: "var(--mockup-body)",
+          boxShadow: "var(--mockup-shadow)",
+          ["--tw-ring-color" as string]: "var(--mockup-ring)",
+        }}
+      >
+        <Image
+          src={src}
+          alt={alt}
+          width={800}
+          height={800}
+          priority={priority}
+          className="max-h-full max-w-full object-contain"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-hidden rounded-2xl shadow-[0_25px_50px_-15px_rgba(0,0,0,0.5)]">
       <Image
