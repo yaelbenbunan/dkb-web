@@ -71,6 +71,17 @@ export interface BlogAuthor {
 
 export type BlogCoverStyle = "image" | "gradient";
 
+export interface BlogTeamEntry {
+  /** Slug del miembro (coincide con el filename del avatar). Ej: "yael-benbunan" */
+  member?: string;
+  /** Si no hay member único (ej. "Las Paulas"), usa este nombre custom */
+  name?: string;
+  /** Lista alternativa de miembros para agrupaciones */
+  members?: string[];
+  /** Descripción del rol en este contexto del post */
+  desc: string;
+}
+
 export interface BlogPost {
   slug: string;
   title: string;
@@ -89,4 +100,9 @@ export interface BlogPost {
   readingMinutes?: number;
   /** Cuerpo en MDX */
   body: string;
+  /**
+   * Entries del equipo a inyectar donde el cuerpo encuentre `[[team]]`.
+   * Opcional — solo se usa si el post quiere presentar miembros con avatar.
+   */
+  team?: BlogTeamEntry[];
 }
