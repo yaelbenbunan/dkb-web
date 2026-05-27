@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import type { CaseImage, CaseSection, MockupKind } from "@/lib/types";
 
@@ -21,12 +22,20 @@ function hostFromUrl(url?: string): string {
 export function CaseSections({
   sections,
   websiteUrl,
+  serviceSlugs,
 }: {
   sections: CaseSection[];
   websiteUrl?: string;
+  /**
+   * Slugs de servicios disponibles. Si el `tag` de una section coincide con
+   * uno de estos slugs, el chip se renderiza como enlace a la página del
+   * servicio para mejorar el internal linking caso → servicio.
+   */
+  serviceSlugs?: string[];
 }) {
   if (!sections.length) return null;
   const domain = hostFromUrl(websiteUrl);
+  const serviceSlugSet = new Set(serviceSlugs ?? []);
 
   return (
     <div className="space-y-20 py-16 md:space-y-28 md:py-20">
@@ -44,9 +53,18 @@ export function CaseSections({
                     : ""
                 }
               >
-                <span className="inline-flex h-7 w-fit items-center rounded-full bg-accent/15 px-3.5 text-[11px] font-bold uppercase tracking-[0.22em] text-accent-hover ring-1 ring-accent/35">
-                  {section.tag.replace(/-/g, " ")}
-                </span>
+                {serviceSlugSet.has(section.tag) ? (
+                  <Link
+                    href={`/servicios/${section.tag}`}
+                    className="inline-flex h-7 w-fit items-center rounded-full bg-accent/15 px-3.5 text-[11px] font-bold uppercase tracking-[0.22em] text-accent-hover ring-1 ring-accent/35 transition-colors hover:bg-accent/25 hover:text-accent"
+                  >
+                    {section.tag.replace(/-/g, " ")}
+                  </Link>
+                ) : (
+                  <span className="inline-flex h-7 w-fit items-center rounded-full bg-accent/15 px-3.5 text-[11px] font-bold uppercase tracking-[0.22em] text-accent-hover ring-1 ring-accent/35">
+                    {section.tag.replace(/-/g, " ")}
+                  </span>
+                )}
                 <h2
                   className="mt-5 font-bold leading-[1.15] tracking-tight"
                   style={{ fontSize: "var(--text-display-md)" }}
