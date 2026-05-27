@@ -154,6 +154,7 @@ export default async function CaseDetail({
           <CaseSections
             sections={caseStudy.sections}
             websiteUrl={caseStudy.social?.website}
+            serviceSlugs={Object.keys(serviceTitleBySlug)}
           />
         </Reveal>
       )}

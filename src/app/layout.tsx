@@ -156,9 +156,17 @@ export default function RootLayout({
           {JSON.stringify(websiteSchema).replace(/</g, "\\u003c")}
         </Script>
         <GTMNoScript />
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-accent focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-white"
+        >
+          Saltar al contenido
+        </a>
         <ScrollProgress />
         <Header />
-        <main className="min-h-[calc(100vh-5rem)]">{children}</main>
+        <main id="main-content" className="min-h-[calc(100vh-5rem)]">
+          {children}
+        </main>
         <Footer />
         <WhatsAppBubble />
         <CookieBanner />
