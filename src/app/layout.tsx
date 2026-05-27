@@ -18,7 +18,7 @@ const sourceSans = Source_Sans_3({
   display: "swap",
 });
 
-const SITE_URL = "https://dinkbit.es";
+const SITE_URL = "https://www.dinkbit.es";
 const SITE_NAME = "dinkbit";
 const SITE_TITLE = "dinkbit — agencia digital";
 const SITE_DESCRIPTION =

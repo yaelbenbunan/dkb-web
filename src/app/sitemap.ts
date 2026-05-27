@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getAllServices, getAllCaseStudies } from "@/lib/content";
 
-const SITE = "https://dinkbit.es";
+const SITE = "https://www.dinkbit.es";
 
 type Freq = "daily" | "weekly" | "monthly" | "yearly";
 

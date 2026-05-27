@@ -52,7 +52,7 @@ export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
   );
 }
 
-const SITE_URL = "https://dinkbit.es";
+const SITE_URL = "https://www.dinkbit.es";
 
 export function buildBreadcrumbSchema(items: BreadcrumbItem[]) {
   return {

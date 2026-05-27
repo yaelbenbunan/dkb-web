@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/Breadcrumbs";
 import { getAllServices, getServiceBySlug, getAllCaseStudies } from "@/lib/content";
 
-const SITE_URL = "https://dinkbit.es";
+const SITE_URL = "https://www.dinkbit.es";
 
 export async function generateStaticParams() {
   return getAllServices().map((s) => ({ slug: s.slug }));
