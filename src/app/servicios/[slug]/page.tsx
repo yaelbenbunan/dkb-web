@@ -1,11 +1,18 @@
 import Link from "next/link";
 import Image from "next/image";
+import Script from "next/script";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/Container";
 import { ServiceFaqs } from "@/components/servicios/ServiceFaqs";
 import { ServiceCtaForm } from "@/components/servicios/ServiceCtaForm";
 import { RelatedCasesMarquee } from "@/components/casos/RelatedCasesMarquee";
+import {
+  Breadcrumbs,
+  buildBreadcrumbSchema,
+} from "@/components/ui/Breadcrumbs";
 import { getAllServices, getServiceBySlug, getAllCaseStudies } from "@/lib/content";
+
+const SITE_URL = "https://dinkbit.es";
 
 export async function generateStaticParams() {
   return getAllServices().map((s) => ({ slug: s.slug }));
@@ -19,9 +26,23 @@ export async function generateMetadata({
   const { slug } = await params;
   const service = getServiceBySlug(slug);
   if (!service) return {};
+  const url = `/servicios/${service.slug}`;
   return {
     title: `${service.title} — dinkbit`,
     description: service.shortDescription,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "website",
+      url,
+      title: `${service.title} — dinkbit`,
+      description: service.shortDescription,
+      siteName: "dinkbit",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${service.title} — dinkbit`,
+      description: service.shortDescription,
+    },
   };
 }
 
@@ -37,12 +58,74 @@ export default async function ServiceDetail({
   const allServices = getAllServices();
   const relatedCases = getAllCaseStudies().filter((c) => c.tags.includes(slug));
 
+  const breadcrumbItems = [
+    { label: "Inicio", href: "/" },
+    { label: "Servicios", href: "/servicios" },
+    { label: service.title },
+  ];
+
+  const serviceSchema = {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    name: service.title,
+    description: service.shortDescription,
+    url: `${SITE_URL}/servicios/${service.slug}`,
+    serviceType: service.title,
+    provider: {
+      "@type": "Organization",
+      name: "dinkbit",
+      url: SITE_URL,
+    },
+    areaServed: ["ES", "MX"],
+  };
+
+  const faqSchema =
+    service.faqs && service.faqs.length > 0
+      ? {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: service.faqs.map((f) => ({
+            "@type": "Question",
+            name: f.q,
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: f.a,
+            },
+          })),
+        }
+      : null;
+
+  const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbItems);
+
   return (
     <article>
+      <Script
+        id={`ld-service-${service.slug}`}
+        type="application/ld+json"
+        strategy="beforeInteractive"
+      >
+        {JSON.stringify(serviceSchema).replace(/</g, "\\u003c")}
+      </Script>
+      {faqSchema && (
+        <Script
+          id={`ld-faq-${service.slug}`}
+          type="application/ld+json"
+          strategy="beforeInteractive"
+        >
+          {JSON.stringify(faqSchema).replace(/</g, "\\u003c")}
+        </Script>
+      )}
+      <Script
+        id={`ld-breadcrumb-${service.slug}`}
+        type="application/ld+json"
+        strategy="beforeInteractive"
+      >
+        {JSON.stringify(breadcrumbSchema).replace(/</g, "\\u003c")}
+      </Script>
       {/* Hero del servicio: bg image + overlay azul + glow + línea inferior */}
       <header className="relative isolate overflow-hidden">
         <Image
-          src="/img/servicios/hero-desarrollo-web1.png"
+          src="/img/servicios/hero-desarrollo-web1.webp"
           alt=""
           fill
           priority
@@ -73,12 +156,18 @@ export default async function ServiceDetail({
         />
 
         <Container className="relative py-16 md:py-20">
+          <div className="mb-8">
+            <Breadcrumbs
+              items={breadcrumbItems}
+              className="text-xs font-medium uppercase tracking-[0.18em] text-[#cfdcf2]/80"
+            />
+          </div>
           <div className="grid items-center gap-8 md:grid-cols-[auto_1fr] md:gap-10">
             {/* Icono del servicio en card grande con glow azul */}
             <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-accent to-[#0c5ec4] shadow-[0_0_60px_rgba(24,123,239,0.5)]">
               <Image
                 src={`/img/icons/servicios/${service.slug}.png`}
-                alt=""
+                alt={`Icono del servicio de ${service.title}`}
                 width={64}
                 height={64}
                 className="h-16 w-16 brightness-0 invert"
@@ -119,7 +208,8 @@ export default async function ServiceDetail({
           {(service.intro || service.bullets) && (
             <section>
               <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
-                ¿Qué <span className="text-accent">ofrecemos</span>?
+                ¿Qué incluye nuestro servicio de{" "}
+                <span className="text-accent">{service.title.toLowerCase()}</span>?
               </h2>
               {service.intro && (
                 <p className="mt-5 text-lg leading-relaxed text-fg-muted">
@@ -161,8 +251,8 @@ export default async function ServiceDetail({
           {service.diferenciador && (
             <section>
               <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
-                ¿Qué hace diferente nuestro{" "}
-                <span className="text-accent">enfoque</span>?
+                Nuestro enfoque de{" "}
+                <span className="text-accent">{service.title.toLowerCase()}</span>
               </h2>
               <p className="mt-4 text-lg leading-relaxed text-fg-muted">
                 {service.diferenciador}
@@ -174,8 +264,8 @@ export default async function ServiceDetail({
           {service.faqs && service.faqs.length > 0 && (
             <section>
               <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
-                Preguntas{" "}
-                <span className="text-accent">frecuentes</span>
+                Preguntas frecuentes sobre{" "}
+                <span className="text-accent">{service.title.toLowerCase()}</span>
               </h2>
               <div className="mt-6">
                 <ServiceFaqs faqs={service.faqs} />

@@ -11,7 +11,7 @@ export function ServiceCard({ service }: { service: Service }) {
       <div className="flex items-start justify-between">
         <Image
           src={`/img/icons/servicios/${service.slug}.png`}
-          alt=""
+          alt={`Icono ${service.title}`}
           width={44}
           height={44}
           className="h-11 w-11"

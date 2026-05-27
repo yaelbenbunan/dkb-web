@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Source_Sans_3 } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
@@ -32,6 +33,10 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   alternates: {
     canonical: "/",
+    languages: {
+      "es-ES": "/",
+      "es-MX": "/nosotros/mexico",
+    },
   },
   applicationName: SITE_NAME,
   authors: [{ name: "dinkbit" }],
@@ -44,6 +49,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "es_ES",
+    alternateLocale: ["es_MX"],
     url: SITE_URL,
     siteName: SITE_NAME,
     title: SITE_TITLE,
@@ -73,6 +79,50 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
+  verification: {
+    // TODO: pegar el código real desde Google Search Console (Configuración → Verificación)
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+    // TODO: pegar el código real desde Bing Webmaster Tools
+    other: {
+      "msvalidate.01": process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION ?? "",
+    },
+  },
+};
+
+const organizationSchema = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "dinkbit",
+  legalName: "Dinkbit Marketing S.L.",
+  url: SITE_URL,
+  logo: `${SITE_URL}/icon.png`,
+  description: SITE_DESCRIPTION,
+  foundingDate: "2010",
+  email: "admin-es@dinkbit.com",
+  areaServed: ["ES", "MX"],
+  address: [
+    {
+      "@type": "PostalAddress",
+      streetAddress: "C/ Fuerteventura 4, Planta 3, Oficina 2",
+      addressLocality: "San Sebastián de los Reyes",
+      addressRegion: "Madrid",
+      postalCode: "28703",
+      addressCountry: "ES",
+    },
+  ],
+  sameAs: [
+    "https://www.linkedin.com/company/dinkbit",
+    "https://www.instagram.com/dinkbit",
+  ],
+};
+
+const websiteSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: SITE_NAME,
+  url: SITE_URL,
+  inLanguage: "es-ES",
+  publisher: { "@type": "Organization", name: "dinkbit" },
 };
 
 export default function RootLayout({
@@ -91,6 +141,20 @@ export default function RootLayout({
         <GTM />
       </head>
       <body>
+        <Script
+          id="ld-organization"
+          type="application/ld+json"
+          strategy="beforeInteractive"
+        >
+          {JSON.stringify(organizationSchema).replace(/</g, "\\u003c")}
+        </Script>
+        <Script
+          id="ld-website"
+          type="application/ld+json"
+          strategy="beforeInteractive"
+        >
+          {JSON.stringify(websiteSchema).replace(/</g, "\\u003c")}
+        </Script>
         <GTMNoScript />
         <ScrollProgress />
         <Header />

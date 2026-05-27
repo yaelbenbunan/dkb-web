@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import dynamic from "next/dynamic";
 import { Hero } from "@/components/home/Hero";
 import { PartnersMarquee } from "@/components/home/PartnersMarquee";
@@ -5,6 +6,19 @@ import { AboutFeatures } from "@/components/home/AboutFeatures";
 import { ServicesCarousel } from "@/components/home/ServicesCarousel";
 import { Reveal } from "@/components/ui/Reveal";
 import { getAllServices } from "@/lib/content";
+
+export const metadata: Metadata = {
+  title: "Agencia digital — desarrollo web, ecommerce, paid media y SEO",
+  description:
+    "Diseñamos y desarrollamos webs, ecommerce y campañas que convierten. Equipo multidisciplinar en Madrid y México con 15+ años creando marcas digitales que crecen.",
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "dinkbit — agencia digital en Madrid y México",
+    description:
+      "Web, ecommerce, paid media y SEO. Soluciones end-to-end para marcas que quieren crecer en digital.",
+    url: "/",
+  },
+};
 
 const Testimonials = dynamic(() =>
   import("@/components/home/Testimonials").then((m) => m.Testimonials),

@@ -56,9 +56,10 @@ export function PartnersMarquee({
             >
               <Image
                 src={p.src}
-                alt={p.name}
+                alt={`Logo de ${p.name}`}
                 width={342}
                 height={164}
+                sizes="(max-width: 640px) 176px, 192px"
                 className={`${p.noFilter ? "" : "partner-logo "}h-16 w-auto object-contain transition-transform duration-300 group-hover:scale-110 sm:h-20`}
               />
             </div>
