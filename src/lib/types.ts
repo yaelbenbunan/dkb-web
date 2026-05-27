@@ -32,6 +32,11 @@ export interface CaseImage {
   mockup?: MockupKind;
   /** Texto alternativo opcional */
   alt?: string;
+  /**
+   * Caption visible debajo del frame, p.ej. "Logo anterior" o "Logo final".
+   * Útil para casos de rebranding donde hay que contextualizar cada imagen.
+   */
+  label?: string;
 }
 
 export interface CaseSection {

@@ -17,6 +17,14 @@ const config: NextConfig = {
     contentDispositionType: "attachment",
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
+  redirects: async () => [
+    // Renombrado del slug por consistencia en plural.
+    {
+      source: "/casos-de-exito/reforma-servilucas",
+      destination: "/casos-de-exito/reformas-servilucas",
+      permanent: true,
+    },
+  ],
 };
 
 export default withMDX(config);

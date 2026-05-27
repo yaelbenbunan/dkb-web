@@ -3,11 +3,21 @@ import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import type { CaseImage, CaseSection, MockupKind } from "@/lib/types";
 
-function normalize(image: string | CaseImage): { src: string; mockup: MockupKind; alt: string } {
+function normalize(image: string | CaseImage): {
+  src: string;
+  mockup: MockupKind;
+  alt: string;
+  label?: string;
+} {
   if (typeof image === "string") {
     return { src: image, mockup: "none", alt: "" };
   }
-  return { src: image.src, mockup: image.mockup ?? "none", alt: image.alt ?? "" };
+  return {
+    src: image.src,
+    mockup: image.mockup ?? "none",
+    alt: image.alt ?? "",
+    label: image.label,
+  };
 }
 
 function hostFromUrl(url?: string): string {
@@ -84,14 +94,20 @@ export function CaseSections({
               <div className="space-y-6">
                 {images.length > 0 ? (
                   images.map((img, i) => (
-                    <MockupFrame
-                      key={`${img.src}-${i}`}
-                      kind={img.mockup}
-                      src={img.src}
-                      alt={img.alt}
-                      domain={domain}
-                      priority={idx === 0 && i === 0}
-                    />
+                    <figure key={`${img.src}-${i}`}>
+                      <MockupFrame
+                        kind={img.mockup}
+                        src={img.src}
+                        alt={img.alt}
+                        domain={domain}
+                        priority={idx === 0 && i === 0}
+                      />
+                      {img.label && (
+                        <figcaption className="mt-3 text-center text-xs font-semibold uppercase tracking-[0.2em] text-fg-muted">
+                          {img.label}
+                        </figcaption>
+                      )}
+                    </figure>
                   ))
                 ) : (
                   <div className="flex aspect-[4/3] items-center justify-center rounded-2xl bg-bg-subtle ring-1 ring-white/[0.05]">
