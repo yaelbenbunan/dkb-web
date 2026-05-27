@@ -62,3 +62,31 @@ export interface CaseStudy {
   sections?: CaseSection[];
   body: string;
 }
+
+export interface BlogAuthor {
+  name: string;
+  role?: string;
+  avatar?: string;
+}
+
+export type BlogCoverStyle = "image" | "gradient";
+
+export interface BlogPost {
+  slug: string;
+  title: string;
+  excerpt: string;
+  /** ISO date */
+  publishedAt: string;
+  tags: string[];
+  author: BlogAuthor;
+  /** Cover hero — either real image path or null para hero solo tipográfico */
+  cover?: string;
+  /** Si no hay cover image, usamos un gradiente. Por defecto: gradient */
+  coverStyle?: BlogCoverStyle;
+  /** Pinta el post como destacado en el listado (hero arriba) */
+  featured?: boolean;
+  /** Reading time en minutos (calculado si se omite) */
+  readingMinutes?: number;
+  /** Cuerpo en MDX */
+  body: string;
+}

@@ -7,6 +7,9 @@ import type {
   CaseSection,
   ServiceFaq,
   CaseSocial,
+  BlogPost,
+  BlogAuthor,
+  BlogCoverStyle,
 } from "./types";
 
 const ROOT = join(process.cwd(), "src/content");
@@ -86,5 +89,60 @@ export function getRelatedCases(slug: string, limit = 3): CaseStudy[] {
       (c) =>
         c.slug !== slug && c.tags.some((t) => current.tags.includes(t)),
     )
+    .slice(0, limit);
+}
+
+/* ----------------------------- Blog ----------------------------- */
+
+const WORDS_PER_MINUTE = 220;
+
+function computeReadingMinutes(text: string): number {
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.round(words / WORDS_PER_MINUTE));
+}
+
+export function getAllPosts(): BlogPost[] {
+  return readMdx("blog")
+    .map(({ data, body }) => {
+      const tags = ((data.tags as string[]) ?? []).map((t) => t.toLowerCase());
+      const readingMinutes =
+        (data.readingMinutes as number | undefined) ?? computeReadingMinutes(body);
+      return {
+        slug: String(data.slug),
+        title: String(data.title),
+        excerpt: String(data.excerpt ?? ""),
+        publishedAt: String(data.publishedAt ?? new Date().toISOString()),
+        tags,
+        author: (data.author as BlogAuthor) ?? { name: "dinkbit" },
+        cover: data.cover as string | undefined,
+        coverStyle: (data.coverStyle as BlogCoverStyle) ?? "gradient",
+        featured: Boolean(data.featured),
+        readingMinutes,
+        body,
+      };
+    })
+    .sort((a, b) => (a.publishedAt < b.publishedAt ? 1 : -1));
+}
+
+export function getPostBySlug(slug: string): BlogPost | undefined {
+  return getAllPosts().find((p) => p.slug === slug);
+}
+
+/** Devuelve la lista única de tags presentes en el blog. */
+export function getAllBlogTags(): string[] {
+  const set = new Set<string>();
+  for (const p of getAllPosts()) {
+    for (const t of p.tags) set.add(t);
+  }
+  return Array.from(set).sort();
+}
+
+/** Posts relacionados por superposición de tags. */
+export function getRelatedPosts(slug: string, limit = 3): BlogPost[] {
+  const all = getAllPosts();
+  const current = all.find((p) => p.slug === slug);
+  if (!current) return [];
+  return all
+    .filter((p) => p.slug !== slug && p.tags.some((t) => current.tags.includes(t)))
     .slice(0, limit);
 }

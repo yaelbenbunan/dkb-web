@@ -1,5 +1,9 @@
 import type { MetadataRoute } from "next";
-import { getAllServices, getAllCaseStudies } from "@/lib/content";
+import {
+  getAllServices,
+  getAllCaseStudies,
+  getAllPosts,
+} from "@/lib/content";
 
 const SITE = "https://www.dinkbit.es";
 
@@ -15,6 +19,7 @@ const STATIC_ROUTES: StaticRoute[] = [
   { path: "", priority: 1.0, changeFrequency: "weekly" },
   { path: "/servicios", priority: 0.9, changeFrequency: "weekly" },
   { path: "/casos-de-exito", priority: 0.9, changeFrequency: "weekly" },
+  { path: "/blog", priority: 0.9, changeFrequency: "weekly" },
   { path: "/nosotros", priority: 0.8, changeFrequency: "monthly" },
   { path: "/nosotros/mexico", priority: 0.7, changeFrequency: "monthly" },
   { path: "/contacto", priority: 0.8, changeFrequency: "monthly" },
@@ -43,5 +48,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     changeFrequency: "monthly" as Freq,
     priority: 0.7,
   }));
-  return [...staticRoutes, ...services, ...cases];
+  const posts = getAllPosts().map((p) => ({
+    url: `${SITE}/blog/${p.slug}`,
+    lastModified: new Date(p.publishedAt),
+    changeFrequency: "monthly" as Freq,
+    priority: 0.7,
+  }));
+  return [...staticRoutes, ...services, ...cases, ...posts];
 }
