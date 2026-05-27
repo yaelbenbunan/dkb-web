@@ -78,6 +78,8 @@ export interface BlogTeamEntry {
   name?: string;
   /** Lista alternativa de miembros para agrupaciones */
   members?: string[];
+  /** Rol custom (override del de lib/team o el del grupo) */
+  role?: string;
   /** Descripción del rol en este contexto del post */
   desc: string;
 }

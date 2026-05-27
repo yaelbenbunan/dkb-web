@@ -8,6 +8,8 @@ export interface TeamShowcaseEntry {
   name?: string;
   /** Lista alternativa de avatares para agrupaciones (ej. [paula-garcia, paula-lopez]) */
   members?: string[];
+  /** Rol custom (override del de lib/team) */
+  role?: string;
   /** Descripción de su rol en este contexto */
   desc: string;
 }
@@ -26,6 +28,7 @@ export function TeamShowcase({ entries }: { entries: TeamShowcaseEntry[] }) {
             ?.map((s) => findMember(s))
             .filter((m): m is TeamMember => Boolean(m)) ?? [];
         const displayName = main?.name ?? entry.name ?? "";
+        const displayRole = entry.role ?? main?.role;
 
         return (
           <div
@@ -67,9 +70,9 @@ export function TeamShowcase({ entries }: { entries: TeamShowcaseEntry[] }) {
               <p className="text-base font-bold leading-tight text-fg">
                 {displayName}
               </p>
-              {main?.role && (
+              {displayRole && (
                 <p className="text-xs font-medium uppercase tracking-[0.15em] text-fg-dim">
-                  {main.role}
+                  {displayRole}
                 </p>
               )}
               <p className="mt-3 text-sm leading-relaxed text-fg-muted">

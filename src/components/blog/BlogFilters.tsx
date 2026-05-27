@@ -25,10 +25,20 @@ export function BlogFilters({ posts, allTags, initialTag }: BlogFiltersProps) {
     [],
   );
 
+  // Cuando no hay tag activo y hay posts destacados, mostramos featured arriba
+  // (2 cards grandes lado a lado) y el resto en grid uniforme debajo.
+  // Con un tag activo, todo va en grid uniforme.
+  const featured = !activeTag
+    ? filtered.filter((p) => p.featured).slice(0, 2)
+    : [];
+  const rest = !activeTag
+    ? filtered.filter((p) => !featured.find((f) => f.slug === p.slug))
+    : filtered;
+
   return (
     <>
       {/* Filtros sticky */}
-      <div className="sticky top-20 z-20 -mx-4 mb-12 border-y border-border/60 bg-[var(--bg)]/85 px-4 py-4 backdrop-blur-xl">
+      <div className="sticky top-20 z-20 -mx-4 mb-10 border-y border-border/60 bg-[var(--bg)]/85 px-4 py-4 backdrop-blur-xl">
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -52,17 +62,37 @@ export function BlogFilters({ posts, allTags, initialTag }: BlogFiltersProps) {
         </div>
       </div>
 
-      {/* Grid */}
       {filtered.length === 0 ? (
         <p className="py-20 text-center text-fg-muted">
-          No hay artículos con este tag. Prueba con otro.
+          No hay artículos con esta temática todavía.
         </p>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((post) => (
-            <BlogCard key={post.slug} post={post} variant="md" />
-          ))}
-        </div>
+        <>
+          {featured.length > 0 && (
+            <div
+              className={
+                featured.length === 1
+                  ? "mb-12 grid gap-6"
+                  : "mb-12 grid gap-6 lg:grid-cols-2"
+              }
+            >
+              {featured.map((post) => (
+                <BlogCard
+                  key={post.slug}
+                  post={post}
+                  variant={featured.length === 1 ? "feature" : "lg"}
+                />
+              ))}
+            </div>
+          )}
+          {rest.length > 0 && (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {rest.map((post) => (
+                <BlogCard key={post.slug} post={post} variant="md" />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </>
   );

@@ -56,7 +56,7 @@ export function PostHero({ post }: { post: BlogPost }) {
         <div className="max-w-3xl">
           <div className="flex flex-wrap items-center gap-2">
             {post.tags.map((t) => (
-              <TagPill key={t} tag={t} href={`/blog?tag=${t}`} size="sm" />
+              <TagPill key={t} tag={t} size="sm" />
             ))}
           </div>
           <h1
