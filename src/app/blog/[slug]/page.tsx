@@ -5,6 +5,8 @@ import { PostHero } from "@/components/blog/PostHero";
 import { PostBody } from "@/lib/blog-markdown";
 import { PostToc } from "@/components/blog/PostToc";
 import { RelatedPosts } from "@/components/blog/RelatedPosts";
+import { PostAsideLinks } from "@/components/blog/PostAsideLinks";
+import { PostAsideCta } from "@/components/blog/PostAsideCta";
 import {
   Breadcrumbs,
   buildBreadcrumbSchema,
@@ -60,6 +62,7 @@ export default async function BlogPostPage({
 
   const headings = extractHeadings(post.body);
   const related = getRelatedPosts(slug, 3);
+  const allPosts = getAllPosts();
 
   const breadcrumbItems = [
     { label: "Inicio", href: "/" },
@@ -117,42 +120,24 @@ export default async function BlogPostPage({
       <PostHero post={post} />
 
       <Container className="py-16 md:py-24">
-        <div className="grid gap-14 lg:grid-cols-[1fr_240px] lg:gap-20">
+        <div className="grid gap-14 lg:grid-cols-[1fr_280px] lg:gap-16 xl:gap-20">
           <div className="min-w-0 max-w-2xl">
             <PostBody body={post.body} team={post.team} />
-
-            {/* Cierre CTA */}
-            <div className="mt-20 rounded-2xl border border-accent/30 bg-accent/10 p-8 md:p-10">
-              <p className="text-sm font-bold uppercase tracking-[0.25em] text-accent">
-                ¿Te ayudamos?
-              </p>
-              <p
-                className="mt-3 font-black leading-tight tracking-tight"
-                style={{ fontSize: "var(--text-display-sm)" }}
-              >
-                Cuéntanos tu proyecto.
-              </p>
-              <p className="mt-4 text-fg-muted">
-                Si lo que has leído te ha sonado a tu negocio, escríbenos. Sin
-                compromiso y sin discurso comercial.
-              </p>
-              <a
-                href="/contacto"
-                className="mt-7 inline-flex h-12 items-center gap-2 rounded-full bg-accent px-6 text-sm font-bold text-white shadow-[0_10px_30px_-10px_rgba(24,123,239,0.6)] transition-all hover:-translate-y-0.5 hover:bg-accent-hover"
-              >
-                Hablar con el equipo →
-              </a>
-            </div>
           </div>
 
-          {/* Aside con TOC sticky en desktop */}
-          {headings.length > 1 && (
-            <aside className="hidden lg:block">
-              <div className="sticky top-28">
-                <PostToc headings={headings} />
-              </div>
-            </aside>
-          )}
+          {/* Aside sticky en desktop: TOC + otros artículos + CTA mini */}
+          <aside className="hidden lg:block">
+            <div className="sticky top-28 space-y-10">
+              {headings.length > 1 && <PostToc headings={headings} />}
+              <PostAsideLinks posts={allPosts} currentSlug={post.slug} />
+              <PostAsideCta />
+            </div>
+          </aside>
+
+          {/* CTA mobile (solo bajo lg) */}
+          <div className="lg:hidden">
+            <PostAsideCta />
+          </div>
         </div>
       </Container>
 
