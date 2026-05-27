@@ -16,7 +16,7 @@ import {
   getAllServices,
 } from "@/lib/content";
 
-const SITE_URL = "https://dinkbit.es";
+const SITE_URL = "https://www.dinkbit.es";
 
 export async function generateStaticParams() {
   return getAllCaseStudies().map((c) => ({ slug: c.slug }));
