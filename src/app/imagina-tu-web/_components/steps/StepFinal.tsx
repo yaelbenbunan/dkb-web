@@ -99,17 +99,31 @@ export function StepFinal({ value, onChange }: Props) {
         </span>
       </label>
 
-      {/* Honeypot */}
-      <input
-        type="text"
-        name="website"
-        tabIndex={-1}
-        autoComplete="off"
-        value={value.website}
-        onChange={(e) => set("website", e.target.value)}
-        className="hidden"
-        aria-hidden
-      />
+      {/* Honeypot — must remain empty. Off-screen + obscure name so
+          browsers and password managers don't autofill it. */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          left: "-10000px",
+          top: "auto",
+          width: "1px",
+          height: "1px",
+          overflow: "hidden",
+        }}
+      >
+        <label>
+          Si eres humano, deja este campo vacío
+          <input
+            type="text"
+            name="contact_url_2"
+            tabIndex={-1}
+            autoComplete="off"
+            value={value.website}
+            onChange={(e) => set("website", e.target.value)}
+          />
+        </label>
+      </div>
     </div>
   );
 }

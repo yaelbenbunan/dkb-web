@@ -8,12 +8,16 @@ import { StepIdentity } from "./steps/StepIdentity";
 import { StepOfferings } from "./steps/StepOfferings";
 import { StepPalette } from "./steps/StepPalette";
 import { StepTypography } from "./steps/StepTypography";
+import { StepBranding } from "./steps/StepBranding";
 import { StepFinal } from "./steps/StepFinal";
 import { WebPreview, type WebPreviewData } from "./WebPreview";
 import { RatingBar } from "./RatingBar";
 import { generatePreview } from "@/lib/preview-generate-action";
 import { PreviewLoading } from "./PreviewLoading";
-import type { CopyResponse } from "@/lib/preview-validation";
+import type {
+  CopyResponse,
+  SaludCopyResponse,
+} from "@/lib/preview-validation";
 
 interface WizardState {
   businessType: "informativa" | "ecommerce" | null;
@@ -23,6 +27,9 @@ interface WizardState {
   offerings: string[];
   palette: string;
   typography: string;
+  logoDataUrl: string;
+  address: string;
+  city: string;
   valueProp: string;
   name: string;
   email: string;
@@ -39,6 +46,9 @@ const INITIAL: WizardState = {
   offerings: [],
   palette: "",
   typography: "",
+  logoDataUrl: "",
+  address: "",
+  city: "",
   valueProp: "",
   name: "",
   email: "",
@@ -47,7 +57,7 @@ const INITIAL: WizardState = {
   website: "",
 };
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 7;
 
 export function PreviewWizard() {
   const [step, setStep] = useState(1);
@@ -58,6 +68,7 @@ export function PreviewWizard() {
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState<{
     copy: CopyResponse | null;
+    saludCopy: SaludCopyResponse | null;
     heroImageDataUrl: string | null;
   } | null>(null);
   const loadedAt = useRef(Date.now());
@@ -83,6 +94,9 @@ export function PreviewWizard() {
       case 5:
         return !!state.typography;
       case 6:
+        // Branding step is fully optional.
+        return true;
+      case 7:
         return (
           state.valueProp.trim().length >= 20 &&
           state.name.trim().length >= 2 &&
@@ -115,6 +129,9 @@ export function PreviewWizard() {
     fd.set("offerings", JSON.stringify(state.offerings));
     fd.set("palette", state.palette);
     fd.set("typography", state.typography);
+    fd.set("logoDataUrl", state.logoDataUrl);
+    fd.set("address", state.address);
+    fd.set("city", state.city);
     fd.set("valueProp", state.valueProp);
     fd.set("name", state.name);
     fd.set("email", state.email);
@@ -143,23 +160,29 @@ export function PreviewWizard() {
           palette: state.palette,
           typography: state.typography,
           valueProp: state.valueProp,
+          address: state.address || undefined,
+          city: state.city || undefined,
         });
         setGenerated({
           copy: result.copy,
+          saludCopy: result.saludCopy,
           heroImageDataUrl: result.heroImageDataUrl,
         });
         setGenerating(false);
         const durationMs = Date.now() - startedAt;
-        if (!result.copy && !result.heroImageDataUrl) {
+        const anyContent =
+          !!result.copy || !!result.saludCopy || !!result.heroImageDataUrl;
+        if (!anyContent) {
           track("preview_generate_fail", {
             leadId: r.leadId,
-            reason: result.error ?? "both_null",
+            reason: result.error ?? "all_null",
             durationMs,
           });
         } else {
           track("preview_generate_success", {
             leadId: r.leadId,
             hadCopy: !!result.copy,
+            hadSaludCopy: !!result.saludCopy,
             hadImage: !!result.heroImageDataUrl,
             durationMs,
           });
@@ -181,40 +204,65 @@ export function PreviewWizard() {
       palette: state.palette,
       typography: state.typography,
       valueProp: state.valueProp,
+      logoDataUrl: state.logoDataUrl || undefined,
+      address: state.address || undefined,
+      city: state.city || undefined,
     };
 
     if (generating || !generated) {
       return (
-        <div className="space-y-6">
+        <section className="mx-auto max-w-3xl px-4 py-12 sm:py-20">
           <PreviewLoading />
-        </div>
+        </section>
       );
     }
 
+    // Preview mode: full-width below the site header, with disclaimer +
+    // rating bar in a centered container above/below.
     return (
-      <div className="space-y-6">
-        <p className="rounded-lg border border-accent/30 bg-accent/5 px-4 py-3 text-sm text-fg-muted">
-          ⚡ <strong className="text-fg">Esta es una vista rápida</strong>{" "}
-          generada con tus respuestas. Tu web real sería 100% personalizada:
-          imágenes propias, copy adaptado a tu marca, animaciones, más
-          secciones y muchísimo más detalle.
-        </p>
-        <WebPreview
-          data={data}
-          copy={generated.copy}
-          heroImageDataUrl={generated.heroImageDataUrl}
-        />
-        <RatingBar
-          leadId={leadId}
-          contact={{ name: state.name, email: state.email, phone: state.phone }}
-          data={data}
-        />
+      <div>
+        <div className="mx-auto max-w-6xl px-4 pt-6">
+          <p className="rounded-lg border border-accent/30 bg-accent/5 px-4 py-3 text-sm text-fg-muted">
+            ⚡ <strong className="text-fg">Esta es una vista rápida</strong>{" "}
+            generada con tus respuestas. Tu web real sería 100% personalizada:
+            imágenes propias, copy adaptado a tu marca, animaciones, más
+            secciones y muchísimo más detalle.
+          </p>
+        </div>
+        <div className="mt-6">
+          <WebPreview
+            data={data}
+            copy={generated.copy}
+            saludCopy={generated.saludCopy}
+            heroImageDataUrl={generated.heroImageDataUrl}
+          />
+        </div>
+        <div className="mx-auto max-w-3xl px-4 py-10">
+          <RatingBar
+            leadId={leadId}
+            contact={{ name: state.name, email: state.email, phone: state.phone }}
+            data={data}
+          />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-bg-elevated p-6 sm:p-8">
+    <section className="mx-auto max-w-3xl px-4 py-12 sm:py-20">
+      <div className="mb-10 text-center">
+        <p className="mb-3 inline-block rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-accent">
+          Vista rápida
+        </p>
+        <h1 className="text-3xl font-bold sm:text-5xl">
+          Imagina tu web en un vistazo
+        </h1>
+        <p className="mt-4 text-base text-fg-muted sm:text-lg">
+          7 pasos rápidos y te mostramos cómo podría ser el home de tu
+          negocio. Sin compromiso.
+        </p>
+      </div>
+      <div className="rounded-2xl border border-border bg-bg-elevated p-6 sm:p-8">
       {/* Progress */}
       <div className="mb-6">
         <div className="mb-2 flex items-center justify-between text-xs text-fg-muted">
@@ -273,6 +321,16 @@ export function PreviewWizard() {
           />
         )}
         {step === 6 && (
+          <StepBranding
+            value={{
+              logoDataUrl: state.logoDataUrl,
+              address: state.address,
+              city: state.city,
+            }}
+            onChange={(v) => setState({ ...state, ...v })}
+          />
+        )}
+        {step === 7 && (
           <StepFinal
             value={{
               valueProp: state.valueProp,
@@ -314,6 +372,7 @@ export function PreviewWizard() {
               : "Siguiente →"}
         </button>
       </div>
-    </div>
+      </div>
+    </section>
   );
 }

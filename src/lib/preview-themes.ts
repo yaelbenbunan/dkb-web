@@ -31,14 +31,54 @@ export interface Sector {
 
 export const PALETTES: Palette[] = [
   {
-    slug: "pastel-suave",
-    name: "Pastel suave",
-    bg: "#fef7f4",
+    slug: "brisa-azul",
+    name: "Brisa azul",
+    bg: "#fafcff",
     surface: "#ffffff",
-    text: "#2a2438",
+    text: "#102744",
+    accent: "#2e7cf0",
+    heroGradient:
+      "linear-gradient(135deg, #ffffff 0%, #e6effa 50%, #b9d2ee 100%)",
+  },
+  {
+    slug: "verde-bienestar",
+    name: "Verde bienestar",
+    bg: "#f6fbf7",
+    surface: "#ffffff",
+    text: "#1b3b2f",
+    accent: "#2d6a4f",
+    heroGradient:
+      "linear-gradient(135deg, #ffffff 0%, #d8f3dc 50%, #95d5b2 100%)",
+  },
+  {
+    slug: "tierra-suave",
+    name: "Tierra suave",
+    bg: "#faf3ec",
+    surface: "#ffffff",
+    text: "#6b4f4f",
+    accent: "#b08968",
+    heroGradient:
+      "linear-gradient(135deg, #ffffff 0%, #e8c5a0 50%, #d4a88c 100%)",
+  },
+  {
+    slug: "coral-suave",
+    name: "Coral suave",
+    bg: "#fdfcfb",
+    surface: "#ffffff",
+    text: "#2d3142",
+    accent: "#ff6b6b",
+    heroGradient:
+      "linear-gradient(135deg, #ffffff 0%, #ffd3b6 40%, #ffa07a 75%, #ff6b6b 100%)",
+  },
+  {
+    slug: "morado-atrevido",
+    name: "Morado atrevido",
+    bg: "#0e0420",
+    surface: "#1a0a3d",
+    text: "#f5ecff",
     accent: "#c084fc",
     heroGradient:
-      "linear-gradient(135deg, #fce7f3 0%, #e9d5ff 60%, #ddd6fe 100%)",
+      "linear-gradient(135deg, #0e0420 0%, #4c1d95 50%, #c084fc 100%)",
   },
   {
     slug: "oscuro-moderno",
@@ -49,26 +89,6 @@ export const PALETTES: Palette[] = [
     accent: "#22d3ee",
     heroGradient:
       "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0e7490 100%)",
-  },
-  {
-    slug: "azul-corporativo",
-    name: "Azul corporativo",
-    bg: "#f4f7fc",
-    surface: "#ffffff",
-    text: "#0c1c40",
-    accent: "#187bef",
-    heroGradient:
-      "linear-gradient(135deg, #dbeafe 0%, #93c5fd 60%, #187bef 100%)",
-  },
-  {
-    slug: "tierra-natural",
-    name: "Tierra natural",
-    bg: "#faf6f0",
-    surface: "#ffffff",
-    text: "#2d2419",
-    accent: "#a16207",
-    heroGradient:
-      "linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #d97706 100%)",
   },
 ];
 

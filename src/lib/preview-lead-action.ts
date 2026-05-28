@@ -33,6 +33,9 @@ export async function sendPreviewLead(
     offerings: parseOfferings(formData.get("offerings")),
     palette: formData.get("palette"),
     typography: formData.get("typography"),
+    logoDataUrl: formData.get("logoDataUrl") ?? "",
+    address: formData.get("address") ?? "",
+    city: formData.get("city") ?? "",
     valueProp: formData.get("valueProp"),
     name: formData.get("name"),
     email: formData.get("email"),
@@ -43,6 +46,10 @@ export async function sendPreviewLead(
   });
 
   if (!parsed.success) {
+    console.error(
+      "[preview-lead] validation failed:",
+      parsed.error.issues.map((i) => ({ path: i.path, code: i.code })),
+    );
     return { ok: false, error: "Revisa los campos del formulario." };
   }
 
@@ -81,11 +88,14 @@ export async function sendPreviewLead(
       `Oferta: ${d.offerings.join(", ")}`,
       `Paleta: ${d.palette}`,
       `Tipografía: ${d.typography}`,
+      `Logo: ${d.logoDataUrl ? "sí (adjunto en data URL)" : "no"}`,
+      `Dirección: ${d.address || "—"}`,
+      `Ciudad: ${d.city || "—"}`,
       "",
       "Toque personal:",
       d.valueProp,
       "",
-      "Origen: /imagina-tu-web (paso 6).",
+      "Origen: /imagina-tu-web.",
     ].join("\n"),
   });
 

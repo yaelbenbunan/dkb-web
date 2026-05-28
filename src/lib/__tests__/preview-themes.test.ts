@@ -13,8 +13,8 @@ import {
 } from "@/lib/preview-themes";
 
 describe("preview-themes catalog", () => {
-  it("exposes exactly 4 palettes with required fields", () => {
-    expect(PALETTES).toHaveLength(4);
+  it("exposes exactly 6 palettes with required fields", () => {
+    expect(PALETTES).toHaveLength(6);
     for (const p of PALETTES) {
       expect(p.slug).toMatch(/^[a-z-]+$/);
       expect(p.name).toBeTruthy();
@@ -45,7 +45,7 @@ describe("preview-themes catalog", () => {
   });
 
   it("isPaletteSlug guards correctly", () => {
-    expect(isPaletteSlug("pastel-suave")).toBe(true);
+    expect(isPaletteSlug("brisa-azul")).toBe(true);
     expect(isPaletteSlug("nope")).toBe(false);
   });
 
@@ -60,8 +60,8 @@ describe("preview-themes catalog", () => {
   });
 
   it("getPalette returns the matching palette", () => {
-    const p = getPalette("pastel-suave");
-    expect(p?.slug).toBe("pastel-suave");
+    const p = getPalette("brisa-azul");
+    expect(p?.slug).toBe("brisa-azul");
   });
 
   it("getPalette returns undefined for unknown slug", () => {

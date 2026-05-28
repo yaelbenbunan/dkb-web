@@ -52,21 +52,7 @@ export default function ImaginaPage() {
 
   return (
     <div className={fontVars}>
-      <section className="mx-auto max-w-3xl px-4 py-12 sm:py-20">
-        <div className="mb-10 text-center">
-          <p className="mb-3 inline-block rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-accent">
-            Vista rápida
-          </p>
-          <h1 className="text-3xl font-bold sm:text-5xl">
-            Imagina tu web en un vistazo
-          </h1>
-          <p className="mt-4 text-base text-fg-muted sm:text-lg">
-            6 preguntas cortas y te mostramos cómo podría ser el home de tu
-            negocio. Sin compromiso.
-          </p>
-        </div>
-        <PreviewWizard />
-      </section>
+      <PreviewWizard />
     </div>
   );
 }
