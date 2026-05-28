@@ -1,25 +1,19 @@
 # Fotos por sector — preview "Imagina tu web"
 
-Esta carpeta agrupa las fotos genéricas que usan los templates sector-específicos
-del preview en `/imagina-tu-web`. Cada sector tiene su propia subcarpeta con dos
-subdirectorios:
+Cada sector tiene su propia subcarpeta con dos subdirectorios y nombres
+canónicos:
 
 ```
 public/img/imagina/
-├── salud/
-│   ├── equipo/             ← retratos del equipo (fondo blanco)
-│   │   ├── profesional-1.jpg
-│   │   ├── profesional-2.jpg
-│   │   └── …
-│   └── valor-agregado/     ← fotos de escenario (recepción, consulta, sala)
-│       ├── foto-1.jpg
-│       ├── foto-2.jpg
-│       └── …
-├── educacion/
-├── restauracion/
-├── moda/
-├── tecnologia/
-└── servicios/
+└── <sector>/
+    ├── equipo/             ← retratos del equipo (fondo blanco)
+    │   ├── profesional-1.png
+    │   ├── profesional-2.png
+    │   └── …
+    └── valor-agregado/     ← fotos de escenario / ambientes
+        ├── foto-1.png
+        ├── foto-2.png
+        └── …
 ```
 
 ## Cómo se usan
@@ -34,33 +28,45 @@ public/img/imagina/
 
 ## Convenciones de archivo
 
-- Formato: **JPG** (preferido) o WebP. PNG solo si necesitas transparencia.
-- Peso: **< 250 KB** por foto. Optimizar con tools tipo
-  [Squoosh](https://squoosh.app) o `mozjpeg`.
-- Resolución: **800–1200 px** lado largo (los templates las escalan).
-- **`equipo/profesional-N.jpg`**:
-  - Cuadradas (800×800 ideal).
-  - **Fondo blanco** (procesar con `rembg` si la original tiene fondo).
-  - Sin estetoscopios u objetos sector-específicos en sectores donde no aplique
-    (estetoscopio solo en sector médico, p. ej.).
-  - Sin texto, logos o marcas.
-- **`valor-agregado/foto-N.jpg`**:
+- **Formato**: PNG (preferido para retratos sin fondo) o JPG.
+- **Peso**: < 300 KB por foto. Optimizar antes de subir.
+- **Resolución**: 800–1200 px lado largo.
+- **`equipo/profesional-N.png`**:
+  - Cuadradas (~800×800 ideal).
+  - Fondo blanco (procesar con `rembg` si la original tiene fondo).
+  - Sin objetos sector-específicos donde no aplique (sin estetoscopio fuera de
+    salud, sin gorro de chef fuera de restauración, etc.).
+  - Sin texto, logos ni marcas.
+- **`valor-agregado/foto-N.png`**:
   - Horizontales o cuadradas.
   - Iluminación natural / profesional. Espacios limpios.
-  - Sin rostros visibles (para que no choquen con la sección Equipo).
+  - Sin rostros visibles (para no chocar con la sección Equipo).
   - Sin texto ni logos.
 
 ## Estado actual
 
 | Sector | `equipo/` | `valor-agregado/` |
 |---|---|---|
-| salud | ✅ 6 fotos | ✅ 4 fotos |
-| educacion | ⏳ vacío | ⏳ vacío |
-| restauracion | ⏳ vacío | ⏳ vacío |
-| moda | ⏳ vacío | ⏳ vacío |
-| tecnologia | ⏳ vacío | ⏳ vacío |
-| servicios | ⏳ vacío | ⏳ vacío |
+| salud | ✅ 5 fotos (3♂ + 2♀) | ✅ 4 fotos |
+| educacion | ✅ 5 fotos (3♂ + 2♀) | ✅ 3 fotos |
+| restauracion | ✅ 6 fotos (2♂ + 4♀) | ✅ 5 fotos |
+| moda | ✅ 5 fotos (2♂ + 3♀) | ✅ 4 fotos |
+| tecnologia | ✅ 5 fotos (3♂ + 2♀) | ✅ 5 fotos |
+| servicios | ✅ 5 fotos (2♂ + 3♀) | ✅ 5 fotos |
 
-Mientras no haya template sector-específico para un sector, el preview usa el
-template genérico (no consume estas fotos). Cuando se cree un template nuevo
-(p. ej. `EducacionInformativaTemplate.tsx`), apuntará a `imagina/educacion/`.
+## Templates sector-específicos
+
+Por ahora **solo el template de salud** (`SaludInformativaTemplate.tsx`)
+consume estas fotos. Los demás sectores caen al template genérico
+`InformativaTemplate` hasta que se construya su template sector-específico.
+
+### Distribución por género (referencia)
+
+| Sector | Masculino (índices) | Femenino (índices) |
+|---|---|---|
+| salud | 1, 4, 5 | 2, 3 |
+| educacion | 2, 3, 5 | 1, 4 |
+| restauracion | 3, 5 | 1, 2, 4, 6 |
+| moda | 4, 5 | 1, 2, 3 |
+| tecnologia | 1, 3, 4 | 2, 5 |
+| servicios | 3, 5 | 1, 2, 4 |

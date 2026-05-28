@@ -67,14 +67,13 @@ const SALUD_PHOTOS = [
 // Team carousel photos — separated by gender so the AI-generated team
 // member name gets a matching portrait.
 const TEAM_PHOTOS_FEMALE = [
-  "/img/imagina/salud/equipo/profesional-1.jpg",
-  "/img/imagina/salud/equipo/profesional-4.jpg",
-  "/img/imagina/salud/equipo/profesional-6.jpg",
+  "/img/imagina/salud/equipo/profesional-2.png",
+  "/img/imagina/salud/equipo/profesional-3.png",
 ];
 const TEAM_PHOTOS_MALE = [
-  "/img/imagina/salud/equipo/profesional-2.jpg",
-  "/img/imagina/salud/equipo/profesional-3.jpg",
-  "/img/imagina/salud/equipo/profesional-5.jpg",
+  "/img/imagina/salud/equipo/profesional-1.png",
+  "/img/imagina/salud/equipo/profesional-4.png",
+  "/img/imagina/salud/equipo/profesional-5.png",
 ];
 
 // --- Spanish name → gender heuristic (fallback if AI didn't supply gender) ----
