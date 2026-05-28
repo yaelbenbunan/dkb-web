@@ -319,6 +319,7 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       "/img/imagina/salud/valor-agregado/foto-2.jpg",
       "/img/imagina/salud/valor-agregado/foto-3.jpg",
       "/img/imagina/salud/valor-agregado/foto-4.jpg",
+      "/img/imagina/salud/valor-agregado/foto-5.jpg",
     ],
     photosMale: [
       "/img/imagina/salud/equipo/profesional-1.png",
