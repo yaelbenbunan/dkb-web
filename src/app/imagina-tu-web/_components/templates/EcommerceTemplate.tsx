@@ -2,8 +2,9 @@
 
 import type { CSSProperties } from "react";
 import {
-  getPalette,
   getTypography,
+  resolvePalette,
+  type CustomPaletteColors,
 } from "@/lib/preview-themes";
 import type { CopyResponse } from "@/lib/preview-validation";
 import { SectorIllustration } from "../SectorIllustration";
@@ -14,6 +15,7 @@ export interface EcommerceData {
   ecommerceKind?: "productos" | "servicios";
   offerings: string[];
   palette: string;
+  customColors?: CustomPaletteColors;
   typography: string;
   valueProp: string;
 }
@@ -25,7 +27,7 @@ interface Props {
 }
 
 export function EcommerceTemplate({ data, copy, heroImageDataUrl }: Props) {
-  const palette = getPalette(data.palette);
+  const palette = resolvePalette(data.palette, data.customColors);
   const typo = getTypography(data.typography);
   if (!palette || !typo) return null;
 

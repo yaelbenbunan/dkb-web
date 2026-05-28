@@ -7,6 +7,21 @@ import {
 
 const offeringSchema = z.string().trim().min(1, "Vacío").max(80, "Demasiado largo");
 
+// Lowercase 6-digit hex color, e.g. "#1e3a8a". Accepts also 3-digit hex
+// expanded to 6 (some color pickers emit shorthand).
+const hexColorSchema = z
+  .string()
+  .trim()
+  .regex(/^#([0-9a-fA-F]{3}){1,2}$/, "Color inválido");
+
+const customColorsSchema = z
+  .object({
+    text: hexColorSchema,
+    accent: hexColorSchema,
+    tint: hexColorSchema,
+  })
+  .optional();
+
 // Optional logo: data URL (image/png|jpeg|webp|svg) up to ~700 KB.
 const logoDataUrlSchema = z
   .string()
@@ -30,6 +45,7 @@ const baseLead = z
       .min(1, "Añade al menos uno")
       .max(6, "Máximo 6"),
     palette: z.string().refine(isPaletteSlug, "Paleta inválida"),
+    customColors: customColorsSchema,
     typography: z.string().refine(isTypographySlug, "Tipografía inválida"),
     logoDataUrl: logoDataUrlSchema.optional().or(z.literal("")),
     address: z.string().trim().max(120, "Dirección demasiado larga").optional().or(z.literal("")),
@@ -101,8 +117,12 @@ export const copyResponseSchema = z.object({
 });
 export type CopyResponse = z.infer<typeof copyResponseSchema>;
 
-// Extended copy for salud-informativa template
-export const saludCopyResponseSchema = copyResponseSchema.extend({
+// Extended copy used by the sector-aware `InformativaSectorTemplate`.
+// Originally written for the salud sector, now consumed by all supported
+// sectors (salud, educacion, moda, tecnologia, servicios). The legacy
+// `saludCopyResponseSchema`/`SaludCopyResponse` aliases stay for now to
+// avoid breaking any external consumer that pinned to them.
+export const sectorInformativaCopyResponseSchema = copyResponseSchema.extend({
   valorAgregadoTitle: z.string().trim().min(2).max(80),
   valorAgregadoIntro: z.string().trim().min(20).max(240),
   bullets: z
@@ -135,7 +155,13 @@ export const saludCopyResponseSchema = copyResponseSchema.extend({
     .min(3)
     .max(4),
 });
-export type SaludCopyResponse = z.infer<typeof saludCopyResponseSchema>;
+export type SectorInformativaCopyResponse = z.infer<
+  typeof sectorInformativaCopyResponseSchema
+>;
+/** @deprecated use {@link SectorInformativaCopyResponse} */
+export type SaludCopyResponse = SectorInformativaCopyResponse;
+/** @deprecated use {@link sectorInformativaCopyResponseSchema} */
+export const saludCopyResponseSchema = sectorInformativaCopyResponseSchema;
 
 export const previewGenerateInputSchema = z.object({
   businessType: z.enum(["informativa", "ecommerce"]),
@@ -144,6 +170,7 @@ export const previewGenerateInputSchema = z.object({
   sector: z.string().refine(isSectorSlug),
   offerings: z.array(z.string().trim().min(1).max(80)).min(1).max(6),
   palette: z.string().refine(isPaletteSlug),
+  customColors: customColorsSchema,
   typography: z.string().refine(isTypographySlug),
   valueProp: z.string().trim().min(20).max(500),
   address: z.string().trim().max(120).optional(),

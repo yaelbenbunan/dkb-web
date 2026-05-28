@@ -16,8 +16,9 @@ import { generatePreview } from "@/lib/preview-generate-action";
 import { PreviewLoading } from "./PreviewLoading";
 import type {
   CopyResponse,
-  SaludCopyResponse,
+  SectorInformativaCopyResponse,
 } from "@/lib/preview-validation";
+import type { CustomPaletteColors } from "@/lib/preview-themes";
 
 interface WizardState {
   businessType: "informativa" | "ecommerce" | null;
@@ -26,6 +27,8 @@ interface WizardState {
   sector: string;
   offerings: string[];
   palette: string;
+  /** Set only when `palette === CUSTOM_PALETTE_SLUG` */
+  customColors: CustomPaletteColors | null;
   typography: string;
   logoDataUrl: string;
   address: string;
@@ -45,6 +48,7 @@ const INITIAL: WizardState = {
   sector: "",
   offerings: [],
   palette: "",
+  customColors: null,
   typography: "",
   logoDataUrl: "",
   address: "",
@@ -68,7 +72,7 @@ export function PreviewWizard() {
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState<{
     copy: CopyResponse | null;
-    saludCopy: SaludCopyResponse | null;
+    sectorCopy: SectorInformativaCopyResponse | null;
     heroImageDataUrl: string | null;
   } | null>(null);
   const loadedAt = useRef(Date.now());
@@ -128,6 +132,9 @@ export function PreviewWizard() {
     fd.set("sector", state.sector);
     fd.set("offerings", JSON.stringify(state.offerings));
     fd.set("palette", state.palette);
+    if (state.customColors) {
+      fd.set("customColors", JSON.stringify(state.customColors));
+    }
     fd.set("typography", state.typography);
     fd.set("logoDataUrl", state.logoDataUrl);
     fd.set("address", state.address);
@@ -158,6 +165,7 @@ export function PreviewWizard() {
           sector: state.sector,
           offerings: state.offerings,
           palette: state.palette,
+          customColors: state.customColors ?? undefined,
           typography: state.typography,
           valueProp: state.valueProp,
           address: state.address || undefined,
@@ -165,13 +173,13 @@ export function PreviewWizard() {
         });
         setGenerated({
           copy: result.copy,
-          saludCopy: result.saludCopy,
+          sectorCopy: result.sectorCopy,
           heroImageDataUrl: result.heroImageDataUrl,
         });
         setGenerating(false);
         const durationMs = Date.now() - startedAt;
         const anyContent =
-          !!result.copy || !!result.saludCopy || !!result.heroImageDataUrl;
+          !!result.copy || !!result.sectorCopy || !!result.heroImageDataUrl;
         if (!anyContent) {
           track("preview_generate_fail", {
             leadId: r.leadId,
@@ -182,7 +190,7 @@ export function PreviewWizard() {
           track("preview_generate_success", {
             leadId: r.leadId,
             hadCopy: !!result.copy,
-            hadSaludCopy: !!result.saludCopy,
+            hadSectorCopy: !!result.sectorCopy,
             hadImage: !!result.heroImageDataUrl,
             durationMs,
           });
@@ -202,6 +210,7 @@ export function PreviewWizard() {
       sector: state.sector,
       offerings: state.offerings,
       palette: state.palette,
+      customColors: state.customColors ?? undefined,
       typography: state.typography,
       valueProp: state.valueProp,
       logoDataUrl: state.logoDataUrl || undefined,
@@ -233,7 +242,7 @@ export function PreviewWizard() {
           <WebPreview
             data={data}
             copy={generated.copy}
-            saludCopy={generated.saludCopy}
+            sectorCopy={generated.sectorCopy}
             heroImageDataUrl={generated.heroImageDataUrl}
           />
         </div>
@@ -311,7 +320,14 @@ export function PreviewWizard() {
         {step === 4 && (
           <StepPalette
             value={state.palette}
-            onChange={(v) => setState({ ...state, palette: v })}
+            customColors={state.customColors}
+            onChange={(slug, custom) =>
+              setState({
+                ...state,
+                palette: slug,
+                customColors: custom ?? null,
+              })
+            }
           />
         )}
         {step === 5 && (

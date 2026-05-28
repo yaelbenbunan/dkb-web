@@ -10,41 +10,117 @@ export interface PromptInput {
   template: "informativa" | "ecommerce";
 }
 
-export function buildSaludCopyPrompt(input: PromptInput): string {
+interface SectorPromptHints {
+  /** "clínicas y centros del sector salud (médico, dental, …)" */
+  expertContext: string;
+  /** "paciente", "alumno", "cliente" */
+  audienceNoun: string;
+  /** "tratamiento", "programa", "servicio" */
+  offeringNoun: string;
+  /** "Pide tu cita", "Reserva tu plaza", "Solicita presupuesto" */
+  ctaExamples: string;
+  /** Role examples for team[].role */
+  teamRoleExamples: string;
+}
+
+const SECTOR_PROMPT_HINTS: Record<string, SectorPromptHints> = {
+  salud: {
+    expertContext:
+      "clínicas y centros del sector salud (médico, dental, estética, fisioterapia, óptica, veterinaria, etc.)",
+    audienceNoun: "paciente",
+    offeringNoun: "tratamiento",
+    ctaExamples: "'Pide tu cita', 'Reserva consulta', 'Solicita información'",
+    teamRoleExamples:
+      "'Odontóloga', 'Higienista dental', 'Médico especialista', 'Recepción'",
+  },
+  educacion: {
+    expertContext:
+      "centros educativos (colegios, academias, escuelas de idiomas, formación profesional, universidades, ed. infantil, etc.)",
+    audienceNoun: "alumno o familia",
+    offeringNoun: "programa o curso",
+    ctaExamples:
+      "'Reserva tu plaza', 'Solicita información', 'Agenda una visita'",
+    teamRoleExamples:
+      "'Director pedagógico', 'Profesor de Matemáticas', 'Coordinador de inglés', 'Orientadora'",
+  },
+  moda: {
+    expertContext:
+      "marcas de moda, atelier, tiendas de ropa, diseño de autor, accesorios o complementos",
+    audienceNoun: "cliente",
+    offeringNoun: "colección, servicio o producto",
+    ctaExamples:
+      "'Descúbrelo', 'Visita el showroom', 'Reserva tu cita', 'Compra ahora'",
+    teamRoleExamples:
+      "'Diseñador/a', 'Pattern maker', 'Atención al cliente', 'Personal shopper'",
+  },
+  tecnologia: {
+    expertContext:
+      "empresas tecnológicas (software, agencias digitales, ciberseguridad, IT, SaaS, etc.)",
+    audienceNoun: "cliente",
+    offeringNoun: "servicio o solución",
+    ctaExamples: "'Hablemos', 'Solicita una demo', 'Cuéntanos tu proyecto'",
+    teamRoleExamples:
+      "'Lead Developer', 'Product Designer', 'CTO', 'Cliente Success', 'Cybersecurity Specialist'",
+  },
+  servicios: {
+    expertContext:
+      "empresas de servicios profesionales (consultoría, asesoría, despachos legales, contabilidad, RRHH, etc.)",
+    audienceNoun: "cliente",
+    offeringNoun: "servicio",
+    ctaExamples:
+      "'Solicita presupuesto', 'Contacta con nosotros', 'Agenda una llamada'",
+    teamRoleExamples:
+      "'Socia directora', 'Abogado mercantil', 'Consultor senior', 'Asesor fiscal'",
+  },
+};
+
+const DEFAULT_HINTS: SectorPromptHints = SECTOR_PROMPT_HINTS.servicios;
+
+function getSectorHints(sectorLabel: string): SectorPromptHints {
+  const slug = sectorLabel.toLowerCase();
+  // Match either by Spanish label or a normalized slug
+  if (slug.includes("salud")) return SECTOR_PROMPT_HINTS.salud;
+  if (slug.includes("educac")) return SECTOR_PROMPT_HINTS.educacion;
+  if (slug.includes("moda")) return SECTOR_PROMPT_HINTS.moda;
+  if (slug.includes("tecnolog")) return SECTOR_PROMPT_HINTS.tecnologia;
+  if (slug.includes("servicio")) return SECTOR_PROMPT_HINTS.servicios;
+  return DEFAULT_HINTS;
+}
+
+export function buildSectorInformativaCopyPrompt(input: PromptInput): string {
+  const hints = getSectorHints(input.sectorLabel);
   return [
-    "Eres copywriter web especializado en clínicas y centros del sector salud",
-    "(médico, dental, estética, fisioterapia, óptica, veterinaria, etc.).",
+    `Eres copywriter web especializado en ${hints.expertContext}.`,
     "El usuario rellenó un cuestionario para generar el preview de su web.",
     "Genera copy en español de España, profesional, cercano y confiable.",
     "",
-    `Negocio (clínica/centro): ${input.businessName}`,
-    `Tipo: Web informativa de salud`,
-    `Servicios/tratamientos: ${input.offerings.join(", ")}`,
+    `Negocio: ${input.businessName}`,
+    `Sector: ${input.sectorLabel}`,
+    `Tipo: Web informativa`,
+    `Servicios/${hints.offeringNoun}s: ${input.offerings.join(", ")}`,
     `Valor agregado escrito por el usuario: "${input.valueProp}"`,
     "",
     "Reglas:",
-    "- NO inventes números (años de experiencia, pacientes atendidos, premios,",
+    "- NO inventes números (años de experiencia, clientes atendidos, premios,",
     "  certificaciones, porcentajes de éxito).",
     "- NO uses marketing-speak ('líderes', 'pioneros', 'mejor del mercado').",
     "- Tono: profesional, calmado, humano. No clickbait.",
     "- Español de España.",
-    "- heroHeadline: una frase corta orientada a confianza y bienestar.",
-    "- heroTagline: explica qué hace la clínica y por qué elegirla, sin métricas inventadas.",
-    "- ctaText: invitación a pedir cita (Ej. 'Pide tu cita', 'Reserva consulta').",
-    "- sectionTitle: titular para la lista de tratamientos/servicios.",
-    "- offerings[].blurb: una frase concreta y honesta sobre cada tratamiento.",
+    "- heroHeadline: una frase corta orientada a confianza y propuesta de valor.",
+    `- heroTagline: explica qué hace el negocio y por qué elegirlo, sin métricas inventadas.`,
+    `- ctaText: invitación a contactar/contratar (Ej. ${hints.ctaExamples}).`,
+    `- sectionTitle: titular para la lista de ${hints.offeringNoun}s.`,
+    `- offerings[].blurb: una frase concreta y honesta sobre cada ${hints.offeringNoun}.`,
     "",
     "- valorAgregadoTitle: titular corto para la sección de valor agregado",
     "  (ej. 'Por qué elegirnos', 'Cuidamos cada detalle').",
-    "- valorAgregadoIntro: 1-2 frases que conecten con el paciente.",
+    `- valorAgregadoIntro: 1-2 frases que conecten con el ${hints.audienceNoun}.`,
     `- bullets: EXACTAMENTE 4 O 6 ventajas (nunca 5). Elige 4 si el negocio es`,
     "  sencillo, 6 si tiene más matices. Cada bullet: title (2-5 palabras),",
     "  text (1 frase concreta, sin números inventados).",
     "",
     "- team: EXACTAMENTE entre 4 y 6 miembros INVENTADOS. Nombres y apellidos",
-    "  españoles realistas (Ej. 'Dra. Marta Rivas'), puesto coherente con los",
-    "  servicios listados (Ej. 'Odontóloga', 'Higienista', 'Recepción'). Sin Dr./Dra.",
-    "  si no aplica al sector.",
+    `  españoles realistas. Puesto coherente con el sector (ej. ${hints.teamRoleExamples}).`,
     "  Cada miembro debe incluir gender: 'male' o 'female' coherente con el nombre",
     "  (María/Lucía/Marta = female; Pablo/Javier/Marco = male). Si el nombre es",
     "  ambiguo (Andrea, Alex…), elige el género más probable.",
@@ -52,7 +128,7 @@ export function buildSaludCopyPrompt(input: PromptInput): string {
     "- testimonials: EXACTAMENTE entre 3 y 4 testimonios INVENTADOS pero realistas.",
     "  Cada uno: name (nombre + inicial de apellido, Ej. 'María G.') y text",
     `  (40-280 caracteres). AL MENOS UNO debe mencionar el nombre "${input.businessName}".`,
-    "  Tono natural de paciente: detalle concreto, sin superlativos vacíos.",
+    `  Tono natural de ${hints.audienceNoun}: detalle concreto, sin superlativos vacíos.`,
     "",
     "RESPONDE ÚNICAMENTE con un objeto JSON válido (sin markdown ni texto extra)",
     "con esta forma exacta:",
@@ -72,6 +148,9 @@ export function buildSaludCopyPrompt(input: PromptInput): string {
     "una por cada servicio listado arriba, en el mismo orden.",
   ].join("\n");
 }
+
+/** @deprecated use {@link buildSectorInformativaCopyPrompt} */
+export const buildSaludCopyPrompt = buildSectorInformativaCopyPrompt;
 
 export function buildCopyPrompt(input: PromptInput): string {
   const tipo =

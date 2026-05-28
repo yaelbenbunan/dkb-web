@@ -4,7 +4,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type {
   CopyResponse,
-  SaludCopyResponse,
+  SectorInformativaCopyResponse,
 } from "@/lib/preview-validation";
 import {
   InformativaTemplate,
@@ -15,9 +15,11 @@ import {
   type EcommerceData,
 } from "./templates/EcommerceTemplate";
 import {
-  SaludInformativaTemplate,
-  type SaludInformativaData,
-} from "./templates/SaludInformativaTemplate";
+  InformativaSectorTemplate,
+  type InformativaSectorData,
+} from "./templates/InformativaSectorTemplate";
+import { isSupportedSector } from "./templates/sector-assets";
+import type { CustomPaletteColors } from "@/lib/preview-themes";
 
 export interface WebPreviewData {
   businessType: "informativa" | "ecommerce";
@@ -26,6 +28,8 @@ export interface WebPreviewData {
   sector: string;
   offerings: string[];
   palette: string;
+  /** Present only when palette === CUSTOM_PALETTE_SLUG */
+  customColors?: CustomPaletteColors;
   typography: string;
   valueProp: string;
   logoDataUrl?: string;
@@ -36,16 +40,18 @@ export interface WebPreviewData {
 interface Props {
   data: WebPreviewData;
   copy: CopyResponse | null;
-  saludCopy: SaludCopyResponse | null;
+  sectorCopy: SectorInformativaCopyResponse | null;
   heroImageDataUrl: string | null;
 }
 
 const DESKTOP_WIDTH = 1280;
 
-export function WebPreview({ data, copy, saludCopy, heroImageDataUrl }: Props) {
+export function WebPreview({ data, copy, sectorCopy, heroImageDataUrl }: Props) {
   const isEcom = data.businessType === "ecommerce";
-  const isSaludInformativa =
-    data.businessType === "informativa" && data.sector === "salud";
+  // Sector-specific template applies to all `Informativa` businesses whose
+  // sector has assets defined (currently every sector EXCEPT restauración).
+  const useSectorTemplate =
+    data.businessType === "informativa" && isSupportedSector(data.sector);
   const safeName = data.businessName.toLowerCase().replace(/\s+/g, "");
 
   // Smart layout:
@@ -85,7 +91,7 @@ export function WebPreview({ data, copy, saludCopy, heroImageDataUrl }: Props) {
   useEffect(() => {
     const h = innerRef.current?.offsetHeight ?? 0;
     if (h) setScaledHeight(h * scale);
-  }, [copy, saludCopy, heroImageDataUrl, scale]);
+  }, [copy, sectorCopy, heroImageDataUrl, scale]);
 
   return (
     <div className="overflow-hidden border-y border-border">
@@ -106,10 +112,10 @@ export function WebPreview({ data, copy, saludCopy, heroImageDataUrl }: Props) {
             transform: `scale(${scale})`,
           }}
         >
-          {isSaludInformativa ? (
-            <SaludInformativaTemplate
-              data={data as SaludInformativaData}
-              copy={saludCopy}
+          {useSectorTemplate ? (
+            <InformativaSectorTemplate
+              data={data as InformativaSectorData}
+              copy={sectorCopy}
             />
           ) : isEcom ? (
             <EcommerceTemplate

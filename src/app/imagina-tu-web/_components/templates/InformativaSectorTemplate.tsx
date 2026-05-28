@@ -2,8 +2,17 @@
 
 import { useEffect, useMemo, useState, type CSSProperties, type SVGProps } from "react";
 import { motion, type Variants } from "motion/react";
-import { getPalette, getTypography } from "@/lib/preview-themes";
-import type { SaludCopyResponse } from "@/lib/preview-validation";
+import {
+  getTypography,
+  resolvePalette,
+  type CustomPaletteColors,
+} from "@/lib/preview-themes";
+import type { SectorInformativaCopyResponse } from "@/lib/preview-validation";
+import {
+  SECTOR_ASSETS,
+  isSupportedSector,
+  type SupportedSector,
+} from "./sector-assets";
 
 // --- Scroll animation presets -----------------------------------------------
 // Single source of truth for entrance animations so every section feels
@@ -39,10 +48,14 @@ const staggerChildVariants: Variants = {
   },
 };
 
-export interface SaludInformativaData {
+export interface InformativaSectorData {
   businessName: string;
+  /** Sector slug — must be one of `SupportedSector` for the template to render */
+  sector: string;
   offerings: string[];
   palette: string;
+  /** Present only when palette === CUSTOM_PALETTE_SLUG */
+  customColors?: CustomPaletteColors;
   typography: string;
   valueProp: string;
   logoDataUrl?: string;
@@ -51,30 +64,9 @@ export interface SaludInformativaData {
 }
 
 interface Props {
-  data: SaludInformativaData;
-  copy: SaludCopyResponse | null;
+  data: InformativaSectorData;
+  copy: SectorInformativaCopyResponse | null;
 }
-
-// Photos that fill the hero background AND the "Por qué elegirnos" image.
-// Live under /img/imagina/<sector>/valor-agregado/foto-N.jpg.
-const SALUD_PHOTOS = [
-  "/img/imagina/salud/valor-agregado/foto-1.jpg",
-  "/img/imagina/salud/valor-agregado/foto-2.jpg",
-  "/img/imagina/salud/valor-agregado/foto-3.jpg",
-  "/img/imagina/salud/valor-agregado/foto-4.jpg",
-];
-
-// Team carousel photos — separated by gender so the AI-generated team
-// member name gets a matching portrait.
-const TEAM_PHOTOS_FEMALE = [
-  "/img/imagina/salud/equipo/profesional-2.png",
-  "/img/imagina/salud/equipo/profesional-3.png",
-];
-const TEAM_PHOTOS_MALE = [
-  "/img/imagina/salud/equipo/profesional-1.png",
-  "/img/imagina/salud/equipo/profesional-4.png",
-  "/img/imagina/salud/equipo/profesional-5.png",
-];
 
 // --- Spanish name → gender heuristic (fallback if AI didn't supply gender) ----
 const NAMES_FEMALE = new Set([
@@ -127,43 +119,9 @@ const baseSvg = {
   strokeLinejoin: "round" as const,
 };
 
-const IconStethoscope = (p: IconProps) => (
-  <svg {...baseSvg} {...p}>
-    <path d="M6 3v6a4 4 0 0 0 8 0V3" />
-    <path d="M10 13v3a5 5 0 0 0 10 0v-2" />
-    <circle cx="20" cy="11" r="2" />
-  </svg>
-);
-const IconTooth = (p: IconProps) => (
-  <svg {...baseSvg} {...p}>
-    <path d="M12 21c-1-3-2-5-2-9 0-1.7-1.6-3-3.5-3S3 10.3 3 12c0-4 3-9 9-9s9 5 9 9c0 1.7-1.6 3-3.5 3S14 13.7 14 12c0 4-1 6-2 9z" />
-  </svg>
-);
-const IconEye = (p: IconProps) => (
-  <svg {...baseSvg} {...p}>
-    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
-    <circle cx="12" cy="12" r="3" />
-  </svg>
-);
-const IconSyringe = (p: IconProps) => (
-  <svg {...baseSvg} {...p}>
-    <path d="M18 2l4 4" />
-    <path d="M15 5l4 4-9 9H6v-4z" />
-    <path d="M9 11l4 4" />
-    <path d="M16 4l3 3" />
-  </svg>
-);
-const IconHeartPulse = (p: IconProps) => (
-  <svg {...baseSvg} {...p}>
-    <path d="M20.8 11.5a5.5 5.5 0 0 0-9.3-3.9 5.5 5.5 0 0 0-9.3 3.9c0 4.6 5.7 8 9.3 10.5 3.6-2.5 9.3-5.9 9.3-10.5z" />
-    <path d="M3 12h4l2-3 3 6 2-3h7" />
-  </svg>
-);
-const IconActivity = (p: IconProps) => (
-  <svg {...baseSvg} {...p}>
-    <path d="M2 12h4l3-9 6 18 3-9h4" />
-  </svg>
-);
+// Sector-specific icons (stethoscope, book, code, etc.) live in
+// `./sector-assets`. The template only keeps inline the icons used in
+// bullets, contact rows, form fields and decorations — all sector-neutral.
 const IconCheck = (p: IconProps) => (
   <svg {...baseSvg} {...p}>
     <circle cx="12" cy="12" r="9" />
@@ -253,14 +211,6 @@ const IconStar = (p: IconProps) => (
   </svg>
 );
 
-const SERVICE_ICONS = [
-  IconStethoscope,
-  IconTooth,
-  IconEye,
-  IconSyringe,
-  IconHeartPulse,
-  IconActivity,
-];
 const BULLET_ICONS = [
   IconCheck,
   IconClock,
@@ -272,16 +222,20 @@ const BULLET_ICONS = [
 
 // --- Template -----------------------------------------------------------------
 
-export function SaludInformativaTemplate({ data, copy }: Props) {
-  const palette = getPalette(data.palette);
+export function InformativaSectorTemplate({ data, copy }: Props) {
+  const palette = resolvePalette(data.palette, data.customColors);
   const typo = getTypography(data.typography);
+  const assets = isSupportedSector(data.sector) ? SECTOR_ASSETS[data.sector] : null;
 
   const [heroBgImg, valorAgregadoImg] = useMemo(() => {
-    const shuffled = [...SALUD_PHOTOS].sort(() => Math.random() - 0.5);
+    const pool = assets?.photosAmbient ?? [];
+    if (pool.length === 0) return [undefined, undefined];
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
     return [shuffled[0], shuffled[1] ?? shuffled[0]];
-  }, []);
+  }, [assets]);
 
-  if (!palette || !typo) return null;
+  if (!palette || !typo || !assets) return null;
+  const SERVICE_ICONS = assets.serviceIcons;
 
   const wrapper: CSSProperties = {
     backgroundColor: palette.bg,
@@ -454,7 +408,7 @@ export function SaludInformativaTemplate({ data, copy }: Props) {
                     <IconStar key={i} className="size-3" />
                   ))}
                 </span>
-                <span>Atención 5★ verificada</span>
+                <span>{assets.labels.ratingText}</span>
               </div>
               <h1
                 style={display}
@@ -680,13 +634,19 @@ export function SaludInformativaTemplate({ data, copy }: Props) {
               Equipo
             </span>
             <h2 style={display} className="mt-4 text-5xl font-bold tracking-tight">
-              Profesionales que te cuidan
+              {assets.labels.teamSectionTitle}
             </h2>
             <p className="mx-auto mt-4 max-w-xl opacity-80">
-              Un equipo humano con experiencia, cercanía y un trato de verdad.
+              {assets.labels.teamSectionSubtitle}
             </p>
           </motion.div>
-          <TeamCarousel team={team} palette={palette} display={display} />
+          <TeamCarousel
+            team={team}
+            palette={palette}
+            display={display}
+            photosMale={assets.photosMale}
+            photosFemale={assets.photosFemale}
+          />
         </div>
       </section>
 
@@ -882,6 +842,7 @@ export function SaludInformativaTemplate({ data, copy }: Props) {
             display={display}
             fg={fgOnInvert}
             fgOnAccent={fgOnAccent}
+            authorLabel={assets.labels.testimonialAuthorLabel}
           />
         </div>
       </section>
@@ -1109,10 +1070,14 @@ function TeamCarousel({
   team,
   palette,
   display,
+  photosMale,
+  photosFemale,
 }: {
   team: { name: string; role: string; gender?: "male" | "female" }[];
   palette: { text: string; accent: string; surface: string };
   display: CSSProperties;
+  photosMale: string[];
+  photosFemale: string[];
 }) {
   const [offset, setOffset] = useState(0);
   useEffect(() => {
@@ -1123,22 +1088,18 @@ function TeamCarousel({
   // Per-member photo: pick by gender from the right pool, cycle by member index
   // so a member always keeps the same photo across rotations.
   const photoFor = useMemo(() => {
-    const malePtr: number[] = [];
-    const femalePtr: number[] = [];
     let mIdx = 0;
     let fIdx = 0;
     return team.map((m) => {
       const g = m.gender ?? guessGender(m.name);
       if (g === "female") {
-        const idx = fIdx++ % TEAM_PHOTOS_FEMALE.length;
-        femalePtr.push(idx);
-        return TEAM_PHOTOS_FEMALE[idx];
+        const idx = fIdx++ % Math.max(photosFemale.length, 1);
+        return photosFemale[idx] ?? photosMale[0] ?? "";
       }
-      const idx = mIdx++ % TEAM_PHOTOS_MALE.length;
-      malePtr.push(idx);
-      return TEAM_PHOTOS_MALE[idx];
+      const idx = mIdx++ % Math.max(photosMale.length, 1);
+      return photosMale[idx] ?? photosFemale[0] ?? "";
     });
-  }, [team]);
+  }, [team, photosMale, photosFemale]);
 
   const visible = useMemo(() => {
     const arr: { member: typeof team[number]; photo: string }[] = [];
@@ -1207,12 +1168,14 @@ function TestimonialsCarousel({
   display,
   fg,
   fgOnAccent,
+  authorLabel,
 }: {
   testimonials: { name: string; text: string }[];
   palette: { text: string; accent: string; surface: string };
   display: CSSProperties;
   fg: string;
   fgOnAccent: string;
+  authorLabel: string;
 }) {
   const [offset, setOffset] = useState(0);
   useEffect(() => {
@@ -1288,7 +1251,7 @@ function TestimonialsCarousel({
                   {t.name}
                 </p>
                 <p className="text-xs opacity-70" style={{ color: fg }}>
-                  Paciente verificado
+                  {authorLabel}
                 </p>
               </div>
             </footer>

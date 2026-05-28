@@ -5,28 +5,42 @@ import { getOpenAIClient } from "./openai-client";
 import {
   buildCopyPrompt,
   buildImagePrompt,
-  buildSaludCopyPrompt,
+  buildSectorInformativaCopyPrompt,
   type PromptInput,
 } from "./preview-prompts";
 import {
   copyResponseSchema,
   previewGenerateInputSchema,
-  saludCopyResponseSchema,
+  sectorInformativaCopyResponseSchema,
   type CopyResponse,
   type PreviewGenerateInput,
-  type SaludCopyResponse,
+  type SectorInformativaCopyResponse,
 } from "./preview-validation";
-import { getPalette, getSectorLabel } from "./preview-themes";
+import { getSectorLabel, resolvePalette } from "./preview-themes";
 
 export interface PreviewGenerateResult {
   copy: CopyResponse | null;
-  saludCopy: SaludCopyResponse | null;
+  /** Filled when the sector-specific InformativaSectorTemplate is used */
+  sectorCopy: SectorInformativaCopyResponse | null;
   heroImageDataUrl: string | null;
   error?: string;
 }
 
-function isSaludInformativa(input: PreviewGenerateInput): boolean {
-  return input.businessType === "informativa" && input.sector === "salud";
+// Sectors that have their own `InformativaSectorTemplate` rendering path.
+// "restauracion" is intentionally excluded — it will get a bespoke template.
+const SECTOR_INFORMATIVA_SECTORS = new Set<string>([
+  "salud",
+  "educacion",
+  "moda",
+  "tecnologia",
+  "servicios",
+]);
+
+function useSectorInformativa(input: PreviewGenerateInput): boolean {
+  return (
+    input.businessType === "informativa" &&
+    SECTOR_INFORMATIVA_SECTORS.has(input.sector)
+  );
 }
 
 export async function generatePreview(
@@ -36,7 +50,7 @@ export async function generatePreview(
   if (!parsed.success) {
     return {
       copy: null,
-      saludCopy: null,
+      sectorCopy: null,
       heroImageDataUrl: null,
       error: "Datos inválidos para generar el preview.",
     };
@@ -45,12 +59,12 @@ export async function generatePreview(
   const client = getOpenAIClient();
   if (!client) {
     console.error("Missing OPENAI_API_KEY — preview will use fallbacks.");
-    return { copy: null, saludCopy: null, heroImageDataUrl: null };
+    return { copy: null, sectorCopy: null, heroImageDataUrl: null };
   }
 
-  const palette = getPalette(parsed.data.palette);
+  const palette = resolvePalette(parsed.data.palette, parsed.data.customColors);
   if (!palette) {
-    return { copy: null, saludCopy: null, heroImageDataUrl: null };
+    return { copy: null, sectorCopy: null, heroImageDataUrl: null };
   }
 
   const template: "informativa" | "ecommerce" =
@@ -68,23 +82,23 @@ export async function generatePreview(
     template,
   };
 
-  const useSalud = isSaludInformativa(parsed.data);
+  const useSector = useSectorInformativa(parsed.data);
 
-  // Salud-informativa skips hero image generation (template uses a static
-  // generic clinic photo instead) to keep cost and latency lower.
-  const tasks: Promise<unknown>[] = useSalud
-    ? [generateSaludCopy(client, promptInput)]
+  // Sector templates skip hero image generation (they use a curated static
+  // photo pool instead) to keep cost and latency lower.
+  const tasks: Promise<unknown>[] = useSector
+    ? [generateSectorCopy(client, promptInput)]
     : [generateCopy(client, promptInput), generateHeroImage(client, promptInput)];
 
   const results = await Promise.allSettled(tasks);
 
-  if (useSalud) {
-    const saludRes = results[0];
+  if (useSector) {
+    const sectorRes = results[0];
     return {
       copy: null,
-      saludCopy:
-        saludRes.status === "fulfilled"
-          ? (saludRes.value as SaludCopyResponse | null)
+      sectorCopy:
+        sectorRes.status === "fulfilled"
+          ? (sectorRes.value as SectorInformativaCopyResponse | null)
           : null,
       heroImageDataUrl: null,
     };
@@ -96,7 +110,7 @@ export async function generatePreview(
       copyRes.status === "fulfilled"
         ? (copyRes.value as CopyResponse | null)
         : null,
-    saludCopy: null,
+    sectorCopy: null,
     heroImageDataUrl:
       imageRes.status === "fulfilled" ? (imageRes.value as string | null) : null,
   };
@@ -144,10 +158,10 @@ async function generateCopy(
   }
 }
 
-async function generateSaludCopy(
+async function generateSectorCopy(
   client: OpenAI,
   promptInput: PromptInput,
-): Promise<SaludCopyResponse | null> {
+): Promise<SectorInformativaCopyResponse | null> {
   try {
     const completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
@@ -157,7 +171,7 @@ async function generateSaludCopy(
           content:
             "Eres un asistente que responde únicamente con JSON válido, sin markdown ni texto extra.",
         },
-        { role: "user", content: buildSaludCopyPrompt(promptInput) },
+        { role: "user", content: buildSectorInformativaCopyPrompt(promptInput) },
       ],
       response_format: { type: "json_object" },
       temperature: 0.75,
@@ -168,20 +182,20 @@ async function generateSaludCopy(
     try {
       parsed = JSON.parse(raw);
     } catch (err) {
-      console.error("generateSaludCopy: invalid JSON from OpenAI:", err);
+      console.error("generateSectorCopy: invalid JSON from OpenAI:", err);
       return null;
     }
-    const validated = saludCopyResponseSchema.safeParse(parsed);
+    const validated = sectorInformativaCopyResponseSchema.safeParse(parsed);
     if (!validated.success) {
       console.error(
-        "generateSaludCopy: response failed schema validation:",
+        "generateSectorCopy: response failed schema validation:",
         validated.error.issues,
       );
       return null;
     }
     return validated.data;
   } catch (err) {
-    console.error("generateSaludCopy failed:", err);
+    console.error("generateSectorCopy failed:", err);
     return null;
   }
 }

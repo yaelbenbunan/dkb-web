@@ -22,6 +22,15 @@ function parseOfferings(raw: FormDataEntryValue | null): string[] {
   }
 }
 
+function parseCustomColors(raw: FormDataEntryValue | null): unknown {
+  if (typeof raw !== "string" || !raw) return undefined;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+}
+
 export async function sendPreviewLead(
   formData: FormData,
 ): Promise<PreviewLeadResult> {
@@ -32,6 +41,7 @@ export async function sendPreviewLead(
     sector: formData.get("sector"),
     offerings: parseOfferings(formData.get("offerings")),
     palette: formData.get("palette"),
+    customColors: parseCustomColors(formData.get("customColors")),
     typography: formData.get("typography"),
     logoDataUrl: formData.get("logoDataUrl") ?? "",
     address: formData.get("address") ?? "",
@@ -86,7 +96,11 @@ export async function sendPreviewLead(
       `Tipo de web: ${tipo}`,
       `Negocio: ${d.businessName} (sector: ${getSectorLabel(d.sector)})`,
       `Oferta: ${d.offerings.join(", ")}`,
-      `Paleta: ${d.palette}`,
+      `Paleta: ${d.palette}${
+        d.customColors
+          ? ` (custom: text ${d.customColors.text}, accent ${d.customColors.accent}, tint ${d.customColors.tint})`
+          : ""
+      }`,
       `Tipografía: ${d.typography}`,
       `Logo: ${d.logoDataUrl ? "sí (adjunto en data URL)" : "no"}`,
       `Dirección: ${d.address || "—"}`,

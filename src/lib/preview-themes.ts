@@ -136,7 +136,56 @@ export const SECTOR_ICONS: Record<SectorSlug, string> = {
   servicios: "💼",
 };
 
-const PALETTE_SLUGS = new Set(PALETTES.map((p) => p.slug));
+/** Slug used when the user picks the "Personalizada" option in the wizard
+ *  and supplies their own three colors. The Palette object is built on the
+ *  fly via {@link buildCustomPalette}. */
+export const CUSTOM_PALETTE_SLUG = "personalizada";
+
+export interface CustomPaletteColors {
+  /** Dark color — used for text and the testimonios section background */
+  text: string;
+  /** Brand/accent color — CTAs, gradient endpoint, highlights */
+  accent: string;
+  /** Light color — base for hero gradient and soft tints */
+  tint: string;
+}
+
+/** Linear-interpolate two #rrggbb colors. `t ∈ [0,1]`. */
+function mixHex(a: string, b: string, t: number): string {
+  const parse = (s: string) => [
+    parseInt(s.slice(1, 3), 16),
+    parseInt(s.slice(3, 5), 16),
+    parseInt(s.slice(5, 7), 16),
+  ];
+  const [ar, ag, ab] = parse(a);
+  const [br, bg, bb] = parse(b);
+  const ch = (x: number, y: number) =>
+    Math.round(x + (y - x) * t)
+      .toString(16)
+      .padStart(2, "0");
+  return `#${ch(ar, br)}${ch(ag, bg)}${ch(ab, bb)}`;
+}
+
+/** Build a Palette from the user's 3 custom colors. Layout follows the same
+ *  `surface`/`text` contract as the catalog so contrast helpers keep working. */
+export function buildCustomPalette(colors: CustomPaletteColors): Palette {
+  return {
+    slug: CUSTOM_PALETTE_SLUG,
+    name: "Personalizada",
+    bg: mixHex("#ffffff", colors.tint, 0.18),
+    surface: "#ffffff",
+    text: colors.text,
+    accent: colors.accent,
+    heroGradient: `linear-gradient(135deg, ${colors.tint} 0%, ${mixHex(
+      colors.tint,
+      colors.accent,
+      0.35,
+    )} 55%, ${mixHex(colors.tint, colors.accent, 0.6)} 100%)`,
+  };
+}
+
+const PALETTE_SLUGS = new Set<string>(PALETTES.map((p) => p.slug));
+PALETTE_SLUGS.add(CUSTOM_PALETTE_SLUG);
 const TYPO_SLUGS = new Set(TYPOGRAPHIES.map((t) => t.slug));
 const SECTOR_SLUGS = new Set<string>(SECTORS.map((s) => s.slug));
 
@@ -154,6 +203,20 @@ export function isSectorSlug(v: unknown): v is string {
 
 export function getPalette(slug: string): Palette | undefined {
   return PALETTES.find((p) => p.slug === slug);
+}
+
+/** Returns the palette to use given the wizard's `palette` slug and the
+ *  optional custom colors. When the slug is `personalizada` and the colors
+ *  are provided, a synthetic palette is built; otherwise the catalog lookup
+ *  applies. */
+export function resolvePalette(
+  slug: string,
+  colors?: CustomPaletteColors,
+): Palette | undefined {
+  if (slug === CUSTOM_PALETTE_SLUG) {
+    return colors ? buildCustomPalette(colors) : undefined;
+  }
+  return getPalette(slug);
 }
 
 export function getTypography(slug: string): Typography | undefined {
