@@ -380,7 +380,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
           </div>
           <nav className="flex gap-7 text-sm font-medium opacity-90" style={display}>
             <span>Inicio</span>
-            <span>Tratamientos</span>
+            <span>{assets.labels.navServicesLabel}</span>
             <span>Equipo</span>
             <span>Contacto</span>
           </nav>
@@ -458,7 +458,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
               }}
             >
               <p style={display} className="text-xl font-bold">
-                <span style={{ color: fgOnSurface }}>Reserva tu cita</span>
+                <span style={{ color: fgOnSurface }}>{assets.labels.formTitle}</span>
               </p>
               <p className="mt-1 text-xs" style={{ color: fgOnSurface + "99" }}>
                 Te confirmamos en menos de 24h.
@@ -467,18 +467,20 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
                 <FormField label="Nombre" placeholder="Tu nombre" palette={palette} />
                 <FormField label="Teléfono" placeholder="+34 600 000 000" palette={palette} />
                 <FormField label="Email" placeholder="tu@email.com" palette={palette} />
-                <FormField
-                  label="Fecha preferida"
-                  placeholder="Selecciona una fecha"
-                  palette={palette}
-                  icon={<IconCalendar className="size-4" />}
-                />
+                {data.sector === "salud" && (
+                  <FormField
+                    label="Fecha preferida"
+                    placeholder="Selecciona una fecha"
+                    palette={palette}
+                    icon={<IconCalendar className="size-4" />}
+                  />
+                )}
                 <button
                   type="button"
                   style={accentBtn}
                   className="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold"
                 >
-                  Solicitar cita
+                  {assets.labels.formSubmitText}
                   <IconArrowRight className="size-4" />
                 </button>
               </div>
@@ -675,15 +677,14 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
                 style={accentSoft}
                 className="inline-block rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider"
               >
-                Tratamientos
+                {assets.labels.servicesSectionPill}
               </span>
               <h2 style={display} className="mt-4 text-5xl font-bold tracking-tight">
                 {servicesTitle}
               </h2>
             </div>
             <p className="max-w-sm text-right opacity-80">
-              Tratamientos diseñados para tu bienestar, ejecutados con un
-              estándar clínico riguroso.
+              {assets.labels.servicesSectionSubtitle}
             </p>
           </motion.div>
           <motion.div
@@ -781,7 +782,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
               ¿Qué esperas?
             </p>
             <h3 style={display} className="mt-1 text-2xl font-bold">
-              Reserva tu primera consulta hoy mismo
+              {assets.labels.bridgeHeadline}
             </h3>
           </div>
           <button
@@ -888,7 +889,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
               ¿Hablamos?
             </h2>
             <p className="mt-3 opacity-80">
-              Pide tu cita o resuelve tus dudas. Estamos aquí para ayudarte.
+              {assets.labels.contactSectionSubtitle}
             </p>
             <button
               type="button"

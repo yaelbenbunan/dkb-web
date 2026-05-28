@@ -259,6 +259,21 @@ export interface SectorLabels {
   defaultValorAgregadoTitle: string;
   /** Intro paragraph of the valor-agregado section */
   defaultValorAgregadoIntro: string;
+  /** Single-word nav item for the services section ("Tratamientos",
+   *  "Programas", "Colecciones", "Servicios"…) */
+  navServicesLabel: string;
+  /** Small pill text rendered above the services section h2 */
+  servicesSectionPill: string;
+  /** One-line subtitle rendered below the services section h2 */
+  servicesSectionSubtitle: string;
+  /** Title of the inline contact / appointment form in the hero */
+  formTitle: string;
+  /** Submit button label of that form */
+  formSubmitText: string;
+  /** Subtitle rendered below "¿Hablamos?" in the contact section */
+  contactSectionSubtitle: string;
+  /** Headline of the CTA bridge banner between Servicios and Testimonios */
+  bridgeHeadline: string;
 }
 
 export interface FallbackTeamMember {
@@ -333,6 +348,15 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       defaultValorAgregadoTitle: "Por qué elegirnos",
       defaultValorAgregadoIntro:
         "Cuidamos de ti con un equipo humano, instalaciones modernas y atención personalizada.",
+      navServicesLabel: "Tratamientos",
+      servicesSectionPill: "Tratamientos",
+      servicesSectionSubtitle:
+        "Tratamientos diseñados para tu bienestar, con un estándar clínico riguroso.",
+      formTitle: "Reserva tu cita",
+      formSubmitText: "Solicitar cita",
+      contactSectionSubtitle:
+        "Pide tu cita o resuelve tus dudas. Estamos aquí para ayudarte.",
+      bridgeHeadline: "Reserva tu primera consulta hoy mismo",
     },
     fallbackTeam: [
       { name: "Dra. Marta Rivas", role: "Directora médica", gender: "female" },
@@ -386,6 +410,15 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       defaultValorAgregadoTitle: "Por qué elegirnos",
       defaultValorAgregadoIntro:
         "Acompañamos a alumnos y familias con un proyecto educativo cercano, exigente y con propósito.",
+      navServicesLabel: "Programas",
+      servicesSectionPill: "Programas",
+      servicesSectionSubtitle:
+        "Programas diseñados para impulsar el aprendizaje y acompañar a cada alumno.",
+      formTitle: "Reserva tu plaza",
+      formSubmitText: "Solicitar plaza",
+      contactSectionSubtitle:
+        "Reserva tu plaza o resuelve tus dudas. Estamos aquí para acompañarte.",
+      bridgeHeadline: "Reserva tu plaza hoy mismo",
     },
     fallbackTeam: [
       { name: "Marta Rivas", role: "Directora pedagógica", gender: "female" },
@@ -443,6 +476,15 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       defaultValorAgregadoTitle: "Por qué elegirnos",
       defaultValorAgregadoIntro:
         "Diseño con identidad. Piezas pensadas con criterio, oficio y atención al detalle.",
+      navServicesLabel: "Colecciones",
+      servicesSectionPill: "Colecciones",
+      servicesSectionSubtitle:
+        "Diseño y piezas con identidad propia, pensadas con criterio y oficio.",
+      formTitle: "Reserva tu cita",
+      formSubmitText: "Reservar",
+      contactSectionSubtitle:
+        "Visítanos en el showroom o escríbenos. Estamos para ayudarte.",
+      bridgeHeadline: "Reserva tu visita al showroom",
     },
     fallbackTeam: [
       { name: "Marta Rivas", role: "Directora creativa", gender: "female" },
@@ -501,6 +543,15 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       defaultValorAgregadoTitle: "Por qué elegirnos",
       defaultValorAgregadoIntro:
         "Soluciones técnicas con propósito y un equipo que se involucra en cada proyecto.",
+      navServicesLabel: "Servicios",
+      servicesSectionPill: "Servicios",
+      servicesSectionSubtitle:
+        "Soluciones técnicas pensadas para resolver problemas reales con un enfoque pragmático.",
+      formTitle: "Cuéntanos tu proyecto",
+      formSubmitText: "Enviar",
+      contactSectionSubtitle:
+        "Cuéntanos tu proyecto y te respondemos en menos de 24h.",
+      bridgeHeadline: "Cuéntanos tu proyecto hoy mismo",
     },
     fallbackTeam: [
       { name: "Marta Rivas", role: "Lead Frontend", gender: "female" },
@@ -563,6 +614,15 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       defaultValorAgregadoTitle: "Por qué elegirnos",
       defaultValorAgregadoIntro:
         "Asesoramiento experto adaptado a las necesidades de cada cliente, con resultados medibles.",
+      navServicesLabel: "Servicios",
+      servicesSectionPill: "Servicios",
+      servicesSectionSubtitle:
+        "Asesoramiento profesional adaptado a las necesidades de cada cliente.",
+      formTitle: "Solicita información",
+      formSubmitText: "Enviar consulta",
+      contactSectionSubtitle:
+        "Cuéntanos tu caso. Te respondemos con un enfoque consultivo y honesto.",
+      bridgeHeadline: "Solicita tu primera consulta hoy mismo",
     },
     fallbackTeam: [
       { name: "Marta Rivas", role: "Socia directora", gender: "female" },
