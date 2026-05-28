@@ -251,6 +251,26 @@ export interface SectorLabels {
   teamSectionSubtitle: string;
   /** Author qualifier shown under each testimonial card */
   testimonialAuthorLabel: string;
+  /** Button text used everywhere the AI didn't provide a custom CTA */
+  defaultCtaText: string;
+  /** Heading above the services grid when the AI didn't provide one */
+  defaultServicesTitle: string;
+  /** Heading of the valor-agregado section */
+  defaultValorAgregadoTitle: string;
+  /** Intro paragraph of the valor-agregado section */
+  defaultValorAgregadoIntro: string;
+}
+
+export interface FallbackTeamMember {
+  name: string;
+  role: string;
+  gender: "male" | "female";
+}
+
+export interface FallbackTestimonial {
+  name: string;
+  /** `{businessName}` token is replaced at render time */
+  text: string;
 }
 
 export interface SectorAssets {
@@ -259,6 +279,13 @@ export interface SectorAssets {
   photosFemale: string[];
   serviceIcons: ComponentType<IconProps>[];
   labels: SectorLabels;
+  /** Team rendered when the AI didn't return a valid `team[]`. Roles must
+   *  be coherent with the sector — never mix medical roles into tecnologia,
+   *  nor teachers into moda, etc. */
+  fallbackTeam: FallbackTeamMember[];
+  /** Testimonials rendered when the AI didn't return a valid `testimonials[]`.
+   *  Use `{businessName}` token to inject the actual business name. */
+  fallbackTestimonials: FallbackTestimonial[];
 }
 
 // SectorSlug is duplicated here as a string literal union to avoid importing
@@ -301,7 +328,29 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       teamSectionSubtitle:
         "Un equipo humano con experiencia, cercanía y un trato de verdad.",
       testimonialAuthorLabel: "Paciente verificado",
+      defaultCtaText: "Pide tu cita",
+      defaultServicesTitle: "Nuestros tratamientos",
+      defaultValorAgregadoTitle: "Por qué elegirnos",
+      defaultValorAgregadoIntro:
+        "Cuidamos de ti con un equipo humano, instalaciones modernas y atención personalizada.",
     },
+    fallbackTeam: [
+      { name: "Dra. Marta Rivas", role: "Directora médica", gender: "female" },
+      { name: "Javier Soler", role: "Odontólogo", gender: "male" },
+      { name: "Lucía Méndez", role: "Higienista dental", gender: "female" },
+      { name: "Pablo Iglesias", role: "Especialista", gender: "male" },
+    ],
+    fallbackTestimonials: [
+      {
+        name: "María G.",
+        text: "Salí encantada de {businessName}. Me explicaron todo con paciencia y el trato fue exquisito.",
+      },
+      { name: "Andrés L.", text: "Profesionalidad y cercanía. Volveré sin duda." },
+      {
+        name: "Sofía P.",
+        text: "La atención fue rápida y el equipo me hizo sentir muy cómoda.",
+      },
+    ],
   },
   educacion: {
     photosAmbient: [
@@ -332,7 +381,32 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       teamSectionSubtitle:
         "Un equipo docente cercano, formado y comprometido con el aprendizaje.",
       testimonialAuthorLabel: "Alumno / Familia",
+      defaultCtaText: "Reserva tu plaza",
+      defaultServicesTitle: "Nuestros programas",
+      defaultValorAgregadoTitle: "Por qué elegirnos",
+      defaultValorAgregadoIntro:
+        "Acompañamos a alumnos y familias con un proyecto educativo cercano, exigente y con propósito.",
     },
+    fallbackTeam: [
+      { name: "Marta Rivas", role: "Directora pedagógica", gender: "female" },
+      { name: "Javier Soler", role: "Profesor de Matemáticas", gender: "male" },
+      { name: "Lucía Méndez", role: "Orientadora", gender: "female" },
+      { name: "Pablo Iglesias", role: "Coordinador de idiomas", gender: "male" },
+    ],
+    fallbackTestimonials: [
+      {
+        name: "María G.",
+        text: "El proyecto educativo de {businessName} marca la diferencia. Mi hija ha avanzado mucho.",
+      },
+      {
+        name: "Andrés L.",
+        text: "Profesores cercanos y exigentes. Se nota que les importa cada alumno.",
+      },
+      {
+        name: "Sofía P.",
+        text: "Comunicación constante con las familias y un trato excelente.",
+      },
+    ],
   },
   moda: {
     photosAmbient: [
@@ -364,7 +438,32 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       teamSectionSubtitle:
         "Diseñadores y profesionales con criterio, oficio y mirada propia.",
       testimonialAuthorLabel: "Cliente",
+      defaultCtaText: "Descúbrelo",
+      defaultServicesTitle: "Nuestras colecciones",
+      defaultValorAgregadoTitle: "Por qué elegirnos",
+      defaultValorAgregadoIntro:
+        "Diseño con identidad. Piezas pensadas con criterio, oficio y atención al detalle.",
     },
+    fallbackTeam: [
+      { name: "Marta Rivas", role: "Directora creativa", gender: "female" },
+      { name: "Javier Soler", role: "Diseñador de producto", gender: "male" },
+      { name: "Lucía Méndez", role: "Personal shopper", gender: "female" },
+      { name: "Pablo Iglesias", role: "Pattern maker", gender: "male" },
+    ],
+    fallbackTestimonials: [
+      {
+        name: "María G.",
+        text: "Las prendas de {businessName} tienen una calidad y un fit excepcionales.",
+      },
+      {
+        name: "Andrés L.",
+        text: "Asesoramiento personalizado y un gusto impecable. Vuelvo siempre.",
+      },
+      {
+        name: "Sofía P.",
+        text: "Diseño con identidad, no es ropa de pasarela vacía.",
+      },
+    ],
   },
   tecnologia: {
     photosAmbient: [
@@ -397,7 +496,36 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       teamSectionSubtitle:
         "Desarrolladores y expertos que entregan soluciones, no excusas.",
       testimonialAuthorLabel: "Cliente",
+      defaultCtaText: "Hablemos",
+      defaultServicesTitle: "Nuestros servicios",
+      defaultValorAgregadoTitle: "Por qué elegirnos",
+      defaultValorAgregadoIntro:
+        "Soluciones técnicas con propósito y un equipo que se involucra en cada proyecto.",
     },
+    fallbackTeam: [
+      { name: "Marta Rivas", role: "Lead Frontend", gender: "female" },
+      { name: "Javier Soler", role: "Backend Developer", gender: "male" },
+      { name: "Lucía Méndez", role: "Product Designer", gender: "female" },
+      {
+        name: "Pablo Iglesias",
+        role: "Cybersecurity Specialist",
+        gender: "male",
+      },
+    ],
+    fallbackTestimonials: [
+      {
+        name: "María G.",
+        text: "{businessName} entregó nuestro proyecto en plazo y con calidad técnica top.",
+      },
+      {
+        name: "Andrés L.",
+        text: "Equipo profesional, comunicación constante y soluciones que funcionan.",
+      },
+      {
+        name: "Sofía P.",
+        text: "Migramos toda la infraestructura sin downtime. Recomendados.",
+      },
+    ],
   },
   servicios: {
     photosAmbient: [
@@ -430,7 +558,32 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       teamSectionSubtitle:
         "Profesionales con experiencia, criterio y enfoque consultivo.",
       testimonialAuthorLabel: "Cliente",
+      defaultCtaText: "Solicita presupuesto",
+      defaultServicesTitle: "Nuestros servicios",
+      defaultValorAgregadoTitle: "Por qué elegirnos",
+      defaultValorAgregadoIntro:
+        "Asesoramiento experto adaptado a las necesidades de cada cliente, con resultados medibles.",
     },
+    fallbackTeam: [
+      { name: "Marta Rivas", role: "Socia directora", gender: "female" },
+      { name: "Javier Soler", role: "Consultor senior", gender: "male" },
+      { name: "Lucía Méndez", role: "Account manager", gender: "female" },
+      { name: "Pablo Iglesias", role: "Asesor fiscal", gender: "male" },
+    ],
+    fallbackTestimonials: [
+      {
+        name: "María G.",
+        text: "{businessName} nos asesoró con un enfoque cercano y muy profesional. Resultados claros.",
+      },
+      {
+        name: "Andrés L.",
+        text: "Equipo serio, exigentes con los detalles. La diferencia se nota.",
+      },
+      {
+        name: "Sofía P.",
+        text: "Resolvieron en días lo que llevaba meses atascado. Recomendados.",
+      },
+    ],
   },
 };
 

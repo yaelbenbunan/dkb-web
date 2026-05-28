@@ -261,53 +261,56 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
     color: palette.accent,
   };
 
-  const headline =
-    copy?.heroHeadline ?? `Tu salud, en manos de ${data.businessName}`;
+  // Capitalize first letter of any user-supplied offering so the cards never
+  // show inconsistent casing (e.g. "implantes dentales" vs "Ortodoncia").
+  const titleize = (s: string) => {
+    const trimmed = s.trim().replace(/\s+/g, " ");
+    if (!trimmed) return trimmed;
+    if (trimmed === trimmed.toUpperCase() && trimmed.length > 3) {
+      return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+    }
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+  };
+
+  // All fallbacks come from the sector assets so a non-salud preview never
+  // accidentally shows "Pide tu cita" or "Nuestros tratamientos" if the AI
+  // call fails.
+  const headline = copy?.heroHeadline ?? `Bienvenidos a ${data.businessName}`;
   const tagline =
     copy?.heroTagline ??
     data.valueProp ??
-    "Atención cercana, profesional y a tu medida.";
-  const ctaText = copy?.ctaText ?? "Pide tu cita";
-  const servicesTitle = copy?.sectionTitle ?? "Nuestros tratamientos";
+    "Profesionalidad, cercanía y un equipo que se involucra en cada proyecto.";
+  const ctaText = copy?.ctaText ?? assets.labels.defaultCtaText;
+  const servicesTitle = copy?.sectionTitle ?? assets.labels.defaultServicesTitle;
   const services =
-    copy?.offerings ?? data.offerings.map((name) => ({ name, blurb: "" }));
+    copy?.offerings ??
+    data.offerings.map((name) => ({ name: titleize(name), blurb: "" }));
 
-  const valorAgregadoTitle = copy?.valorAgregadoTitle ?? "Por qué elegirnos";
+  const valorAgregadoTitle =
+    copy?.valorAgregadoTitle ?? assets.labels.defaultValorAgregadoTitle;
   const valorAgregadoIntro =
-    copy?.valorAgregadoIntro ??
-    "Cuidamos de ti con un equipo humano, instalaciones modernas y atención personalizada.";
+    copy?.valorAgregadoIntro ?? assets.labels.defaultValorAgregadoIntro;
 
   // Bullets must be even (4 or 6). If AI returns 5, drop the last to make it 4.
-  // If less than 4 (fallback), pad to 4 with safe defaults.
   const rawBullets = copy?.bullets ?? [
     { title: "Atención personalizada", text: "Te dedicamos el tiempo que necesitas." },
-    { title: "Equipo profesional", text: "Especialistas con experiencia en tu cuidado." },
+    { title: "Equipo profesional", text: "Especialistas con experiencia en tu sector." },
     { title: "Instalaciones modernas", text: "Espacios pensados para tu comodidad." },
-    { title: "Cita rápida", text: "Reserva online o por teléfono en minutos." },
+    { title: "Respuesta rápida", text: "Contacto y seguimiento sin demoras." },
   ];
   const bullets =
     rawBullets.length >= 6
       ? rawBullets.slice(0, 6)
       : rawBullets.slice(0, 4);
 
-  const team =
-    copy?.team ??
-    [
-      { name: "Dra. Marta Rivas", role: "Directora médica", gender: "female" as const },
-      { name: "Javier Soler", role: "Profesional clínico", gender: "male" as const },
-      { name: "Lucía Méndez", role: "Atención al paciente", gender: "female" as const },
-      { name: "Pablo Iglesias", role: "Especialista", gender: "male" as const },
-    ];
+  const team = copy?.team ?? assets.fallbackTeam;
 
   const testimonials =
-    copy?.testimonials ?? [
-      {
-        name: "María G.",
-        text: `Salí encantada de ${data.businessName}. Me explicaron todo con paciencia y el trato fue exquisito.`,
-      },
-      { name: "Andrés L.", text: "Profesionalidad y cercanía. Volveré sin duda." },
-      { name: "Sofía P.", text: "La atención fue rápida y el equipo me hizo sentir muy cómoda." },
-    ];
+    copy?.testimonials ??
+    assets.fallbackTestimonials.map((t) => ({
+      name: t.name,
+      text: t.text.replace("{businessName}", data.businessName),
+    }));
 
   const fullAddress = [data.address, data.city].filter(Boolean).join(", ");
   const mapAddress = fullAddress || "Madrid, España";
@@ -510,7 +513,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
               <img
                 src={valorAgregadoImg}
                 alt=""
-                className="block aspect-[4/5] w-full object-cover"
+                className="block aspect-square w-full object-cover"
                 onError={(e) => {
                   const el = e.currentTarget;
                   el.style.display = "none";
@@ -520,7 +523,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
               />
               <div
                 data-fallback
-                className="aspect-[4/5] w-full"
+                className="aspect-square w-full"
                 style={{ background: palette.heroGradient, display: "none" }}
                 aria-hidden
               />
@@ -591,10 +594,10 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
                       <Icon className="size-5" />
                     </span>
                     <div>
-                      <p style={display} className="font-semibold">
+                      <p style={display} className="text-lg font-bold">
                         {b.title}
                       </p>
-                      <p className="mt-1 text-sm leading-relaxed opacity-75">
+                      <p className="mt-1.5 text-base leading-relaxed opacity-85">
                         {b.text}
                       </p>
                     </div>
@@ -650,14 +653,14 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
         </div>
       </section>
 
-      {/* SERVICIOS — uses palette.heroGradient (the palette's signature
-          diagonal gradient) so it's clearly different from Equipo's flat
-          accent tint. Each palette has its own heroGradient, keeping brand
-          coherence while breaking the rhythm. */}
+      {/* SERVICIOS — soft 2-stop gradient (surface → accent 10%) so the
+          section reads as "tinted" without the harsh 3-color heroGradient
+          that some palettes had. Cards keep their solid surface fill, so
+          they always stand out cleanly. */}
       <section
         className="relative overflow-hidden px-12 py-28"
         style={{
-          background: palette.heroGradient,
+          background: `linear-gradient(135deg, ${palette.surface} 0%, ${palette.accent}1a 100%)`,
         }}
       >
         <div
@@ -722,13 +725,17 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
                     style={{ ...display, color: fgOnSurface }}
                     className="relative mt-5 text-lg font-bold"
                   >
-                    {s.name}
+                    {titleize(s.name)}
                   </h3>
                   <p
                     className="relative mt-2 text-sm leading-relaxed"
                     style={{ color: fgOnSurface + "cc" }}
                   >
-                    {s.blurb || "Tratamiento especializado para tus necesidades."}
+                    {s.blurb ||
+                      `${assets.labels.defaultServicesTitle.replace(
+                        "Nuestros ",
+                        "",
+                      )} adaptados a tus necesidades.`}
                   </p>
                   <button
                     type="button"
@@ -746,13 +753,10 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
             <div className="mt-10 flex justify-center">
               <button
                 type="button"
-                style={{
-                  borderColor: palette.accent,
-                  color: palette.accent,
-                }}
-                className="inline-flex h-12 items-center gap-2 rounded-full border-2 px-7 text-sm font-semibold transition hover:scale-105"
+                style={accentBtn}
+                className="inline-flex h-12 items-center gap-2 rounded-full px-7 text-sm font-semibold transition hover:scale-[1.03]"
               >
-                Ver todos los tratamientos
+                Ver todos los {servicesTitle.replace(/^Nuestros?\s+/i, "").toLowerCase()}
                 <IconArrowRight className="size-4" />
               </button>
             </div>

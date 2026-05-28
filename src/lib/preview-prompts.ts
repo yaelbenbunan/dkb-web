@@ -1,3 +1,17 @@
+/** Normalize a user-provided offering string: collapse internal whitespace and
+ *  capitalize the first letter while preserving the rest. Doesn't touch
+ *  intentionally uppercase tokens (acronyms like SEO, UX, IVA). */
+export function normalizeOffering(raw: string): string {
+  const trimmed = raw.trim().replace(/\s+/g, " ");
+  if (trimmed.length === 0) return trimmed;
+  // If the whole string is uppercase (likely an acronym shouted), title-case it
+  // so it doesn't read as SHOUTING in the design.
+  if (trimmed === trimmed.toUpperCase() && trimmed.length > 3) {
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+  }
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
 export interface PromptInput {
   businessName: string;
   sectorLabel: string;
@@ -89,6 +103,7 @@ function getSectorHints(sectorLabel: string): SectorPromptHints {
 
 export function buildSectorInformativaCopyPrompt(input: PromptInput): string {
   const hints = getSectorHints(input.sectorLabel);
+  const normalizedOfferings = input.offerings.map(normalizeOffering);
   return [
     `Eres copywriter web especializado en ${hints.expertContext}.`,
     "El usuario rellenó un cuestionario para generar el preview de su web.",
@@ -97,15 +112,31 @@ export function buildSectorInformativaCopyPrompt(input: PromptInput): string {
     `Negocio: ${input.businessName}`,
     `Sector: ${input.sectorLabel}`,
     `Tipo: Web informativa`,
-    `Servicios/${hints.offeringNoun}s: ${input.offerings.join(", ")}`,
+    `Servicios/${hints.offeringNoun}s: ${normalizedOfferings.join(", ")}`,
     `Valor agregado escrito por el usuario: "${input.valueProp}"`,
     "",
-    "Reglas:",
+    "🚨 REGLA CRÍTICA DE COHERENCIA DE SECTOR:",
+    `TODO el contenido (puestos del equipo, tipo de servicios, terminología, CTA,`,
+    `testimonios) debe encajar con el sector "${input.sectorLabel}". Está`,
+    "PROHIBIDO mezclar terminología entre sectores. Ejemplos de errores graves:",
+    "- 'tratamiento', 'paciente', 'doctor/a', 'clínica' SOLO en sector salud.",
+    "- 'alumno', 'profesor/a', 'lección', 'curso' SOLO en educación.",
+    "- 'comensal', 'menú', 'platos' SOLO en restauración.",
+    "- 'colección', 'pasarela', 'prenda' SOLO en moda.",
+    "- 'desarrollador', 'código', 'producto digital' SOLO en tecnología.",
+    `Si el sector es ${input.sectorLabel}, usa SOLO terminología propia de ese sector.`,
+    "",
+    "Reglas generales:",
     "- NO inventes números (años de experiencia, clientes atendidos, premios,",
     "  certificaciones, porcentajes de éxito).",
     "- NO uses marketing-speak ('líderes', 'pioneros', 'mejor del mercado').",
     "- Tono: profesional, calmado, humano. No clickbait.",
     "- Español de España.",
+    "- Capitaliza nombres propios: 'Asesoría fiscal' no 'asesoría fiscal' ni 'ASESORÍA FISCAL'.",
+    "- Si los servicios del usuario vienen con mayúsculas/minúsculas inconsistentes,",
+    "  homologa el estilo (primera letra mayúscula, resto minúscula) salvo siglas.",
+    "- Si detectas errores ortográficos obvios en los servicios del usuario,",
+    "  corrígelos en silencio (sin comentarlos).",
     "- heroHeadline: una frase corta orientada a confianza y propuesta de valor.",
     `- heroTagline: explica qué hace el negocio y por qué elegirlo, sin métricas inventadas.`,
     `- ctaText: invitación a contactar/contratar (Ej. ${hints.ctaExamples}).`,
