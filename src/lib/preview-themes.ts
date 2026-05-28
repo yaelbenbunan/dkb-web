@@ -91,6 +91,11 @@ export const PALETTES: Palette[] = [
   },
 ];
 
+// Six visually distinct typography options. Pairs (displayVar/bodyVar) are
+// chosen so each preset reads differently at a glance — a sans-only modern
+// option, an architectural geometric sans, a classical contrasty serif, a
+// friendly modern serif, an editorial display + geometric body, and a high
+// impact condensed display paired with Inter for body legibility.
 export const TYPOGRAPHIES: Typography[] = [
   {
     slug: "moderna-sans",
@@ -115,6 +120,18 @@ export const TYPOGRAPHIES: Typography[] = [
     name: "Friendly",
     displayVar: "--font-prev-fraunces",
     bodyVar: "--font-prev-fraunces",
+  },
+  {
+    slug: "editorial",
+    name: "Editorial moderno",
+    displayVar: "--font-prev-dm-serif",
+    bodyVar: "--font-prev-dm-sans",
+  },
+  {
+    slug: "impactante",
+    name: "Impactante",
+    displayVar: "--font-prev-bebas",
+    bodyVar: "--font-prev-inter",
   },
 ];
 

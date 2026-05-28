@@ -5,6 +5,9 @@ import {
   Playfair_Display,
   Fraunces,
   Source_Sans_3,
+  DM_Serif_Display,
+  DM_Sans,
+  Bebas_Neue,
 } from "next/font/google";
 import { PreviewWizard } from "./_components/PreviewWizard";
 
@@ -33,6 +36,23 @@ const source = Source_Sans_3({
   variable: "--font-prev-source",
   display: "swap",
 });
+const dmSerif = DM_Serif_Display({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-prev-dm-serif",
+  display: "swap",
+});
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-prev-dm-sans",
+  display: "swap",
+});
+const bebas = Bebas_Neue({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-prev-bebas",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Imagina tu web",
@@ -48,6 +68,9 @@ export default function ImaginaPage() {
     playfair.variable,
     fraunces.variable,
     source.variable,
+    dmSerif.variable,
+    dmSans.variable,
+    bebas.variable,
   ].join(" ");
 
   return (

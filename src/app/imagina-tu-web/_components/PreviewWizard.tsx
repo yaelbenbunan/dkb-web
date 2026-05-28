@@ -14,9 +14,11 @@ import { WebPreview, type WebPreviewData } from "./WebPreview";
 import { RatingBar } from "./RatingBar";
 import { generatePreview } from "@/lib/preview-generate-action";
 import { PreviewLoading } from "./PreviewLoading";
-import type {
-  CopyResponse,
-  SectorInformativaCopyResponse,
+import {
+  isValidContactEmail,
+  isValidContactPhone,
+  type CopyResponse,
+  type SectorInformativaCopyResponse,
 } from "@/lib/preview-validation";
 import type { CustomPaletteColors } from "@/lib/preview-themes";
 
@@ -104,8 +106,8 @@ export function PreviewWizard() {
         return (
           state.valueProp.trim().length >= 20 &&
           state.name.trim().length >= 2 &&
-          /.+@.+\..+/.test(state.email) &&
-          state.phone.trim().length >= 6 &&
+          isValidContactEmail(state.email) &&
+          isValidContactPhone(state.phone) &&
           state.privacy
         );
       default:

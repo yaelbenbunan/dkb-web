@@ -1,5 +1,7 @@
 "use client";
 
+import { isValidContactEmail, isValidContactPhone } from "@/lib/preview-validation";
+
 interface Value {
   valueProp: string;
   name: string;
@@ -18,12 +20,31 @@ export function StepFinal({ value, onChange }: Props) {
   const set = <K extends keyof Value>(k: K, v: Value[K]) =>
     onChange({ ...value, [k]: v });
 
+  // Live validation — show error only after the user has typed something.
+  const phoneError =
+    value.phone.length > 0 && !isValidContactPhone(value.phone)
+      ? "Introduce un teléfono válido (9 dígitos para España, hasta 15 internacional)."
+      : null;
+  const emailError =
+    value.email.length > 0 && !isValidContactEmail(value.email)
+      ? "Introduce un email válido (ej. tu@email.com)."
+      : null;
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold">Toque personal y tus datos</h2>
         <p className="mt-2 text-sm text-fg-muted">
           Te enviamos el preview y nos lo guardamos para hablar contigo.
+        </p>
+      </div>
+
+      <div className="flex items-start gap-3 rounded-lg border border-accent/30 bg-accent/5 px-4 py-3 text-sm">
+        <span aria-hidden className="text-base leading-tight">📩</span>
+        <p className="text-fg-muted">
+          <strong className="text-fg">Asegúrate de que el email y el teléfono son correctos:</strong>{" "}
+          te enviaremos ahí el enlace al preview y nos pondremos en contacto
+          contigo desde estos datos.
         </p>
       </div>
 
@@ -65,8 +86,15 @@ export function StepFinal({ value, onChange }: Props) {
             value={value.phone}
             onChange={(e) => set("phone", e.target.value)}
             placeholder="+34 600 000 000"
-            className="surface-input mt-1.5 block w-full rounded-md px-3.5 py-2.5 text-sm"
+            inputMode="tel"
+            autoComplete="tel"
+            className={`surface-input mt-1.5 block w-full rounded-md px-3.5 py-2.5 text-sm ${
+              phoneError ? "border-red-500/60" : ""
+            }`}
           />
+          {phoneError && (
+            <span className="mt-1 block text-xs text-red-500">{phoneError}</span>
+          )}
         </label>
       </div>
 
@@ -79,8 +107,15 @@ export function StepFinal({ value, onChange }: Props) {
           value={value.email}
           onChange={(e) => set("email", e.target.value)}
           placeholder="tu@email.com"
-          className="surface-input mt-1.5 block w-full rounded-md px-3.5 py-2.5 text-sm"
+          inputMode="email"
+          autoComplete="email"
+          className={`surface-input mt-1.5 block w-full rounded-md px-3.5 py-2.5 text-sm ${
+            emailError ? "border-red-500/60" : ""
+          }`}
         />
+        {emailError && (
+          <span className="mt-1 block text-xs text-red-500">{emailError}</span>
+        )}
       </label>
 
       <label className="flex items-start gap-2 text-sm">

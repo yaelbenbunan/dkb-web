@@ -7,6 +7,37 @@ import {
 
 const offeringSchema = z.string().trim().min(1, "Vacío").max(80, "Demasiado largo");
 
+// ---- Contact-field validators ---------------------------------------------
+// Shared between client (live input feedback in StepFinal) and server (schema
+// validation in the lead action) so the rules never drift.
+
+/** Strip everything that isn't a digit and count remaining digits. Strips the
+ *  `+`/`00` prefix, spaces, dashes, parens, etc. */
+export function countPhoneDigits(raw: string): number {
+  return (raw.match(/\d/g) ?? []).length;
+}
+
+/** Accept Spanish (9 digits) and most international numbers up to 15 digits
+ *  (E.164 max). Common spam submissions use repeated digits or very short
+ *  numbers — both fail this check. */
+export function isValidContactPhone(raw: string): boolean {
+  const digits = countPhoneDigits(raw);
+  if (digits < 9 || digits > 15) return false;
+  // Reject obvious spam: same digit repeated (111111111, 999999999, etc.)
+  const onlyDigits = raw.replace(/\D/g, "");
+  if (/^(\d)\1+$/.test(onlyDigits)) return false;
+  return true;
+}
+
+/** Same rules zod uses internally but exported so we can show inline errors
+ *  on the client without depending on a server round-trip. */
+export function isValidContactEmail(raw: string): boolean {
+  const trimmed = raw.trim();
+  if (trimmed.length < 5 || trimmed.length > 254) return false;
+  // local@host.tld — at least one dot in the domain, no whitespace.
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmed);
+}
+
 // Lowercase 6-digit hex color, e.g. "#1e3a8a". Accepts also 3-digit hex
 // expanded to 6 (some color pickers emit shorthand).
 const hexColorSchema = z
@@ -56,8 +87,17 @@ const baseLead = z
       .min(20, "Cuéntanos un poco más (mínimo 20 caracteres)")
       .max(500, "Máximo 500 caracteres"),
     name: z.string().trim().min(2, "Demasiado corto"),
-    email: z.email("Email inválido"),
-    phone: z.string().trim().min(6, "Teléfono demasiado corto"),
+    email: z
+      .string()
+      .trim()
+      .refine(isValidContactEmail, "Introduce un email válido"),
+    phone: z
+      .string()
+      .trim()
+      .refine(
+        isValidContactPhone,
+        "Introduce un teléfono válido (9 dígitos en España, hasta 15 internacional)",
+      ),
     privacy: z.literal("on", {
       message: "Debes aceptar la política de privacidad",
     }),
@@ -90,8 +130,8 @@ export const previewRatingSchema = z
     typography: z.string().refine(isTypographySlug),
     valueProp: z.string().trim().min(20).max(500),
     name: z.string().trim().min(2),
-    email: z.email(),
-    phone: z.string().trim().min(6),
+    email: z.string().trim().refine(isValidContactEmail),
+    phone: z.string().trim().refine(isValidContactPhone),
     leadId: z.string().regex(/^[a-z0-9]{4,}-[a-z0-9]{4}$/, "leadId inválido"),
     rating: z.enum(["up", "down"]),
     comment: z.string().trim().max(500).optional().or(z.literal("")),

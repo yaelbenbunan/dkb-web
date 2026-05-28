@@ -26,8 +26,8 @@ describe("preview-themes catalog", () => {
     }
   });
 
-  it("exposes exactly 4 typographies with required fields", () => {
-    expect(TYPOGRAPHIES).toHaveLength(4);
+  it("exposes exactly 6 typographies with required fields", () => {
+    expect(TYPOGRAPHIES).toHaveLength(6);
     for (const t of TYPOGRAPHIES) {
       expect(t.slug).toMatch(/^[a-z-]+$/);
       expect(t.name).toBeTruthy();
