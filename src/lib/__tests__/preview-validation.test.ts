@@ -12,7 +12,7 @@ const validLead = {
   businessName: "La Tiendita",
   sector: "moda",
   offerings: ["camisetas", "gorras"],
-  palette: "brisa-azul",
+  palette: "azul-electrico",
   typography: "moderna-sans",
   valueProp:
     "Somos artesanos locales con materiales sostenibles desde 2010, atención personal.",
@@ -196,7 +196,7 @@ const validGenerateInput = {
   businessName: "La Tiendita",
   sector: "moda",
   offerings: ["camisetas", "gorras"],
-  palette: "brisa-azul",
+  palette: "azul-electrico",
   typography: "moderna-sans",
   valueProp:
     "Hacemos prendas artesanales con materiales sostenibles desde 2010.",

@@ -12,8 +12,8 @@ const baseInput: PromptInput = {
   ecommerceKind: "productos",
   offerings: ["camisetas", "sudaderas", "gorras"],
   valueProp: "Hacemos prendas artesanales con materiales sostenibles desde 2010.",
-  paletteSlug: "brisa-azul",
-  paletteAccent: "#2e7cf0",
+  paletteSlug: "azul-electrico",
+  paletteAccent: "#2563eb",
   template: "ecommerce",
 };
 
@@ -47,7 +47,7 @@ describe("buildImagePrompt", () => {
   it("mentions sector and palette accent color", () => {
     const p = buildImagePrompt(baseInput);
     expect(p.toLowerCase()).toContain("moda");
-    expect(p.toLowerCase()).toContain("2e7cf0");
+    expect(p.toLowerCase()).toContain("2563eb");
   });
 
   it("explicitly bans people faces, text, logos", () => {

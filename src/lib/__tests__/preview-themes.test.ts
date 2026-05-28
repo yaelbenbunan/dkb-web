@@ -45,7 +45,7 @@ describe("preview-themes catalog", () => {
   });
 
   it("isPaletteSlug guards correctly", () => {
-    expect(isPaletteSlug("brisa-azul")).toBe(true);
+    expect(isPaletteSlug("azul-electrico")).toBe(true);
     expect(isPaletteSlug("nope")).toBe(false);
   });
 
@@ -60,8 +60,8 @@ describe("preview-themes catalog", () => {
   });
 
   it("getPalette returns the matching palette", () => {
-    const p = getPalette("brisa-azul");
-    expect(p?.slug).toBe("brisa-azul");
+    const p = getPalette("azul-electrico");
+    expect(p?.slug).toBe("azul-electrico");
   });
 
   it("getPalette returns undefined for unknown slug", () => {

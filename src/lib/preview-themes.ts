@@ -31,14 +31,14 @@ export interface Sector {
 
 export const PALETTES: Palette[] = [
   {
-    slug: "brisa-azul",
-    name: "Brisa azul",
-    bg: "#fafcff",
+    slug: "azul-electrico",
+    name: "Azul eléctrico",
+    bg: "#f5fafd",
     surface: "#ffffff",
-    text: "#102744",
-    accent: "#2e7cf0",
+    text: "#0f172a",
+    accent: "#2563eb",
     heroGradient:
-      "linear-gradient(135deg, #ffffff 0%, #e6effa 50%, #b9d2ee 100%)",
+      "linear-gradient(135deg, #e0f2fe 0%, #dbeafe 50%, #bae6fd 100%)",
   },
   {
     slug: "verde-bienestar",
