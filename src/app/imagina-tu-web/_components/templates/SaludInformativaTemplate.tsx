@@ -55,14 +55,17 @@ interface Props {
   copy: SaludCopyResponse | null;
 }
 
+// Photos that fill the hero background AND the "Por qué elegirnos" image.
+// Live under /img/imagina/<sector>/valor-agregado/foto-N.jpg.
 const SALUD_PHOTOS = [
-  "/img/imagina/salud/shutterstock_2518819139.jpg",
-  "/img/imagina/salud/shutterstock_2703488387.jpg",
-  "/img/imagina/salud/shutterstock_2733428565.jpg",
-  "/img/imagina/salud/shutterstock_2779638033.jpg",
+  "/img/imagina/salud/valor-agregado/foto-1.jpg",
+  "/img/imagina/salud/valor-agregado/foto-2.jpg",
+  "/img/imagina/salud/valor-agregado/foto-3.jpg",
+  "/img/imagina/salud/valor-agregado/foto-4.jpg",
 ];
 
-// Manually classified by gender (matches the processed photos)
+// Team carousel photos — separated by gender so the AI-generated team
+// member name gets a matching portrait.
 const TEAM_PHOTOS_FEMALE = [
   "/img/imagina/salud/equipo/profesional-1.jpg",
   "/img/imagina/salud/equipo/profesional-4.jpg",

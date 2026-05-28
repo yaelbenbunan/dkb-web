@@ -1,20 +1,15 @@
-# Imágenes genéricas — sector salud (preview "imagina-tu-web")
+# Fotos — sector salud
 
-Coloca aquí 3-4 fotos genéricas (libres de derechos) de salas de espera, recepciones o entornos de clínicas que sirvan para cualquier negocio del sector salud (médica, dental, estética, fisio, óptica, veterinaria...).
+```
+salud/
+├── equipo/
+│   ├── profesional-1.jpg … profesional-6.jpg   ← 6 retratos (3 mujeres + 3 hombres) ya procesados
+│   ├── shutterstock_*.jpg                       ← originales (ignorados por git)
+│   ├── _descartadas/                            ← originales con estetoscopio (ignorados)
+│   └── _viejo/                                  ← backup de versiones anteriores (ignorados)
+└── valor-agregado/
+    ├── foto-1.jpg … foto-4.jpg                  ← 4 escenarios genéricos (salas/recepciones)
+    └── …
+```
 
-Convención de nombres esperada por el template:
-
-- `sala-espera-1.jpg`
-- `sala-espera-2.jpg`
-- `sala-espera-3.jpg`
-- `sala-espera-4.jpg` (opcional)
-
-Recomendaciones:
-
-- Orientación: horizontal o cuadrada.
-- Resolución mínima: 1200px en el lado largo.
-- Peso: < 300 KB cada una (optimízalas; JPG/WebP).
-- Sin rostros visibles ni logos ni texto.
-- Iluminación natural / clínica clara.
-
-El template (`SaludInformativaTemplate.tsx`) elige una al azar para la sección "Valor agregado". Mientras no haya archivos, el template usa un fallback con gradiente.
+Convención de uso y procesado: ver [../README.md](../README.md).

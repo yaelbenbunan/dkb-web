@@ -21,8 +21,7 @@ export type SectorSlug =
   | "restauracion"
   | "moda"
   | "tecnologia"
-  | "servicios"
-  | "otro";
+  | "servicios";
 
 export interface Sector {
   slug: SectorSlug;
@@ -126,7 +125,6 @@ export const SECTORS: Sector[] = [
   { slug: "moda", label: "Moda" },
   { slug: "tecnologia", label: "Tecnología" },
   { slug: "servicios", label: "Servicios profesionales" },
-  { slug: "otro", label: "Otro" },
 ];
 
 export const SECTOR_ICONS: Record<SectorSlug, string> = {
@@ -136,7 +134,6 @@ export const SECTOR_ICONS: Record<SectorSlug, string> = {
   moda: "👗",
   tecnologia: "💻",
   servicios: "💼",
-  otro: "✨",
 };
 
 const PALETTE_SLUGS = new Set(PALETTES.map((p) => p.slug));

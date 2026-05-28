@@ -36,12 +36,11 @@ describe("preview-themes catalog", () => {
     }
   });
 
-  it("provides an icon per sector and an 'otro' fallback", () => {
-    expect(SECTORS.length).toBeGreaterThanOrEqual(7);
+  it("provides an icon per sector", () => {
+    expect(SECTORS.length).toBeGreaterThanOrEqual(6);
     for (const s of SECTORS) {
       expect(SECTOR_ICONS[s.slug]).toBeTruthy();
     }
-    expect(SECTOR_ICONS.otro).toBeTruthy();
   });
 
   it("isPaletteSlug guards correctly", () => {

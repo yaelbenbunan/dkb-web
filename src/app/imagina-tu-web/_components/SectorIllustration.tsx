@@ -86,7 +86,6 @@ function renderSvg(sector: string) {
           <path d="M14 52h68" />
         </svg>
       );
-    case "otro":
     default:
       return (
         <svg {...common}>
