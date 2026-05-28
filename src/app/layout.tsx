@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Source_Sans_3 } from "next/font/google";
 import "./globals.css";
@@ -123,6 +123,13 @@ const websiteSchema = {
   url: SITE_URL,
   inLanguage: "es-ES",
   publisher: { "@type": "Organization", name: "dinkbit" },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

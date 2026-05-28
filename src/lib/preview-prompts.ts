@@ -165,9 +165,14 @@ export function buildSectorInformativaCopyPrompt(input: PromptInput): string {
     `- sectionTitle: titular para la lista de ${hints.offeringNoun}s.`,
     isRestauracion
       ? "- offerings[]: EXACTAMENTE 6 platos típicos de la cocina elegida.\n" +
-        "  Cada uno con name (nombre del plato, ej. 'Tartar de atún rojo')\n" +
-        "  y blurb (1 frase sensorial: textura, ingredientes destacados,\n" +
-        "  preparación. SIN precios, sin números inventados, sin marketing speak)."
+        "  Cada uno con:\n" +
+        "    · name: nombre del plato (ej. 'Tartar de atún rojo')\n" +
+        "    · tagline: 2-4 palabras divertidas y realistas que sirven como\n" +
+        "      subtítulo bajo el nombre. Tono cálido, sin marketing-speak.\n" +
+        "      Ejemplos: 'Sabor a domingo', 'Plato bandera', 'Receta de la abuela',\n" +
+        "      'Para los grandes momentos', 'Clásico imprescindible'.\n" +
+        "    · blurb: 1 frase sensorial (textura, ingredientes destacados,\n" +
+        "      preparación). SIN precios, sin números inventados, sin marketing-speak."
       : `- offerings[].blurb: una frase concreta y honesta sobre cada ${hints.offeringNoun}.`,
     "",
     "- valorAgregadoTitle: titular corto para la sección de valor agregado",
@@ -195,7 +200,9 @@ export function buildSectorInformativaCopyPrompt(input: PromptInput): string {
     '  "heroTagline": string (20-220),',
     '  "ctaText": string (1-40),',
     '  "sectionTitle": string (2-60),',
-    '  "offerings": [{ "name": string, "blurb": string (20-160) }, ...],',
+    isRestauracion
+      ? '  "offerings": [{ "name": string, "tagline": string (2-40), "blurb": string (20-160) }, ... 6 items],'
+      : '  "offerings": [{ "name": string, "blurb": string (20-160) }, ...],',
     '  "valorAgregadoTitle": string (2-80),',
     '  "valorAgregadoIntro": string (20-240),',
     '  "bullets": [{ "title": string (2-60), "text": string (20-180) }, ... 4 or 6 items],',

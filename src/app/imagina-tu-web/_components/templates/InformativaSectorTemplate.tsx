@@ -1295,7 +1295,7 @@ function DishesGrid({
   fgOnSurface,
   accentBtn,
 }: {
-  dishes: { name: string; blurb: string }[];
+  dishes: { name: string; blurb: string; tagline?: string }[];
   cuisine: Cuisine;
   palette: { surface: string; accent: string; text: string };
   display: CSSProperties;
@@ -1303,11 +1303,17 @@ function DishesGrid({
   accentBtn: CSSProperties;
 }) {
   const photos = getCuisinePhotos(cuisine);
-  // Show as many dishes as the smaller of: AI items, photos available, 6.
-  const count = Math.min(dishes.length, photos.length, 6);
-  const visible = dishes.slice(0, count).map((d, i) => ({
-    ...d,
-    photo: photos[i % Math.max(photos.length, 1)],
+  // Always render ONE card per uploaded photo (capped at 6 for grid balance).
+  // If the AI returned fewer dishes than photos, cycle the dish data so no
+  // photo is left without a name/blurb.
+  const count = Math.min(photos.length, 6);
+  const dishesPool =
+    dishes.length > 0
+      ? dishes
+      : [{ name: "Plato del día", blurb: "Producto de mercado.", tagline: "Hoy en la pizarra" }];
+  const visible = Array.from({ length: count }, (_, i) => ({
+    ...dishesPool[i % dishesPool.length],
+    photo: photos[i],
   }));
 
   return (
@@ -1347,6 +1353,14 @@ function DishesGrid({
               >
                 {d.name}
               </h3>
+              {d.tagline && (
+                <p
+                  className="mt-1 text-xs font-semibold uppercase tracking-[0.14em]"
+                  style={{ color: palette.accent }}
+                >
+                  {d.tagline}
+                </p>
+              )}
               <p
                 className="mt-2 text-sm leading-relaxed"
                 style={{ color: fgOnSurface + "cc" }}

@@ -155,6 +155,10 @@ export const copyResponseSchema = z.object({
       z.object({
         name: z.string().trim().min(1).max(80),
         blurb: z.string().trim().min(20).max(160),
+        /** Optional short fun tagline shown under the name. Currently only
+         *  populated for restauración dishes ("Sabor a domingo", "Plato bandera",
+         *  etc.) but the schema allows it anywhere the AI sees fit. */
+        tagline: z.string().trim().min(2).max(40).optional(),
       }),
     )
     .min(1)

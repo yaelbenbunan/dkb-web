@@ -82,11 +82,29 @@ export function PreviewWizard() {
     heroImageDataUrl: string | null;
   } | null>(null);
   const loadedAt = useRef(Date.now());
+  const wizardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadedAt.current = Date.now();
     track("preview_wizard_start");
   }, []);
+
+  // On step change, scroll back to the start of the wizard so the new
+  // question's heading is visible. Without this, mobile users land in
+  // the middle of the next step because the "Siguiente" button was at
+  // the bottom of the previous one.
+  useEffect(() => {
+    wizardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [step]);
+
+  // When the preview lead is created, scroll to the very top of the page
+  // so the user sees the simulated web from its header — not mid-page
+  // where the form was.
+  useEffect(() => {
+    if (leadId) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [leadId]);
 
   const canAdvance = (): boolean => {
     switch (step) {
@@ -239,7 +257,7 @@ export function PreviewWizard() {
     // Preview mode: full-width below the site header, with disclaimer +
     // rating bar in a centered container above/below.
     return (
-      <div>
+      <div ref={wizardRef}>
         <div className="mx-auto max-w-6xl px-4 pt-6">
           <p className="rounded-lg border border-accent/30 bg-accent/5 px-4 py-3 text-sm text-fg-muted">
             ⚡ <strong className="text-fg">Esta es una vista rápida</strong>{" "}
@@ -268,7 +286,7 @@ export function PreviewWizard() {
   }
 
   return (
-    <section className="mx-auto max-w-3xl px-4 py-12 sm:py-20">
+    <section ref={wizardRef} className="mx-auto max-w-3xl px-4 py-12 sm:py-20">
       <div className="mb-10 text-center">
         <p className="mb-3 inline-block rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-accent">
           Vista rápida
