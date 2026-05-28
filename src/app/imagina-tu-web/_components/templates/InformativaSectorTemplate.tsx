@@ -11,6 +11,8 @@ import type { SectorInformativaCopyResponse } from "@/lib/preview-validation";
 import {
   SECTOR_ASSETS,
   getCuisinePhotos,
+  getFallbackDishes,
+  getRestauracionRolePhoto,
   isSupportedSector,
   type Cuisine,
   type SupportedSector,
@@ -655,6 +657,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
             display={display}
             photosMale={assets.photosMale}
             photosFemale={assets.photosFemale}
+            sector={data.sector}
           />
         </div>
       </section>
@@ -1094,12 +1097,14 @@ function TeamCarousel({
   display,
   photosMale,
   photosFemale,
+  sector,
 }: {
   team: { name: string; role: string; gender?: "male" | "female" }[];
   palette: { text: string; accent: string; surface: string };
   display: CSSProperties;
   photosMale: string[];
   photosFemale: string[];
+  sector: string;
 }) {
   const [offset, setOffset] = useState(0);
   useEffect(() => {
@@ -1107,21 +1112,41 @@ function TeamCarousel({
     return () => clearInterval(id);
   }, [team.length]);
 
-  // Per-member photo: pick by gender from the right pool, cycle by member index
-  // so a member always keeps the same photo across rotations.
+  // Per-member photo. For restauración, role keywords get priority over
+  // sequential gender-pool order so the chef-hat photo always lands on
+  // the chef role (and never on the sumiller / sala roles).
   const photoFor = useMemo(() => {
+    const taken = new Set<string>();
     let mIdx = 0;
     let fIdx = 0;
     return team.map((m) => {
       const g = m.gender ?? guessGender(m.name);
-      if (g === "female") {
-        const idx = fIdx++ % Math.max(photosFemale.length, 1);
-        return photosFemale[idx] ?? photosMale[0] ?? "";
+      // Sector-specific role-coded override (chef-hat photo → chef role).
+      if (sector === "restauracion") {
+        const override = getRestauracionRolePhoto(m.role, g);
+        if (override && !taken.has(override)) {
+          taken.add(override);
+          return override;
+        }
       }
-      const idx = mIdx++ % Math.max(photosMale.length, 1);
-      return photosMale[idx] ?? photosFemale[0] ?? "";
+      // Default: pick from gender pool in member order, skipping any photo
+      // already claimed by a role-keyword override.
+      const pool = g === "female" ? photosFemale : photosMale;
+      const ptr = g === "female" ? () => fIdx++ : () => mIdx++;
+      for (let attempts = 0; attempts < pool.length; attempts++) {
+        const idx = ptr() % pool.length;
+        const candidate = pool[idx];
+        if (candidate && !taken.has(candidate)) {
+          taken.add(candidate);
+          return candidate;
+        }
+      }
+      // Last resort: cycle without dedup.
+      const fallbackIdx =
+        (g === "female" ? fIdx : mIdx) % Math.max(pool.length, 1);
+      return pool[fallbackIdx] ?? photosMale[0] ?? photosFemale[0] ?? "";
     });
-  }, [team, photosMale, photosFemale]);
+  }, [team, photosMale, photosFemale, sector]);
 
   const visible = useMemo(() => {
     const arr: { member: typeof team[number]; photo: string }[] = [];
@@ -1304,17 +1329,23 @@ function DishesGrid({
 }) {
   const photos = getCuisinePhotos(cuisine);
   // Always render ONE card per uploaded photo (capped at 6 for grid balance).
-  // If the AI returned fewer dishes than photos, cycle the dish data so no
-  // photo is left without a name/blurb.
   const count = Math.min(photos.length, 6);
-  const dishesPool =
-    dishes.length > 0
-      ? dishes
-      : [{ name: "Plato del día", blurb: "Producto de mercado.", tagline: "Hoy en la pizarra" }];
+  // A "good" AI payload looks like {name: "Spaghetti...", blurb: "..."}.
+  // The cuisine fallback uses real Italian / Mexican / Japanese / etc. dish
+  // names so the cards NEVER show the cuisine slug itself (e.g. "Italiana")
+  // when the AI failed and the wizard's `offerings` was only the cuisine
+  // label.
+  const looksLikeAiResponse =
+    dishes.length >= 3 &&
+    dishes.some((d) => d.blurb && d.blurb.length > 10);
+  const dishesPool = looksLikeAiResponse ? dishes : getFallbackDishes(cuisine);
   const visible = Array.from({ length: count }, (_, i) => ({
     ...dishesPool[i % dishesPool.length],
     photo: photos[i],
   }));
+  // Use 4 columns when there are 4 cards (clean row), 3 columns otherwise
+  // (5/6 cards lay out cleanly as 3+2 or 3+3).
+  const gridColsClass = count === 4 ? "grid-cols-4" : "grid-cols-3";
 
   return (
     <>
@@ -1323,7 +1354,7 @@ function DishesGrid({
         whileInView="visible"
         viewport={VIEWPORT}
         variants={staggerParentVariants}
-        className="grid gap-6 grid-cols-3"
+        className={`grid gap-6 ${gridColsClass}`}
       >
         {visible.map((d, i) => (
           <motion.article

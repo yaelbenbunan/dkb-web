@@ -187,6 +187,11 @@ export function buildSectorInformativaCopyPrompt(input: PromptInput): string {
     "  Cada miembro debe incluir gender: 'male' o 'female' coherente con el nombre",
     "  (María/Lucía/Marta = female; Pablo/Javier/Marco = male). Si el nombre es",
     "  ambiguo (Andrea, Alex…), elige el género más probable.",
+    isRestauracion
+      ? "  IMPORTANTE: el PRIMER miembro del equipo debe ser el jefe/a de cocina\n" +
+        "  (rol más senior y visible). Ej. 'Carlos Rivas — Jefe de cocina'.\n" +
+        "  Los siguientes pueden ser sumiller, maître, cocinero/a, jefe/a de sala."
+      : "",
     "",
     "- testimonials: EXACTAMENTE entre 3 y 4 testimonios INVENTADOS pero realistas.",
     "  Cada uno: name (nombre + inicial de apellido, Ej. 'María G.') y text",

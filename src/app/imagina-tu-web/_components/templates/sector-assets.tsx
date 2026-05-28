@@ -405,6 +405,133 @@ export function getCuisinePhotos(cuisine: Cuisine): string[] {
     .flatMap((arr) => arr.slice(0, 3));
 }
 
+/** Cuisine-specific fallback dishes used when the AI didn't return a valid
+ *  `offerings` payload. Without these, restauración previews fall back to
+ *  the wizard's `offerings = [cuisineLabel]` which produces cards titled
+ *  "ITALIANA" instead of real dish names. */
+interface FallbackDish {
+  name: string;
+  tagline: string;
+  blurb: string;
+}
+
+const CUISINE_FALLBACK_DISHES: Record<Cuisine, FallbackDish[]> = {
+  italiana: [
+    {
+      name: "Spaghetti al pomodoro",
+      tagline: "Clásico imprescindible",
+      blurb:
+        "Pasta artesana, tomate San Marzano cocinado a fuego lento y un puñado de albahaca fresca.",
+    },
+    {
+      name: "Pizza Margherita",
+      tagline: "Receta napolitana",
+      blurb:
+        "Masa con masa madre, mozzarella di bufala y tomate de la huerta. Cocción al horno de leña.",
+    },
+    {
+      name: "Lasaña a la boloñesa",
+      tagline: "Sabor a domingo",
+      blurb:
+        "Capas de pasta fresca, ragù cocinado durante horas y bechamel cremosa al horno.",
+    },
+    {
+      name: "Tiramisú casero",
+      tagline: "Para terminar dulce",
+      blurb:
+        "Mascarpone, bizcochos de soletilla bañados en café espresso y un toque de cacao puro.",
+    },
+    {
+      name: "Risotto alla milanese",
+      tagline: "Plato bandera",
+      blurb:
+        "Arroz arborio, caldo de carne, azafrán y un nudo final de mantequilla y parmesano.",
+    },
+    {
+      name: "Burrata con tomate",
+      tagline: "Producto en primer plano",
+      blurb:
+        "Burrata di Andria, tomate rosa de temporada y aceite de oliva virgen extra. Sin más.",
+    },
+  ],
+  mexicana: [
+    { name: "Tacos al pastor", tagline: "Sabor de la calle", blurb: "Carne marinada con achiote y especias, piña fresca y cilantro." },
+    { name: "Guacamole tradicional", tagline: "Para empezar", blurb: "Aguacate, cebolla, cilantro, lima y chile servido con totopos crujientes." },
+    { name: "Enchiladas verdes", tagline: "Receta de la abuela", blurb: "Tortillas rellenas bañadas en salsa de tomatillo, crema y queso fresco." },
+    { name: "Mole poblano", tagline: "Plato bandera", blurb: "Salsa compleja con chiles, especias y chocolate, servida con pollo y arroz." },
+    { name: "Quesadilla de flor", tagline: "Hoy en la pizarra", blurb: "Tortilla recién hecha con flor de calabaza y queso oaxaca fundido." },
+    { name: "Chiles en nogada", tagline: "De temporada", blurb: "Chile poblano relleno con picadillo, salsa de nuez y granada." },
+  ],
+  japonesa: [
+    { name: "Nigiri de salmón", tagline: "Para empezar", blurb: "Arroz vinagrado y salmón fresco cortado a mano, un toque de wasabi." },
+    { name: "Ramen tonkotsu", tagline: "Reconfortante", blurb: "Caldo de cerdo cocinado 12 horas, fideos al huevo, chashu y huevo curado." },
+    { name: "Gyozas a la plancha", tagline: "Casi imprescindible", blurb: "Empanadillas de cerdo y verduras, doradas por una cara y al vapor por la otra." },
+    { name: "Tempura de verduras", tagline: "Ligera y crujiente", blurb: "Verduras de temporada en rebozado fino y crujiente, salsa tentsuyu." },
+    { name: "Sashimi variado", tagline: "Pescado del día", blurb: "Selección de pescado fresco cortado a cuchillo según mercado." },
+    { name: "Mochi de matcha", tagline: "Para terminar", blurb: "Pasta de arroz dulce rellena de helado de matcha." },
+  ],
+  tradicional: [
+    { name: "Tortilla de patatas", tagline: "Plato bandera", blurb: "Patata confitada en aceite de oliva, huevo de campo y cebolla pochada lentamente." },
+    { name: "Croquetas de jamón", tagline: "Casi imprescindible", blurb: "Bechamel cremosa con jamón ibérico, rebozadas y fritas al momento." },
+    { name: "Pulpo a la gallega", tagline: "Producto de Galicia", blurb: "Pulpo cocido, patata, pimentón de la Vera y aceite de oliva virgen extra." },
+    { name: "Solomillo al whisky", tagline: "Sabor de toda la vida", blurb: "Lomos de solomillo flambados con whisky, ajo y aceite de oliva." },
+    { name: "Pisto manchego", tagline: "De la huerta", blurb: "Pimiento, calabacín, cebolla y tomate cocinados a fuego lento con un huevo encima." },
+    { name: "Tarta de Santiago", tagline: "Para terminar dulce", blurb: "Almendra molida, huevo y azúcar. Sin gluten y con la cruz por encima." },
+  ],
+  otra: [
+    { name: "Plato de la casa", tagline: "Hoy en la pizarra", blurb: "Producto de temporada cocinado con criterio y atención al detalle." },
+    { name: "Tartar de atún", tagline: "Casi imprescindible", blurb: "Atún rojo cortado a cuchillo con soja, lima y aceite de oliva." },
+    { name: "Risotto del momento", tagline: "Receta de temporada", blurb: "Arroz cremoso con producto que entra esa semana al obrador." },
+    { name: "Ensalada de mercado", tagline: "Fresca y ligera", blurb: "Hojas, brotes y verduras según mercado, vinagreta de la casa." },
+    { name: "Pescado del día", tagline: "Producto en primer plano", blurb: "Pieza entera asada al horno con sus jugos y guarnición de huerta." },
+    { name: "Postre del chef", tagline: "Para terminar", blurb: "Creación dulce que cambia según ingredientes y antojo del pase." },
+  ],
+};
+
+export function getFallbackDishes(cuisine: Cuisine): FallbackDish[] {
+  return CUISINE_FALLBACK_DISHES[cuisine] ?? CUISINE_FALLBACK_DISHES.otra;
+}
+
+/** Role-coded photos for restauración. When the AI returns the team, we
+ *  match roles by keyword and route them to the photo that visually fits
+ *  (e.g. the chef-hat photo only goes to a chef-level role). */
+export interface RestauracionRoleHints {
+  chefMale: string;
+  chefFemale: string;
+  managerMale: string;
+  managerFemale: string;
+}
+
+export const RESTAURACION_ROLE_PHOTOS: RestauracionRoleHints = {
+  chefMale: "/img/imagina/restauracion/equipo/profesional-3.png", // male with chef hat
+  chefFemale: "/img/imagina/restauracion/equipo/profesional-4.png", // female with chef hat
+  managerMale: "/img/imagina/restauracion/equipo/profesional-5.png", // older man, shirt
+  managerFemale: "/img/imagina/restauracion/equipo/profesional-1.png", // woman with tablet
+};
+
+/** Pick the photo that best matches a given role keyword + gender. Returns
+ *  null if no specific override applies — caller should fall back to the
+ *  generic sequential gender-pool pick. */
+export function getRestauracionRolePhoto(
+  role: string,
+  gender: "male" | "female",
+): string | null {
+  const r = role.toLowerCase();
+  // Chef-level kitchen roles → the chef-hat photo.
+  if (/(chef|cocina|jefe de cocina|jefa de cocina|cociner)/.test(r)) {
+    return gender === "male"
+      ? RESTAURACION_ROLE_PHOTOS.chefMale
+      : RESTAURACION_ROLE_PHOTOS.chefFemale;
+  }
+  // Sala / gerencia roles → the older man / tablet-woman photo.
+  if (/(ma[iî]tre|sumiller|sommelier|gerente|manager|director|propietari|sala|atenci)/.test(r)) {
+    return gender === "male"
+      ? RESTAURACION_ROLE_PHOTOS.managerMale
+      : RESTAURACION_ROLE_PHOTOS.managerFemale;
+  }
+  return null;
+}
+
 export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
   salud: {
     photosAmbient: [
@@ -787,10 +914,10 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       bridgeHeadline: "Reserva tu mesa para hoy o mañana",
     },
     fallbackTeam: [
-      { name: "Marta Rivas", role: "Jefa de cocina", gender: "female" },
-      { name: "Javier Soler", role: "Sumiller", gender: "male" },
-      { name: "Lucía Méndez", role: "Maître", gender: "female" },
-      { name: "Pablo Iglesias", role: "Cocinero", gender: "male" },
+      { name: "Carlos Rivas", role: "Jefe de cocina", gender: "male" },
+      { name: "Marta Soler", role: "Jefa de sala", gender: "female" },
+      { name: "Andrés Méndez", role: "Sumiller", gender: "male" },
+      { name: "Lucía Iglesias", role: "Maître", gender: "female" },
     ],
     fallbackTestimonials: [
       {
