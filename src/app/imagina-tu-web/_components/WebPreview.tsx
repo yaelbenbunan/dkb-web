@@ -18,7 +18,7 @@ import {
   InformativaSectorTemplate,
   type InformativaSectorData,
 } from "./templates/InformativaSectorTemplate";
-import { isSupportedSector } from "./templates/sector-assets";
+import { isSupportedSector, type Cuisine } from "./templates/sector-assets";
 import type { CustomPaletteColors } from "@/lib/preview-themes";
 
 export interface WebPreviewData {
@@ -27,6 +27,8 @@ export interface WebPreviewData {
   businessName: string;
   sector: string;
   offerings: string[];
+  /** Only when sector === "restauracion" */
+  cuisine?: Cuisine | "";
   palette: string;
   /** Present only when palette === CUSTOM_PALETTE_SLUG */
   customColors?: CustomPaletteColors;

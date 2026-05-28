@@ -53,6 +53,10 @@ const customColorsSchema = z
   })
   .optional();
 
+const cuisineSchema = z
+  .enum(["mexicana", "italiana", "japonesa", "tradicional", "otra"])
+  .optional();
+
 // Optional logo: data URL (image/png|jpeg|webp|svg) up to ~700 KB.
 const logoDataUrlSchema = z
   .string()
@@ -75,6 +79,7 @@ const baseLead = z
       .array(offeringSchema)
       .min(1, "Añade al menos uno")
       .max(6, "Máximo 6"),
+    cuisine: cuisineSchema,
     palette: z.string().refine(isPaletteSlug, "Paleta inválida"),
     customColors: customColorsSchema,
     typography: z.string().refine(isTypographySlug, "Tipografía inválida"),
@@ -209,6 +214,7 @@ export const previewGenerateInputSchema = z.object({
   businessName: z.string().trim().min(2).max(60),
   sector: z.string().refine(isSectorSlug),
   offerings: z.array(z.string().trim().min(1).max(80)).min(1).max(6),
+  cuisine: cuisineSchema,
   palette: z.string().refine(isPaletteSlug),
   customColors: customColorsSchema,
   typography: z.string().refine(isTypographySlug),

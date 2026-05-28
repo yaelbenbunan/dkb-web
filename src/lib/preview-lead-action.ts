@@ -40,6 +40,7 @@ export async function sendPreviewLead(
     businessName: formData.get("businessName"),
     sector: formData.get("sector"),
     offerings: parseOfferings(formData.get("offerings")),
+    cuisine: formData.get("cuisine") || undefined,
     palette: formData.get("palette"),
     customColors: parseCustomColors(formData.get("customColors")),
     typography: formData.get("typography"),

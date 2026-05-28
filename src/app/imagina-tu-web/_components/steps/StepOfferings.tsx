@@ -1,13 +1,88 @@
 "use client";
 
 import { useState } from "react";
+import {
+  CUISINES,
+  type Cuisine,
+} from "../templates/sector-assets";
 
 interface Props {
+  /** Free-text offerings list (used by every sector EXCEPT restauración) */
   value: string[];
-  onChange: (v: string[]) => void;
+  /** Sector slug — picks which UI to show */
+  sector: string;
+  /** Selected cuisine, only meaningful when sector === "restauracion" */
+  cuisine: Cuisine | "";
+  onChange: (next: { offerings: string[]; cuisine: Cuisine | "" }) => void;
 }
 
-export function StepOfferings({ value, onChange }: Props) {
+export function StepOfferings({ value, sector, cuisine, onChange }: Props) {
+  if (sector === "restauracion") {
+    return (
+      <CuisinePicker
+        cuisine={cuisine}
+        onPick={(c) => {
+          const label = CUISINES.find((x) => x.slug === c)?.label ?? "";
+          // Mirror the choice into `offerings` so the schema (which still
+          // requires at least 1 item) is happy. The template ignores this
+          // field for restauración and uses cuisine + AI-generated dishes
+          // instead.
+          onChange({ offerings: [label], cuisine: c });
+        }}
+      />
+    );
+  }
+  return (
+    <FreeTextOfferings
+      value={value}
+      onChange={(next) => onChange({ offerings: next, cuisine: "" })}
+    />
+  );
+}
+
+function CuisinePicker({
+  cuisine,
+  onPick,
+}: {
+  cuisine: Cuisine | "";
+  onPick: (c: Cuisine) => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold">¿Qué tipo de cocina hacéis?</h2>
+        <p className="mt-2 text-sm text-fg-muted">
+          Elige la que mejor encaje. Con tu elección mostraremos platos del
+          estilo que cocinas.
+        </p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {CUISINES.map((c) => (
+          <button
+            key={c.slug}
+            type="button"
+            onClick={() => onPick(c.slug)}
+            className={`rounded-xl border-2 p-4 text-left transition ${
+              cuisine === c.slug
+                ? "border-accent bg-accent/10"
+                : "border-border hover:border-accent/50"
+            }`}
+          >
+            <p className="text-base font-semibold">{c.label}</p>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FreeTextOfferings({
+  value,
+  onChange,
+}: {
+  value: string[];
+  onChange: (next: string[]) => void;
+}) {
   const [draft, setDraft] = useState("");
 
   const add = () => {

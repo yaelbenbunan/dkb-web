@@ -18,6 +18,10 @@ export interface PromptInput {
   businessType: "informativa" | "ecommerce";
   ecommerceKind?: "productos" | "servicios";
   offerings: string[];
+  /** Only when sector === "restauracion" — cuisine label like "Italiana",
+   *  "Mexicana", "Tradicional / mediterránea", etc. The AI uses it to
+   *  invent 6 typical dish names with sensory blurbs. */
+  cuisineLabel?: string;
   valueProp: string;
   paletteSlug: string;
   paletteAccent: string;
@@ -38,6 +42,16 @@ interface SectorPromptHints {
 }
 
 const SECTOR_PROMPT_HINTS: Record<string, SectorPromptHints> = {
+  restauracion: {
+    expertContext:
+      "restaurantes, bistros, gastrobares y proyectos de restauración (cocina tradicional, italiana, japonesa, mexicana, fusión, etc.)",
+    audienceNoun: "comensal",
+    offeringNoun: "plato",
+    ctaExamples:
+      "'Reserva tu mesa', 'Pide tu mesa', 'Cena con nosotros'",
+    teamRoleExamples:
+      "'Jefe/a de cocina', 'Sumiller', 'Maître', 'Cocinero/a'",
+  },
   salud: {
     expertContext:
       "clínicas y centros del sector salud (médico, dental, estética, fisioterapia, óptica, veterinaria, etc.)",
@@ -97,6 +111,7 @@ function getSectorHints(sectorLabel: string): SectorPromptHints {
   if (slug.includes("educac")) return SECTOR_PROMPT_HINTS.educacion;
   if (slug.includes("moda")) return SECTOR_PROMPT_HINTS.moda;
   if (slug.includes("tecnolog")) return SECTOR_PROMPT_HINTS.tecnologia;
+  if (slug.includes("restaur")) return SECTOR_PROMPT_HINTS.restauracion;
   if (slug.includes("servicio")) return SECTOR_PROMPT_HINTS.servicios;
   return DEFAULT_HINTS;
 }
@@ -104,6 +119,13 @@ function getSectorHints(sectorLabel: string): SectorPromptHints {
 export function buildSectorInformativaCopyPrompt(input: PromptInput): string {
   const hints = getSectorHints(input.sectorLabel);
   const normalizedOfferings = input.offerings.map(normalizeOffering);
+  const isRestauracion = !!input.cuisineLabel;
+  // Restauración doesn't take a free-list of offerings — the user picks a
+  // cuisine and we ask the AI to invent 6 typical dishes for that cuisine.
+  const offeringsExpected = isRestauracion ? 6 : input.offerings.length;
+  const offeringsLine = isRestauracion
+    ? `Cocina elegida: ${input.cuisineLabel}`
+    : `Servicios/${hints.offeringNoun}s: ${normalizedOfferings.join(", ")}`;
   return [
     `Eres copywriter web especializado en ${hints.expertContext}.`,
     "El usuario rellenó un cuestionario para generar el preview de su web.",
@@ -112,7 +134,7 @@ export function buildSectorInformativaCopyPrompt(input: PromptInput): string {
     `Negocio: ${input.businessName}`,
     `Sector: ${input.sectorLabel}`,
     `Tipo: Web informativa`,
-    `Servicios/${hints.offeringNoun}s: ${normalizedOfferings.join(", ")}`,
+    offeringsLine,
     `Valor agregado escrito por el usuario: "${input.valueProp}"`,
     "",
     "🚨 REGLA CRÍTICA DE COHERENCIA DE SECTOR:",
@@ -141,7 +163,12 @@ export function buildSectorInformativaCopyPrompt(input: PromptInput): string {
     `- heroTagline: explica qué hace el negocio y por qué elegirlo, sin métricas inventadas.`,
     `- ctaText: invitación a contactar/contratar (Ej. ${hints.ctaExamples}).`,
     `- sectionTitle: titular para la lista de ${hints.offeringNoun}s.`,
-    `- offerings[].blurb: una frase concreta y honesta sobre cada ${hints.offeringNoun}.`,
+    isRestauracion
+      ? "- offerings[]: EXACTAMENTE 6 platos típicos de la cocina elegida.\n" +
+        "  Cada uno con name (nombre del plato, ej. 'Tartar de atún rojo')\n" +
+        "  y blurb (1 frase sensorial: textura, ingredientes destacados,\n" +
+        "  preparación. SIN precios, sin números inventados, sin marketing speak)."
+      : `- offerings[].blurb: una frase concreta y honesta sobre cada ${hints.offeringNoun}.`,
     "",
     "- valorAgregadoTitle: titular corto para la sección de valor agregado",
     "  (ej. 'Por qué elegirnos', 'Cuidamos cada detalle').",
@@ -175,8 +202,10 @@ export function buildSectorInformativaCopyPrompt(input: PromptInput): string {
     '  "team": [{ "name": string, "role": string, "gender": "male" | "female" }, ... 4-6 items],',
     '  "testimonials": [{ "name": string, "text": string (40-280) }, ... 3-4 items]',
     "}",
-    `Debes devolver EXACTAMENTE ${input.offerings.length} entradas en "offerings",`,
-    "una por cada servicio listado arriba, en el mismo orden.",
+    `Debes devolver EXACTAMENTE ${offeringsExpected} entradas en "offerings".`,
+    isRestauracion
+      ? `Son 6 platos típicos de la cocina ${input.cuisineLabel}, en el orden que tú prefieras.`
+      : "Una por cada servicio listado arriba, en el mismo orden.",
   ].join("\n");
 }
 

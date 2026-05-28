@@ -26,14 +26,16 @@ export interface PreviewGenerateResult {
   error?: string;
 }
 
-// Sectors that have their own `InformativaSectorTemplate` rendering path.
-// "restauracion" is intentionally excluded — it will get a bespoke template.
+// Sectors handled by `InformativaSectorTemplate`. Restauración shares the
+// same template but renders a "Especialidades de la casa" dish grid in
+// place of the Servicios cards.
 const SECTOR_INFORMATIVA_SECTORS = new Set<string>([
   "salud",
   "educacion",
   "moda",
   "tecnologia",
   "servicios",
+  "restauracion",
 ]);
 
 function useSectorInformativa(input: PreviewGenerateInput): boolean {
@@ -70,12 +72,25 @@ export async function generatePreview(
   const template: "informativa" | "ecommerce" =
     parsed.data.businessType === "ecommerce" ? "ecommerce" : "informativa";
 
+  // Map cuisine slug to a human-readable label that the AI can read.
+  const cuisineLabel =
+    parsed.data.cuisine && parsed.data.sector === "restauracion"
+      ? {
+          mexicana: "Mexicana",
+          italiana: "Italiana",
+          japonesa: "Japonesa / asiática",
+          tradicional: "Tradicional / mediterránea",
+          otra: "Cocina variada / fusión",
+        }[parsed.data.cuisine]
+      : undefined;
+
   const promptInput: PromptInput = {
     businessName: parsed.data.businessName,
     sectorLabel: getSectorLabel(parsed.data.sector),
     businessType: parsed.data.businessType,
     ecommerceKind: parsed.data.ecommerceKind,
     offerings: parsed.data.offerings,
+    cuisineLabel,
     valueProp: parsed.data.valueProp,
     paletteSlug: palette.slug,
     paletteAccent: palette.accent,

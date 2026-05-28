@@ -191,6 +191,46 @@ export const IconGear = (p: IconProps) => (
   </svg>
 );
 
+// --- RESTAURACION ----------------------------------------------------------
+export const IconUtensils = (p: IconProps) => (
+  <svg {...baseSvg} {...p}>
+    <path d="M7 2v8M7 10c-1.5 0-2.5 1-2.5 2.5V21M11 2v6a2 2 0 0 1-4 0V2" />
+    <path d="M17 2c-2 0-3.5 1.5-3.5 4v6h3V21h3V2c-1 0-2.5.5-2.5 0z" />
+  </svg>
+);
+export const IconChefHat = (p: IconProps) => (
+  <svg {...baseSvg} {...p}>
+    <path d="M6 14a4 4 0 0 1 0-8 5 5 0 0 1 9-2 5 5 0 0 1 5 2 4 4 0 0 1 0 8" />
+    <path d="M6 14h12v6c0 1-1 2-2 2H8c-1 0-2-1-2-2v-6z" />
+  </svg>
+);
+export const IconWineGlass = (p: IconProps) => (
+  <svg {...baseSvg} {...p}>
+    <path d="M7 3h10v6a5 5 0 0 1-10 0V3z" />
+    <path d="M12 14v7M8 21h8" />
+  </svg>
+);
+export const IconPlate = (p: IconProps) => (
+  <svg {...baseSvg} {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <circle cx="12" cy="12" r="5" />
+  </svg>
+);
+export const IconLeafFresh = (p: IconProps) => (
+  <svg {...baseSvg} {...p}>
+    <path d="M4 20c10 0 16-6 16-16-8 0-16 4-16 14a3 3 0 0 0 0 2z" />
+    <path d="M4 20l8-8" />
+  </svg>
+);
+export const IconCake = (p: IconProps) => (
+  <svg {...baseSvg} {...p}>
+    <path d="M5 11h14v9H5z" />
+    <path d="M5 15h14" />
+    <path d="M9 11V8a3 3 0 0 1 6 0v3" />
+    <path d="M12 5V3" />
+  </svg>
+);
+
 // --- SERVICIOS -------------------------------------------------------------
 export const IconBriefcase = (p: IconProps) => (
   <svg {...baseSvg} {...p}>
@@ -310,7 +350,60 @@ export type SupportedSector =
   | "educacion"
   | "moda"
   | "tecnologia"
-  | "servicios";
+  | "servicios"
+  | "restauracion";
+
+// Cuisine types offered when sector === "restauracion". The dish photos for
+// the "Especialidades de la casa" section come from per-cuisine subfolders
+// in /img/imagina/restauracion/platos/<cuisine>/. "Otra" doesn't have its
+// own folder — the helper below mixes 1-2 photos from each of the four
+// cuisines so the user gets a varied display.
+export type Cuisine =
+  | "mexicana"
+  | "italiana"
+  | "japonesa"
+  | "tradicional"
+  | "otra";
+
+export const CUISINES: { slug: Cuisine; label: string }[] = [
+  { slug: "tradicional", label: "Tradicional / mediterránea" },
+  { slug: "italiana", label: "Italiana" },
+  { slug: "japonesa", label: "Japonesa / asiática" },
+  { slug: "mexicana", label: "Mexicana" },
+  { slug: "otra", label: "Otra / fusión" },
+];
+
+// IMPORTANT: only list paths that ACTUALLY exist on disk. The browser will
+// 404 on missing files, so keep these arrays in sync with what's been
+// uploaded to public/img/imagina/restauracion/platos/<cuisine>/. Buckets
+// that are still empty stay as empty arrays so the fallback in
+// `getCuisinePhotos` kicks in.
+const CUISINE_PHOTOS: Record<Exclude<Cuisine, "otra">, string[]> = {
+  mexicana: [],
+  italiana: [
+    "/img/imagina/restauracion/platos/italiana/foto-1.jpg",
+    "/img/imagina/restauracion/platos/italiana/foto-2.jpg",
+    "/img/imagina/restauracion/platos/italiana/foto-3.jpg",
+    "/img/imagina/restauracion/platos/italiana/foto-4.jpg",
+  ],
+  japonesa: [],
+  tradicional: [],
+};
+
+/** Returns the dish photos to render for the chosen cuisine. For "otra"
+ *  — or for any cuisine whose bucket is still empty — it falls back to a
+ *  mix of photos from whichever buckets DO have content. */
+export function getCuisinePhotos(cuisine: Cuisine): string[] {
+  if (cuisine !== "otra") {
+    const requested = CUISINE_PHOTOS[cuisine];
+    if (requested && requested.length > 0) return requested;
+  }
+  // Fallback: every populated bucket contributes (otra = up to 2 from each,
+  // empty-bucket fallback = whatever happens to be available).
+  return Object.values(CUISINE_PHOTOS)
+    .filter((arr) => arr.length > 0)
+    .flatMap((arr) => arr.slice(0, 3));
+}
 
 export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
   salud: {
@@ -643,6 +736,74 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       {
         name: "Sofía P.",
         text: "Resolvieron en días lo que llevaba meses atascado. Recomendados.",
+      },
+    ],
+  },
+  restauracion: {
+    photosAmbient: [
+      "/img/imagina/restauracion/valor-agregado/foto-1.png",
+      "/img/imagina/restauracion/valor-agregado/foto-2.png",
+      "/img/imagina/restauracion/valor-agregado/foto-3.png",
+      "/img/imagina/restauracion/valor-agregado/foto-4.png",
+      "/img/imagina/restauracion/valor-agregado/foto-5.png",
+    ],
+    photosMale: [
+      "/img/imagina/restauracion/equipo/profesional-3.png",
+      "/img/imagina/restauracion/equipo/profesional-5.png",
+    ],
+    photosFemale: [
+      "/img/imagina/restauracion/equipo/profesional-1.png",
+      "/img/imagina/restauracion/equipo/profesional-2.png",
+      "/img/imagina/restauracion/equipo/profesional-4.png",
+      "/img/imagina/restauracion/equipo/profesional-6.png",
+    ],
+    serviceIcons: [
+      IconUtensils,
+      IconChefHat,
+      IconWineGlass,
+      IconPlate,
+      IconLeafFresh,
+      IconCake,
+    ],
+    labels: {
+      ratingText: "Cocina con alma 5★",
+      teamSectionTitle: "Nuestro equipo",
+      teamSectionSubtitle:
+        "Cocina, sala y atención que cuidan cada detalle del paso por el restaurante.",
+      testimonialAuthorLabel: "Comensal",
+      defaultCtaText: "Reserva tu mesa",
+      defaultServicesTitle: "Especialidades de la casa",
+      defaultValorAgregadoTitle: "Por qué elegirnos",
+      defaultValorAgregadoIntro:
+        "Producto de temporada, cocina con criterio y una sala que sabe acompañar la experiencia.",
+      navServicesLabel: "Carta",
+      servicesSectionPill: "Carta",
+      servicesSectionSubtitle:
+        "Una selección de platos que define nuestra cocina y la mesa que ofrecemos.",
+      formTitle: "Reserva tu mesa",
+      formSubmitText: "Reservar mesa",
+      contactSectionSubtitle:
+        "Reserva tu mesa o pregúntanos lo que necesites. Estamos para acompañar tu visita.",
+      bridgeHeadline: "Reserva tu mesa para hoy o mañana",
+    },
+    fallbackTeam: [
+      { name: "Marta Rivas", role: "Jefa de cocina", gender: "female" },
+      { name: "Javier Soler", role: "Sumiller", gender: "male" },
+      { name: "Lucía Méndez", role: "Maître", gender: "female" },
+      { name: "Pablo Iglesias", role: "Cocinero", gender: "male" },
+    ],
+    fallbackTestimonials: [
+      {
+        name: "María G.",
+        text: "Una experiencia redonda en {businessName}. El producto se nota desde la primera cucharada.",
+      },
+      {
+        name: "Andrés L.",
+        text: "Sala atenta sin agobiar, platos con identidad propia. Volveremos sin duda.",
+      },
+      {
+        name: "Sofía P.",
+        text: "El sumiller bordó el maridaje. Cena que recuerdas semanas después.",
       },
     ],
   },

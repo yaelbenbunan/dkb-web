@@ -10,7 +10,9 @@ import {
 import type { SectorInformativaCopyResponse } from "@/lib/preview-validation";
 import {
   SECTOR_ASSETS,
+  getCuisinePhotos,
   isSupportedSector,
+  type Cuisine,
   type SupportedSector,
 } from "./sector-assets";
 
@@ -53,6 +55,8 @@ export interface InformativaSectorData {
   /** Sector slug — must be one of `SupportedSector` for the template to render */
   sector: string;
   offerings: string[];
+  /** Only when sector === "restauracion" */
+  cuisine?: Cuisine | "";
   palette: string;
   /** Present only when palette === CUSTOM_PALETTE_SLUG */
   customColors?: CustomPaletteColors;
@@ -687,80 +691,93 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
               {assets.labels.servicesSectionSubtitle}
             </p>
           </motion.div>
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={VIEWPORT}
-            variants={staggerParentVariants}
-            className="grid gap-6 grid-cols-4"
-          >
-            {services.slice(0, 4).map((s, i) => {
-              const Icon = SERVICE_ICONS[i % SERVICE_ICONS.length];
-              return (
-                <motion.article
-                  key={i}
-                  variants={staggerChildVariants}
-                  className="group relative overflow-hidden rounded-3xl border p-6 shadow-sm transition hover:-translate-y-2 hover:shadow-xl"
-                  style={{
-                    backgroundColor: palette.surface,
-                    color: fgOnSurface,
-                    borderColor: palette.accent + "1f",
-                  }}
-                >
-                  <div
-                    aria-hidden
-                    className="absolute right-0 top-0 size-32 -translate-y-1/2 translate-x-1/2 rounded-full transition group-hover:scale-150"
-                    style={{ backgroundColor: palette.accent + "12" }}
-                  />
-                  <span
-                    className="relative grid size-14 place-items-center rounded-2xl"
-                    style={{
-                      background: `linear-gradient(135deg, ${palette.accent}22, ${palette.accent}11)`,
-                      color: palette.accent,
-                    }}
-                    aria-hidden
-                  >
-                    <Icon className="size-7" />
-                  </span>
-                  <h3
-                    style={{ ...display, color: fgOnSurface }}
-                    className="relative mt-5 text-lg font-bold"
-                  >
-                    {titleize(s.name)}
-                  </h3>
-                  <p
-                    className="relative mt-2 text-sm leading-relaxed"
-                    style={{ color: fgOnSurface + "cc" }}
-                  >
-                    {s.blurb ||
-                      `${assets.labels.defaultServicesTitle.replace(
-                        "Nuestros ",
-                        "",
-                      )} adaptados a tus necesidades.`}
-                  </p>
+          {data.sector === "restauracion" ? (
+            <DishesGrid
+              dishes={services}
+              cuisine={data.cuisine || "otra"}
+              palette={palette}
+              display={display}
+              fgOnSurface={fgOnSurface}
+              accentBtn={accentBtn}
+            />
+          ) : (
+            <>
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={VIEWPORT}
+                variants={staggerParentVariants}
+                className="grid gap-6 grid-cols-4"
+              >
+                {services.slice(0, 4).map((s, i) => {
+                  const Icon = SERVICE_ICONS[i % SERVICE_ICONS.length];
+                  return (
+                    <motion.article
+                      key={i}
+                      variants={staggerChildVariants}
+                      className="group relative overflow-hidden rounded-3xl border p-6 shadow-sm transition hover:-translate-y-2 hover:shadow-xl"
+                      style={{
+                        backgroundColor: palette.surface,
+                        color: fgOnSurface,
+                        borderColor: palette.accent + "1f",
+                      }}
+                    >
+                      <div
+                        aria-hidden
+                        className="absolute right-0 top-0 size-32 -translate-y-1/2 translate-x-1/2 rounded-full transition group-hover:scale-150"
+                        style={{ backgroundColor: palette.accent + "12" }}
+                      />
+                      <span
+                        className="relative grid size-14 place-items-center rounded-2xl"
+                        style={{
+                          background: `linear-gradient(135deg, ${palette.accent}22, ${palette.accent}11)`,
+                          color: palette.accent,
+                        }}
+                        aria-hidden
+                      >
+                        <Icon className="size-7" />
+                      </span>
+                      <h3
+                        style={{ ...display, color: fgOnSurface }}
+                        className="relative mt-5 text-lg font-bold"
+                      >
+                        {titleize(s.name)}
+                      </h3>
+                      <p
+                        className="relative mt-2 text-sm leading-relaxed"
+                        style={{ color: fgOnSurface + "cc" }}
+                      >
+                        {s.blurb ||
+                          `${assets.labels.defaultServicesTitle.replace(
+                            "Nuestros ",
+                            "",
+                          )} adaptados a tus necesidades.`}
+                      </p>
+                      <button
+                        type="button"
+                        style={accentText}
+                        className="relative mt-4 inline-flex items-center gap-1 text-sm font-semibold"
+                      >
+                        Ver más
+                        <IconArrowRight className="size-4" />
+                      </button>
+                    </motion.article>
+                  );
+                })}
+              </motion.div>
+              {services.length > 4 && (
+                <div className="mt-10 flex justify-center">
                   <button
                     type="button"
-                    style={accentText}
-                    className="relative mt-4 inline-flex items-center gap-1 text-sm font-semibold"
+                    style={accentBtn}
+                    className="inline-flex h-12 items-center gap-2 rounded-full px-7 text-sm font-semibold transition hover:scale-[1.03]"
                   >
-                    Ver más
+                    Ver todos los {servicesTitle.replace(/^Nuestros?\s+/i, "").toLowerCase()}
                     <IconArrowRight className="size-4" />
                   </button>
-                </motion.article>
-              );
-            })}
-          </motion.div>
-          {services.length > 4 && (
-            <div className="mt-10 flex justify-center">
-              <button
-                type="button"
-                style={accentBtn}
-                className="inline-flex h-12 items-center gap-2 rounded-full px-7 text-sm font-semibold transition hover:scale-[1.03]"
-              >
-                Ver todos los {servicesTitle.replace(/^Nuestros?\s+/i, "").toLowerCase()}
-                <IconArrowRight className="size-4" />
-              </button>
-            </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>
@@ -1264,5 +1281,92 @@ function TestimonialsCarousel({
         );
       })}
     </div>
+  );
+}
+
+/** "Especialidades de la casa" — grid of dish cards used in the restauración
+ *  branch of the services section. Each card shows a real photo from the
+ *  selected cuisine bucket, plus the AI-generated dish name and blurb. */
+function DishesGrid({
+  dishes,
+  cuisine,
+  palette,
+  display,
+  fgOnSurface,
+  accentBtn,
+}: {
+  dishes: { name: string; blurb: string }[];
+  cuisine: Cuisine;
+  palette: { surface: string; accent: string; text: string };
+  display: CSSProperties;
+  fgOnSurface: string;
+  accentBtn: CSSProperties;
+}) {
+  const photos = getCuisinePhotos(cuisine);
+  // Show as many dishes as the smaller of: AI items, photos available, 6.
+  const count = Math.min(dishes.length, photos.length, 6);
+  const visible = dishes.slice(0, count).map((d, i) => ({
+    ...d,
+    photo: photos[i % Math.max(photos.length, 1)],
+  }));
+
+  return (
+    <>
+      <motion.div
+        initial="hidden"
+        whileInView="visible"
+        viewport={VIEWPORT}
+        variants={staggerParentVariants}
+        className="grid gap-6 grid-cols-3"
+      >
+        {visible.map((d, i) => (
+          <motion.article
+            key={i}
+            variants={staggerChildVariants}
+            className="group overflow-hidden rounded-3xl border shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
+            style={{
+              backgroundColor: palette.surface,
+              borderColor: palette.accent + "1f",
+            }}
+          >
+            <div className="aspect-square overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={d.photo}
+                alt={d.name}
+                className="size-full object-cover transition group-hover:scale-105"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+            </div>
+            <div className="p-5">
+              <h3
+                style={{ ...display, color: fgOnSurface }}
+                className="text-lg font-bold"
+              >
+                {d.name}
+              </h3>
+              <p
+                className="mt-2 text-sm leading-relaxed"
+                style={{ color: fgOnSurface + "cc" }}
+              >
+                {d.blurb}
+              </p>
+            </div>
+          </motion.article>
+        ))}
+      </motion.div>
+      <div className="mt-10 flex justify-center">
+        <button
+          type="button"
+          style={accentBtn}
+          className="inline-flex h-12 items-center gap-2 rounded-full px-7 text-sm font-semibold transition hover:scale-[1.03]"
+        >
+          Ver carta completa
+          <IconArrowRight className="size-4" />
+        </button>
+      </div>
+    </>
   );
 }

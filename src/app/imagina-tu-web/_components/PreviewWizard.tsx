@@ -21,6 +21,7 @@ import {
   type SectorInformativaCopyResponse,
 } from "@/lib/preview-validation";
 import type { CustomPaletteColors } from "@/lib/preview-themes";
+import type { Cuisine } from "./templates/sector-assets";
 
 interface WizardState {
   businessType: "informativa" | "ecommerce" | null;
@@ -28,6 +29,8 @@ interface WizardState {
   businessName: string;
   sector: string;
   offerings: string[];
+  /** Set only when `sector === "restauracion"` */
+  cuisine: Cuisine | "";
   palette: string;
   /** Set only when `palette === CUSTOM_PALETTE_SLUG` */
   customColors: CustomPaletteColors | null;
@@ -49,6 +52,7 @@ const INITIAL: WizardState = {
   businessName: "",
   sector: "",
   offerings: [],
+  cuisine: "",
   palette: "",
   customColors: null,
   typography: "",
@@ -94,6 +98,7 @@ export function PreviewWizard() {
       case 2:
         return state.businessName.trim().length >= 2 && !!state.sector;
       case 3:
+        if (state.sector === "restauracion") return !!state.cuisine;
         return state.offerings.length >= 1 && state.offerings.length <= 6;
       case 4:
         return !!state.palette;
@@ -133,6 +138,7 @@ export function PreviewWizard() {
     fd.set("businessName", state.businessName);
     fd.set("sector", state.sector);
     fd.set("offerings", JSON.stringify(state.offerings));
+    if (state.cuisine) fd.set("cuisine", state.cuisine);
     fd.set("palette", state.palette);
     if (state.customColors) {
       fd.set("customColors", JSON.stringify(state.customColors));
@@ -166,6 +172,7 @@ export function PreviewWizard() {
           businessName: state.businessName,
           sector: state.sector,
           offerings: state.offerings,
+          cuisine: state.cuisine || undefined,
           palette: state.palette,
           customColors: state.customColors ?? undefined,
           typography: state.typography,
@@ -211,6 +218,7 @@ export function PreviewWizard() {
       businessName: state.businessName,
       sector: state.sector,
       offerings: state.offerings,
+      cuisine: state.cuisine || undefined,
       palette: state.palette,
       customColors: state.customColors ?? undefined,
       typography: state.typography,
@@ -316,7 +324,11 @@ export function PreviewWizard() {
         {step === 3 && (
           <StepOfferings
             value={state.offerings}
-            onChange={(v) => setState({ ...state, offerings: v })}
+            sector={state.sector}
+            cuisine={state.cuisine}
+            onChange={(v) =>
+              setState({ ...state, offerings: v.offerings, cuisine: v.cuisine })
+            }
           />
         )}
         {step === 4 && (
