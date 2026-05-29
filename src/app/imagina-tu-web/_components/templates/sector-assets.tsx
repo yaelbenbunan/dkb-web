@@ -359,22 +359,23 @@ export type SupportedSector =
 
 // Cuisine types offered when sector === "restauracion". The dish photos for
 // the "Especialidades de la casa" section come from per-cuisine subfolders
-// in /img/imagina/restauracion/platos/<cuisine>/. "Otra" doesn't have its
-// own folder — the helper below mixes 1-2 photos from each of the four
-// cuisines so the user gets a varied display.
+// in /img/imagina/restauracion/platos/<cuisine>/. "Fusión" still works as a
+// fallback that mixes photos from whatever buckets do have content.
 export type Cuisine =
-  | "mexicana"
-  | "italiana"
-  | "japonesa"
   | "tradicional"
-  | "otra";
+  | "italiana"
+  | "asiatica"
+  | "mexicana"
+  | "americana"
+  | "fusion";
 
 export const CUISINES: { slug: Cuisine; label: string }[] = [
   { slug: "tradicional", label: "Tradicional / mediterránea" },
   { slug: "italiana", label: "Italiana" },
-  { slug: "japonesa", label: "Japonesa / asiática" },
-  { slug: "mexicana", label: "Mexicana" },
-  { slug: "otra", label: "Otra / fusión" },
+  { slug: "asiatica", label: "Asiática (japonesa, china, tailandesa…)" },
+  { slug: "mexicana", label: "Mexicana / latina" },
+  { slug: "americana", label: "Americana / burger / BBQ" },
+  { slug: "fusion", label: "Fusión / autor" },
 ];
 
 // IMPORTANT: only list paths that ACTUALLY exist on disk. The browser will
@@ -382,28 +383,46 @@ export const CUISINES: { slug: Cuisine; label: string }[] = [
 // uploaded to public/img/imagina/restauracion/platos/<cuisine>/. Buckets
 // that are still empty stay as empty arrays so the fallback in
 // `getCuisinePhotos` kicks in.
-const CUISINE_PHOTOS: Record<Exclude<Cuisine, "otra">, string[]> = {
-  mexicana: [],
+const CUISINE_PHOTOS: Record<Cuisine, string[]> = {
+  tradicional: [
+    "/img/imagina/restauracion/platos/tradicional/39.jpg",
+    "/img/imagina/restauracion/platos/tradicional/40.jpg",
+    "/img/imagina/restauracion/platos/tradicional/41.jpg",
+  ],
   italiana: [
     "/img/imagina/restauracion/platos/italiana/foto-1.jpg",
     "/img/imagina/restauracion/platos/italiana/foto-2.jpg",
     "/img/imagina/restauracion/platos/italiana/foto-3.jpg",
     "/img/imagina/restauracion/platos/italiana/foto-4.jpg",
   ],
-  japonesa: [],
-  tradicional: [],
+  asiatica: [
+    "/img/imagina/restauracion/platos/asiatica/36.jpg",
+    "/img/imagina/restauracion/platos/asiatica/37.jpg",
+    "/img/imagina/restauracion/platos/asiatica/38.jpg",
+  ],
+  mexicana: [
+    "/img/imagina/restauracion/platos/mexicana/42.jpg",
+    "/img/imagina/restauracion/platos/mexicana/43.jpg",
+    "/img/imagina/restauracion/platos/mexicana/44.jpg",
+  ],
+  americana: [
+    "/img/imagina/restauracion/platos/americana/48.jpg",
+    "/img/imagina/restauracion/platos/americana/49.jpg",
+    "/img/imagina/restauracion/platos/americana/50.jpg",
+  ],
+  fusion: [
+    "/img/imagina/restauracion/platos/fusion/45.jpg",
+    "/img/imagina/restauracion/platos/fusion/46.jpg",
+    "/img/imagina/restauracion/platos/fusion/47.jpg",
+  ],
 };
 
-/** Returns the dish photos to render for the chosen cuisine. For "otra"
- *  — or for any cuisine whose bucket is still empty — it falls back to a
- *  mix of photos from whichever buckets DO have content. */
+/** Returns the dish photos to render for the chosen cuisine. If the bucket
+ *  for the chosen cuisine is empty, falls back to a mix of photos from
+ *  whichever buckets DO have content. */
 export function getCuisinePhotos(cuisine: Cuisine): string[] {
-  if (cuisine !== "otra") {
-    const requested = CUISINE_PHOTOS[cuisine];
-    if (requested && requested.length > 0) return requested;
-  }
-  // Fallback: every populated bucket contributes (otra = up to 2 from each,
-  // empty-bucket fallback = whatever happens to be available).
+  const requested = CUISINE_PHOTOS[cuisine];
+  if (requested && requested.length > 0) return requested;
   return Object.values(CUISINE_PHOTOS)
     .filter((arr) => arr.length > 0)
     .flatMap((arr) => arr.slice(0, 3));
@@ -466,12 +485,12 @@ const CUISINE_FALLBACK_DISHES: Record<Cuisine, FallbackDish[]> = {
     { name: "Quesadilla de flor", tagline: "Hoy en la pizarra", blurb: "Tortilla recién hecha con flor de calabaza y queso oaxaca fundido." },
     { name: "Chiles en nogada", tagline: "De temporada", blurb: "Chile poblano relleno con picadillo, salsa de nuez y granada." },
   ],
-  japonesa: [
+  asiatica: [
     { name: "Nigiri de salmón", tagline: "Para empezar", blurb: "Arroz vinagrado y salmón fresco cortado a mano, un toque de wasabi." },
     { name: "Ramen tonkotsu", tagline: "Reconfortante", blurb: "Caldo de cerdo cocinado 12 horas, fideos al huevo, chashu y huevo curado." },
     { name: "Gyozas a la plancha", tagline: "Casi imprescindible", blurb: "Empanadillas de cerdo y verduras, doradas por una cara y al vapor por la otra." },
-    { name: "Tempura de verduras", tagline: "Ligera y crujiente", blurb: "Verduras de temporada en rebozado fino y crujiente, salsa tentsuyu." },
-    { name: "Sashimi variado", tagline: "Pescado del día", blurb: "Selección de pescado fresco cortado a cuchillo según mercado." },
+    { name: "Pad thai de gambas", tagline: "Wok del día", blurb: "Fideos de arroz salteados al wok con gambas, cacahuete y lima." },
+    { name: "Dim sum variado", tagline: "Para compartir", blurb: "Selección de bocados al vapor: cerdo, gamba y verdura." },
     { name: "Mochi de matcha", tagline: "Para terminar", blurb: "Pasta de arroz dulce rellena de helado de matcha." },
   ],
   tradicional: [
@@ -482,18 +501,26 @@ const CUISINE_FALLBACK_DISHES: Record<Cuisine, FallbackDish[]> = {
     { name: "Pisto manchego", tagline: "De la huerta", blurb: "Pimiento, calabacín, cebolla y tomate cocinados a fuego lento con un huevo encima." },
     { name: "Tarta de Santiago", tagline: "Para terminar dulce", blurb: "Almendra molida, huevo y azúcar. Sin gluten y con la cruz por encima." },
   ],
-  otra: [
-    { name: "Plato de la casa", tagline: "Hoy en la pizarra", blurb: "Producto de temporada cocinado con criterio y atención al detalle." },
-    { name: "Tartar de atún", tagline: "Casi imprescindible", blurb: "Atún rojo cortado a cuchillo con soja, lima y aceite de oliva." },
-    { name: "Risotto del momento", tagline: "Receta de temporada", blurb: "Arroz cremoso con producto que entra esa semana al obrador." },
-    { name: "Ensalada de mercado", tagline: "Fresca y ligera", blurb: "Hojas, brotes y verduras según mercado, vinagreta de la casa." },
-    { name: "Pescado del día", tagline: "Producto en primer plano", blurb: "Pieza entera asada al horno con sus jugos y guarnición de huerta." },
-    { name: "Postre del chef", tagline: "Para terminar", blurb: "Creación dulce que cambia según ingredientes y antojo del pase." },
+  americana: [
+    { name: "Smash burger doble", tagline: "Plato bandera", blurb: "Dos carnes prensadas a la plancha, queso fundido, salsa de la casa y pan brioche." },
+    { name: "Pulled pork BBQ", tagline: "Cocción lenta", blurb: "Cerdo deshilachado tras 12 horas en horno bajo, salsa BBQ ahumada y coleslaw." },
+    { name: "Buffalo wings", tagline: "Para compartir", blurb: "Alitas crujientes glaseadas con salsa buffalo y dip de queso azul." },
+    { name: "Mac & cheese trufado", tagline: "Reconfortante", blurb: "Macarrones con bechamel de quesos curados y aceite de trufa negra." },
+    { name: "Ribs glaseadas", tagline: "Sabor a humo", blurb: "Costillas de cerdo a baja temperatura con glaseado dulce y notas de bourbon." },
+    { name: "Apple pie casera", tagline: "Para terminar dulce", blurb: "Tarta de manzana con masa quebrada, canela y bola de helado de vainilla." },
+  ],
+  fusion: [
+    { name: "Tartar de atún oriental", tagline: "Hoy en la pizarra", blurb: "Atún rojo, sésamo, lima, jengibre y aceite de oliva virgen extra." },
+    { name: "Bao bun de cochinita", tagline: "Casi imprescindible", blurb: "Pan al vapor relleno de cochinita pibil, cebolla encurtida y cilantro." },
+    { name: "Risotto de pimentón", tagline: "Receta de autor", blurb: "Arroz arborio cremoso con pimentón de la Vera y polvo de chorizo." },
+    { name: "Ceviche nikkei", tagline: "Fresca y ligera", blurb: "Pescado curado en leche de tigre con soja, sésamo y boniato glaseado." },
+    { name: "Pescado del día a la brasa", tagline: "Producto en primer plano", blurb: "Pieza entera a la brasa con jugo dashi y guarnición de huerta." },
+    { name: "Coulant de matcha", tagline: "Para terminar", blurb: "Bizcocho fluido de matcha con corazón de chocolate blanco." },
   ],
 };
 
 export function getFallbackDishes(cuisine: Cuisine): FallbackDish[] {
-  return CUISINE_FALLBACK_DISHES[cuisine] ?? CUISINE_FALLBACK_DISHES.otra;
+  return CUISINE_FALLBACK_DISHES[cuisine] ?? CUISINE_FALLBACK_DISHES.fusion;
 }
 
 // ---------------------------------------------------------------------------
@@ -555,12 +582,12 @@ const FEATURED_MENUS: Record<Cuisine, FeaturedMenu> = {
       { name: "Chiles en nogada", desc: "Chile poblano relleno, salsa de nuez y granada.", price: "€25" },
     ],
   },
-  japonesa: {
+  asiatica: {
     leftTitle: "Entrantes",
     leftItems: [
       { name: "Edamame con sal de yuzu", desc: "Vainas de soja al vapor, sal cítrica.", price: "€8" },
       { name: "Gyozas a la plancha", desc: "Empanadillas de cerdo y verduras, doradas y al vapor.", price: "€12" },
-      { name: "Tempura de verduras", desc: "Rebozado fino, salsa tentsuyu y rábano.", price: "€14" },
+      { name: "Dim sum variado", desc: "Selección de bocados al vapor: cerdo, gamba y verdura.", price: "€15" },
       { name: "Tartar de salmón", desc: "Salmón fresco, aguacate, sésamo y soja.", price: "€16" },
       { name: "Tataki de atún", desc: "Atún sellado, salsa ponzu y cebolla tierna.", price: "€18" },
     ],
@@ -569,8 +596,8 @@ const FEATURED_MENUS: Record<Cuisine, FeaturedMenu> = {
       { name: "Ramen tonkotsu", desc: "Caldo de cerdo cocinado 12 horas, chashu, huevo.", price: "€18" },
       { name: "Sushi nigiri (10 piezas)", desc: "Selección del chef según pescado del día.", price: "€28" },
       { name: "Don de chirashi", desc: "Bol de arroz con sashimi variado y verduras.", price: "€24" },
+      { name: "Pad thai de gambas", desc: "Fideos de arroz al wok con gambas, cacahuete y lima.", price: "€22" },
       { name: "Pato laqueado", desc: "Pato glaseado al estilo cantonés, panqueques y hoisin.", price: "€26" },
-      { name: "Yakisoba de gambas", desc: "Fideos salteados, gambas, verduras y salsa yakisoba.", price: "€20" },
     ],
   },
   tradicional: {
@@ -591,28 +618,46 @@ const FEATURED_MENUS: Record<Cuisine, FeaturedMenu> = {
       { name: "Carrillera de ternera", desc: "Carrillera braseada al vino tinto, puré de patata.", price: "€22" },
     ],
   },
-  otra: {
+  americana: {
     leftTitle: "Para empezar",
     leftItems: [
-      { name: "Tartar de atún rojo", desc: "Atún cortado a cuchillo, soja, lima y aceite de oliva.", price: "€18" },
-      { name: "Ensalada de mercado", desc: "Brotes, verduras y vinagreta de la casa.", price: "€14" },
-      { name: "Crocante de remolacha", desc: "Remolacha asada, queso de cabra y nueces.", price: "€12" },
-      { name: "Croquetas del chef", desc: "Receta del chef, cambia según temporada.", price: "€11" },
-      { name: "Sopa del día", desc: "Caldo de verduras o pescado según mercado.", price: "€10" },
+      { name: "Buffalo wings (6 uds)", desc: "Alitas crujientes glaseadas con salsa buffalo.", price: "€10" },
+      { name: "Nachos cargados", desc: "Totopos, queso fundido, chili con carne y guacamole.", price: "€12" },
+      { name: "Onion rings", desc: "Aros de cebolla rebozados, salsa ranchera.", price: "€8" },
+      { name: "Loaded fries", desc: "Patatas con queso, bacon ahumado y cebollino.", price: "€11" },
+      { name: "Caesar salad", desc: "Lechuga romana, pollo, parmesano y crutones.", price: "€13" },
     ],
     rightTitle: "Principales",
     rightItems: [
-      { name: "Pescado del día", desc: "Pieza entera al horno con guarnición de huerta.", price: "€28" },
-      { name: "Risotto del momento", desc: "Arroz cremoso con producto de la semana.", price: "€22" },
-      { name: "Solomillo a la brasa", desc: "Solomillo de ternera, patatas confitadas y reducción.", price: "€30" },
-      { name: "Vegano del día", desc: "Creación vegetal del chef, cambia cada semana.", price: "€19" },
-      { name: "Pasta del chef", desc: "Pasta fresca con salsa pensada para esa semana.", price: "€20" },
+      { name: "Smash burger doble", desc: "Dos carnes prensadas, queso fundido y salsa de la casa.", price: "€16" },
+      { name: "Pulled pork BBQ", desc: "Cerdo deshilachado a baja temperatura con coleslaw.", price: "€18" },
+      { name: "Ribs al bourbon", desc: "Costillas glaseadas, notas de bourbon y miel.", price: "€22" },
+      { name: "Mac & cheese trufado", desc: "Macarrones con cuatro quesos y aceite de trufa.", price: "€15" },
+      { name: "Apple pie con helado", desc: "Tarta de manzana caliente y helado de vainilla.", price: "€9" },
+    ],
+  },
+  fusion: {
+    leftTitle: "Para empezar",
+    leftItems: [
+      { name: "Tartar de atún oriental", desc: "Atún rojo, sésamo, lima, jengibre y aceite de oliva.", price: "€18" },
+      { name: "Bao bun de cochinita", desc: "Pan al vapor, cochinita pibil y encurtidos.", price: "€14" },
+      { name: "Ceviche nikkei", desc: "Pescado curado, leche de tigre, soja y boniato.", price: "€16" },
+      { name: "Croquetas del chef", desc: "Receta del chef, cambia según temporada.", price: "€11" },
+      { name: "Ensalada de mercado", desc: "Brotes, verduras y vinagreta de la casa.", price: "€12" },
+    ],
+    rightTitle: "Principales",
+    rightItems: [
+      { name: "Risotto de pimentón", desc: "Arroz cremoso con pimentón de la Vera y chorizo.", price: "€22" },
+      { name: "Pescado a la brasa con dashi", desc: "Pieza del día a la brasa con caldo dashi y huerta.", price: "€28" },
+      { name: "Solomillo con teriyaki", desc: "Solomillo de ternera, glaseado teriyaki y patata.", price: "€30" },
+      { name: "Vegetal de autor", desc: "Creación vegetal del chef, cambia cada semana.", price: "€19" },
+      { name: "Coulant de matcha", desc: "Bizcocho fluido de matcha, corazón de chocolate.", price: "€9" },
     ],
   },
 };
 
 export function getFeaturedMenu(cuisine: Cuisine): FeaturedMenu {
-  return FEATURED_MENUS[cuisine] ?? FEATURED_MENUS.otra;
+  return FEATURED_MENUS[cuisine] ?? FEATURED_MENUS.fusion;
 }
 
 /** Role-coded photos for restauración. When the AI returns the team, we
@@ -625,33 +670,24 @@ export interface RestauracionRoleHints {
   managerFemale: string;
 }
 
+// TEMP: with the new natural-bg photo set, the role-coded mapping is gone
+// — we don't know yet which of 16-21.jpg is the chef vs the gerente. Until
+// the user re-labels them, leave the function as a no-op and let the
+// generic pool drive the picks. Re-enable by filling in actual paths.
 export const RESTAURACION_ROLE_PHOTOS: RestauracionRoleHints = {
-  chefMale: "/img/imagina/restauracion/equipo/profesional-3.png", // male with chef hat
-  chefFemale: "/img/imagina/restauracion/equipo/profesional-4.png", // female with chef hat
-  managerMale: "/img/imagina/restauracion/equipo/profesional-5.png", // older man, shirt
-  managerFemale: "/img/imagina/restauracion/equipo/profesional-1.png", // woman with tablet
+  chefMale: "",
+  chefFemale: "",
+  managerMale: "",
+  managerFemale: "",
 };
 
 /** Pick the photo that best matches a given role keyword + gender. Returns
  *  null if no specific override applies — caller should fall back to the
  *  generic sequential gender-pool pick. */
 export function getRestauracionRolePhoto(
-  role: string,
-  gender: "male" | "female",
+  _role: string,
+  _gender: "male" | "female",
 ): string | null {
-  const r = role.toLowerCase();
-  // Chef-level kitchen roles → the chef-hat photo.
-  if (/(chef|cocina|jefe de cocina|jefa de cocina|cociner)/.test(r)) {
-    return gender === "male"
-      ? RESTAURACION_ROLE_PHOTOS.chefMale
-      : RESTAURACION_ROLE_PHOTOS.chefFemale;
-  }
-  // Sala / gerencia roles → the older man / tablet-woman photo.
-  if (/(ma[iî]tre|sumiller|sommelier|gerente|manager|director|propietari|sala|atenci)/.test(r)) {
-    return gender === "male"
-      ? RESTAURACION_ROLE_PHOTOS.managerMale
-      : RESTAURACION_ROLE_PHOTOS.managerFemale;
-  }
   return null;
 }
 
@@ -664,14 +700,22 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       "/img/imagina/salud/valor-agregado/foto-4.jpg",
       "/img/imagina/salud/valor-agregado/foto-5.jpg",
     ],
+    // TEMP: gender-agnostic pools while the new photo set (with backgrounds)
+    // doesn't have a male/female split yet. The template still asks for both
+    // arrays so we point them at the same pool — refine later by hand.
     photosMale: [
-      "/img/imagina/salud/equipo/profesional-1.png",
-      "/img/imagina/salud/equipo/profesional-4.png",
-      "/img/imagina/salud/equipo/profesional-5.png",
+      "/img/imagina/salud/equipo/1.jpg",
+      "/img/imagina/salud/equipo/2.jpg",
+      "/img/imagina/salud/equipo/3.jpg",
+      "/img/imagina/salud/equipo/4.jpg",
+      "/img/imagina/salud/equipo/5.jpg",
     ],
     photosFemale: [
-      "/img/imagina/salud/equipo/profesional-2.png",
-      "/img/imagina/salud/equipo/profesional-3.png",
+      "/img/imagina/salud/equipo/1.jpg",
+      "/img/imagina/salud/equipo/2.jpg",
+      "/img/imagina/salud/equipo/3.jpg",
+      "/img/imagina/salud/equipo/4.jpg",
+      "/img/imagina/salud/equipo/5.jpg",
     ],
     serviceIcons: [
       IconStethoscope,
@@ -729,13 +773,18 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       "/img/imagina/educacion/valor-agregado/foto-3.png",
     ],
     photosMale: [
-      "/img/imagina/educacion/equipo/profesional-2.png",
-      "/img/imagina/educacion/equipo/profesional-3.png",
-      "/img/imagina/educacion/equipo/profesional-5.png",
+      "/img/imagina/educacion/equipo/11.jpg",
+      "/img/imagina/educacion/equipo/12.jpg",
+      "/img/imagina/educacion/equipo/13.jpg",
+      "/img/imagina/educacion/equipo/14.jpg",
+      "/img/imagina/educacion/equipo/15.jpg",
     ],
     photosFemale: [
-      "/img/imagina/educacion/equipo/profesional-1.png",
-      "/img/imagina/educacion/equipo/profesional-4.png",
+      "/img/imagina/educacion/equipo/11.jpg",
+      "/img/imagina/educacion/equipo/12.jpg",
+      "/img/imagina/educacion/equipo/13.jpg",
+      "/img/imagina/educacion/equipo/14.jpg",
+      "/img/imagina/educacion/equipo/15.jpg",
     ],
     serviceIcons: [
       IconBook,
@@ -797,13 +846,18 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       "/img/imagina/moda/valor-agregado/foto-4.png",
     ],
     photosMale: [
-      "/img/imagina/moda/equipo/profesional-4.png",
-      "/img/imagina/moda/equipo/profesional-5.png",
+      "/img/imagina/moda/equipo/moda-1.jpg",
+      "/img/imagina/moda/equipo/moda-2.jpg",
+      "/img/imagina/moda/equipo/moda-3.jpg",
+      "/img/imagina/moda/equipo/moda-4.jpg",
+      "/img/imagina/moda/equipo/moda-5.jpg",
     ],
     photosFemale: [
-      "/img/imagina/moda/equipo/profesional-1.png",
-      "/img/imagina/moda/equipo/profesional-2.png",
-      "/img/imagina/moda/equipo/profesional-3.png",
+      "/img/imagina/moda/equipo/moda-1.jpg",
+      "/img/imagina/moda/equipo/moda-2.jpg",
+      "/img/imagina/moda/equipo/moda-3.jpg",
+      "/img/imagina/moda/equipo/moda-4.jpg",
+      "/img/imagina/moda/equipo/moda-5.jpg",
     ],
     serviceIcons: [
       IconHanger,
@@ -866,13 +920,20 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       "/img/imagina/tecnologia/valor-agregado/foto-5.png",
     ],
     photosMale: [
-      "/img/imagina/tecnologia/equipo/profesional-1.png",
-      "/img/imagina/tecnologia/equipo/profesional-3.png",
-      "/img/imagina/tecnologia/equipo/profesional-4.png",
+      "/img/imagina/tecnologia/equipo/22.jpg",
+      "/img/imagina/tecnologia/equipo/23.jpg",
+      "/img/imagina/tecnologia/equipo/24.jpg",
+      "/img/imagina/tecnologia/equipo/25.jpg",
+      "/img/imagina/tecnologia/equipo/26.jpg",
+      "/img/imagina/tecnologia/equipo/27b.jpg",
     ],
     photosFemale: [
-      "/img/imagina/tecnologia/equipo/profesional-2.png",
-      "/img/imagina/tecnologia/equipo/profesional-5.png",
+      "/img/imagina/tecnologia/equipo/22.jpg",
+      "/img/imagina/tecnologia/equipo/23.jpg",
+      "/img/imagina/tecnologia/equipo/24.jpg",
+      "/img/imagina/tecnologia/equipo/25.jpg",
+      "/img/imagina/tecnologia/equipo/26.jpg",
+      "/img/imagina/tecnologia/equipo/27b.jpg",
     ],
     serviceIcons: [
       IconCode,
@@ -939,13 +1000,18 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       "/img/imagina/servicios/valor-agregado/foto-5.png",
     ],
     photosMale: [
-      "/img/imagina/servicios/equipo/profesional-3.png",
-      "/img/imagina/servicios/equipo/profesional-5.png",
+      "/img/imagina/servicios/equipo/27.jpg",
+      "/img/imagina/servicios/equipo/28.jpg",
+      "/img/imagina/servicios/equipo/29.jpg",
+      "/img/imagina/servicios/equipo/30.jpg",
+      "/img/imagina/servicios/equipo/31.jpg",
     ],
     photosFemale: [
-      "/img/imagina/servicios/equipo/profesional-1.png",
-      "/img/imagina/servicios/equipo/profesional-2.png",
-      "/img/imagina/servicios/equipo/profesional-4.png",
+      "/img/imagina/servicios/equipo/27.jpg",
+      "/img/imagina/servicios/equipo/28.jpg",
+      "/img/imagina/servicios/equipo/29.jpg",
+      "/img/imagina/servicios/equipo/30.jpg",
+      "/img/imagina/servicios/equipo/31.jpg",
     ],
     serviceIcons: [
       IconBriefcase,
@@ -1008,14 +1074,20 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       "/img/imagina/restauracion/valor-agregado/foto-5.png",
     ],
     photosMale: [
-      "/img/imagina/restauracion/equipo/profesional-3.png",
-      "/img/imagina/restauracion/equipo/profesional-5.png",
+      "/img/imagina/restauracion/equipo/16.jpg",
+      "/img/imagina/restauracion/equipo/17.jpg",
+      "/img/imagina/restauracion/equipo/18.jpg",
+      "/img/imagina/restauracion/equipo/19.jpg",
+      "/img/imagina/restauracion/equipo/20.jpg",
+      "/img/imagina/restauracion/equipo/21.jpg",
     ],
     photosFemale: [
-      "/img/imagina/restauracion/equipo/profesional-1.png",
-      "/img/imagina/restauracion/equipo/profesional-2.png",
-      "/img/imagina/restauracion/equipo/profesional-4.png",
-      "/img/imagina/restauracion/equipo/profesional-6.png",
+      "/img/imagina/restauracion/equipo/16.jpg",
+      "/img/imagina/restauracion/equipo/17.jpg",
+      "/img/imagina/restauracion/equipo/18.jpg",
+      "/img/imagina/restauracion/equipo/19.jpg",
+      "/img/imagina/restauracion/equipo/20.jpg",
+      "/img/imagina/restauracion/equipo/21.jpg",
     ],
     serviceIcons: [
       IconUtensils,

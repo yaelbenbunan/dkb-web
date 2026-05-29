@@ -54,7 +54,7 @@ const customColorsSchema = z
   .optional();
 
 const cuisineSchema = z
-  .enum(["mexicana", "italiana", "japonesa", "tradicional", "otra"])
+  .enum(["tradicional", "italiana", "asiatica", "mexicana", "americana", "fusion"])
   .optional();
 
 // Optional logo: data URL (image/png|jpeg|webp|svg) up to ~700 KB.

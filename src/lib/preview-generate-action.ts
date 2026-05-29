@@ -76,11 +76,12 @@ export async function generatePreview(
   const cuisineLabel =
     parsed.data.cuisine && parsed.data.sector === "restauracion"
       ? {
-          mexicana: "Mexicana",
-          italiana: "Italiana",
-          japonesa: "Japonesa / asiática",
           tradicional: "Tradicional / mediterránea",
-          otra: "Cocina variada / fusión",
+          italiana: "Italiana",
+          asiatica: "Asiática (japonesa, china, tailandesa)",
+          mexicana: "Mexicana / latina",
+          americana: "Americana / burger / BBQ",
+          fusion: "Fusión / autor",
         }[parsed.data.cuisine]
       : undefined;
 

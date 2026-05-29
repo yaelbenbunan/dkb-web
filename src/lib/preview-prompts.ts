@@ -44,7 +44,7 @@ interface SectorPromptHints {
 const SECTOR_PROMPT_HINTS: Record<string, SectorPromptHints> = {
   restauracion: {
     expertContext:
-      "restaurantes, bistros, gastrobares y proyectos de restauración (cocina tradicional, italiana, japonesa, mexicana, fusión, etc.)",
+      "restaurantes, bistros, gastrobares y proyectos de restauración (cocina tradicional / mediterránea, italiana, asiática, mexicana / latina, americana / BBQ, fusión / autor, etc.)",
     audienceNoun: "comensal",
     offeringNoun: "plato",
     ctaExamples:

@@ -739,7 +739,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
           {data.sector === "restauracion" ? (
             <DishesGrid
               dishes={services}
-              cuisine={data.cuisine || "otra"}
+              cuisine={data.cuisine || "fusion"}
               palette={palette}
               display={display}
               fgOnSurface={fgOnSurface}
@@ -832,7 +832,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
           prices are 100% fabricated per cuisine (zero AI dependency). */}
       {data.sector === "restauracion" && (
         <FeaturedMenuSection
-          cuisine={data.cuisine || "otra"}
+          cuisine={data.cuisine || "fusion"}
           palette={palette}
           display={display}
           fgOnSurface={fgOnSurface}
