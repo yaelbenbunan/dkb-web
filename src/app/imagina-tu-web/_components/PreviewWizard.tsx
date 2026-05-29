@@ -380,6 +380,7 @@ export function PreviewWizard() {
         {step === 6 && (
           <StepStyle
             value={state.style}
+            sector={state.sector}
             onChange={(v) => setState({ ...state, style: v })}
           />
         )}

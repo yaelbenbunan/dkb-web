@@ -70,7 +70,7 @@ const logoDataUrlSchema = z
 // Visual style selected by the user in StepStyle. Each value maps to a
 // different React template under `_components/templates/`. Default is
 // "moderno" so older lead rows / API calls remain valid.
-export const PREVIEW_STYLES = ["moderno", "editorial"] as const;
+export const PREVIEW_STYLES = ["moderno", "editorial", "compacto"] as const;
 export type PreviewStyle = (typeof PREVIEW_STYLES)[number];
 const styleSchema = z
   .enum(PREVIEW_STYLES)

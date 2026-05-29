@@ -117,12 +117,34 @@ export interface EditorialLimpioData {
   city?: string;
 }
 
+/** Visual density for Editorial. "spacious" is the default (generous aire,
+ *  large hero, big numbers). "compact" keeps the editorial style but
+ *  removes the hero photo and tightens padding/typography so the whole
+ *  page fits more info in less scroll. */
+export type EditorialDensity = "spacious" | "compact";
+
 interface Props {
   data: EditorialLimpioData;
   copy: SectorInformativaCopyResponse | null;
+  /** Visual density. Defaults to "spacious" so existing callers keep
+   *  their look. The "compacto" wizard style sets this to "compact". */
+  density?: EditorialDensity;
 }
 
-export function EditorialLimpioTemplate({ data, copy }: Props) {
+export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Props) {
+  const isCompact = density === "compact";
+  // Section padding tokens — every section uses these so density changes
+  // ripple through the whole template without per-section edits.
+  const padX = "px-12";
+  const padY = isCompact ? "py-14" : "py-24";
+  const padYHero = isCompact ? "pt-14 pb-12" : "pt-24 pb-20";
+  const padYDark = isCompact ? "py-16" : "py-28";
+  const titleSize = isCompact
+    ? "text-3xl sm:text-5xl"
+    : "text-4xl sm:text-5xl";
+  const heroTitleSize = isCompact
+    ? "text-4xl sm:text-6xl"
+    : "text-5xl sm:text-7xl";
   const palette = resolvePalette(data.palette, data.customColors);
   const typo = getTypography(data.typography);
   const assets = isSupportedSector(data.sector) ? SECTOR_ASSETS[data.sector] : null;
@@ -262,7 +284,7 @@ export function EditorialLimpioTemplate({ data, copy }: Props) {
       </header>
 
       {/* HERO — centered editorial */}
-      <section className="relative px-12 pt-24 pb-20">
+      <section className={`relative ${padX} ${padYHero}`}>
         <div className="mx-auto max-w-3xl text-center">
           <motion.span
             {...fadeUp}
@@ -276,7 +298,7 @@ export function EditorialLimpioTemplate({ data, copy }: Props) {
             {...fadeUp}
             transition={{ ...fadeUp.transition, delay: 0.05 }}
             style={display}
-            className="text-balance text-5xl font-bold leading-[1.05] tracking-tight sm:text-7xl"
+            className={`text-balance ${heroTitleSize} font-bold leading-[1.05] tracking-tight`}
           >
             {headline}
           </motion.h1>
@@ -310,8 +332,9 @@ export function EditorialLimpioTemplate({ data, copy }: Props) {
           </motion.div>
         </div>
 
-        {/* Hero image — wide rounded, sits below the headline */}
-        {heroImg && (
+        {/* Hero image — wide rounded, sits below the headline. Hidden in
+            compact mode so the page starts straight into content. */}
+        {heroImg && !isCompact && (
           <motion.div
             initial={{ opacity: 0, scale: 0.98 }}
             whileInView={{ opacity: 1, scale: 1 }}
@@ -339,7 +362,7 @@ export function EditorialLimpioTemplate({ data, copy }: Props) {
 
       {/* NUMBERED EDITORIAL BULLETS — 6 items in 3 cols */}
       <section
-        className="border-y px-12 py-24"
+        className={`border-y ${padX} ${padY}`}
         style={{ ...hairline, backgroundColor: palette.surface }}
       >
         <div className="mx-auto max-w-6xl">
@@ -353,7 +376,7 @@ export function EditorialLimpioTemplate({ data, copy }: Props) {
               </span>
               <h2
                 style={display}
-                className="mt-4 text-balance text-4xl font-bold leading-[1.1] sm:text-5xl"
+                className={`mt-4 text-balance ${titleSize} font-bold leading-[1.1]`}
               >
                 {valorTitle}
               </h2>
@@ -361,7 +384,7 @@ export function EditorialLimpioTemplate({ data, copy }: Props) {
                 {valorIntro}
               </p>
             </div>
-            {valorImg && (
+            {valorImg && !isCompact && (
               <div
                 className="aspect-[5/4] overflow-hidden rounded-2xl bg-cover bg-center"
                 style={{ backgroundImage: `url('${valorImg}')` }}
@@ -396,7 +419,7 @@ export function EditorialLimpioTemplate({ data, copy }: Props) {
       </section>
 
       {/* SERVICES — asymmetric list */}
-      <section className="px-12 py-24">
+      <section className={`${padX} ${padY}`}>
         <div className="mx-auto max-w-6xl">
           <motion.div {...fadeUp} className="grid gap-10 sm:grid-cols-[1fr_2fr]">
             <div>
@@ -408,7 +431,7 @@ export function EditorialLimpioTemplate({ data, copy }: Props) {
               </span>
               <h2
                 style={display}
-                className="mt-4 text-balance text-4xl font-bold leading-[1.1] sm:text-5xl"
+                className={`mt-4 text-balance ${titleSize} font-bold leading-[1.1]`}
               >
                 {servicesTitle}
               </h2>
@@ -470,7 +493,7 @@ export function EditorialLimpioTemplate({ data, copy }: Props) {
       {/* RESTAURACION — minimal dish strip when sector matches and photos exist */}
       {isRestauracion && dishPhotos.length > 0 && (
         <section
-          className="border-y px-12 py-24"
+          className={`border-y ${padX} ${padY}`}
           style={{ ...hairline, backgroundColor: palette.surface }}
         >
           <div className="mx-auto max-w-6xl">
@@ -483,7 +506,7 @@ export function EditorialLimpioTemplate({ data, copy }: Props) {
               </span>
               <h2
                 style={display}
-                className="mt-4 text-4xl font-bold leading-[1.05] sm:text-5xl"
+                className={`mt-4 ${titleSize} font-bold leading-[1.05]`}
               >
                 Los platos que nos dan nombre
               </h2>
@@ -522,7 +545,7 @@ export function EditorialLimpioTemplate({ data, copy }: Props) {
       )}
 
       {/* TEAM — 4-up portrait grid (no carousel) */}
-      <section className="px-12 py-24">
+      <section className={`${padX} ${padY}`}>
         <div className="mx-auto max-w-6xl">
           <motion.div {...fadeUp} className="mb-12 grid gap-10 sm:grid-cols-[1fr_2fr]">
             <div>
@@ -534,7 +557,7 @@ export function EditorialLimpioTemplate({ data, copy }: Props) {
               </span>
               <h2
                 style={display}
-                className="mt-4 text-balance text-4xl font-bold leading-[1.1] sm:text-5xl"
+                className={`mt-4 text-balance ${titleSize} font-bold leading-[1.1]`}
               >
                 Las personas detrás de {data.businessName}
               </h2>
@@ -580,7 +603,7 @@ export function EditorialLimpioTemplate({ data, copy }: Props) {
       {/* TESTIMONIAL — big editorial quote */}
       {testimonials.length > 0 && (
         <section
-          className="px-12 py-28"
+          className={`${padX} ${padYDark}`}
           style={{ backgroundColor: palette.text, color: fgOnInvert }}
         >
           <div className="mx-auto max-w-4xl">
@@ -637,7 +660,7 @@ export function EditorialLimpioTemplate({ data, copy }: Props) {
       )}
 
       {/* CONTACTO — editorial split */}
-      <section className="px-12 py-24">
+      <section className={`${padX} ${padY}`}>
         <div className="mx-auto max-w-6xl">
           <motion.div {...fadeUp} className="grid gap-12 sm:grid-cols-[1fr_1fr]">
             <div>
@@ -649,7 +672,7 @@ export function EditorialLimpioTemplate({ data, copy }: Props) {
               </span>
               <h2
                 style={display}
-                className="mt-4 text-balance text-4xl font-bold leading-[1.1] sm:text-5xl"
+                className={`mt-4 text-balance ${titleSize} font-bold leading-[1.1]`}
               >
                 {assets.labels.bridgeHeadline}
               </h2>
