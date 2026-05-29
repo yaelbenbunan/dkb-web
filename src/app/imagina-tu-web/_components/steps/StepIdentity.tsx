@@ -5,6 +5,7 @@ import { SECTORS } from "@/lib/preview-themes";
 interface Value {
   businessName: string;
   sector: string;
+  currentWebsite: string;
 }
 
 interface Props {
@@ -49,6 +50,26 @@ export function StepIdentity({ value, onChange }: Props) {
             </option>
           ))}
         </select>
+      </label>
+      <label className="block">
+        <span className="text-xs font-bold uppercase tracking-wider text-accent">
+          Web actual (opcional)
+        </span>
+        <input
+          type="url"
+          inputMode="url"
+          value={value.currentWebsite}
+          onChange={(e) =>
+            onChange({ ...value, currentWebsite: e.target.value })
+          }
+          placeholder="Ej. www.tunegocio.com"
+          className="surface-input mt-1.5 block w-full rounded-md px-3.5 py-2.5 text-sm"
+          maxLength={300}
+        />
+        <span className="mt-1 block text-xs text-fg-muted">
+          Si ya tienes web, la usamos para que la propuesta sea lo más fiel
+          posible a tu negocio real.
+        </span>
       </label>
     </div>
   );

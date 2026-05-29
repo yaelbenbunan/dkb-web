@@ -283,82 +283,145 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
         </button>
       </header>
 
-      {/* HERO — centered editorial */}
-      <section className={`relative ${padX} ${padYHero}`}>
-        <div className="mx-auto max-w-3xl text-center">
-          <motion.span
-            {...fadeUp}
-            transition={{ ...fadeUp.transition, delay: 0 }}
-            style={{ color: palette.accent }}
-            className="mb-6 inline-block text-[11px] font-bold uppercase tracking-[0.32em]"
-          >
-            {assets.labels.servicesSectionPill}
-          </motion.span>
-          <motion.h1
-            {...fadeUp}
-            transition={{ ...fadeUp.transition, delay: 0.05 }}
-            style={display}
-            className={`text-balance ${heroTitleSize} font-bold leading-[1.05] tracking-tight`}
-          >
-            {headline}
-          </motion.h1>
-          <motion.p
-            {...fadeUp}
-            transition={{ ...fadeUp.transition, delay: 0.12 }}
-            className="mx-auto mt-7 max-w-2xl text-balance text-lg leading-relaxed opacity-80 sm:text-xl"
-          >
-            {tagline}
-          </motion.p>
+      {/* HERO — full-bleed photo with the welcome copy overlaid on top.
+          A dark scrim + palette tint keeps the text legible over any image
+          (we always render white text here, regardless of the palette). When
+          there's no sector photo we fall back to a clean editorial hero on the
+          palette background. */}
+      {heroImg ? (
+        <section
+          className={`relative isolate flex items-center justify-center overflow-hidden ${padX} ${
+            isCompact ? "min-h-[70vh] py-20" : "min-h-[88vh] py-28"
+          }`}
+        >
+          {/* Background image with a slow Ken Burns zoom */}
           <motion.div
-            {...fadeUp}
-            transition={{ ...fadeUp.transition, delay: 0.18 }}
-            className="mt-10 flex items-center justify-center gap-3"
-          >
-            <button
-              type="button"
-              style={accentBtn}
-              className="inline-flex h-12 items-center gap-2 rounded-full px-7 text-sm font-semibold"
+            aria-hidden
+            className="absolute inset-0 -z-20 bg-cover bg-center"
+            style={{ backgroundImage: `url('${heroImg}')` }}
+            initial={{ scale: 1.1 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 9, ease: "easeOut" }}
+          />
+          {/* Legibility scrim: dark vertical gradient + a touch of palette
+              colour so the hero still feels on-brand. */}
+          <div
+            aria-hidden
+            className="absolute inset-0 -z-10"
+            style={{
+              background: `linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.35) 45%, rgba(0,0,0,0.7) 100%)`,
+            }}
+          />
+          <div
+            aria-hidden
+            className="absolute inset-0 -z-10 mix-blend-multiply"
+            style={{
+              background: `linear-gradient(135deg, ${palette.accent}40 0%, transparent 60%)`,
+            }}
+          />
+          <div className="relative mx-auto max-w-3xl text-center text-white">
+            <motion.span
+              {...fadeUp}
+              transition={{ ...fadeUp.transition, delay: 0 }}
+              style={accentChip}
+              className="mb-6 inline-block rounded-full px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.32em]"
             >
-              {ctaText}
-              <IconArrowRight className="size-4" />
-            </button>
-            <button
-              type="button"
-              style={ghostBtn}
-              className="inline-flex h-12 items-center gap-2 rounded-full px-6 text-sm font-medium"
+              {assets.labels.servicesSectionPill}
+            </motion.span>
+            <motion.h1
+              {...fadeUp}
+              transition={{ ...fadeUp.transition, delay: 0.05 }}
+              style={{ ...display, textShadow: "0 2px 24px rgba(0,0,0,0.45)" }}
+              className={`text-balance ${heroTitleSize} font-bold leading-[1.05] tracking-tight`}
             >
-              {assets.labels.navServicesLabel}
-            </button>
-          </motion.div>
-        </div>
-
-        {/* Hero image — wide rounded, sits below the headline. Hidden in
-            compact mode so the page starts straight into content. */}
-        {heroImg && !isCompact && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.98 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={VIEWPORT}
-            transition={{ duration: 0.9, ease: [0.21, 1, 0.34, 1] }}
-            className="relative mx-auto mt-16 aspect-[16/7] w-full max-w-5xl overflow-hidden rounded-3xl"
-            style={{ boxShadow: `0 30px 60px -30px ${palette.text}33` }}
-          >
-            <div
-              className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: `url('${heroImg}')` }}
-              aria-hidden
-            />
-            {/* Soft bottom gradient so the section flows back into the page */}
-            <div
-              aria-hidden
-              className="absolute inset-x-0 bottom-0 h-1/3"
-              style={{
-                background: `linear-gradient(to top, ${palette.bg}66, transparent)`,
-              }}
-            />
-          </motion.div>
-        )}
-      </section>
+              {headline}
+            </motion.h1>
+            <motion.p
+              {...fadeUp}
+              transition={{ ...fadeUp.transition, delay: 0.12 }}
+              style={{ textShadow: "0 1px 16px rgba(0,0,0,0.5)" }}
+              className="mx-auto mt-7 max-w-2xl text-balance text-lg leading-relaxed opacity-95 sm:text-xl"
+            >
+              {tagline}
+            </motion.p>
+            <motion.div
+              {...fadeUp}
+              transition={{ ...fadeUp.transition, delay: 0.18 }}
+              className="mt-10 flex flex-wrap items-center justify-center gap-3"
+            >
+              <button
+                type="button"
+                style={{ backgroundColor: palette.accent, color: fgOnAccent }}
+                className="inline-flex h-12 items-center gap-2 rounded-full px-7 text-sm font-semibold shadow-xl"
+              >
+                {ctaText}
+                <IconArrowRight className="size-4" />
+              </button>
+              <button
+                type="button"
+                style={{
+                  backgroundColor: "rgba(255,255,255,0.12)",
+                  color: "#ffffff",
+                  border: "1px solid rgba(255,255,255,0.55)",
+                }}
+                className="inline-flex h-12 items-center gap-2 rounded-full px-6 text-sm font-medium backdrop-blur-sm"
+              >
+                {assets.labels.navServicesLabel}
+              </button>
+            </motion.div>
+          </div>
+        </section>
+      ) : (
+        // Fallback hero (compact mode / sectors with no photo pool).
+        <section className={`relative ${padX} ${padYHero}`}>
+          <div className="mx-auto max-w-3xl text-center">
+            <motion.span
+              {...fadeUp}
+              transition={{ ...fadeUp.transition, delay: 0 }}
+              style={{ color: palette.accent }}
+              className="mb-6 inline-block text-[11px] font-bold uppercase tracking-[0.32em]"
+            >
+              {assets.labels.servicesSectionPill}
+            </motion.span>
+            <motion.h1
+              {...fadeUp}
+              transition={{ ...fadeUp.transition, delay: 0.05 }}
+              style={display}
+              className={`text-balance ${heroTitleSize} font-bold leading-[1.05] tracking-tight`}
+            >
+              {headline}
+            </motion.h1>
+            <motion.p
+              {...fadeUp}
+              transition={{ ...fadeUp.transition, delay: 0.12 }}
+              className="mx-auto mt-7 max-w-2xl text-balance text-lg leading-relaxed opacity-80 sm:text-xl"
+            >
+              {tagline}
+            </motion.p>
+            <motion.div
+              {...fadeUp}
+              transition={{ ...fadeUp.transition, delay: 0.18 }}
+              className="mt-10 flex items-center justify-center gap-3"
+            >
+              <button
+                type="button"
+                style={accentBtn}
+                className="inline-flex h-12 items-center gap-2 rounded-full px-7 text-sm font-semibold"
+              >
+                {ctaText}
+                <IconArrowRight className="size-4" />
+              </button>
+              <button
+                type="button"
+                style={ghostBtn}
+                className="inline-flex h-12 items-center gap-2 rounded-full px-6 text-sm font-medium"
+              >
+                {assets.labels.navServicesLabel}
+              </button>
+            </motion.div>
+          </div>
+        </section>
+      )}
 
       {/* NUMBERED EDITORIAL BULLETS — 6 items in 3 cols */}
       <section

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   buildCopyPrompt,
   buildImagePrompt,
+  buildSectorInformativaCopyPrompt,
   type PromptInput,
 } from "@/lib/preview-prompts";
 
@@ -67,5 +68,69 @@ describe("buildImagePrompt", () => {
 
     const ecommerce = buildImagePrompt(baseInput);
     expect(ecommerce.toLowerCase()).toContain("landscape");
+  });
+});
+
+describe("buildCopyPrompt — current website grounding", () => {
+  it("includes the scraped website summary when provided", () => {
+    const p = buildCopyPrompt({
+      ...baseInput,
+      sourceSummary: "Título: Moda Sostenible | Camisetas de algodón orgánico.",
+    });
+    expect(p).toContain("WEB ACTUAL");
+    expect(p).toContain("algodón orgánico");
+  });
+
+  it("omits the website block when no summary is given", () => {
+    const p = buildCopyPrompt(baseInput);
+    expect(p).not.toContain("WEB ACTUAL");
+  });
+});
+
+describe("buildSectorInformativaCopyPrompt — sub-specialty coherence", () => {
+  const saludInput: PromptInput = {
+    businessName: "Fisioterapia Bimo",
+    sectorLabel: "Salud",
+    businessType: "informativa",
+    offerings: ["Fisioterapia deportiva", "Punción seca"],
+    valueProp: "Recuperamos lesiones con un plan de trabajo personalizado.",
+    paletteSlug: "azul-electrico",
+    paletteAccent: "#2563eb",
+    template: "informativa",
+  };
+
+  it("instructs deriving the exact sub-specialty from the business name", () => {
+    const p = buildSectorInformativaCopyPrompt(saludInput);
+    expect(p).toContain("SUBESPECIALIDAD");
+    expect(p).toContain("Fisioterapia Bimo");
+    // The fisioterapia → no-dental example must be present.
+    expect(p.toLowerCase()).toContain("fisioterapeuta");
+    expect(p.toLowerCase()).toContain("prohibido");
+  });
+
+  it("requires a short description for every service (non-restauración)", () => {
+    const p = buildSectorInformativaCopyPrompt(saludInput);
+    expect(p).toMatch(/blurb[\s\S]*OBLIGATORIO/);
+  });
+
+  it("keeps the user's featured dishes for restauración", () => {
+    const p = buildSectorInformativaCopyPrompt({
+      ...saludInput,
+      sectorLabel: "Restauración",
+      cuisineLabel: "Italiana",
+      featuredDishes: ["Tagliatelle al ragú", "Tiramisú de la casa"],
+    });
+    expect(p).toContain("Platos destacados");
+    expect(p).toContain("Tagliatelle al ragú");
+    expect(p).toContain("Tiramisú de la casa");
+  });
+
+  it("includes the scraped website summary when provided", () => {
+    const p = buildSectorInformativaCopyPrompt({
+      ...saludInput,
+      sourceSummary: "Contenido: especialistas en suelo pélvico.",
+    });
+    expect(p).toContain("WEB ACTUAL");
+    expect(p).toContain("suelo pélvico");
   });
 });

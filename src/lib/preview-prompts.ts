@@ -22,10 +22,18 @@ export interface PromptInput {
    *  "Mexicana", "Tradicional / mediterránea", etc. The AI uses it to
    *  invent 6 typical dish names with sensory blurbs. */
   cuisineLabel?: string;
+  /** Only when sector === "restauracion" — signature dishes the user typed.
+   *  The AI must keep these (improving wording) and invent the rest up to 6. */
+  featuredDishes?: string[];
   valueProp: string;
   paletteSlug: string;
   paletteAccent: string;
   template: "informativa" | "ecommerce";
+  /** Plain-text summary extracted from the business's current website (title,
+   *  meta description and visible copy). Used ONLY to ground the new copy in
+   *  real services/tone — never pasted verbatim. Undefined if not provided or
+   *  the fetch failed. */
+  sourceSummary?: string;
 }
 
 interface SectorPromptHints {
@@ -59,7 +67,7 @@ const SECTOR_PROMPT_HINTS: Record<string, SectorPromptHints> = {
     offeringNoun: "tratamiento",
     ctaExamples: "'Pide tu cita', 'Reserva consulta', 'Solicita información'",
     teamRoleExamples:
-      "'Odontóloga', 'Higienista dental', 'Médico especialista', 'Recepción'",
+      "puestos de la disciplina concreta del negocio (ej. una clínica de fisioterapia → 'Fisioterapeuta', 'Osteópata', 'Recepción'; una dental → 'Odontóloga', 'Higienista dental'; una óptica → 'Optometrista'). NUNCA mezcles disciplinas.",
   },
   educacion: {
     expertContext:
@@ -126,6 +134,24 @@ export function buildSectorInformativaCopyPrompt(input: PromptInput): string {
   const offeringsLine = isRestauracion
     ? `Cocina elegida: ${input.cuisineLabel}`
     : `Servicios/${hints.offeringNoun}s: ${normalizedOfferings.join(", ")}`;
+  const featuredDishesLine =
+    isRestauracion && input.featuredDishes && input.featuredDishes.length > 0
+      ? `Platos destacados que indica el usuario (REALES, debes incluirlos): ${input.featuredDishes
+          .map(normalizeOffering)
+          .join(", ")}`
+      : null;
+  const sourceBlock =
+    input.sourceSummary && input.sourceSummary.trim().length > 0
+      ? [
+          "",
+          "📄 CONTENIDO DE SU WEB ACTUAL (extraído automáticamente):",
+          `"""${input.sourceSummary.slice(0, 4000)}"""`,
+          "Usa este contenido para que la propuesta sea FIEL a la realidad:",
+          "extrae sus servicios/tratamientos reales, su especialidad concreta,",
+          "su tono y cualquier dato verídico (sin inventar números). Reescríbelo",
+          "con mejor redacción — NUNCA lo copies literal.",
+        ]
+      : [];
   return [
     `Eres copywriter web especializado en ${hints.expertContext}.`,
     "El usuario rellenó un cuestionario para generar el preview de su web.",
@@ -135,7 +161,23 @@ export function buildSectorInformativaCopyPrompt(input: PromptInput): string {
     `Sector: ${input.sectorLabel}`,
     `Tipo: Web informativa`,
     offeringsLine,
+    ...(featuredDishesLine ? [featuredDishesLine] : []),
     `Valor agregado escrito por el usuario: "${input.valueProp}"`,
+    ...sourceBlock,
+    "",
+    "🎯 REGLA CRÍTICA DE ESPECIALIDAD CONCRETA:",
+    `El sector "${input.sectorLabel}" es amplio. Deduce la SUBESPECIALIDAD`,
+    `EXACTA del negocio a partir de su nombre ("${input.businessName}"), sus`,
+    "servicios y el contenido de su web actual, y haz que TODO (puestos del",
+    "equipo, terminología, servicios, testimonios) encaje SOLO con esa",
+    "subespecialidad. Ejemplos:",
+    "- 'Fisioterapia Bimo' → fisioterapia: puestos como 'Fisioterapeuta',",
+    "  'Osteópata', 'Recepción'. PROHIBIDO 'Odontólogo', 'Higienista dental'",
+    "  u otros puestos dentales.",
+    "- 'Clínica Dental Sonrisa' → odontología: 'Odontóloga', 'Higienista'.",
+    "- 'Óptica Vista' → 'Optometrista'. NO mezcles disciplinas distintas.",
+    "Si el nombre o los servicios no dejan clara la subespecialidad, usa",
+    "puestos genéricos del sector, nunca de una disciplina ajena.",
     "",
     "⚠️ REGLA CRÍTICA DE COPYWRITING:",
     "El 'Valor agregado escrito por el usuario' que ves arriba es SOLO",
@@ -175,6 +217,9 @@ export function buildSectorInformativaCopyPrompt(input: PromptInput): string {
     `- sectionTitle: titular para la lista de ${hints.offeringNoun}s.`,
     isRestauracion
       ? "- offerings[]: EXACTAMENTE 6 platos típicos de la cocina elegida.\n" +
+        "  Si arriba hay 'Platos destacados que indica el usuario', INCLÚYELOS\n" +
+        "  como primeros platos (mejorando su redacción) y completa el resto\n" +
+        "  hasta llegar a 6 con platos típicos de esa cocina.\n" +
         "  Cada uno con:\n" +
         "    · name: nombre del plato (ej. 'Tartar de atún rojo')\n" +
         "    · tagline: 2-4 palabras divertidas y realistas que sirven como\n" +
@@ -183,7 +228,10 @@ export function buildSectorInformativaCopyPrompt(input: PromptInput): string {
         "      'Para los grandes momentos', 'Clásico imprescindible'.\n" +
         "    · blurb: 1 frase sensorial (textura, ingredientes destacados,\n" +
         "      preparación). SIN precios, sin números inventados, sin marketing-speak."
-      : `- offerings[].blurb: una frase concreta y honesta sobre cada ${hints.offeringNoun}.`,
+      : `- offerings[].blurb: OBLIGATORIO para CADA ${hints.offeringNoun}. Una\n` +
+        `  descripción breve (1 frase, ~8-18 palabras) que explique en qué\n` +
+        `  consiste ese ${hints.offeringNoun} concreto, honesta y sin números\n` +
+        "  inventados. Nunca dejes un servicio sin descripción.",
     "",
     "- valorAgregadoTitle: titular corto para la sección de valor agregado",
     "  (ej. 'Por qué elegirnos', 'Cuidamos cada detalle').",
@@ -251,6 +299,14 @@ export function buildCopyPrompt(input: PromptInput): string {
     `Tipo: ${tipo}`,
     `Oferta: ${input.offerings.join(", ")}`,
     `Valor agregado escrito por el usuario: "${input.valueProp}"`,
+    ...(input.sourceSummary && input.sourceSummary.trim().length > 0
+      ? [
+          "",
+          "📄 CONTENIDO DE SU WEB ACTUAL (extraído automáticamente, úsalo para",
+          "que la propuesta sea fiel a la realidad — NUNCA lo copies literal):",
+          `"""${input.sourceSummary.slice(0, 4000)}"""`,
+        ]
+      : []),
     "",
     "Reglas:",
     "- NO inventes datos numéricos, años de experiencia, certificaciones,",

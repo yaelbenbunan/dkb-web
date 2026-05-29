@@ -750,9 +750,9 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
     },
     fallbackTeam: [
       { name: "Dra. Marta Rivas", role: "Directora médica", gender: "female" },
-      { name: "Javier Soler", role: "Odontólogo", gender: "male" },
-      { name: "Lucía Méndez", role: "Higienista dental", gender: "female" },
-      { name: "Pablo Iglesias", role: "Especialista", gender: "male" },
+      { name: "Javier Soler", role: "Especialista", gender: "male" },
+      { name: "Lucía Méndez", role: "Profesional sanitaria", gender: "female" },
+      { name: "Pablo Iglesias", role: "Recepción", gender: "male" },
     ],
     fallbackTestimonials: [
       {

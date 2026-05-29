@@ -97,11 +97,13 @@ const baseLead = z
     logoDataUrl: logoDataUrlSchema.optional().or(z.literal("")),
     address: z.string().trim().max(120, "Dirección demasiado larga").optional().or(z.literal("")),
     city: z.string().trim().max(60, "Ciudad demasiado larga").optional().or(z.literal("")),
+    currentWebsite: z.string().trim().max(300, "URL demasiado larga").optional().or(z.literal("")),
+    featuredDishes: z.array(offeringSchema).max(6).optional(),
     valueProp: z
       .string()
       .trim()
       .min(20, "Cuéntanos un poco más (mínimo 20 caracteres)")
-      .max(500, "Máximo 500 caracteres"),
+      .max(800, "Máximo 800 caracteres"),
     name: z.string().trim().min(2, "Demasiado corto"),
     email: z
       .string()
@@ -144,7 +146,7 @@ export const previewRatingSchema = z
     offerings: z.array(offeringSchema).min(1).max(6),
     palette: z.string().refine(isPaletteSlug),
     typography: z.string().refine(isTypographySlug),
-    valueProp: z.string().trim().min(20).max(500),
+    valueProp: z.string().trim().min(20).max(800),
     name: z.string().trim().min(2),
     email: z.string().trim().refine(isValidContactEmail),
     phone: z.string().trim().refine(isValidContactPhone),
@@ -232,8 +234,15 @@ export const previewGenerateInputSchema = z.object({
   customColors: customColorsSchema,
   typography: z.string().refine(isTypographySlug),
   style: styleSchema,
-  valueProp: z.string().trim().min(20).max(500),
+  valueProp: z.string().trim().min(20).max(800),
   address: z.string().trim().max(120).optional(),
   city: z.string().trim().max(60).optional(),
+  /** Optional URL of the business's current website. We fetch it server-side
+   *  and use its content to ground the generated copy (and reuse a real image
+   *  when possible). */
+  currentWebsite: z.string().trim().max(300).optional(),
+  /** Optional signature dishes the user highlights (restauración only). The AI
+   *  keeps these and invents the rest of the menu around them. */
+  featuredDishes: z.array(z.string().trim().min(1).max(80)).max(6).optional(),
 });
 export type PreviewGenerateInput = z.infer<typeof previewGenerateInputSchema>;

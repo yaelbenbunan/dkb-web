@@ -81,6 +81,26 @@ describe("previewLeadSchema", () => {
     expect(r.success).toBe(false);
   });
 
+  it("accepts a valueProp up to 800 chars and rejects beyond", () => {
+    expect(
+      previewLeadSchema.safeParse({ ...validLead, valueProp: "a".repeat(800) })
+        .success,
+    ).toBe(true);
+    expect(
+      previewLeadSchema.safeParse({ ...validLead, valueProp: "a".repeat(801) })
+        .success,
+    ).toBe(false);
+  });
+
+  it("accepts an optional currentWebsite and featuredDishes", () => {
+    const r = previewLeadSchema.safeParse({
+      ...validLead,
+      currentWebsite: "https://miweb.com",
+      featuredDishes: ["Paella", "Tarta de queso"],
+    });
+    expect(r.success).toBe(true);
+  });
+
   it("rejects invalid email and short phone", () => {
     expect(
       previewLeadSchema.safeParse({ ...validLead, email: "x" }).success,

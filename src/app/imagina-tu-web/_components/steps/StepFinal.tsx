@@ -55,13 +55,13 @@ export function StepFinal({ value, onChange }: Props) {
         <textarea
           value={value.valueProp}
           onChange={(e) => set("valueProp", e.target.value)}
-          rows={4}
-          maxLength={500}
+          rows={5}
+          maxLength={800}
           placeholder="Ej. Hacemos asesoría fiscal personalizada con respuesta en 24h y precios cerrados desde el primer día."
           className="surface-input mt-1.5 block w-full rounded-md px-3.5 py-2.5 text-sm"
         />
         <span className="mt-1 block text-xs text-fg-muted">
-          {value.valueProp.length}/500
+          {value.valueProp.length}/800
         </span>
       </label>
 

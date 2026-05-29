@@ -1,0 +1,202 @@
+import "server-only";
+import dns from "node:dns";
+import type { LookupFunction } from "node:net";
+import { Agent, fetch as undiciFetch } from "undici";
+import { isBlockedHost, isBlockedIp, normalizeUrl } from "./website-extract-guard";
+
+export interface WebsiteExtract {
+  /** Resolved, normalized URL we actually fetched. */
+  url: string;
+  /** Plain-text summary (title + meta description + visible copy), capped. */
+  summary: string;
+  /** Absolute URL of a representative image (og:image / twitter:image), if any. */
+  imageUrl?: string;
+}
+
+const FETCH_TIMEOUT_MS = 6000;
+const MAX_BYTES = 600_000; // stop reading after ~600 KB of HTML
+const MAX_SUMMARY_CHARS = 4000;
+
+/** Custom DNS resolver for undici. Runs for EVERY connection the dispatcher
+ *  opens — the initial request and each redirect hop — and rejects the
+ *  connection if any resolved address is in a blocked range. Because undici
+ *  connects to exactly the address we return here, there is no resolve→connect
+ *  TOCTOU gap (no DNS-rebinding window). */
+const ssrfLookup: LookupFunction = (hostname, options, callback) => {
+  dns.lookup(hostname, { ...options, all: true }, (err, addresses) => {
+    if (err) {
+      callback(err, "", 0);
+      return;
+    }
+    const list = addresses as dns.LookupAddress[];
+    if (list.length === 0) {
+      callback(new Error("No address resolved"), "", 0);
+      return;
+    }
+    const blocked = list.find((a) => isBlockedIp(a.address));
+    if (blocked) {
+      callback(
+        new Error(`Blocked by SSRF guard: ${blocked.address}`),
+        "",
+        0,
+      );
+      return;
+    }
+    // Respect the shape undici asked for.
+    if ((options as dns.LookupAllOptions).all) {
+      callback(null, list as unknown as string, 0);
+    } else {
+      callback(null, list[0].address, list[0].family);
+    }
+  });
+};
+
+function decodeEntities(s: string): string {
+  return s
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&aacute;/g, "á")
+    .replace(/&eacute;/g, "é")
+    .replace(/&iacute;/g, "í")
+    .replace(/&oacute;/g, "ó")
+    .replace(/&uacute;/g, "ú")
+    .replace(/&ntilde;/g, "ñ");
+}
+
+function matchAttr(html: string, regex: RegExp): string | undefined {
+  const m = html.match(regex);
+  return m?.[1]?.trim() || undefined;
+}
+
+/** Pull title + meta description + a chunk of visible body text out of raw HTML.
+ *  Regex-based on purpose: no extra dependency, and we only need a rough
+ *  textual fingerprint to feed the copywriting model. */
+function extractFromHtml(html: string, baseUrl: URL): WebsiteExtract {
+  const title = matchAttr(html, /<title[^>]*>([\s\S]*?)<\/title>/i);
+  const metaDesc =
+    matchAttr(
+      html,
+      /<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i,
+    ) ??
+    matchAttr(
+      html,
+      /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']description["']/i,
+    );
+  const ogImage =
+    matchAttr(
+      html,
+      /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
+    ) ??
+    matchAttr(
+      html,
+      /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i,
+    );
+
+  // Visible text: drop scripts/styles/noscript, strip tags, collapse whitespace.
+  const body = html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+    .replace(/<[^>]+>/g, " ");
+  const bodyText = decodeEntities(body).replace(/\s+/g, " ").trim();
+
+  const summary = decodeEntities(
+    [
+      title ? `Título: ${title}` : "",
+      metaDesc ? `Descripción: ${metaDesc}` : "",
+      bodyText ? `Contenido: ${bodyText}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  ).slice(0, MAX_SUMMARY_CHARS);
+
+  // The image URL is rendered into the preview, so only surface it if its host
+  // passes the same cheap block-list (it's loaded by the visitor's browser, not
+  // fetched server-side, so we don't resolve DNS for it here).
+  let imageUrl: string | undefined;
+  if (ogImage) {
+    try {
+      const abs = new URL(ogImage, baseUrl);
+      if (
+        (abs.protocol === "http:" || abs.protocol === "https:") &&
+        !isBlockedHost(abs.hostname)
+      ) {
+        imageUrl = abs.toString();
+      }
+    } catch {
+      imageUrl = undefined;
+    }
+  }
+
+  return { url: baseUrl.toString(), summary, imageUrl };
+}
+
+/** Fetch the user's current website and return a text summary (+ a candidate
+ *  image URL) to ground the generated copy. Returns null on any problem —
+ *  callers must treat this as best-effort and fall back gracefully.
+ *
+ *  SSRF defense: a custom undici dispatcher validates the resolved IP of every
+ *  connection (initial request + each redirect hop) against {@link isBlockedIp}
+ *  and refuses to connect to internal/loopback/metadata ranges. */
+export async function extractWebsite(
+  rawUrl: string | undefined,
+): Promise<WebsiteExtract | null> {
+  if (!rawUrl) return null;
+  const url = normalizeUrl(rawUrl);
+  if (!url || isBlockedHost(url.hostname)) return null;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const dispatcher = new Agent({
+    connect: { lookup: ssrfLookup },
+    headersTimeout: FETCH_TIMEOUT_MS,
+    bodyTimeout: FETCH_TIMEOUT_MS,
+  });
+
+  try {
+    const res = await undiciFetch(url, {
+      method: "GET",
+      redirect: "follow", // each hop re-connects through ssrfLookup → revalidated
+      signal: controller.signal,
+      dispatcher,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; DinkbitPreviewBot/1.0)",
+        Accept: "text/html,application/xhtml+xml",
+      },
+    });
+    if (!res.ok || !res.body) return null;
+    const contentType = res.headers.get("content-type") ?? "";
+    if (!contentType.includes("html")) return null;
+
+    // Final URL host re-check (defense in depth; the lookup already vetted the
+    // IP of every hop).
+    const finalUrl = new URL(res.url || url.toString());
+    if (isBlockedHost(finalUrl.hostname)) return null;
+
+    // Read at most MAX_BYTES so a giant page can't exhaust memory.
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let html = "";
+    let received = 0;
+    while (received < MAX_BYTES) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      received += value.byteLength;
+      html += decoder.decode(value, { stream: true });
+    }
+    await reader.cancel().catch(() => {});
+
+    const extracted = extractFromHtml(html, finalUrl);
+    if (!extracted.summary && !extracted.imageUrl) return null;
+    return extracted;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+    await dispatcher.close().catch(() => {});
+  }
+}

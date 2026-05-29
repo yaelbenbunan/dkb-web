@@ -17,6 +17,7 @@ import {
   type SectorInformativaCopyResponse,
 } from "./preview-validation";
 import { getSectorLabel, resolvePalette } from "./preview-themes";
+import { extractWebsite } from "./website-extract";
 
 export interface PreviewGenerateResult {
   copy: CopyResponse | null;
@@ -72,6 +73,11 @@ export async function generatePreview(
   const template: "informativa" | "ecommerce" =
     parsed.data.businessType === "ecommerce" ? "ecommerce" : "informativa";
 
+  // Best-effort: fetch the user's current website to ground the copy in their
+  // real services/tone and reuse a real image when available. Never blocks the
+  // preview — extractWebsite returns null on any failure/timeout.
+  const source = await extractWebsite(parsed.data.currentWebsite);
+
   // Map cuisine slug to a human-readable label that the AI can read.
   const cuisineLabel =
     parsed.data.cuisine && parsed.data.sector === "restauracion"
@@ -92,35 +98,38 @@ export async function generatePreview(
     ecommerceKind: parsed.data.ecommerceKind,
     offerings: parsed.data.offerings,
     cuisineLabel,
+    featuredDishes:
+      parsed.data.sector === "restauracion"
+        ? parsed.data.featuredDishes
+        : undefined,
     valueProp: parsed.data.valueProp,
     paletteSlug: palette.slug,
     paletteAccent: palette.accent,
     template,
+    sourceSummary: source?.summary,
   };
 
   const useSector = useSectorInformativa(parsed.data);
 
-  // Sector templates skip hero image generation (they use a curated static
-  // photo pool instead) to keep cost and latency lower.
-  const tasks: Promise<unknown>[] = useSector
-    ? [generateSectorCopy(client, promptInput)]
-    : [generateCopy(client, promptInput), generateHeroImage(client, promptInput)];
-
-  const results = await Promise.allSettled(tasks);
-
   if (useSector) {
-    const sectorRes = results[0];
-    return {
-      copy: null,
-      sectorCopy:
-        sectorRes.status === "fulfilled"
-          ? (sectorRes.value as SectorInformativaCopyResponse | null)
-          : null,
-      heroImageDataUrl: null,
-    };
+    // Sector templates use a curated static photo pool, so we only need copy.
+    const sectorCopy = await generateSectorCopy(client, promptInput).catch(
+      () => null,
+    );
+    return { copy: null, sectorCopy, heroImageDataUrl: null };
   }
 
-  const [copyRes, imageRes] = results;
+  // Generic templates need a hero image. Prefer a real image scraped from the
+  // user's current website (more faithful, and free); only fall back to AI
+  // image generation when we couldn't get one.
+  const tasks: Promise<unknown>[] = [generateCopy(client, promptInput)];
+  if (!source?.imageUrl) {
+    tasks.push(generateHeroImage(client, promptInput));
+  }
+  const results = await Promise.allSettled(tasks);
+
+  const copyRes = results[0];
+  const aiImageRes = source?.imageUrl ? undefined : results[1];
   return {
     copy:
       copyRes.status === "fulfilled"
@@ -128,7 +137,10 @@ export async function generatePreview(
         : null,
     sectorCopy: null,
     heroImageDataUrl:
-      imageRes.status === "fulfilled" ? (imageRes.value as string | null) : null,
+      source?.imageUrl ??
+      (aiImageRes && aiImageRes.status === "fulfilled"
+        ? (aiImageRes.value as string | null)
+        : null),
   };
 }
 

@@ -48,6 +48,8 @@ export async function sendPreviewLead(
     logoDataUrl: formData.get("logoDataUrl") ?? "",
     address: formData.get("address") ?? "",
     city: formData.get("city") ?? "",
+    currentWebsite: formData.get("currentWebsite") ?? "",
+    featuredDishes: parseOfferings(formData.get("featuredDishes")),
     valueProp: formData.get("valueProp"),
     name: formData.get("name"),
     email: formData.get("email"),
@@ -108,6 +110,12 @@ export async function sendPreviewLead(
       `Logo: ${d.logoDataUrl ? "sí (adjunto en data URL)" : "no"}`,
       `Dirección: ${d.address || "—"}`,
       `Ciudad: ${d.city || "—"}`,
+      `Web actual: ${d.currentWebsite || "—"}`,
+      `Platos destacados: ${
+        d.featuredDishes && d.featuredDishes.length > 0
+          ? d.featuredDishes.join(", ")
+          : "—"
+      }`,
       "",
       "Toque personal:",
       d.valueProp,

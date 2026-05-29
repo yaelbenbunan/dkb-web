@@ -30,9 +30,13 @@ interface WizardState {
   ecommerceKind: "productos" | "servicios" | null;
   businessName: string;
   sector: string;
+  /** Optional URL of the business's current website (used to ground the copy). */
+  currentWebsite: string;
   offerings: string[];
   /** Set only when `sector === "restauracion"` */
   cuisine: Cuisine | "";
+  /** Optional signature dishes (restauración only). */
+  featuredDishes: string[];
   palette: string;
   /** Set only when `palette === CUSTOM_PALETTE_SLUG` */
   customColors: CustomPaletteColors | null;
@@ -54,8 +58,10 @@ const INITIAL: WizardState = {
   ecommerceKind: null,
   businessName: "",
   sector: "",
+  currentWebsite: "",
   offerings: [],
   cuisine: "",
+  featuredDishes: [],
   palette: "",
   customColors: null,
   typography: "",
@@ -161,8 +167,10 @@ export function PreviewWizard() {
     if (state.ecommerceKind) fd.set("ecommerceKind", state.ecommerceKind);
     fd.set("businessName", state.businessName);
     fd.set("sector", state.sector);
+    fd.set("currentWebsite", state.currentWebsite);
     fd.set("offerings", JSON.stringify(state.offerings));
     if (state.cuisine) fd.set("cuisine", state.cuisine);
+    fd.set("featuredDishes", JSON.stringify(state.featuredDishes));
     fd.set("palette", state.palette);
     if (state.customColors) {
       fd.set("customColors", JSON.stringify(state.customColors));
@@ -198,6 +206,9 @@ export function PreviewWizard() {
           sector: state.sector,
           offerings: state.offerings,
           cuisine: state.cuisine || undefined,
+          currentWebsite: state.currentWebsite || undefined,
+          featuredDishes:
+            state.featuredDishes.length > 0 ? state.featuredDishes : undefined,
           palette: state.palette,
           customColors: state.customColors ?? undefined,
           typography: state.typography,
@@ -344,7 +355,11 @@ export function PreviewWizard() {
         )}
         {step === 2 && (
           <StepIdentity
-            value={{ businessName: state.businessName, sector: state.sector }}
+            value={{
+              businessName: state.businessName,
+              sector: state.sector,
+              currentWebsite: state.currentWebsite,
+            }}
             onChange={(v) => setState({ ...state, ...v })}
           />
         )}
@@ -353,8 +368,14 @@ export function PreviewWizard() {
             value={state.offerings}
             sector={state.sector}
             cuisine={state.cuisine}
+            featuredDishes={state.featuredDishes}
             onChange={(v) =>
-              setState({ ...state, offerings: v.offerings, cuisine: v.cuisine })
+              setState({
+                ...state,
+                offerings: v.offerings,
+                cuisine: v.cuisine,
+                featuredDishes: v.featuredDishes,
+              })
             }
           />
         )}
