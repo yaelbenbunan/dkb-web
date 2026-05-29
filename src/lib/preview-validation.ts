@@ -179,6 +179,22 @@ export const copyResponseSchema = z.object({
 });
 export type CopyResponse = z.infer<typeof copyResponseSchema>;
 
+// Fictitious "Carta destacada" (restauración). Two named sections of menu
+// items, each carrying a short description and a realistic invented price.
+const menuItemResponseSchema = z.object({
+  name: z.string().trim().min(2).max(70),
+  desc: z.string().trim().min(5).max(140),
+  /** Price as a display string, e.g. "€14" or "14 €". Kept loose on purpose. */
+  price: z.string().trim().min(1).max(12),
+});
+export const menuResponseSchema = z.object({
+  leftTitle: z.string().trim().min(2).max(40),
+  leftItems: z.array(menuItemResponseSchema).min(3).max(6),
+  rightTitle: z.string().trim().min(2).max(40),
+  rightItems: z.array(menuItemResponseSchema).min(3).max(6),
+});
+export type MenuResponse = z.infer<typeof menuResponseSchema>;
+
 // Extended copy used by the sector-aware `InformativaSectorTemplate`.
 // Originally written for the salud sector, now consumed by all supported
 // sectors (salud, educacion, moda, tecnologia, servicios). The legacy
@@ -214,6 +230,10 @@ export const sectorInformativaCopyResponseSchema = copyResponseSchema.extend({
     )
     .min(3)
     .max(4),
+  /** Restauración only — fictitious "Carta destacada" with prices. Includes
+   *  the user's featured dishes plus invented ones. Optional: when absent we
+   *  fall back to the static per-cuisine menu in sector-assets. */
+  menu: menuResponseSchema.optional(),
 });
 export type SectorInformativaCopyResponse = z.infer<
   typeof sectorInformativaCopyResponseSchema

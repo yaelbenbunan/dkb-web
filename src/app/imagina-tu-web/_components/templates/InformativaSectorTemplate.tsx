@@ -16,6 +16,7 @@ import {
   getRestauracionRolePhoto,
   isSupportedSector,
   type Cuisine,
+  type FeaturedMenu,
   type SupportedSector,
 } from "./sector-assets";
 
@@ -833,6 +834,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
       {data.sector === "restauracion" && (
         <FeaturedMenuSection
           cuisine={data.cuisine || "fusion"}
+          menu={copy?.menu}
           palette={palette}
           display={display}
           fgOnSurface={fgOnSurface}
@@ -1475,16 +1477,25 @@ function DishesGrid({
  *  restauración branch right after "Especialidades de la casa". */
 function FeaturedMenuSection({
   cuisine,
+  menu: aiMenu,
   palette,
   display,
   fgOnSurface,
 }: {
   cuisine: Cuisine;
+  /** AI-generated carta (includes the user's featured dishes + invented ones).
+   *  Falls back to the static per-cuisine menu when absent. */
+  menu?: FeaturedMenu | null;
   palette: { bg: string; surface: string; accent: string; text: string };
   display: CSSProperties;
   fgOnSurface: string;
 }) {
-  const menu = getFeaturedMenu(cuisine);
+  // Prefer the AI carta, but only if it actually has items in both columns;
+  // otherwise use the curated static menu for this cuisine.
+  const menu =
+    aiMenu && aiMenu.leftItems?.length && aiMenu.rightItems?.length
+      ? aiMenu
+      : getFeaturedMenu(cuisine);
   const photos = getCuisinePhotos(cuisine);
   // Pick a centered photo. Stable per render (same on hover/scroll).
   const heroPhoto = useMemo(

@@ -256,6 +256,22 @@ export function buildSectorInformativaCopyPrompt(input: PromptInput): string {
     "  Cada uno: name (nombre + inicial de apellido, Ej. 'María G.') y text",
     `  (40-280 caracteres). AL MENOS UNO debe mencionar el nombre "${input.businessName}".`,
     `  Tono natural de ${hints.audienceNoun}: detalle concreto, sin superlativos vacíos.`,
+    ...(isRestauracion
+      ? [
+          "",
+          "- menu: una CARTA destacada ficticia en DOS secciones (entrantes/para",
+          "  empezar y platos principales). Cada sección con leftTitle/rightTitle",
+          "  (ej. 'Para empezar', 'Antipasti', 'Principales') y 5 items.",
+          "  Cada item: name, desc (1 línea de ingredientes/elaboración, sin",
+          "  marketing-speak) y price.",
+          "  ⚠️ A DIFERENCIA de offerings[].blurb, aquí SÍ debes poner PRECIOS:",
+          "  inventa precios realistas de restaurante en España con símbolo €",
+          "  (entrantes ~€8-18, principales ~€16-30, postres ~€6-10).",
+          "  IMPORTANTE: si arriba hay 'Platos destacados que indica el usuario',",
+          "  INCLÚYELOS en la carta (en la sección que corresponda) y completa el",
+          "  resto con platos típicos inventados de la cocina elegida.",
+        ]
+      : []),
     "",
     "RESPONDE ÚNICAMENTE con un objeto JSON válido (sin markdown ni texto extra)",
     "con esta forma exacta:",
@@ -271,7 +287,17 @@ export function buildSectorInformativaCopyPrompt(input: PromptInput): string {
     '  "valorAgregadoIntro": string (20-240),',
     '  "bullets": [{ "title": string (2-60), "text": string (20-180) }, ... EXACTLY 6 items],',
     '  "team": [{ "name": string, "role": string, "gender": "male" | "female" }, ... 4-6 items],',
-    '  "testimonials": [{ "name": string, "text": string (40-280) }, ... 3-4 items]',
+    isRestauracion
+      ? '  "testimonials": [{ "name": string, "text": string (40-280) }, ... 3-4 items],'
+      : '  "testimonials": [{ "name": string, "text": string (40-280) }, ... 3-4 items]',
+    ...(isRestauracion
+      ? [
+          '  "menu": {',
+          '    "leftTitle": string (2-40), "leftItems": [{ "name": string, "desc": string, "price": string }, ... 5 items],',
+          '    "rightTitle": string (2-40), "rightItems": [{ "name": string, "desc": string, "price": string }, ... 5 items]',
+          "  }",
+        ]
+      : []),
     "}",
     `Debes devolver EXACTAMENTE ${offeringsExpected} entradas en "offerings".`,
     isRestauracion

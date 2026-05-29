@@ -125,6 +125,20 @@ describe("buildSectorInformativaCopyPrompt — sub-specialty coherence", () => {
     expect(p).toContain("Tiramisú de la casa");
   });
 
+  it("asks for a priced carta (menu) only for restauración", () => {
+    const resto = buildSectorInformativaCopyPrompt({
+      ...saludInput,
+      sectorLabel: "Restauración",
+      cuisineLabel: "Italiana",
+    });
+    expect(resto).toContain("CARTA");
+    expect(resto).toContain("PRECIOS");
+    expect(resto).toContain('"menu"');
+
+    const salud = buildSectorInformativaCopyPrompt(saludInput);
+    expect(salud).not.toContain('"menu"');
+  });
+
   it("includes the scraped website summary when provided", () => {
     const p = buildSectorInformativaCopyPrompt({
       ...saludInput,
