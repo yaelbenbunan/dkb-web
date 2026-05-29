@@ -437,7 +437,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
                 {headline}
               </h1>
               <p
-                className="mt-6 max-w-lg text-base leading-relaxed"
+                className="mt-6 max-w-lg text-lg leading-relaxed sm:text-xl"
                 style={{
                   color: palette.text,
                   textShadow: `0 0 14px ${palette.bg}cc`,
@@ -586,7 +586,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
             <h2 style={display} className="mt-4 text-4xl font-bold tracking-tight">
               {valorAgregadoTitle}
             </h2>
-            <p className="mt-4 max-w-lg leading-relaxed opacity-90">
+            <p className="mt-5 max-w-lg text-lg leading-relaxed opacity-90">
               {valorAgregadoIntro}
             </p>
             <motion.ul
@@ -683,7 +683,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
               {assets.labels.teamSectionTitle}
             </h2>
             <p
-              className="mx-auto mt-4 max-w-xl"
+              className="mx-auto mt-5 max-w-xl text-lg leading-relaxed"
               style={{
                 color: palette.text,
                 opacity: 0.85,
@@ -732,7 +732,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
                 {servicesTitle}
               </h2>
             </div>
-            <p className="max-w-sm text-right opacity-80">
+            <p className="max-w-sm text-right text-lg leading-relaxed opacity-85">
               {assets.labels.servicesSectionSubtitle}
             </p>
           </motion.div>
@@ -789,7 +789,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
                         {titleize(s.name)}
                       </h3>
                       <p
-                        className="relative mt-2 text-sm leading-relaxed"
+                        className="relative mt-2 text-base leading-relaxed"
                         style={{ color: fgOnSurface + "cc" }}
                       >
                         {s.blurb ||
@@ -973,7 +973,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
               {ctaText}
               <IconArrowRight className="size-4" />
             </button>
-            <dl className="mt-10 space-y-4 text-sm">
+            <dl className="mt-10 space-y-5 text-base">
               <ContactRow
                 label="Ubicación"
                 value={fullAddress || "Calle Ejemplo 123, Madrid"}
@@ -1447,7 +1447,7 @@ function DishesGrid({
                 </p>
               )}
               <p
-                className="mt-2 text-sm leading-relaxed"
+                className="mt-2 text-base leading-relaxed"
                 style={{ color: fgOnSurface + "cc" }}
               >
                 {d.blurb}
@@ -1610,7 +1610,7 @@ function MenuColumn({
                 {it.price}
               </span>
             </div>
-            <p className="mt-1 text-sm leading-relaxed opacity-70" style={{ color: fg }}>
+            <p className="mt-1.5 text-[15px] leading-relaxed opacity-75" style={{ color: fg }}>
               {it.desc}
             </p>
           </li>

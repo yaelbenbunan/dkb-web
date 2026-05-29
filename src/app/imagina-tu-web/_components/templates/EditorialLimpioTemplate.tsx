@@ -265,7 +265,7 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
           )}
         </div>
         <nav
-          className="hidden gap-8 text-xs uppercase tracking-[0.18em] opacity-75 sm:flex"
+          className="hidden gap-8 text-[13px] uppercase tracking-[0.18em] opacity-80 sm:flex"
           style={display}
         >
           <span>Inicio</span>
@@ -362,15 +362,28 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
 
       {/* NUMBERED EDITORIAL BULLETS — 6 items in 3 cols */}
       <section
-        className={`border-y ${padX} ${padY}`}
+        className={`relative isolate overflow-hidden border-y ${padX} ${padY}`}
         style={{ ...hairline, backgroundColor: palette.surface }}
       >
-        <div className="mx-auto max-w-6xl">
-          <motion.div {...fadeUp} className="grid gap-10 sm:grid-cols-[1fr_2fr]">
-            <div>
+        {/* Dot-grid texture so the section never reads as a flat surface */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10"
+          style={{
+            backgroundImage: `radial-gradient(circle at 1px 1px, ${palette.text}1f 1px, transparent 1.5px)`,
+            backgroundSize: "26px 26px",
+            opacity: 0.55,
+          }}
+        />
+        <div className="relative mx-auto max-w-6xl">
+          <motion.div
+            {...fadeUp}
+            className="grid items-stretch gap-10 sm:grid-cols-2"
+          >
+            <div className="flex flex-col">
               <span
                 style={{ color: palette.accent }}
-                className="text-[11px] font-bold uppercase tracking-[0.32em]"
+                className="text-xs font-bold uppercase tracking-[0.32em]"
               >
                 Cómo trabajamos
               </span>
@@ -380,16 +393,61 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
               >
                 {valorTitle}
               </h2>
-              <p className="mt-5 max-w-md text-base leading-relaxed opacity-75">
+              <p className="mt-6 max-w-lg text-lg leading-relaxed opacity-85">
                 {valorIntro}
               </p>
-            </div>
-            {valorImg && !isCompact && (
+              {/* Claim editorial — llena la altura de la columna y crea un
+                  segundo punto visual frente a la foto. */}
               <div
-                className="aspect-[5/4] overflow-hidden rounded-2xl bg-cover bg-center"
+                className="mt-auto flex items-end pt-10"
+              >
+                <div
+                  className="border-l-2 pl-5"
+                  style={{ borderColor: palette.accent }}
+                >
+                  <p
+                    style={display}
+                    className="text-balance text-xl font-medium leading-snug sm:text-2xl"
+                  >
+                    Cada decisión que tomamos pasa antes por una pregunta:
+                    <span style={{ color: palette.accent }}> ¿le aporta esto al cliente?</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+            {valorImg && !isCompact ? (
+              <div
+                className="min-h-[360px] overflow-hidden rounded-2xl bg-cover bg-center"
                 style={{ backgroundImage: `url('${valorImg}')` }}
                 aria-hidden
               />
+            ) : (
+              // Compact mode: no photo — replace with a 4-up stat block so
+              // the row never reads as half-empty.
+              <div className="grid grid-cols-2 gap-4 self-stretch">
+                {[
+                  { k: "+10", l: "Años acompañando proyectos" },
+                  { k: "98%", l: "Clientes que repiten" },
+                  { k: "24h", l: "Tiempo medio de respuesta" },
+                  { k: "100%", l: "Atención personalizada" },
+                ].map((s, i) => (
+                  <div
+                    key={i}
+                    className="flex flex-col justify-center rounded-2xl border p-6"
+                    style={hairline}
+                  >
+                    <span
+                      style={{ ...display, color: palette.accent }}
+                      className="text-4xl font-bold leading-none"
+                    >
+                      {s.k}
+                    </span>
+                    <span className="mt-3 text-sm leading-snug opacity-80">
+                      {s.l}
+                    </span>
+                  </div>
+                ))}
+              </div>
             )}
           </motion.div>
 
@@ -404,14 +462,14 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
               >
                 <div
                   style={{ ...display, color: palette.accent }}
-                  className="text-3xl font-bold leading-none"
+                  className="text-3xl font-bold leading-none sm:text-4xl"
                 >
                   {String(i + 1).padStart(2, "0")}
                 </div>
-                <h3 style={display} className="mt-4 text-xl font-semibold">
+                <h3 style={display} className="mt-4 text-xl font-semibold sm:text-2xl">
                   {b.title}
                 </h3>
-                <p className="mt-2 text-sm leading-relaxed opacity-75">{b.text}</p>
+                <p className="mt-3 text-base leading-relaxed opacity-85">{b.text}</p>
               </motion.div>
             ))}
           </div>
@@ -419,13 +477,24 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
       </section>
 
       {/* SERVICES — asymmetric list */}
-      <section className={`${padX} ${padY}`}>
-        <div className="mx-auto max-w-6xl">
-          <motion.div {...fadeUp} className="grid gap-10 sm:grid-cols-[1fr_2fr]">
-            <div>
+      <section className={`relative isolate overflow-hidden ${padX} ${padY}`}>
+        {/* Soft accent veil — dynamism without overwhelming the type */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10"
+          style={{
+            background: `linear-gradient(160deg, ${palette.accent}0a 0%, transparent 45%)`,
+          }}
+        />
+        <div className="relative mx-auto max-w-6xl">
+          <motion.div
+            {...fadeUp}
+            className="grid items-stretch gap-12 sm:grid-cols-[2fr_3fr]"
+          >
+            <div className="flex flex-col">
               <span
                 style={{ color: palette.accent }}
-                className="text-[11px] font-bold uppercase tracking-[0.32em]"
+                className="text-xs font-bold uppercase tracking-[0.32em]"
               >
                 {assets.labels.servicesSectionPill}
               </span>
@@ -435,9 +504,37 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
               >
                 {servicesTitle}
               </h2>
-              <p className="mt-5 max-w-md text-base leading-relaxed opacity-75">
+              <p className="mt-6 max-w-md text-lg leading-relaxed opacity-85">
                 {assets.labels.servicesSectionSubtitle}
               </p>
+              {/* Bottom callout: rellena la altura de la columna y empuja al
+                  usuario a contactar si no encuentra su caso en la lista. */}
+              <div
+                className="mt-auto rounded-2xl border p-6"
+                style={{
+                  ...hairline,
+                  backgroundColor: `${palette.accent}0d`,
+                }}
+              >
+                <p
+                  style={display}
+                  className="text-balance text-lg font-semibold leading-snug"
+                >
+                  ¿No ves tu caso aquí?
+                </p>
+                <p className="mt-2 text-base leading-relaxed opacity-85">
+                  Cuéntanos qué necesitas y te decimos sin compromiso si encaja
+                  con lo que hacemos.
+                </p>
+                <button
+                  type="button"
+                  className="mt-4 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-wider"
+                  style={{ color: palette.accent }}
+                >
+                  Hablemos
+                  <IconArrowRight className="size-4" />
+                </button>
+              </div>
             </div>
             <ul className="space-y-2">
               {services.map((s, i) => {
@@ -465,14 +562,14 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
                         {s.name}
                       </h3>
                       {s.blurb && (
-                        <p className="mt-2 text-sm leading-relaxed opacity-75">
+                        <p className="mt-2 text-base leading-relaxed opacity-85">
                           {s.blurb}
                         </p>
                       )}
                       {tagline && (
                         <p
                           style={{ color: palette.accent }}
-                          className="mt-1 text-xs font-semibold uppercase tracking-wider"
+                          className="mt-2 text-[13px] font-semibold uppercase tracking-wider"
                         >
                           {tagline}
                         </p>
@@ -493,14 +590,22 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
       {/* RESTAURACION — minimal dish strip when sector matches and photos exist */}
       {isRestauracion && dishPhotos.length > 0 && (
         <section
-          className={`border-y ${padX} ${padY}`}
+          className={`relative isolate overflow-hidden border-y ${padX} ${padY}`}
           style={{ ...hairline, backgroundColor: palette.surface }}
         >
-          <div className="mx-auto max-w-6xl">
-            <motion.div {...fadeUp} className="mb-12 max-w-2xl">
+          {/* Diagonal hairlines for visual variety vs. neighbouring sections */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 -z-10"
+            style={{
+              backgroundImage: `repeating-linear-gradient(135deg, ${palette.text}0a 0 1px, transparent 1px 28px)`,
+            }}
+          />
+          <div className="relative mx-auto max-w-6xl">
+            <motion.div {...fadeUp} className="mb-14 max-w-2xl">
               <span
                 style={{ color: palette.accent }}
-                className="text-[11px] font-bold uppercase tracking-[0.32em]"
+                className="text-xs font-bold uppercase tracking-[0.32em]"
               >
                 Especialidades
               </span>
@@ -510,6 +615,11 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
               >
                 Los platos que nos dan nombre
               </h2>
+              <p className="mt-5 text-lg leading-relaxed opacity-85">
+                Recetas que repetimos cada semana porque siguen sorprendiendo a
+                quienes ya las conocen y enamorando a los que las prueban por
+                primera vez.
+              </p>
             </motion.div>
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
               {dishPhotos.slice(0, 4).map((photo, i) => {
@@ -525,15 +635,20 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
                       style={{ backgroundImage: `url('${photo}')` }}
                       aria-hidden
                     />
-                    <h3 style={display} className="mt-4 text-lg font-semibold">
+                    <h3 style={display} className="mt-5 text-xl font-semibold">
                       {dish?.name ?? "Plato del día"}
                     </h3>
                     {dish?.tagline && (
                       <p
                         style={{ color: palette.accent }}
-                        className="mt-1 text-xs font-semibold uppercase tracking-wider"
+                        className="mt-2 text-[13px] font-semibold uppercase tracking-wider"
                       >
                         {dish.tagline}
+                      </p>
+                    )}
+                    {dish?.blurb && (
+                      <p className="mt-2 text-base leading-relaxed opacity-85">
+                        {dish.blurb}
                       </p>
                     )}
                   </motion.div>
@@ -545,13 +660,24 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
       )}
 
       {/* TEAM — 4-up portrait grid (no carousel) */}
-      <section className={`${padX} ${padY}`}>
-        <div className="mx-auto max-w-6xl">
-          <motion.div {...fadeUp} className="mb-12 grid gap-10 sm:grid-cols-[1fr_2fr]">
+      <section className={`relative isolate overflow-hidden ${padX} ${padY}`}>
+        {/* Radial accent blob — dynamism on what would otherwise be plain bg */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-40 top-1/3 -z-10 size-[640px] rounded-full opacity-50 blur-3xl"
+          style={{
+            background: `radial-gradient(circle, ${palette.accent}33 0%, transparent 70%)`,
+          }}
+        />
+        <div className="relative mx-auto max-w-6xl">
+          <motion.div
+            {...fadeUp}
+            className="mb-14 grid items-end gap-10 sm:grid-cols-2"
+          >
             <div>
               <span
                 style={{ color: palette.accent }}
-                className="text-[11px] font-bold uppercase tracking-[0.32em]"
+                className="text-xs font-bold uppercase tracking-[0.32em]"
               >
                 Equipo
               </span>
@@ -562,12 +688,14 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
                 Las personas detrás de {data.businessName}
               </h2>
             </div>
-            <p className="max-w-md text-base leading-relaxed opacity-75">
-              Cada proyecto pasa por manos con nombre y apellido. Aquí los tienes.
+            <p className="max-w-lg text-lg leading-relaxed opacity-85">
+              Cada proyecto pasa por manos con nombre y apellido. Sin
+              intermediarios, sin departamentos opacos: trabajas directamente
+              con quien firma el trabajo y te explica cada paso.
             </p>
           </motion.div>
 
-          <div className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-4">
             {team.slice(0, 4).map((member, i) => {
               const portrait = pickPortrait(member, i);
               return (
@@ -584,12 +712,12 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
                     }}
                     aria-hidden
                   />
-                  <h3 style={display} className="mt-5 text-lg font-semibold">
+                  <h3 style={display} className="mt-5 text-xl font-semibold">
                     {member.name}
                   </h3>
                   <p
                     style={{ color: palette.accent }}
-                    className="mt-1 text-xs font-semibold uppercase tracking-[0.18em]"
+                    className="mt-2 text-[13px] font-semibold uppercase tracking-[0.18em]"
                   >
                     {member.role}
                   </p>
@@ -644,10 +772,10 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
                     {...fadeUp}
                     transition={{ ...fadeUp.transition, delay: 0.05 * i }}
                   >
-                    <p className="text-base leading-relaxed opacity-85">«{t.text}»</p>
+                    <p className="text-lg leading-relaxed opacity-90">«{t.text}»</p>
                     <p
                       style={{ ...display, color: palette.accent }}
-                      className="mt-4 text-sm font-semibold uppercase tracking-[0.18em]"
+                      className="mt-5 text-[13px] font-semibold uppercase tracking-[0.18em]"
                     >
                       — {t.name}
                     </p>
@@ -660,13 +788,28 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
       )}
 
       {/* CONTACTO — editorial split */}
-      <section className={`${padX} ${padY}`}>
-        <div className="mx-auto max-w-6xl">
-          <motion.div {...fadeUp} className="grid gap-12 sm:grid-cols-[1fr_1fr]">
-            <div>
+      <section
+        className={`relative isolate overflow-hidden border-t ${padX} ${padY}`}
+        style={{ ...hairline, backgroundColor: palette.surface }}
+      >
+        {/* Soft vertical gradient veil — contact section reads warmer than the
+            neighbouring team section despite using the same surface base. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10"
+          style={{
+            background: `linear-gradient(180deg, transparent 0%, ${palette.accent}0d 100%)`,
+          }}
+        />
+        <div className="relative mx-auto max-w-6xl">
+          <motion.div
+            {...fadeUp}
+            className="grid items-stretch gap-12 sm:grid-cols-2"
+          >
+            <div className="flex flex-col">
               <span
                 style={{ color: palette.accent }}
-                className="text-[11px] font-bold uppercase tracking-[0.32em]"
+                className="text-xs font-bold uppercase tracking-[0.32em]"
               >
                 Contacto
               </span>
@@ -676,50 +819,66 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
               >
                 {assets.labels.bridgeHeadline}
               </h2>
-              <p className="mt-5 max-w-md text-base leading-relaxed opacity-75">
+              <p className="mt-6 max-w-lg text-lg leading-relaxed opacity-85">
                 {assets.labels.contactSectionSubtitle}
               </p>
 
-              <ul className="mt-10 space-y-5">
+              <ul className="mt-10 space-y-6">
                 <li className="flex items-start gap-4">
                   <IconMapPin
-                    className="mt-0.5 size-5 shrink-0"
+                    className="mt-0.5 size-6 shrink-0"
                     style={{ color: palette.accent }}
                   />
                   <div>
-                    <p className="text-xs uppercase tracking-[0.18em] opacity-60">
+                    <p className="text-[13px] uppercase tracking-[0.18em] opacity-70">
                       Dirección
                     </p>
-                    <p className="text-base font-medium">{fullAddress || "Madrid, España"}</p>
+                    <p className="text-base font-medium sm:text-lg">{fullAddress || "Madrid, España"}</p>
                   </div>
                 </li>
                 <li className="flex items-start gap-4">
                   <IconPhone
-                    className="mt-0.5 size-5 shrink-0"
+                    className="mt-0.5 size-6 shrink-0"
                     style={{ color: palette.accent }}
                   />
                   <div>
-                    <p className="text-xs uppercase tracking-[0.18em] opacity-60">
+                    <p className="text-[13px] uppercase tracking-[0.18em] opacity-70">
                       Teléfono
                     </p>
-                    <p className="text-base font-medium">+34 900 000 000</p>
+                    <p className="text-base font-medium sm:text-lg">+34 900 000 000</p>
                   </div>
                 </li>
                 <li className="flex items-start gap-4">
                   <IconMail
-                    className="mt-0.5 size-5 shrink-0"
+                    className="mt-0.5 size-6 shrink-0"
                     style={{ color: palette.accent }}
                   />
                   <div>
-                    <p className="text-xs uppercase tracking-[0.18em] opacity-60">
+                    <p className="text-[13px] uppercase tracking-[0.18em] opacity-70">
                       Email
                     </p>
-                    <p className="text-base font-medium">
+                    <p className="text-base font-medium sm:text-lg">
                       hola@{data.businessName.toLowerCase().replace(/\s+/g, "")}.es
                     </p>
                   </div>
                 </li>
               </ul>
+
+              {/* Schedule strip — llena el final de la columna para que el mapa
+                  no quede más alto que el texto. */}
+              <div
+                className="mt-auto rounded-2xl border p-5"
+                style={hairline}
+              >
+                <p className="text-[13px] uppercase tracking-[0.18em] opacity-70">
+                  Horario
+                </p>
+                <p className="mt-2 text-base font-medium leading-relaxed">
+                  Lun – Vie · 9:00 – 20:00
+                  <br />
+                  Sáb · 10:00 – 14:00
+                </p>
+              </div>
             </div>
 
             <div
@@ -728,7 +887,7 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
             >
               <iframe
                 src={mapEmbedUrl}
-                className="h-full min-h-[360px] w-full"
+                className="h-full min-h-[420px] w-full"
                 loading="lazy"
                 title="Mapa de ubicación"
               />
