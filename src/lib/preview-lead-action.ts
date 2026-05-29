@@ -44,6 +44,7 @@ export async function sendPreviewLead(
     palette: formData.get("palette"),
     customColors: parseCustomColors(formData.get("customColors")),
     typography: formData.get("typography"),
+    style: formData.get("style") || undefined,
     logoDataUrl: formData.get("logoDataUrl") ?? "",
     address: formData.get("address") ?? "",
     city: formData.get("city") ?? "",
@@ -103,6 +104,7 @@ export async function sendPreviewLead(
           : ""
       }`,
       `Tipografía: ${d.typography}`,
+      `Estilo: ${d.style ?? "moderno"}`,
       `Logo: ${d.logoDataUrl ? "sí (adjunto en data URL)" : "no"}`,
       `Dirección: ${d.address || "—"}`,
       `Ciudad: ${d.city || "—"}`,

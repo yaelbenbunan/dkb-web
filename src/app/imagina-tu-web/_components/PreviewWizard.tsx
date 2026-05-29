@@ -8,6 +8,7 @@ import { StepIdentity } from "./steps/StepIdentity";
 import { StepOfferings } from "./steps/StepOfferings";
 import { StepPalette } from "./steps/StepPalette";
 import { StepTypography } from "./steps/StepTypography";
+import { StepStyle } from "./steps/StepStyle";
 import { StepBranding } from "./steps/StepBranding";
 import { StepFinal } from "./steps/StepFinal";
 import { WebPreview, type WebPreviewData } from "./WebPreview";
@@ -18,6 +19,7 @@ import {
   isValidContactEmail,
   isValidContactPhone,
   type CopyResponse,
+  type PreviewStyle,
   type SectorInformativaCopyResponse,
 } from "@/lib/preview-validation";
 import type { CustomPaletteColors } from "@/lib/preview-themes";
@@ -35,6 +37,7 @@ interface WizardState {
   /** Set only when `palette === CUSTOM_PALETTE_SLUG` */
   customColors: CustomPaletteColors | null;
   typography: string;
+  style: PreviewStyle | "";
   logoDataUrl: string;
   address: string;
   city: string;
@@ -56,6 +59,7 @@ const INITIAL: WizardState = {
   palette: "",
   customColors: null,
   typography: "",
+  style: "",
   logoDataUrl: "",
   address: "",
   city: "",
@@ -67,7 +71,7 @@ const INITIAL: WizardState = {
   website: "",
 };
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 8;
 
 export function PreviewWizard() {
   const [step, setStep] = useState(1);
@@ -123,9 +127,11 @@ export function PreviewWizard() {
       case 5:
         return !!state.typography;
       case 6:
+        return !!state.style;
+      case 7:
         // Branding step is fully optional.
         return true;
-      case 7:
+      case 8:
         return (
           state.valueProp.trim().length >= 20 &&
           state.name.trim().length >= 2 &&
@@ -162,6 +168,7 @@ export function PreviewWizard() {
       fd.set("customColors", JSON.stringify(state.customColors));
     }
     fd.set("typography", state.typography);
+    if (state.style) fd.set("style", state.style);
     fd.set("logoDataUrl", state.logoDataUrl);
     fd.set("address", state.address);
     fd.set("city", state.city);
@@ -194,6 +201,7 @@ export function PreviewWizard() {
           palette: state.palette,
           customColors: state.customColors ?? undefined,
           typography: state.typography,
+          style: state.style || "moderno",
           valueProp: state.valueProp,
           address: state.address || undefined,
           city: state.city || undefined,
@@ -240,6 +248,7 @@ export function PreviewWizard() {
       palette: state.palette,
       customColors: state.customColors ?? undefined,
       typography: state.typography,
+      style: state.style || "moderno",
       valueProp: state.valueProp,
       logoDataUrl: state.logoDataUrl || undefined,
       address: state.address || undefined,
@@ -295,7 +304,7 @@ export function PreviewWizard() {
           Imagina tu web en un vistazo
         </h1>
         <p className="mt-4 text-base text-fg-muted sm:text-lg">
-          7 pasos rápidos y te mostramos cómo podría ser el home de tu
+          8 pasos rápidos y te mostramos cómo podría ser el home de tu
           negocio. Sin compromiso.
         </p>
       </div>
@@ -369,6 +378,12 @@ export function PreviewWizard() {
           />
         )}
         {step === 6 && (
+          <StepStyle
+            value={state.style}
+            onChange={(v) => setState({ ...state, style: v })}
+          />
+        )}
+        {step === 7 && (
           <StepBranding
             value={{
               logoDataUrl: state.logoDataUrl,
@@ -378,7 +393,7 @@ export function PreviewWizard() {
             onChange={(v) => setState({ ...state, ...v })}
           />
         )}
-        {step === 7 && (
+        {step === 8 && (
           <StepFinal
             value={{
               valueProp: state.valueProp,

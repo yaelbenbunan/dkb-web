@@ -67,6 +67,16 @@ const logoDataUrlSchema = z
     "Formato de logo no válido",
   );
 
+// Visual style selected by the user in StepStyle. Each value maps to a
+// different React template under `_components/templates/`. Default is
+// "moderno" so older lead rows / API calls remain valid.
+export const PREVIEW_STYLES = ["moderno", "editorial"] as const;
+export type PreviewStyle = (typeof PREVIEW_STYLES)[number];
+const styleSchema = z
+  .enum(PREVIEW_STYLES)
+  .optional()
+  .default("moderno");
+
 const baseLead = z
   .object({
     businessType: z.enum(["informativa", "ecommerce"], {
@@ -83,6 +93,7 @@ const baseLead = z
     palette: z.string().refine(isPaletteSlug, "Paleta inválida"),
     customColors: customColorsSchema,
     typography: z.string().refine(isTypographySlug, "Tipografía inválida"),
+    style: styleSchema,
     logoDataUrl: logoDataUrlSchema.optional().or(z.literal("")),
     address: z.string().trim().max(120, "Dirección demasiado larga").optional().or(z.literal("")),
     city: z.string().trim().max(60, "Ciudad demasiado larga").optional().or(z.literal("")),
@@ -220,6 +231,7 @@ export const previewGenerateInputSchema = z.object({
   palette: z.string().refine(isPaletteSlug),
   customColors: customColorsSchema,
   typography: z.string().refine(isTypographySlug),
+  style: styleSchema,
   valueProp: z.string().trim().min(20).max(500),
   address: z.string().trim().max(120).optional(),
   city: z.string().trim().max(60).optional(),

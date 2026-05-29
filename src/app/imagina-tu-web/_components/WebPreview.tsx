@@ -18,8 +18,13 @@ import {
   InformativaSectorTemplate,
   type InformativaSectorData,
 } from "./templates/InformativaSectorTemplate";
+import {
+  EditorialLimpioTemplate,
+  type EditorialLimpioData,
+} from "./templates/EditorialLimpioTemplate";
 import { isSupportedSector, type Cuisine } from "./templates/sector-assets";
 import type { CustomPaletteColors } from "@/lib/preview-themes";
+import type { PreviewStyle } from "@/lib/preview-validation";
 
 export interface WebPreviewData {
   businessType: "informativa" | "ecommerce";
@@ -33,6 +38,8 @@ export interface WebPreviewData {
   /** Present only when palette === CUSTOM_PALETTE_SLUG */
   customColors?: CustomPaletteColors;
   typography: string;
+  /** Visual style picked in StepStyle. Defaults to "moderno" for older flows. */
+  style?: PreviewStyle;
   valueProp: string;
   logoDataUrl?: string;
   address?: string;
@@ -115,10 +122,17 @@ export function WebPreview({ data, copy, sectorCopy, heroImageDataUrl }: Props) 
           }}
         >
           {useSectorTemplate ? (
-            <InformativaSectorTemplate
-              data={data as InformativaSectorData}
-              copy={sectorCopy}
-            />
+            data.style === "editorial" ? (
+              <EditorialLimpioTemplate
+                data={data as EditorialLimpioData}
+                copy={sectorCopy}
+              />
+            ) : (
+              <InformativaSectorTemplate
+                data={data as InformativaSectorData}
+                copy={sectorCopy}
+              />
+            )
           ) : isEcom ? (
             <EcommerceTemplate
               data={data as EcommerceData}
