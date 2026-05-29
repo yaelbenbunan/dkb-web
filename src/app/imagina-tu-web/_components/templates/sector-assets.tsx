@@ -291,6 +291,10 @@ export interface SectorLabels {
   teamSectionSubtitle: string;
   /** Author qualifier shown under each testimonial card */
   testimonialAuthorLabel: string;
+  /** Hero subtitle used when the AI didn't produce a heroTagline. NEVER use
+   *  the user's valueProp directly — the user's text is just inspiration and
+   *  must be rewritten by the AI; this default is a clean fallback. */
+  defaultHeroTagline: string;
   /** Button text used everywhere the AI didn't provide a custom CTA */
   defaultCtaText: string;
   /** Heading above the services grid when the AI didn't provide one */
@@ -492,6 +496,125 @@ export function getFallbackDishes(cuisine: Cuisine): FallbackDish[] {
   return CUISINE_FALLBACK_DISHES[cuisine] ?? CUISINE_FALLBACK_DISHES.otra;
 }
 
+// ---------------------------------------------------------------------------
+// Featured menu — magazine-style "Carta destacada" section rendered between
+// Especialidades and Equipo for restauración. Two columns (entrantes + main
+// course) with prices, plus a centered cuisine photo. Items are 100%
+// invented (with €) so we don't need anything from the user or the AI.
+// ---------------------------------------------------------------------------
+
+export interface MenuItem {
+  name: string;
+  /** One short line — ingredients or preparation, no marketing-speak */
+  desc: string;
+  /** Price including € symbol */
+  price: string;
+}
+
+export interface FeaturedMenu {
+  leftTitle: string;
+  leftItems: MenuItem[];
+  rightTitle: string;
+  rightItems: MenuItem[];
+}
+
+const FEATURED_MENUS: Record<Cuisine, FeaturedMenu> = {
+  italiana: {
+    leftTitle: "Antipasti",
+    leftItems: [
+      { name: "Burrata di Bufala", desc: "Tomate rosa, aceite virgen extra y albahaca.", price: "€14" },
+      { name: "Carpaccio di Manzo", desc: "Buey, rúcula, parmesano y limón.", price: "€16" },
+      { name: "Caprese tradicional", desc: "Mozzarella, tomate raf y pesto de la casa.", price: "€13" },
+      { name: "Vitello tonnato", desc: "Ternera, salsa de atún, alcaparras y limón.", price: "€18" },
+      { name: "Bruschetta del día", desc: "Pan rústico, producto de temporada.", price: "€10" },
+    ],
+    rightTitle: "Pasta e Secondi",
+    rightItems: [
+      { name: "Tagliatelle al Ragù", desc: "Pasta fresca con ragù boloñés de seis horas.", price: "€18" },
+      { name: "Spaghetti alle Vongole", desc: "Almeja, ajo, perejil y un toque de guindilla.", price: "€22" },
+      { name: "Risotto alla Milanese", desc: "Arroz arborio, azafrán, mantequilla y parmesano.", price: "€20" },
+      { name: "Osso buco con polenta", desc: "Jarrete de ternera braseado, polenta cremosa.", price: "€28" },
+      { name: "Lubina al horno", desc: "Lubina entera, tomate cherry, alcaparras y olivas.", price: "€26" },
+    ],
+  },
+  mexicana: {
+    leftTitle: "Para empezar",
+    leftItems: [
+      { name: "Guacamole tradicional", desc: "Aguacate machacado a mano, cilantro y lima.", price: "€11" },
+      { name: "Tacos al pastor (3 uds)", desc: "Cerdo marinado con achiote, piña y cilantro.", price: "€14" },
+      { name: "Ceviche de pescado", desc: "Pescado del día, lima, cebolla morada y chile.", price: "€16" },
+      { name: "Quesadillas de flor", desc: "Tortilla, flor de calabaza y queso oaxaca.", price: "€13" },
+      { name: "Sopa de tortilla", desc: "Caldo de pollo, chiles, tortilla crujiente y aguacate.", price: "€12" },
+    ],
+    rightTitle: "Platos fuertes",
+    rightItems: [
+      { name: "Cochinita pibil", desc: "Cerdo marinado con achiote, cocinado a baja temperatura.", price: "€22" },
+      { name: "Mole poblano", desc: "Pollo, salsa de mole tradicional con cacao y especias.", price: "€24" },
+      { name: "Pescado a la veracruzana", desc: "Pescado, tomate, alcaparras, aceitunas y guindilla.", price: "€26" },
+      { name: "Carnitas michoacanas", desc: "Cerdo confitado, tortillas calientes y salsas.", price: "€23" },
+      { name: "Chiles en nogada", desc: "Chile poblano relleno, salsa de nuez y granada.", price: "€25" },
+    ],
+  },
+  japonesa: {
+    leftTitle: "Entrantes",
+    leftItems: [
+      { name: "Edamame con sal de yuzu", desc: "Vainas de soja al vapor, sal cítrica.", price: "€8" },
+      { name: "Gyozas a la plancha", desc: "Empanadillas de cerdo y verduras, doradas y al vapor.", price: "€12" },
+      { name: "Tempura de verduras", desc: "Rebozado fino, salsa tentsuyu y rábano.", price: "€14" },
+      { name: "Tartar de salmón", desc: "Salmón fresco, aguacate, sésamo y soja.", price: "€16" },
+      { name: "Tataki de atún", desc: "Atún sellado, salsa ponzu y cebolla tierna.", price: "€18" },
+    ],
+    rightTitle: "Principales",
+    rightItems: [
+      { name: "Ramen tonkotsu", desc: "Caldo de cerdo cocinado 12 horas, chashu, huevo.", price: "€18" },
+      { name: "Sushi nigiri (10 piezas)", desc: "Selección del chef según pescado del día.", price: "€28" },
+      { name: "Don de chirashi", desc: "Bol de arroz con sashimi variado y verduras.", price: "€24" },
+      { name: "Pato laqueado", desc: "Pato glaseado al estilo cantonés, panqueques y hoisin.", price: "€26" },
+      { name: "Yakisoba de gambas", desc: "Fideos salteados, gambas, verduras y salsa yakisoba.", price: "€20" },
+    ],
+  },
+  tradicional: {
+    leftTitle: "Entrantes",
+    leftItems: [
+      { name: "Croquetas de jamón", desc: "Bechamel cremosa con jamón ibérico, rebozadas al momento.", price: "€10" },
+      { name: "Tortilla de patatas", desc: "Cebolla pochada lentamente, huevo de campo, jugosa.", price: "€9" },
+      { name: "Pulpo a la gallega", desc: "Pulpo cocido, patata, pimentón de la Vera y aceite.", price: "€18" },
+      { name: "Ensaladilla rusa", desc: "Patata, mayonesa de la casa, atún y huevo cocido.", price: "€11" },
+      { name: "Anchoas del Cantábrico", desc: "Filetes de anchoa con tomate raf y aceite.", price: "€16" },
+    ],
+    rightTitle: "Principales",
+    rightItems: [
+      { name: "Solomillo al whisky", desc: "Lomos de solomillo flambados con whisky y ajo.", price: "€24" },
+      { name: "Bacalao al pil-pil", desc: "Lomo de bacalao, ajo, guindilla y emulsión de su gelatina.", price: "€26" },
+      { name: "Cochinillo asado", desc: "Cochinillo segoviano asado al horno de leña.", price: "€28" },
+      { name: "Merluza en salsa verde", desc: "Merluza, guisantes, espárragos y caldo de pescado.", price: "€25" },
+      { name: "Carrillera de ternera", desc: "Carrillera braseada al vino tinto, puré de patata.", price: "€22" },
+    ],
+  },
+  otra: {
+    leftTitle: "Para empezar",
+    leftItems: [
+      { name: "Tartar de atún rojo", desc: "Atún cortado a cuchillo, soja, lima y aceite de oliva.", price: "€18" },
+      { name: "Ensalada de mercado", desc: "Brotes, verduras y vinagreta de la casa.", price: "€14" },
+      { name: "Crocante de remolacha", desc: "Remolacha asada, queso de cabra y nueces.", price: "€12" },
+      { name: "Croquetas del chef", desc: "Receta del chef, cambia según temporada.", price: "€11" },
+      { name: "Sopa del día", desc: "Caldo de verduras o pescado según mercado.", price: "€10" },
+    ],
+    rightTitle: "Principales",
+    rightItems: [
+      { name: "Pescado del día", desc: "Pieza entera al horno con guarnición de huerta.", price: "€28" },
+      { name: "Risotto del momento", desc: "Arroz cremoso con producto de la semana.", price: "€22" },
+      { name: "Solomillo a la brasa", desc: "Solomillo de ternera, patatas confitadas y reducción.", price: "€30" },
+      { name: "Vegano del día", desc: "Creación vegetal del chef, cambia cada semana.", price: "€19" },
+      { name: "Pasta del chef", desc: "Pasta fresca con salsa pensada para esa semana.", price: "€20" },
+    ],
+  },
+};
+
+export function getFeaturedMenu(cuisine: Cuisine): FeaturedMenu {
+  return FEATURED_MENUS[cuisine] ?? FEATURED_MENUS.otra;
+}
+
 /** Role-coded photos for restauración. When the AI returns the team, we
  *  match roles by keyword and route them to the photo that visually fits
  *  (e.g. the chef-hat photo only goes to a chef-level role). */
@@ -564,6 +687,8 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       teamSectionSubtitle:
         "Un equipo humano con experiencia, cercanía y un trato de verdad.",
       testimonialAuthorLabel: "Paciente verificado",
+      defaultHeroTagline:
+        "Cuidamos cada detalle de tu salud con un equipo cercano, instalaciones modernas y atención personalizada.",
       defaultCtaText: "Pide tu cita",
       defaultServicesTitle: "Nuestros tratamientos",
       defaultValorAgregadoTitle: "Por qué elegirnos",
@@ -626,6 +751,8 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       teamSectionSubtitle:
         "Un equipo docente cercano, formado y comprometido con el aprendizaje.",
       testimonialAuthorLabel: "Alumno / Familia",
+      defaultHeroTagline:
+        "Educación con criterio, profesores que conocen a cada alumno y un proyecto pensado para acompañar de verdad.",
       defaultCtaText: "Reserva tu plaza",
       defaultServicesTitle: "Nuestros programas",
       defaultValorAgregadoTitle: "Por qué elegirnos",
@@ -692,6 +819,8 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       teamSectionSubtitle:
         "Diseñadores y profesionales con criterio, oficio y mirada propia.",
       testimonialAuthorLabel: "Cliente",
+      defaultHeroTagline:
+        "Diseño con identidad y oficio. Piezas pensadas para quienes tienen criterio propio.",
       defaultCtaText: "Descúbrelo",
       defaultServicesTitle: "Nuestras colecciones",
       defaultValorAgregadoTitle: "Por qué elegirnos",
@@ -759,6 +888,8 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       teamSectionSubtitle:
         "Desarrolladores y expertos que entregan soluciones, no excusas.",
       testimonialAuthorLabel: "Cliente",
+      defaultHeroTagline:
+        "Soluciones tecnológicas pensadas para resolver problemas reales, con un equipo que se involucra en cada proyecto.",
       defaultCtaText: "Hablemos",
       defaultServicesTitle: "Nuestros servicios",
       defaultValorAgregadoTitle: "Por qué elegirnos",
@@ -830,6 +961,8 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       teamSectionSubtitle:
         "Profesionales con experiencia, criterio y enfoque consultivo.",
       testimonialAuthorLabel: "Cliente",
+      defaultHeroTagline:
+        "Asesoramiento experto con enfoque consultivo. Decisiones informadas, resultados medibles.",
       defaultCtaText: "Solicita presupuesto",
       defaultServicesTitle: "Nuestros servicios",
       defaultValorAgregadoTitle: "Por qué elegirnos",
@@ -898,6 +1031,8 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       teamSectionSubtitle:
         "Cocina, sala y atención que cuidan cada detalle del paso por el restaurante.",
       testimonialAuthorLabel: "Comensal",
+      defaultHeroTagline:
+        "Cocina con producto, sala que cuida y una mesa pensada para volver.",
       defaultCtaText: "Reserva tu mesa",
       defaultServicesTitle: "Especialidades de la casa",
       defaultValorAgregadoTitle: "Por qué elegirnos",

@@ -12,6 +12,7 @@ import {
   SECTOR_ASSETS,
   getCuisinePhotos,
   getFallbackDishes,
+  getFeaturedMenu,
   getRestauracionRolePhoto,
   isSupportedSector,
   type Cuisine,
@@ -280,12 +281,11 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
 
   // All fallbacks come from the sector assets so a non-salud preview never
   // accidentally shows "Pide tu cita" or "Nuestros tratamientos" if the AI
-  // call fails.
+  // call fails. CRITICAL: never paste `data.valueProp` (the user's raw text)
+  // into the design — that text is rewriter input for the AI, not display
+  // copy. Use the sector default instead.
   const headline = copy?.heroHeadline ?? `Bienvenidos a ${data.businessName}`;
-  const tagline =
-    copy?.heroTagline ??
-    data.valueProp ??
-    "Profesionalidad, cercanía y un equipo que se involucra en cada proyecto.";
+  const tagline = copy?.heroTagline ?? assets.labels.defaultHeroTagline;
   const ctaText = copy?.ctaText ?? assets.labels.defaultCtaText;
   const servicesTitle = copy?.sectionTitle ?? assets.labels.defaultServicesTitle;
   const services =
@@ -784,6 +784,18 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
           )}
         </div>
       </section>
+
+      {/* FEATURED MENU — magazine-style menu shown only for restauración,
+          right after the "Especialidades de la casa" dish grid. Items and
+          prices are 100% fabricated per cuisine (zero AI dependency). */}
+      {data.sector === "restauracion" && (
+        <FeaturedMenuSection
+          cuisine={data.cuisine || "otra"}
+          palette={palette}
+          display={display}
+          fgOnSurface={fgOnSurface}
+        />
+      )}
 
       {/* CTA BRIDGE — floating banner that connects Servicios and Testimonios,
           adding visual continuity (no two consecutive sections feel detached). */}
@@ -1413,5 +1425,155 @@ function DishesGrid({
         </button>
       </div>
     </>
+  );
+}
+
+/** Magazine-style featured menu (Antipasti / Entrantes on the left, mains on
+ *  the right, a centered cuisine photo in between). Used only by the
+ *  restauración branch right after "Especialidades de la casa". */
+function FeaturedMenuSection({
+  cuisine,
+  palette,
+  display,
+  fgOnSurface,
+}: {
+  cuisine: Cuisine;
+  palette: { bg: string; surface: string; accent: string; text: string };
+  display: CSSProperties;
+  fgOnSurface: string;
+}) {
+  const menu = getFeaturedMenu(cuisine);
+  const photos = getCuisinePhotos(cuisine);
+  // Pick a centered photo. Stable per render (same on hover/scroll).
+  const heroPhoto = useMemo(
+    () => photos[Math.floor(Math.random() * Math.max(photos.length, 1))],
+    [photos],
+  );
+
+  return (
+    <section
+      className="relative overflow-hidden px-12 py-28"
+      style={{
+        background: `linear-gradient(180deg, ${palette.surface} 0%, ${palette.accent}0d 100%)`,
+      }}
+    >
+      <div className="mx-auto max-w-6xl">
+        <motion.h2
+          {...fadeUpProps}
+          style={{ ...display, color: fgOnSurface }}
+          className="text-center text-5xl font-bold tracking-[0.04em]"
+        >
+          Carta destacada
+        </motion.h2>
+        <motion.p
+          {...fadeUpProps}
+          transition={{ ...fadeUpProps.transition, delay: 0.1 }}
+          className="mx-auto mt-3 max-w-xl text-center opacity-70"
+          style={{ color: fgOnSurface }}
+        >
+          Una selección de platos que define nuestra cocina y la mesa que ofrecemos.
+        </motion.p>
+
+        <div className="mt-16 grid items-start gap-12 grid-cols-[1fr_auto_1fr]">
+          <MenuColumn
+            title={menu.leftTitle}
+            items={menu.leftItems}
+            palette={palette}
+            display={display}
+            fg={fgOnSurface}
+          />
+
+          {/* Centered photo in an oval frame with accent border */}
+          <div className="relative w-[280px]">
+            <div
+              aria-hidden
+              className="absolute inset-0 -m-2 rounded-[9999px]"
+              style={{
+                background: `linear-gradient(135deg, ${palette.accent}66, transparent)`,
+                filter: "blur(20px)",
+              }}
+            />
+            <div
+              className="relative overflow-hidden border-2 shadow-2xl"
+              style={{
+                borderColor: palette.accent + "55",
+                borderRadius: "50% / 38%",
+                aspectRatio: "3 / 4",
+              }}
+            >
+              {heroPhoto && (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={heroPhoto}
+                  alt=""
+                  className="block size-full object-cover"
+                />
+              )}
+            </div>
+          </div>
+
+          <MenuColumn
+            title={menu.rightTitle}
+            items={menu.rightItems}
+            palette={palette}
+            display={display}
+            fg={fgOnSurface}
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function MenuColumn({
+  title,
+  items,
+  palette,
+  display,
+  fg,
+}: {
+  title: string;
+  items: { name: string; desc: string; price: string }[];
+  palette: { accent: string };
+  display: CSSProperties;
+  fg: string;
+}) {
+  return (
+    <div>
+      <h3
+        style={{ ...display, color: fg }}
+        className="text-center text-xs font-bold uppercase tracking-[0.36em]"
+      >
+        {title}
+      </h3>
+      <div
+        aria-hidden
+        className="mx-auto mt-3 h-px w-16"
+        style={{ backgroundColor: palette.accent + "66" }}
+      />
+      <ul className="mt-10 space-y-7">
+        {items.map((it, i) => (
+          <li key={i}>
+            <div className="flex items-baseline justify-between gap-4">
+              <p
+                style={{ ...display, color: fg }}
+                className="text-base font-semibold uppercase tracking-[0.08em]"
+              >
+                {it.name}
+              </p>
+              <span
+                style={{ ...display, color: palette.accent }}
+                className="text-sm font-semibold whitespace-nowrap"
+              >
+                {it.price}
+              </span>
+            </div>
+            <p className="mt-1 text-sm leading-relaxed opacity-70" style={{ color: fg }}>
+              {it.desc}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
