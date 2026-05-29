@@ -181,9 +181,7 @@ export const sectorInformativaCopyResponseSchema = copyResponseSchema.extend({
         text: z.string().trim().min(20).max(180),
       }),
     )
-    .refine((arr) => arr.length === 4 || arr.length === 6, {
-      message: "bullets must contain exactly 4 or 6 items",
-    }),
+    .length(6, "bullets must contain exactly 6 items (3 per column)"),
   team: z
     .array(
       z.object({

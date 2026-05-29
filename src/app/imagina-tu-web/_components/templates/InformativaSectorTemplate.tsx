@@ -297,17 +297,21 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
   const valorAgregadoIntro =
     copy?.valorAgregadoIntro ?? assets.labels.defaultValorAgregadoIntro;
 
-  // Bullets must be even (4 or 6). If AI returns 5, drop the last to make it 4.
-  const rawBullets = copy?.bullets ?? [
+  // Bullets always render as 3 columns × 2 rows = 6. Schema enforces 6; if
+  // the AI somehow returned fewer, pad with generic fallbacks so the grid
+  // never has a hole.
+  const FALLBACK_BULLETS = [
     { title: "Atención personalizada", text: "Te dedicamos el tiempo que necesitas." },
     { title: "Equipo profesional", text: "Especialistas con experiencia en tu sector." },
     { title: "Instalaciones modernas", text: "Espacios pensados para tu comodidad." },
     { title: "Respuesta rápida", text: "Contacto y seguimiento sin demoras." },
+    { title: "Trato cercano", text: "Cuidamos cada detalle para que la experiencia importe." },
+    { title: "Compromiso real", text: "Hacemos lo que decimos, no inflamos promesas." },
   ];
-  const bullets =
-    rawBullets.length >= 6
-      ? rawBullets.slice(0, 6)
-      : rawBullets.slice(0, 4);
+  const rawBullets = copy?.bullets ?? FALLBACK_BULLETS;
+  const bullets = Array.from({ length: 6 }, (_, i) =>
+    rawBullets[i] ?? FALLBACK_BULLETS[i]
+  );
 
   const team = copy?.team ?? assets.fallbackTeam;
 
@@ -338,13 +342,14 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
           animate={{ scale: 1 }}
           transition={{ duration: 8, ease: "easeOut" }}
         />
-        {/* Color overlay — strong on the left for text legibility, fades to
+        {/* Color overlay — VERY strong on the left so headline + tagline read
+            on any photo regardless of the user's chosen palette. Fades to
             (almost) transparent on the right so the photo shows clearly. */}
         <div
           aria-hidden
           className="absolute inset-0 -z-10"
           style={{
-            background: `linear-gradient(105deg, ${palette.bg}f0 0%, ${palette.bg}d0 25%, ${palette.bg}80 55%, ${palette.bg}20 80%, transparent 100%)`,
+            background: `linear-gradient(105deg, ${palette.bg} 0%, ${palette.bg}f5 35%, ${palette.bg}cc 55%, ${palette.bg}55 75%, transparent 100%)`,
           }}
         />
         {/* Subtle accent veil on the photo side */}
@@ -420,12 +425,24 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
                 <span>{assets.labels.ratingText}</span>
               </div>
               <h1
-                style={display}
+                style={{
+                  ...display,
+                  // Soft halo behind the text — works for dark or light
+                  // palette.text without looking like a "shadow effect".
+                  // Critical for hero legibility on busy photos.
+                  textShadow: `0 1px 0 ${palette.bg}, 0 0 18px ${palette.bg}80`,
+                }}
                 className="mt-5 text-6xl font-bold leading-[1.02] tracking-tight"
               >
                 {headline}
               </h1>
-              <p className="mt-6 max-w-lg text-base leading-relaxed opacity-90">
+              <p
+                className="mt-6 max-w-lg text-base leading-relaxed"
+                style={{
+                  color: palette.text,
+                  textShadow: `0 0 14px ${palette.bg}cc`,
+                }}
+              >
                 {tagline}
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
@@ -617,15 +634,26 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
         </div>
       </section>
 
-      {/* EQUIPO — flat accent-tinted section (clearly a colored "blue room")
-          so it's unmistakably different from VA (pure white) and from
-          Servicios (palette heroGradient diagonal). */}
+      {/* EQUIPO — accent-tinted section with a subtle dotted-noise texture
+          overlay so it never reads as flat. Two blurred accent blobs add
+          depth without dominating. */}
       <section
         className="relative overflow-hidden px-12 py-28"
         style={{
           backgroundColor: palette.accent + "1f",
         }}
       >
+        {/* Subtle dot pattern overlay — low opacity, color derived from text
+            so it adapts to both light and dark palettes. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage: `radial-gradient(circle at 1px 1px, ${palette.text}26 1px, transparent 1.5px)`,
+            backgroundSize: "22px 22px",
+            opacity: 0.55,
+          }}
+        />
         <div
           aria-hidden
           className="absolute -left-24 top-20 size-72 rounded-full blur-3xl"
@@ -644,10 +672,24 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
             >
               Equipo
             </span>
-            <h2 style={display} className="mt-4 text-5xl font-bold tracking-tight">
+            <h2
+              style={{
+                ...display,
+                color: palette.text,
+                textShadow: `0 0 14px ${palette.bg}cc`,
+              }}
+              className="mt-4 text-5xl font-bold tracking-tight"
+            >
               {assets.labels.teamSectionTitle}
             </h2>
-            <p className="mx-auto mt-4 max-w-xl opacity-80">
+            <p
+              className="mx-auto mt-4 max-w-xl"
+              style={{
+                color: palette.text,
+                opacity: 0.85,
+                textShadow: `0 0 10px ${palette.bg}99`,
+              }}
+            >
               {assets.labels.teamSectionSubtitle}
             </p>
           </motion.div>
