@@ -541,7 +541,11 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
         </div>
       </section>
 
-      {/* SERVICES — asymmetric list */}
+      {/* SERVICES — asymmetric list. Hidden for restauración: the dish strip
+          ("Los platos que nos dan nombre") + the Carta destacada already cover
+          the food, and this list would otherwise just repeat the cuisine label
+          (e.g. "Mexicana / latina") whenever the AI copy isn't available. */}
+      {!isRestauracion && (
       <section className={`relative isolate overflow-hidden ${padX} ${padY}`}>
         {/* Soft accent veil — dynamism without overwhelming the type */}
         <div
@@ -651,6 +655,7 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
           </motion.div>
         </div>
       </section>
+      )}
 
       {/* RESTAURACION — minimal dish strip when sector matches and photos exist */}
       {isRestauracion && dishPhotos.length > 0 && (
