@@ -12,10 +12,12 @@ import {
   SECTOR_ASSETS,
   getCuisinePhotos,
   getFallbackDishes,
+  getFeaturedMenu,
   getRestauracionRolePhoto,
   isSupportedSector,
   type Cuisine,
 } from "./sector-assets";
+import { FeaturedMenu } from "./FeaturedMenu";
 
 const VIEWPORT = { once: true, margin: "-80px" } as const;
 
@@ -720,6 +722,27 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
             </div>
           </div>
         </section>
+      )}
+
+      {/* CARTA DESTACADA — priced menu (includes the user's featured dishes +
+          invented ones). Editorial uses the photo-aside layout (spacious) and
+          Compacto drops the photo entirely. */}
+      {isRestauracion && (
+        <FeaturedMenu
+          variant={isCompact ? "no-photo" : "photo-aside"}
+          menu={
+            copy?.menu &&
+            copy.menu.leftItems?.length &&
+            copy.menu.rightItems?.length
+              ? copy.menu
+              : getFeaturedMenu(cuisine ?? "fusion")
+          }
+          photo={dishPhotos[0] ?? valorImg}
+          palette={palette}
+          display={display}
+          fg={readableOn(palette.surface)}
+          density={density}
+        />
       )}
 
       {/* TEAM — 4-up portrait grid (no carousel) */}
