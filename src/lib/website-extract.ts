@@ -2,6 +2,7 @@ import "server-only";
 import dns from "node:dns";
 import type { LookupFunction } from "node:net";
 import { Agent, fetch as undiciFetch } from "undici";
+import sharp from "sharp";
 import { isBlockedHost, isBlockedIp, normalizeUrl } from "./website-extract-guard";
 
 export interface WebsiteExtract {
@@ -13,9 +14,18 @@ export interface WebsiteExtract {
   imageUrl?: string;
 }
 
+interface RawExtract extends WebsiteExtract {
+  /** Width declared by the site for og:image, if any. */
+  imageWidthHint?: number;
+}
+
 const FETCH_TIMEOUT_MS = 6000;
 const MAX_BYTES = 600_000; // stop reading after ~600 KB of HTML
 const MAX_SUMMARY_CHARS = 4000;
+const MAX_IMAGE_BYTES = 3_000_000; // cap image download used only to measure size
+/** A hero background needs real width; anything narrower looks soft/stretched,
+ *  so we drop it and fall back to the curated stock photos. */
+const MIN_IMAGE_WIDTH = 700;
 
 /** Custom DNS resolver for undici. Runs for EVERY connection the dispatcher
  *  opens — the initial request and each redirect hop — and rejects the
@@ -75,7 +85,7 @@ function matchAttr(html: string, regex: RegExp): string | undefined {
 /** Pull title + meta description + a chunk of visible body text out of raw HTML.
  *  Regex-based on purpose: no extra dependency, and we only need a rough
  *  textual fingerprint to feed the copywriting model. */
-function extractFromHtml(html: string, baseUrl: URL): WebsiteExtract {
+function extractFromHtml(html: string, baseUrl: URL): RawExtract {
   const title = matchAttr(html, /<title[^>]*>([\s\S]*?)<\/title>/i);
   const metaDesc =
     matchAttr(
@@ -95,6 +105,14 @@ function extractFromHtml(html: string, baseUrl: URL): WebsiteExtract {
       html,
       /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i,
     );
+  // Optional dimension hint declared by the site, e.g. <meta property=
+  // "og:image:width" content="1200">. Lets us reject tiny images without a
+  // round-trip when the site is honest about it.
+  const ogWidthRaw = matchAttr(
+    html,
+    /<meta[^>]+property=["']og:image:width["'][^>]+content=["']([0-9]+)["']/i,
+  );
+  const imageWidthHint = ogWidthRaw ? Number(ogWidthRaw) : undefined;
 
   // Visible text: drop scripts/styles/noscript, strip tags, collapse whitespace.
   const body = html
@@ -132,7 +150,7 @@ function extractFromHtml(html: string, baseUrl: URL): WebsiteExtract {
     }
   }
 
-  return { url: baseUrl.toString(), summary, imageUrl };
+  return { url: baseUrl.toString(), summary, imageUrl, imageWidthHint };
 }
 
 /** Fetch the user's current website and return a text summary (+ a candidate
@@ -191,12 +209,68 @@ export async function extractWebsite(
     await reader.cancel().catch(() => {});
 
     const extracted = extractFromHtml(html, finalUrl);
-    if (!extracted.summary && !extracted.imageUrl) return null;
-    return extracted;
+
+    // Only keep the image if it's big enough to use as a hero. Prefer the
+    // site-declared width; otherwise download it and measure. If we can't
+    // confirm it meets the bar (blocked, too small, broken), drop it so the
+    // template falls back to the curated stock photos.
+    let imageUrl = extracted.imageUrl;
+    if (imageUrl) {
+      const ok =
+        typeof extracted.imageWidthHint === "number"
+          ? extracted.imageWidthHint >= MIN_IMAGE_WIDTH
+          : (await measureImageWidth(imageUrl, dispatcher, controller.signal)) >=
+            MIN_IMAGE_WIDTH;
+      if (!ok) imageUrl = undefined;
+    }
+
+    const result: WebsiteExtract = {
+      url: extracted.url,
+      summary: extracted.summary,
+      imageUrl,
+    };
+    if (!result.summary && !result.imageUrl) return null;
+    return result;
   } catch {
     return null;
   } finally {
     clearTimeout(timeout);
     await dispatcher.close().catch(() => {});
+  }
+}
+
+/** Download an image (size-capped, SSRF-safe via the same dispatcher) and
+ *  return its pixel width, or 0 if it can't be fetched/decoded. */
+async function measureImageWidth(
+  url: string,
+  dispatcher: Agent,
+  signal: AbortSignal,
+): Promise<number> {
+  try {
+    const res = await undiciFetch(url, {
+      method: "GET",
+      redirect: "follow",
+      signal,
+      dispatcher,
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; DinkbitPreviewBot/1.0)" },
+    });
+    if (!res.ok || !res.body) return 0;
+    const ct = res.headers.get("content-type") ?? "";
+    if (!ct.startsWith("image/")) return 0;
+    const reader = res.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let received = 0;
+    while (received < MAX_IMAGE_BYTES) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      received += value.byteLength;
+      chunks.push(value);
+    }
+    await reader.cancel().catch(() => {});
+    const buf = Buffer.concat(chunks.map((c) => Buffer.from(c)));
+    const meta = await sharp(buf).metadata();
+    return meta.width ?? 0;
+  } catch {
+    return 0;
   }
 }

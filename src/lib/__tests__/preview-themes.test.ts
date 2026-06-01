@@ -13,8 +13,8 @@ import {
 } from "@/lib/preview-themes";
 
 describe("preview-themes catalog", () => {
-  it("exposes exactly 6 palettes with required fields", () => {
-    expect(PALETTES).toHaveLength(6);
+  it("exposes exactly 7 palettes with required fields", () => {
+    expect(PALETTES).toHaveLength(7);
     for (const p of PALETTES) {
       expect(p.slug).toMatch(/^[a-z-]+$/);
       expect(p.name).toBeTruthy();

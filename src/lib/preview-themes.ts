@@ -89,6 +89,16 @@ export const PALETTES: Palette[] = [
     heroGradient:
       "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0e7490 100%)",
   },
+  {
+    slug: "blanco-negro",
+    name: "Blanco y negro",
+    bg: "#ffffff",
+    surface: "#f4f4f5",
+    text: "#0a0a0a",
+    accent: "#111111",
+    heroGradient:
+      "linear-gradient(135deg, #ffffff 0%, #e5e5e5 50%, #c7c7c7 100%)",
+  },
 ];
 
 // Six visually distinct typography options. Pairs (displayVar/bodyVar) are
