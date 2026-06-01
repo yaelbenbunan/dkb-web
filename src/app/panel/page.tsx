@@ -1,5 +1,6 @@
 import { listLeads, type LeadRow } from "@/lib/imagina-leads";
 import { getSectorLabel } from "@/lib/preview-themes";
+import { normalizeUrl } from "@/lib/website-extract-guard";
 import { StatusSelect } from "./StatusSelect";
 import { panelLogout } from "./actions";
 
@@ -110,11 +111,22 @@ export default async function PanelPage() {
                   <td style={td}>{l.sector ? getSectorLabel(l.sector) : "—"}</td>
                   <td style={td}>
                     {l.business_name ?? "—"}
-                    {l.current_website ? (
-                      <a href={l.current_website} target="_blank" rel="noreferrer" style={{ display: "block", color: "#187bef", fontSize: 12 }}>
-                        web actual ↗
-                      </a>
-                    ) : null}
+                    {(() => {
+                      // Sanitize the user-submitted URL: only http(s) becomes a
+                      // link, so a stored `javascript:`/`data:` value can't run
+                      // when an admin clicks it.
+                      const href = normalizeUrl(l.current_website ?? "")?.toString();
+                      return href ? (
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          style={{ display: "block", color: "#187bef", fontSize: 12 }}
+                        >
+                          web actual ↗
+                        </a>
+                      ) : null;
+                    })()}
                   </td>
                   <td style={{ ...td, textTransform: "capitalize" }}>{l.style ?? "—"}</td>
                   <td style={td}>
