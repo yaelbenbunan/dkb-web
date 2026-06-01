@@ -203,7 +203,7 @@ export default async function ServiceDetail({
 
       {/* Body 2/3 + 1/3 */}
       <Container className="grid gap-12 py-20 lg:grid-cols-[2fr_1fr] lg:gap-14">
-        <div className="min-w-0 space-y-16">
+        <div className="order-2 min-w-0 space-y-16 lg:order-1">
           {/* Intro + bullets */}
           {(service.intro || service.bullets) && (
             <section>
@@ -290,8 +290,9 @@ export default async function ServiceDetail({
           )}
         </div>
 
-        {/* Aside sticky */}
-        <aside className="lg:sticky lg:top-28 lg:h-max lg:self-start">
+        {/* Aside sticky (desktop). On mobile it moves above the content so the
+            CTA form is reachable without scrolling past the whole article. */}
+        <aside className="order-1 lg:order-2 lg:sticky lg:top-28 lg:h-max lg:self-start">
           <div className="space-y-5">
             <ServiceCtaForm serviceTitle={service.title} />
 
