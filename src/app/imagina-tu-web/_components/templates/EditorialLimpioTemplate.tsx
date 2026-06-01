@@ -499,11 +499,11 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
                   <div
                     key={i}
                     className="flex flex-col justify-center rounded-2xl border p-6"
-                    style={hairline}
+                    style={{ ...hairline, backgroundColor: `${palette.accent}0a` }}
                   >
                     <span
                       style={{ ...display, color: palette.accent }}
-                      className="text-4xl font-bold leading-none"
+                      className="text-5xl font-black leading-none tracking-tight"
                     >
                       {s.k}
                     </span>
@@ -516,27 +516,45 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
             )}
           </motion.div>
 
-          <div className="mt-16 grid gap-x-12 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
-            {bullets.map((b, i) => (
-              <motion.div
-                key={i}
-                {...fadeUp}
-                transition={{ ...fadeUp.transition, delay: 0.05 * i }}
-                className="border-t pt-6"
-                style={hairline}
-              >
-                <div
-                  style={{ ...display, color: palette.accent }}
-                  className="text-3xl font-bold leading-none sm:text-4xl"
+          <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {bullets.map((b, i) => {
+              const num = String(i + 1).padStart(2, "0");
+              return (
+                <motion.div
+                  key={i}
+                  {...fadeUp}
+                  transition={{ ...fadeUp.transition, delay: 0.05 * i }}
+                  className="relative overflow-hidden rounded-2xl border p-6"
+                  style={{ ...hairline, backgroundColor: `${palette.accent}0a` }}
                 >
-                  {String(i + 1).padStart(2, "0")}
-                </div>
-                <h3 style={display} className="mt-4 text-xl font-semibold sm:text-2xl">
-                  {b.title}
-                </h3>
-                <p className="mt-3 text-base leading-relaxed opacity-85">{b.text}</p>
-              </motion.div>
-            ))}
+                  {/* Oversized ghost number — adds depth so the grid never reads
+                      as a flat "blue number / black text" list. */}
+                  <span
+                    aria-hidden
+                    style={{ ...display, color: palette.accent }}
+                    className="pointer-events-none absolute -right-1 -top-4 select-none text-8xl font-black leading-none opacity-[0.08]"
+                  >
+                    {num}
+                  </span>
+                  {/* Solid accent badge with the number */}
+                  <div
+                    style={{ backgroundColor: palette.accent, color: fgOnAccent }}
+                    className="relative flex size-12 items-center justify-center rounded-xl text-lg font-bold shadow-md"
+                  >
+                    {num}
+                  </div>
+                  <h3
+                    style={display}
+                    className="relative mt-5 text-xl font-semibold sm:text-[1.35rem]"
+                  >
+                    {b.title}
+                  </h3>
+                  <p className="relative mt-2 text-base leading-relaxed opacity-85">
+                    {b.text}
+                  </p>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>
