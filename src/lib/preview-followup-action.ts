@@ -167,9 +167,11 @@ export async function sendPreviewFollowup(
   const resend = new Resend(apiKey);
   const attachment = { filename: pdfFilename, content: pdfBuffer };
 
-  // 1) User-facing offer email (with PDF).
+  // 1) User-facing offer email (with PDF). It invites a reply, so it must come
+  // from a real, monitored address on the verified domain — never a noreply.
+  const offerFrom = `dinkbit <${OFFER.fromEmail}>`;
   const userSend = await resend.emails.send({
-    from,
+    from: offerFrom,
     to: d.email,
     replyTo: OFFER.contactEmail,
     subject: offer.subject,
