@@ -14,6 +14,7 @@ import { StepFinal } from "./steps/StepFinal";
 import { WebPreview, type WebPreviewData } from "./WebPreview";
 import { RatingBar } from "./RatingBar";
 import { generatePreview } from "@/lib/preview-generate-action";
+import { captureAndSendFollowup } from "./capture-and-send";
 import { PreviewLoading } from "./PreviewLoading";
 import {
   isValidContactEmail,
@@ -85,6 +86,7 @@ export function PreviewWizard() {
   const [pending, startTransition] = useTransition();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [leadId, setLeadId] = useState<string | null>(null);
+  const [followupToken, setFollowupToken] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState<{
     copy: CopyResponse | null;
@@ -93,6 +95,7 @@ export function PreviewWizard() {
   } | null>(null);
   const loadedAt = useRef(Date.now());
   const wizardRef = useRef<HTMLDivElement>(null);
+  const followupSentRef = useRef(false);
 
   useEffect(() => {
     loadedAt.current = Date.now();
@@ -115,6 +118,37 @@ export function PreviewWizard() {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }, [leadId]);
+
+  // Once the preview is fully rendered, capture it to a PDF and fire the
+  // follow-up emails (offer to the user + copy to us). Runs exactly once, and
+  // only after generation settles so the capture isn't blank. Best-effort.
+  useEffect(() => {
+    if (followupSentRef.current) return;
+    if (!leadId || !followupToken || generating || !generated) return;
+    followupSentRef.current = true;
+    const t = setTimeout(() => {
+      captureAndSendFollowup({
+        leadId,
+        followupToken,
+        name: state.name,
+        email: state.email,
+        businessName: state.businessName,
+      }).then((ok) =>
+        track(ok ? "preview_followup_sent" : "preview_followup_fail", {
+          leadId,
+        }),
+      );
+    }, 1800);
+    return () => clearTimeout(t);
+  }, [
+    leadId,
+    followupToken,
+    generating,
+    generated,
+    state.name,
+    state.email,
+    state.businessName,
+  ]);
 
   const canAdvance = (): boolean => {
     switch (step) {
@@ -196,6 +230,7 @@ export function PreviewWizard() {
           businessType: state.businessType,
         });
         setLeadId(r.leadId);
+        setFollowupToken(r.followupToken ?? null);
         setGenerating(true);
         track("preview_generate_start", { leadId: r.leadId });
         const startedAt = Date.now();

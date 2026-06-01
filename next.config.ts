@@ -5,6 +5,11 @@ const withMDX = createMDX({});
 
 const config: NextConfig = {
   pageExtensions: ["ts", "tsx", "md", "mdx"],
+  experimental: {
+    // The preview-follow-up action receives a captured JPEG of the rendered
+    // preview (~1-3 MB). Raise the default 1 MB server-action body cap.
+    serverActions: { bodySizeLimit: "8mb" },
+  },
   images: {
     // AVIF first, WebP fallback. Next ya negocia con el Accept del cliente.
     formats: ["image/avif", "image/webp"],

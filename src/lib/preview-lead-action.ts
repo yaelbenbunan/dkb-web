@@ -4,10 +4,13 @@ import { Resend } from "resend";
 import { previewLeadSchema } from "./preview-validation";
 import { generateLeadId } from "./preview-lead-id";
 import { getSectorLabel } from "./preview-themes";
+import { mintFollowupToken } from "./preview-followup-token";
 
 interface PreviewLeadResult {
   ok: boolean;
   leadId?: string;
+  /** Short-lived HMAC authorizing the follow-up email to this lead's address. */
+  followupToken?: string;
   error?: string;
 }
 
@@ -128,5 +131,5 @@ export async function sendPreviewLead(
     console.error("Resend error:", error);
     return { ok: false, error: "No se pudo enviar. Inténtalo más tarde." };
   }
-  return { ok: true, leadId };
+  return { ok: true, leadId, followupToken: mintFollowupToken(leadId, d.email) };
 }

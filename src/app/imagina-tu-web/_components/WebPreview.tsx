@@ -148,6 +148,7 @@ export function WebPreview({ data, copy, sectorCopy, heroImageDataUrl }: Props) 
       <div ref={wrapperRef} style={{ height: scaledHeight, overflow: "hidden" }}>
         <div
           ref={innerRef}
+          id="preview-capture-root"
           style={{
             width: innerWidth,
             transformOrigin: "top left",
