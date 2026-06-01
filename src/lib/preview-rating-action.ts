@@ -3,6 +3,7 @@
 import { Resend } from "resend";
 import { previewRatingSchema } from "./preview-validation";
 import { getSectorLabel } from "./preview-themes";
+import { updateLeadReview } from "./imagina-leads";
 
 interface PreviewRatingResult {
   ok: boolean;
@@ -43,6 +44,14 @@ export async function sendPreviewRating(
   if (!parsed.success) {
     return { ok: false, error: "Datos del rating inválidos." };
   }
+
+  // Record the review on the lead so it shows in the internal panel (best-effort,
+  // independent of the email below).
+  await updateLeadReview(
+    parsed.data.leadId,
+    parsed.data.rating,
+    parsed.data.comment ?? "",
+  );
 
   const apiKey = process.env.RESEND_API_KEY;
   const to = process.env.CONTACT_EMAIL_TO;

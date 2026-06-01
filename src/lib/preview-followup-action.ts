@@ -12,6 +12,7 @@ import {
   leadTipoLabel,
   type LeadSummary,
 } from "./preview-lead-summary";
+import { saveLead, uploadPreviewPdf } from "./imagina-leads";
 
 const IMAGE_RE = /^data:image\/(jpeg|png);base64,[A-Za-z0-9+/=]+$/;
 
@@ -166,6 +167,27 @@ export async function sendPreviewFollowup(
       console.error("[preview-followup] PDF generation failed:", err);
     }
   }
+
+  // Persist the lead (+ PDF) to Supabase so it shows up in the internal panel.
+  // Best-effort: failures here never block the emails.
+  let pdfPath: string | null = null;
+  if (attachment) {
+    pdfPath = await uploadPreviewPdf(d.leadId, attachment.content);
+  }
+  await saveLead({
+    id: d.leadId,
+    name: d.name,
+    email: d.email,
+    phone: d.phone,
+    sector: d.sector,
+    businessName: d.businessName,
+    businessType: d.businessType,
+    style: d.style,
+    palette: d.palette,
+    valueProp: d.valueProp,
+    currentWebsite: d.currentWebsite,
+    pdfPath,
+  });
 
   const resend = new Resend(apiKey);
 
