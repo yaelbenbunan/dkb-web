@@ -1,62 +1,100 @@
 import { sendPreviewFollowup } from "@/lib/preview-followup-action";
 
+export interface FollowupLead {
+  name: string;
+  email: string;
+  phone: string;
+  businessName: string;
+  businessType: "informativa" | "ecommerce";
+  ecommerceKind?: string;
+  sector: string;
+  offerings: string[];
+  palette: string;
+  typography: string;
+  style?: string;
+  hasLogo: boolean;
+  address?: string;
+  city?: string;
+  currentWebsite?: string;
+  featuredDishes: string[];
+  valueProp: string;
+}
+
 interface Args {
   leadId: string;
   followupToken: string;
-  name: string;
-  email: string;
-  businessName: string;
+  lead: FollowupLead;
 }
 
-/** Capture the rendered preview (#preview-capture-root) as a JPEG and hand it
- *  to the server action, which turns it into a PDF and sends the offer +
- *  internal emails. Best-effort: returns false on any problem without throwing.
+/** Capture the rendered preview (#preview-capture-root) as a JPEG, then hand
+ *  everything to the server action, which sends ONE internal notification
+ *  (answers + preview PDF) and the user's offer email.
+ *
+ *  Always calls the action — even if the capture fails — so the lead is still
+ *  notified (just without the PDF). Returns false on any problem.
  *
  *  We inject a temporary stylesheet that forces every node to its final,
- *  fully-visible state — the templates animate sections in on scroll
- *  (`whileInView`), so off-screen sections would otherwise capture blank. */
+ *  fully-visible state — sections animate in on scroll (`whileInView`), so
+ *  off-screen ones would otherwise capture blank. */
 export async function captureAndSendFollowup(args: Args): Promise<boolean> {
+  let imageDataUrl = "";
   const node = document.getElementById("preview-capture-root");
-  if (!node) return false;
-
-  const style = document.createElement("style");
-  style.textContent =
-    "#preview-capture-root,#preview-capture-root *{opacity:1 !important;" +
-    "transform:none !important;animation:none !important;" +
-    "transition:none !important;filter:none !important;}";
-  document.head.appendChild(style);
+  if (node) {
+    const style = document.createElement("style");
+    style.textContent =
+      "#preview-capture-root,#preview-capture-root *{opacity:1 !important;" +
+      "transform:none !important;animation:none !important;" +
+      "transition:none !important;filter:none !important;}";
+    document.head.appendChild(style);
+    try {
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
+      await new Promise((r) => setTimeout(r, 150));
+      const { toJpeg } = await import("html-to-image");
+      const el = node as HTMLElement;
+      const url = await toJpeg(el, {
+        quality: 0.82,
+        pixelRatio: 1.3,
+        backgroundColor: "#ffffff",
+        width: el.scrollWidth,
+        height: el.scrollHeight,
+        cacheBust: true,
+      });
+      if (url && url.length > 5000) imageDataUrl = url;
+    } catch (err) {
+      console.error("preview capture failed (sending without PDF):", err);
+    } finally {
+      style.remove();
+    }
+  }
 
   try {
-    // Let the override apply and layout settle before measuring/cloning.
-    await new Promise((r) => requestAnimationFrame(() => r(null)));
-    await new Promise((r) => setTimeout(r, 150));
-
-    const { toJpeg } = await import("html-to-image");
-    const el = node as HTMLElement;
-    const dataUrl = await toJpeg(el, {
-      quality: 0.82,
-      pixelRatio: 1.3,
-      backgroundColor: "#ffffff",
-      width: el.scrollWidth,
-      height: el.scrollHeight,
-      cacheBust: true,
-    });
-    if (!dataUrl || dataUrl.length < 5000) return false;
-
+    const { lead } = args;
     const fd = new FormData();
     fd.set("leadId", args.leadId);
     fd.set("followupToken", args.followupToken);
-    fd.set("name", args.name);
-    fd.set("email", args.email);
-    fd.set("businessName", args.businessName);
-    fd.set("imageDataUrl", dataUrl);
+    fd.set("name", lead.name);
+    fd.set("email", lead.email);
+    fd.set("phone", lead.phone);
+    fd.set("businessName", lead.businessName);
+    fd.set("businessType", lead.businessType);
+    if (lead.ecommerceKind) fd.set("ecommerceKind", lead.ecommerceKind);
+    fd.set("sector", lead.sector);
+    fd.set("offerings", JSON.stringify(lead.offerings));
+    fd.set("palette", lead.palette);
+    fd.set("typography", lead.typography);
+    if (lead.style) fd.set("style", lead.style);
+    fd.set("hasLogo", lead.hasLogo ? "true" : "false");
+    if (lead.address) fd.set("address", lead.address);
+    if (lead.city) fd.set("city", lead.city);
+    if (lead.currentWebsite) fd.set("currentWebsite", lead.currentWebsite);
+    fd.set("featuredDishes", JSON.stringify(lead.featuredDishes));
+    fd.set("valueProp", lead.valueProp);
+    fd.set("imageDataUrl", imageDataUrl);
 
     const r = await sendPreviewFollowup(fd);
     return r.ok;
   } catch (err) {
     console.error("captureAndSendFollowup failed:", err);
     return false;
-  } finally {
-    style.remove();
   }
 }

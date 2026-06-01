@@ -1,9 +1,7 @@
 "use server";
 
-import { Resend } from "resend";
 import { previewLeadSchema } from "./preview-validation";
 import { generateLeadId } from "./preview-lead-id";
-import { getSectorLabel } from "./preview-themes";
 import { mintFollowupToken } from "./preview-followup-token";
 
 interface PreviewLeadResult {
@@ -34,6 +32,12 @@ function parseCustomColors(raw: FormDataEntryValue | null): unknown {
   }
 }
 
+/**
+ * Validates the wizard answers and mints a lead id + follow-up token. It does
+ * NOT send the internal email anymore: that single notification (answers + the
+ * preview PDF) is sent once from `sendPreviewFollowup`, after the preview has
+ * rendered and been captured. This keeps the team to ONE email per lead.
+ */
 export async function sendPreviewLead(
   formData: FormData,
 ): Promise<PreviewLeadResult> {
@@ -70,66 +74,10 @@ export async function sendPreviewLead(
     return { ok: false, error: "Revisa los campos del formulario." };
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
-  const to = process.env.CONTACT_EMAIL_TO;
-  const from = process.env.CONTACT_EMAIL_FROM ?? "onboarding@resend.dev";
-  if (!apiKey || !to) {
-    console.error("Missing RESEND_API_KEY or CONTACT_EMAIL_TO");
-    return { ok: false, error: "Servidor mal configurado. Inténtalo más tarde." };
-  }
-
   const leadId = generateLeadId();
-  const d = parsed.data;
-  const tipo =
-    d.businessType === "ecommerce"
-      ? `Ecommerce — ${d.ecommerceKind}`
-      : "Informativa";
-
-  const resend = new Resend(apiKey);
-  const { error } = await resend.emails.send({
-    from,
-    to,
-    replyTo: d.email,
-    subject: `Preview Web — ${d.name} (${tipo}) [#${leadId}]`,
-    text: [
-      `ID lead: ${leadId}`,
-      "",
-      "--- Contacto ---",
-      `Nombre: ${d.name}`,
-      `Email: ${d.email}`,
-      `Teléfono: ${d.phone}`,
-      "",
-      "--- Respuestas ---",
-      `Tipo de web: ${tipo}`,
-      `Negocio: ${d.businessName} (sector: ${getSectorLabel(d.sector)})`,
-      `Oferta: ${d.offerings.join(", ")}`,
-      `Paleta: ${d.palette}${
-        d.customColors
-          ? ` (custom: text ${d.customColors.text}, accent ${d.customColors.accent}, tint ${d.customColors.tint})`
-          : ""
-      }`,
-      `Tipografía: ${d.typography}`,
-      `Estilo: ${d.style ?? "moderno"}`,
-      `Logo: ${d.logoDataUrl ? "sí (adjunto en data URL)" : "no"}`,
-      `Dirección: ${d.address || "—"}`,
-      `Ciudad: ${d.city || "—"}`,
-      `Web actual: ${d.currentWebsite || "—"}`,
-      `Platos destacados: ${
-        d.featuredDishes && d.featuredDishes.length > 0
-          ? d.featuredDishes.join(", ")
-          : "—"
-      }`,
-      "",
-      "Toque personal:",
-      d.valueProp,
-      "",
-      "Origen: /imagina-tu-web.",
-    ].join("\n"),
-  });
-
-  if (error) {
-    console.error("Resend error:", error);
-    return { ok: false, error: "No se pudo enviar. Inténtalo más tarde." };
-  }
-  return { ok: true, leadId, followupToken: mintFollowupToken(leadId, d.email) };
+  return {
+    ok: true,
+    leadId,
+    followupToken: mintFollowupToken(leadId, parsed.data.email),
+  };
 }

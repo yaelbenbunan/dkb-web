@@ -255,8 +255,11 @@ async function measureImageWidth(
       headers: { "User-Agent": "Mozilla/5.0 (compatible; DinkbitPreviewBot/1.0)" },
     });
     if (!res.ok || !res.body) return 0;
-    const ct = res.headers.get("content-type") ?? "";
-    if (!ct.startsWith("image/")) return 0;
+    // Raster formats only. Excludes SVG on purpose — passing attacker-supplied
+    // SVG to sharp/libvips (librsvg) is a parser-DoS / CVE risk.
+    const ct = (res.headers.get("content-type") ?? "").toLowerCase();
+    const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"];
+    if (!allowed.some((a) => ct.startsWith(a))) return 0;
     const reader = res.body.getReader();
     const chunks: Uint8Array[] = [];
     let received = 0;
@@ -268,9 +271,48 @@ async function measureImageWidth(
     }
     await reader.cancel().catch(() => {});
     const buf = Buffer.concat(chunks.map((c) => Buffer.from(c)));
-    const meta = await sharp(buf).metadata();
+    // Defense in depth: verify the bytes really are a raster image (content-type
+    // can lie) before handing them to the decoder.
+    if (!isRasterMagic(buf)) return 0;
+    // metadata() only parses the header (no full pixel decode); disable SVG and
+    // cap input pixels so a crafted file can't blow up memory/CPU.
+    const meta = await sharp(buf, {
+      failOn: "error",
+      limitInputPixels: 100_000_000,
+    }).metadata();
     return meta.width ?? 0;
   } catch {
     return 0;
   }
+}
+
+/** True if the buffer starts with the magic bytes of a supported raster image
+ *  (JPEG, PNG, GIF, WebP, AVIF/HEIF). Rejects SVG and everything else. */
+function isRasterMagic(buf: Buffer): boolean {
+  if (buf.length < 12) return false;
+  // JPEG
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return true;
+  // PNG
+  if (
+    buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47
+  ) {
+    return true;
+  }
+  // GIF
+  if (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46) return true;
+  // WebP: "RIFF"...."WEBP"
+  if (
+    buf.toString("ascii", 0, 4) === "RIFF" &&
+    buf.toString("ascii", 8, 12) === "WEBP"
+  ) {
+    return true;
+  }
+  // AVIF / HEIF: "....ftyp...." with a known brand
+  if (buf.toString("ascii", 4, 8) === "ftyp") {
+    const brand = buf.toString("ascii", 8, 12);
+    if (["avif", "avis", "heic", "heix", "mif1", "msf1"].includes(brand)) {
+      return true;
+    }
+  }
+  return false;
 }

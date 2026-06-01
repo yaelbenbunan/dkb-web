@@ -131,9 +131,25 @@ export function PreviewWizard() {
       captureAndSendFollowup({
         leadId,
         followupToken,
-        name: state.name,
-        email: state.email,
-        businessName: state.businessName,
+        lead: {
+          name: state.name,
+          email: state.email,
+          phone: state.phone,
+          businessName: state.businessName,
+          businessType: state.businessType ?? "informativa",
+          ecommerceKind: state.ecommerceKind ?? undefined,
+          sector: state.sector,
+          offerings: state.offerings,
+          palette: state.palette,
+          typography: state.typography,
+          style: state.style || undefined,
+          hasLogo: !!state.logoDataUrl,
+          address: state.address || undefined,
+          city: state.city || undefined,
+          currentWebsite: state.currentWebsite || undefined,
+          featuredDishes: state.featuredDishes,
+          valueProp: state.valueProp,
+        },
       }).then((ok) =>
         track(ok ? "preview_followup_sent" : "preview_followup_fail", {
           leadId,
@@ -141,15 +157,10 @@ export function PreviewWizard() {
       );
     }, 1800);
     return () => clearTimeout(t);
-  }, [
-    leadId,
-    followupToken,
-    generating,
-    generated,
-    state.name,
-    state.email,
-    state.businessName,
-  ]);
+    // Runs once (guarded by followupSentRef) using the wizard answers, which
+    // are stable by the time the preview renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leadId, followupToken, generating, generated]);
 
   const canAdvance = (): boolean => {
     switch (step) {
