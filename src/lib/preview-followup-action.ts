@@ -30,6 +30,39 @@ export interface PreviewFollowupResult {
 
 const TTL_MS = OFFER.ttlHours * 60 * 60 * 1000;
 
+// --- Abuse throttle (best-effort, per-instance) -----------------------------
+// This action sends a branded email + an attacker-influenced attachment to a
+// user-chosen address, so we cap it. The HMAC token already requires a real
+// lead submission per (leadId, email); on top of that we make each token
+// single-use and limit sends per address. NOTE: this is in-memory, so it is
+// per serverless instance only — it blunts scripted bursts but is not a hard
+// guarantee. Move to KV/Upstash if abuse is ever observed.
+const MAX_SENDS_PER_EMAIL_PER_HOUR = 3;
+const usedTokens = new Map<string, number>();
+const sendsByEmail = new Map<string, number[]>();
+
+function throttle(email: string, token: string): boolean {
+  const now = Date.now();
+  // Single-use token.
+  if (usedTokens.has(token)) return true;
+  // Per-email window.
+  const key = email.trim().toLowerCase();
+  const recent = (sendsByEmail.get(key) ?? []).filter(
+    (t) => now - t < 60 * 60 * 1000,
+  );
+  if (recent.length >= MAX_SENDS_PER_EMAIL_PER_HOUR) return true;
+  recent.push(now);
+  sendsByEmail.set(key, recent);
+  usedTokens.set(token, now);
+  // Opportunistic cleanup so the maps don't grow unbounded.
+  if (usedTokens.size > 5000) {
+    for (const [t, ts] of usedTokens) {
+      if (now - ts > TTL_MS) usedTokens.delete(t);
+    }
+  }
+  return false;
+}
+
 /** Turn the captured preview image into a single-page PDF. */
 async function imageToPdf(imageDataUrl: string): Promise<Uint8Array> {
   const isPng = imageDataUrl.startsWith("data:image/png");
@@ -67,6 +100,11 @@ export async function sendPreviewFollowup(
     return { ok: false, error: "No autorizado." };
   }
 
+  // Make the token single-use and cap sends per address (best-effort).
+  if (throttle(d.email, d.followupToken)) {
+    return { ok: false, error: "Solicitud duplicada o límite alcanzado." };
+  }
+
   const apiKey = process.env.RESEND_API_KEY;
   const internalTo = process.env.CONTACT_EMAIL_TO;
   const from = process.env.CONTACT_EMAIL_FROM ?? "onboarding@resend.dev";
@@ -83,8 +121,9 @@ export async function sendPreviewFollowup(
     return { ok: false, error: "No se pudo generar el PDF." };
   }
   const pdfBuffer = Buffer.from(pdfBytes);
-  const safeName = d.businessName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-  const pdfFilename = `preview-${safeName || "dinkbit"}.pdf`;
+  // Fixed filename — never derive it from user input (no header/path injection
+  // and no attacker-chosen text in the attachment name).
+  const pdfFilename = "preview-dinkbit.pdf";
 
   const deadlineMs = Date.now() + TTL_MS;
   const countdownUrl = `${OFFER.siteUrl}/api/countdown?d=${deadlineMs}&a=${OFFER.accentHex}`;
