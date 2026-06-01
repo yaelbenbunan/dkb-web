@@ -375,7 +375,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
 
         {/* Floating header (semi-transparent, photo shows through) */}
         <header
-          className="relative z-10 flex items-center justify-between px-12 py-5 backdrop-blur-md"
+          className="relative z-10 flex items-center justify-between px-5 sm:px-8 lg:px-12 py-5 backdrop-blur-md"
           style={{
             backgroundColor: palette.bg + "66",
             borderBottom: `1px solid ${palette.accent}1f`,
@@ -412,8 +412,8 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
         </header>
 
         {/* Hero content */}
-        <div className="relative px-12 pb-24 pt-16">
-          <div className="mx-auto grid max-w-6xl items-center gap-10 grid-cols-[1.1fr_1fr]">
+        <div className="relative px-5 sm:px-8 lg:px-12 pb-24 pt-16">
+          <div className="mx-auto grid max-w-6xl items-center gap-10 grid-cols-1 lg:grid-cols-[1.1fr_1fr]">
             <motion.div
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
@@ -438,7 +438,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
                   // Critical for hero legibility on busy photos.
                   textShadow: `0 1px 0 ${palette.bg}, 0 0 18px ${palette.bg}80`,
                 }}
-                className="mt-5 text-6xl font-bold leading-[1.02] tracking-tight"
+                className="mt-5 text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.02] tracking-tight"
               >
                 {headline}
               </h1>
@@ -521,7 +521,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
       {/* VALOR AGREGADO — clean surface with photo overflowing the section
           top edge to bridge with the Hero. Big decorative number "01". */}
       <section
-        className="relative overflow-hidden px-12 py-24"
+        className="relative overflow-hidden px-5 sm:px-8 lg:px-12 py-24"
         style={{ backgroundColor: palette.surface }}
       >
         <div
@@ -529,7 +529,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
           className="absolute -left-32 top-32 size-80 rounded-full blur-3xl"
           style={{ backgroundColor: palette.accent + "1a" }}
         />
-        <div className="relative mx-auto grid max-w-6xl items-center gap-12 grid-cols-2">
+        <div className="relative mx-auto grid max-w-6xl items-center gap-12 grid-cols-1 lg:grid-cols-2">
           <motion.div className="relative" {...fadeUpProps}>
             <div
               aria-hidden
@@ -644,7 +644,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
           overlay so it never reads as flat. Two blurred accent blobs add
           depth without dominating. */}
       <section
-        className="relative overflow-hidden px-12 py-28"
+        className="relative overflow-hidden px-5 sm:px-8 lg:px-12 py-28"
         style={{
           backgroundColor: palette.accent + "1f",
         }}
@@ -684,7 +684,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
                 color: palette.text,
                 textShadow: `0 0 14px ${palette.bg}cc`,
               }}
-              className="mt-4 text-5xl font-bold tracking-tight"
+              className="mt-4 text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight"
             >
               {assets.labels.teamSectionTitle}
             </h2>
@@ -715,7 +715,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
           that some palettes had. Cards keep their solid surface fill, so
           they always stand out cleanly. */}
       <section
-        className="relative overflow-hidden px-12 py-28"
+        className="relative overflow-hidden px-5 sm:px-8 lg:px-12 py-28"
         style={{
           background: `linear-gradient(135deg, ${palette.surface} 0%, ${palette.accent}1a 100%)`,
         }}
@@ -734,7 +734,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
               >
                 {assets.labels.servicesSectionPill}
               </span>
-              <h2 style={display} className="mt-4 text-5xl font-bold tracking-tight">
+              <h2 style={display} className="mt-4 text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight">
                 {servicesTitle}
               </h2>
             </div>
@@ -758,7 +758,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
                 whileInView="visible"
                 viewport={VIEWPORT}
                 variants={staggerParentVariants}
-                className="grid gap-6 grid-cols-4"
+                className="grid gap-6 grid-cols-2 lg:grid-cols-4"
               >
                 {services.slice(0, 4).map((s, i) => {
                   const Icon = SERVICE_ICONS[i % SERVICE_ICONS.length];
@@ -848,7 +848,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
 
       {/* CTA BRIDGE — floating banner that connects Servicios and Testimonios,
           adding visual continuity (no two consecutive sections feel detached). */}
-      <div className="relative z-30 -my-14 px-12">
+      <div className="relative z-30 -my-14 px-5 sm:px-8 lg:px-12">
         <motion.div
           {...fadeUpProps}
           className="mx-auto flex max-w-5xl items-center justify-between gap-8 rounded-3xl px-10 py-7 shadow-2xl"
@@ -880,7 +880,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
       {/* TESTIMONIOS — high-contrast section using the inverse of palette.text
           (works for both light and dark palettes). */}
       <section
-        className="relative overflow-hidden px-12 pb-24 pt-32"
+        className="relative overflow-hidden px-5 sm:px-8 lg:px-12 pb-24 pt-32"
         style={{
           background: `linear-gradient(135deg, ${palette.text} 0%, ${shadeColor(palette.text, -10)} 50%, ${palette.accent} 200%)`,
           color: fgOnInvert,
@@ -916,7 +916,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
             </span>
             <h2
               style={display}
-              className="mx-auto mt-4 max-w-3xl text-5xl font-bold tracking-tight"
+              className="mx-auto mt-4 max-w-3xl text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight"
             >
               Lo que dicen quienes ya{" "}
               <span style={{ color: palette.accent }}>confían en nosotros</span>
@@ -937,12 +937,12 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
           with a diagonal accent fade ending in palette.bg so the footer
           (which sits on palette.bg) joins seamlessly. */}
       <section
-        className="relative overflow-hidden px-12 py-24"
+        className="relative overflow-hidden px-5 sm:px-8 lg:px-12 py-24"
         style={{
           background: `linear-gradient(160deg, ${palette.surface} 0%, ${palette.accent}1a 55%, ${palette.bg} 100%)`,
         }}
       >
-        <div className="relative mx-auto grid max-w-6xl items-start gap-10 grid-cols-2">
+        <div className="relative mx-auto grid max-w-6xl items-start gap-10 grid-cols-1 lg:grid-cols-2">
           <motion.div
             {...fadeInProps}
             className="overflow-hidden rounded-3xl border shadow-2xl"
@@ -966,7 +966,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
             >
               Contacto
             </span>
-            <h2 style={display} className="mt-4 text-5xl font-bold tracking-tight">
+            <h2 style={display} className="mt-4 text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight">
               ¿Hablamos?
             </h2>
             <p className="mt-3 opacity-80">
@@ -1018,7 +1018,7 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
 
       {/* Footer */}
       <footer
-        className="border-t px-12 py-6 text-xs opacity-70"
+        className="border-t px-5 sm:px-8 lg:px-12 py-6 text-xs opacity-70"
         style={{ borderColor: palette.accent + "22" }}
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between">
@@ -1219,7 +1219,7 @@ function TeamCarousel({
   }, [team, offset, photoFor]);
 
   return (
-    <div className="grid gap-6 grid-cols-4">
+    <div className="grid gap-6 grid-cols-2 lg:grid-cols-4">
       {visible.map(({ member, photo }, i) => (
         <article
           key={`${member.name}-${i}-${offset}`}
@@ -1308,7 +1308,7 @@ function TestimonialsCarousel({
   const cardBorder = fg + "22";
 
   return (
-    <div className="grid gap-6 grid-cols-2">
+    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2">
       {visible.map((t, i) => {
         const initial = t.name.charAt(0).toUpperCase();
         return (
@@ -1406,7 +1406,7 @@ function DishesGrid({
   }));
   // Use 4 columns when there are 4 cards (clean row), 3 columns otherwise
   // (5/6 cards lay out cleanly as 3+2 or 3+3).
-  const gridColsClass = count === 4 ? "grid-cols-4" : "grid-cols-3";
+  const gridColsClass = count === 4 ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
 
   return (
     <>
@@ -1510,7 +1510,7 @@ function FeaturedMenuSection({
 
   return (
     <section
-      className="relative overflow-hidden px-12 py-28"
+      className="relative overflow-hidden px-5 sm:px-8 lg:px-12 py-28"
       style={{
         background: `linear-gradient(180deg, ${palette.surface} 0%, ${palette.accent}0d 100%)`,
       }}
@@ -1519,7 +1519,7 @@ function FeaturedMenuSection({
         <motion.h2
           {...fadeUpProps}
           style={{ ...display, color: fgOnSurface }}
-          className="text-center text-5xl font-bold tracking-[0.04em]"
+          className="text-center text-3xl sm:text-4xl lg:text-5xl font-bold tracking-[0.04em]"
         >
           Carta destacada
         </motion.h2>
@@ -1532,7 +1532,7 @@ function FeaturedMenuSection({
           Una selección de platos que define nuestra cocina y la mesa que ofrecemos.
         </motion.p>
 
-        <div className="mt-16 grid items-start gap-12 grid-cols-[1fr_auto_1fr]">
+        <div className="mt-16 grid items-start gap-12 grid-cols-1 lg:grid-cols-[1fr_auto_1fr]">
           <MenuColumn
             title={menu.leftTitle}
             items={menu.leftItems}
