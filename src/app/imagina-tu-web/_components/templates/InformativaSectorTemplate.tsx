@@ -69,6 +69,8 @@ export interface InformativaSectorData {
   logoDataUrl?: string;
   address?: string;
   city?: string;
+  /** Real image scraped from the user's current website (hero background). */
+  sourceImageUrl?: string;
 }
 
 interface Props {
@@ -237,10 +239,13 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
 
   const [heroBgImg, valorAgregadoImg] = useMemo(() => {
     const pool = assets?.photosAmbient ?? [];
-    if (pool.length === 0) return [undefined, undefined];
-    const shuffled = [...pool].sort(() => Math.random() - 0.5);
-    return [shuffled[0], shuffled[1] ?? shuffled[0]];
-  }, [assets]);
+    const shuffled =
+      pool.length > 0 ? [...pool].sort(() => Math.random() - 0.5) : [];
+    // Prefer the user's real website image for the hero when available.
+    const hero = data.sourceImageUrl || shuffled[0];
+    const valor = shuffled[1] ?? shuffled[0];
+    return [hero, valor];
+  }, [assets, data.sourceImageUrl]);
 
   if (!palette || !typo || !assets) return null;
   const SERVICE_ICONS = assets.serviceIcons;

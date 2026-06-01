@@ -24,6 +24,10 @@ export interface PreviewGenerateResult {
   /** Filled when the sector-specific InformativaSectorTemplate is used */
   sectorCopy: SectorInformativaCopyResponse | null;
   heroImageDataUrl: string | null;
+  /** A real image scraped from the user's current website (og:image). Sector
+   *  templates use it as the hero background; generic templates already fold
+   *  it into heroImageDataUrl. */
+  sourceImageUrl?: string | null;
   error?: string;
 }
 
@@ -113,10 +117,17 @@ export async function generatePreview(
 
   if (useSector) {
     // Sector templates use a curated static photo pool, so we only need copy.
+    // We still surface the scraped image so the template can use it as the
+    // hero background (falling back to curated photos).
     const sectorCopy = await generateSectorCopy(client, promptInput).catch(
       () => null,
     );
-    return { copy: null, sectorCopy, heroImageDataUrl: null };
+    return {
+      copy: null,
+      sectorCopy,
+      heroImageDataUrl: null,
+      sourceImageUrl: source?.imageUrl ?? null,
+    };
   }
 
   // Generic templates need a hero image. Prefer a real image scraped from the

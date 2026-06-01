@@ -45,6 +45,9 @@ export interface WebPreviewData {
   logoDataUrl?: string;
   address?: string;
   city?: string;
+  /** Real image scraped from the user's current website — used as the hero
+   *  background when present (falls back to curated photos). */
+  sourceImageUrl?: string;
 }
 
 interface Props {

@@ -92,6 +92,7 @@ export function PreviewWizard() {
     copy: CopyResponse | null;
     sectorCopy: SectorInformativaCopyResponse | null;
     heroImageDataUrl: string | null;
+    sourceImageUrl: string | null;
   } | null>(null);
   const loadedAt = useRef(Date.now());
   const wizardRef = useRef<HTMLDivElement>(null);
@@ -256,6 +257,7 @@ export function PreviewWizard() {
           copy: result.copy,
           sectorCopy: result.sectorCopy,
           heroImageDataUrl: result.heroImageDataUrl,
+          sourceImageUrl: result.sourceImageUrl ?? null,
         });
         setGenerating(false);
         const durationMs = Date.now() - startedAt;
@@ -299,6 +301,7 @@ export function PreviewWizard() {
       logoDataUrl: state.logoDataUrl || undefined,
       address: state.address || undefined,
       city: state.city || undefined,
+      sourceImageUrl: generated?.sourceImageUrl ?? undefined,
     };
 
     if (generating || !generated) {
