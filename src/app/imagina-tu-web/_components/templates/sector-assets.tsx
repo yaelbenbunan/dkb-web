@@ -700,13 +700,9 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       "/img/imagina/salud/valor-agregado/foto-4.jpg",
       "/img/imagina/salud/valor-agregado/foto-5.jpg",
     ],
-    // TEMP: gender-agnostic pools while the new photo set (with backgrounds)
-    // doesn't have a male/female split yet. The template still asks for both
-    // arrays so we point them at the same pool — refine later by hand.
+    // Pools split by apparent gender (classified by hand) so team names and
+    // portraits stay coherent.
     photosMale: [
-      "/img/imagina/salud/equipo/1.jpg",
-      "/img/imagina/salud/equipo/2.jpg",
-      "/img/imagina/salud/equipo/3.jpg",
       "/img/imagina/salud/equipo/4.jpg",
       "/img/imagina/salud/equipo/5.jpg",
     ],
@@ -714,8 +710,6 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       "/img/imagina/salud/equipo/1.jpg",
       "/img/imagina/salud/equipo/2.jpg",
       "/img/imagina/salud/equipo/3.jpg",
-      "/img/imagina/salud/equipo/4.jpg",
-      "/img/imagina/salud/equipo/5.jpg",
     ],
     serviceIcons: [
       IconStethoscope,
@@ -773,18 +767,13 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       "/img/imagina/educacion/valor-agregado/foto-3.png",
     ],
     photosMale: [
-      "/img/imagina/educacion/equipo/11.jpg",
       "/img/imagina/educacion/equipo/12.jpg",
       "/img/imagina/educacion/equipo/13.jpg",
-      "/img/imagina/educacion/equipo/14.jpg",
       "/img/imagina/educacion/equipo/15.jpg",
     ],
     photosFemale: [
       "/img/imagina/educacion/equipo/11.jpg",
-      "/img/imagina/educacion/equipo/12.jpg",
-      "/img/imagina/educacion/equipo/13.jpg",
       "/img/imagina/educacion/equipo/14.jpg",
-      "/img/imagina/educacion/equipo/15.jpg",
     ],
     serviceIcons: [
       IconBook,
@@ -846,9 +835,6 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       "/img/imagina/moda/valor-agregado/foto-4.png",
     ],
     photosMale: [
-      "/img/imagina/moda/equipo/moda-1.jpg",
-      "/img/imagina/moda/equipo/moda-2.jpg",
-      "/img/imagina/moda/equipo/moda-3.jpg",
       "/img/imagina/moda/equipo/moda-4.jpg",
       "/img/imagina/moda/equipo/moda-5.jpg",
     ],
@@ -856,8 +842,6 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       "/img/imagina/moda/equipo/moda-1.jpg",
       "/img/imagina/moda/equipo/moda-2.jpg",
       "/img/imagina/moda/equipo/moda-3.jpg",
-      "/img/imagina/moda/equipo/moda-4.jpg",
-      "/img/imagina/moda/equipo/moda-5.jpg",
     ],
     serviceIcons: [
       IconHanger,
@@ -921,17 +905,11 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
     ],
     photosMale: [
       "/img/imagina/tecnologia/equipo/22.jpg",
-      "/img/imagina/tecnologia/equipo/23.jpg",
       "/img/imagina/tecnologia/equipo/24.jpg",
       "/img/imagina/tecnologia/equipo/25.jpg",
-      "/img/imagina/tecnologia/equipo/26.jpg",
-      "/img/imagina/tecnologia/equipo/27b.jpg",
     ],
     photosFemale: [
-      "/img/imagina/tecnologia/equipo/22.jpg",
       "/img/imagina/tecnologia/equipo/23.jpg",
-      "/img/imagina/tecnologia/equipo/24.jpg",
-      "/img/imagina/tecnologia/equipo/25.jpg",
       "/img/imagina/tecnologia/equipo/26.jpg",
       "/img/imagina/tecnologia/equipo/27b.jpg",
     ],
@@ -1000,18 +978,13 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
       "/img/imagina/servicios/valor-agregado/foto-5.png",
     ],
     photosMale: [
-      "/img/imagina/servicios/equipo/27.jpg",
-      "/img/imagina/servicios/equipo/28.jpg",
       "/img/imagina/servicios/equipo/29.jpg",
-      "/img/imagina/servicios/equipo/30.jpg",
       "/img/imagina/servicios/equipo/31.jpg",
     ],
     photosFemale: [
       "/img/imagina/servicios/equipo/27.jpg",
       "/img/imagina/servicios/equipo/28.jpg",
-      "/img/imagina/servicios/equipo/29.jpg",
       "/img/imagina/servicios/equipo/30.jpg",
-      "/img/imagina/servicios/equipo/31.jpg",
     ],
     serviceIcons: [
       IconBriefcase,
@@ -1075,18 +1048,12 @@ export const SECTOR_ASSETS: Record<SupportedSector, SectorAssets> = {
     ],
     photosMale: [
       "/img/imagina/restauracion/equipo/16.jpg",
-      "/img/imagina/restauracion/equipo/17.jpg",
       "/img/imagina/restauracion/equipo/18.jpg",
-      "/img/imagina/restauracion/equipo/19.jpg",
       "/img/imagina/restauracion/equipo/20.jpg",
-      "/img/imagina/restauracion/equipo/21.jpg",
     ],
     photosFemale: [
-      "/img/imagina/restauracion/equipo/16.jpg",
       "/img/imagina/restauracion/equipo/17.jpg",
-      "/img/imagina/restauracion/equipo/18.jpg",
       "/img/imagina/restauracion/equipo/19.jpg",
-      "/img/imagina/restauracion/equipo/20.jpg",
       "/img/imagina/restauracion/equipo/21.jpg",
     ],
     serviceIcons: [

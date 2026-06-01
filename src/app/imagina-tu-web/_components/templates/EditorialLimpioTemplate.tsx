@@ -105,6 +105,49 @@ const IconQuoteMark = (p: IconProps) => (
   </svg>
 );
 
+// Generic "value" icons for the valor-agregado bullets (the number already
+// shows as the card's ghost watermark, so the badge carries an icon instead).
+const IconCheck = (p: IconProps) => (
+  <svg {...baseSvg} {...p}>
+    <path d="M20 6 9 17l-5-5" />
+  </svg>
+);
+const IconBolt = (p: IconProps) => (
+  <svg {...baseSvg} {...p}>
+    <path d="M13 2 4 14h6l-1 8 9-12h-6z" />
+  </svg>
+);
+const IconShield = (p: IconProps) => (
+  <svg {...baseSvg} {...p}>
+    <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z" />
+    <path d="M9 12l2 2 4-4" />
+  </svg>
+);
+const IconClock = (p: IconProps) => (
+  <svg {...baseSvg} {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7v5l3 2" />
+  </svg>
+);
+const IconHeart = (p: IconProps) => (
+  <svg {...baseSvg} {...p}>
+    <path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z" />
+  </svg>
+);
+const IconSpark = (p: IconProps) => (
+  <svg {...baseSvg} {...p}>
+    <path d="M12 3v6M12 15v6M3 12h6M15 12h6M6 6l3 3M15 15l3 3M18 6l-3 3M9 15l-3 3" />
+  </svg>
+);
+const VALUE_ICONS = [
+  IconCheck,
+  IconBolt,
+  IconShield,
+  IconClock,
+  IconHeart,
+  IconSpark,
+];
+
 export interface EditorialLimpioData {
   businessName: string;
   sector: string;
@@ -521,46 +564,81 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
             )}
           </motion.div>
 
-          <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {bullets.map((b, i) => {
-              const num = String(i + 1).padStart(2, "0");
-              return (
-                <motion.div
-                  key={i}
-                  {...fadeUp}
-                  transition={{ ...fadeUp.transition, delay: 0.05 * i }}
-                  className="relative overflow-hidden rounded-2xl border p-6"
-                  style={{ ...hairline, backgroundColor: `${palette.accent}0a` }}
-                >
-                  {/* Oversized ghost number — adds depth so the grid never reads
-                      as a flat "blue number / black text" list. */}
-                  <span
-                    aria-hidden
-                    style={{ ...display, color: palette.accent }}
-                    className="pointer-events-none absolute -right-1 -top-4 select-none text-8xl font-black leading-none opacity-[0.08]"
+          {isCompact ? (
+            // COMPACT — lighter, airier presentation (no boxes). Big accent icon
+            // tile on top of each item so it reads visual without saturating.
+            <div className="mt-14 grid gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+              {bullets.map((b, i) => {
+                const Icon = VALUE_ICONS[i % VALUE_ICONS.length];
+                return (
+                  <motion.div
+                    key={i}
+                    {...fadeUp}
+                    transition={{ ...fadeUp.transition, delay: 0.05 * i }}
                   >
-                    {num}
-                  </span>
-                  {/* Solid accent badge with the number */}
-                  <div
-                    style={{ backgroundColor: palette.accent, color: fgOnAccent }}
-                    className="relative flex size-12 items-center justify-center rounded-xl text-lg font-bold shadow-md"
+                    <div
+                      style={{
+                        background: `linear-gradient(135deg, ${palette.accent}, ${palette.accent}cc)`,
+                        color: fgOnAccent,
+                      }}
+                      className="flex size-14 items-center justify-center rounded-2xl shadow-lg"
+                    >
+                      <Icon className="size-7" />
+                    </div>
+                    <h3
+                      style={display}
+                      className="mt-5 text-lg font-semibold sm:text-xl"
+                    >
+                      {b.title}
+                    </h3>
+                    <p className="mt-2 text-base leading-relaxed opacity-85">
+                      {b.text}
+                    </p>
+                  </motion.div>
+                );
+              })}
+            </div>
+          ) : (
+            // SPACIOUS — cards with an icon badge + a big ghost number for depth.
+            <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {bullets.map((b, i) => {
+                const num = String(i + 1).padStart(2, "0");
+                const Icon = VALUE_ICONS[i % VALUE_ICONS.length];
+                return (
+                  <motion.div
+                    key={i}
+                    {...fadeUp}
+                    transition={{ ...fadeUp.transition, delay: 0.05 * i }}
+                    className="relative overflow-hidden rounded-2xl border p-6"
+                    style={{ ...hairline, backgroundColor: `${palette.accent}0a` }}
                   >
-                    {num}
-                  </div>
-                  <h3
-                    style={display}
-                    className="relative mt-5 text-xl font-semibold sm:text-[1.35rem]"
-                  >
-                    {b.title}
-                  </h3>
-                  <p className="relative mt-2 text-base leading-relaxed opacity-85">
-                    {b.text}
-                  </p>
-                </motion.div>
-              );
-            })}
-          </div>
+                    <span
+                      aria-hidden
+                      style={{ ...display, color: palette.accent }}
+                      className="pointer-events-none absolute -right-1 -top-4 select-none text-8xl font-black leading-none opacity-[0.08]"
+                    >
+                      {num}
+                    </span>
+                    <div
+                      style={{ backgroundColor: palette.accent, color: fgOnAccent }}
+                      className="relative flex size-12 items-center justify-center rounded-xl shadow-md"
+                    >
+                      <Icon className="size-6" />
+                    </div>
+                    <h3
+                      style={display}
+                      className="relative mt-5 text-xl font-semibold sm:text-[1.35rem]"
+                    >
+                      {b.title}
+                    </h3>
+                    <p className="relative mt-2 text-base leading-relaxed opacity-85">
+                      {b.text}
+                    </p>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
 
