@@ -7,7 +7,7 @@ export const OFFER = {
   priceOffer: "1.000€",
   sections: "hasta 5 secciones",
   ttlHours: 48,
-  contactEmail: "admin-es@dinkbit.com",
+  contactEmail: "hola@dinkbit.com",
   siteUrl: "https://www.dinkbit.es",
 } as const;
 

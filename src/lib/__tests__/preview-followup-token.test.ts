@@ -1,4 +1,7 @@
 import { describe, it, expect } from "vitest";
+// A signing secret is required now (no hardcoded fallback). secret() reads the
+// env at call time, so setting it here before any mint/verify is enough.
+process.env.PREVIEW_FOLLOWUP_SECRET = "test-signing-secret-32-bytes-long!!";
 // The token module imports "server-only", aliased to an empty stub in
 // vitest.config.ts so it loads here.
 import {

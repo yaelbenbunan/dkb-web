@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { z } from "zod";
 import { Resend } from "resend";
 import { PDFDocument } from "pdf-lib";
@@ -37,24 +38,49 @@ const TTL_MS = OFFER.ttlHours * 60 * 60 * 1000;
 // single-use and limit sends per address. NOTE: this is in-memory, so it is
 // per serverless instance only — it blunts scripted bursts but is not a hard
 // guarantee. Move to KV/Upstash if abuse is ever observed.
+const HOUR = 60 * 60 * 1000;
 const MAX_SENDS_PER_EMAIL_PER_HOUR = 3;
+const MAX_SENDS_PER_IP_PER_HOUR = 8;
 const usedTokens = new Map<string, number>();
 const sendsByEmail = new Map<string, number[]>();
+const sendsByIp = new Map<string, number[]>();
 
-function throttle(email: string, token: string): boolean {
-  const now = Date.now();
-  // Single-use token.
-  if (usedTokens.has(token)) return true;
-  // Per-email window.
-  const key = email.trim().toLowerCase();
-  const recent = (sendsByEmail.get(key) ?? []).filter(
-    (t) => now - t < 60 * 60 * 1000,
-  );
-  if (recent.length >= MAX_SENDS_PER_EMAIL_PER_HOUR) return true;
+/** True if `key` has hit `max` events within the last hour (and records this
+ *  one otherwise). */
+function windowLimited(
+  map: Map<string, number[]>,
+  key: string,
+  max: number,
+  now: number,
+): boolean {
+  const recent = (map.get(key) ?? []).filter((t) => now - t < HOUR);
+  if (recent.length >= max) {
+    map.set(key, recent);
+    return true;
+  }
   recent.push(now);
-  sendsByEmail.set(key, recent);
+  map.set(key, recent);
+  return false;
+}
+
+/** Best-effort, per-instance throttle: single-use token + per-email + per-IP
+ *  hourly caps. Not a hard guarantee on serverless (in-memory, per instance);
+ *  move to KV/Upstash if abuse is observed. */
+function throttle(email: string, ip: string, token: string): boolean {
+  const now = Date.now();
+  if (usedTokens.has(token)) return true; // single-use
+  if (windowLimited(sendsByIp, ip, MAX_SENDS_PER_IP_PER_HOUR, now)) return true;
+  if (
+    windowLimited(
+      sendsByEmail,
+      email.trim().toLowerCase(),
+      MAX_SENDS_PER_EMAIL_PER_HOUR,
+      now,
+    )
+  ) {
+    return true;
+  }
   usedTokens.set(token, now);
-  // Opportunistic cleanup so the maps don't grow unbounded.
   if (usedTokens.size > 5000) {
     for (const [t, ts] of usedTokens) {
       if (now - ts > TTL_MS) usedTokens.delete(t);
@@ -100,8 +126,11 @@ export async function sendPreviewFollowup(
     return { ok: false, error: "No autorizado." };
   }
 
-  // Make the token single-use and cap sends per address (best-effort).
-  if (throttle(d.email, d.followupToken)) {
+  // Make the token single-use and cap sends per address + per IP (best-effort).
+  const ip =
+    (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    "unknown";
+  if (throttle(d.email, ip, d.followupToken)) {
     return { ok: false, error: "Solicitud duplicada o límite alcanzado." };
   }
 
