@@ -39,6 +39,7 @@ describe("gtm helpers (enabled)", () => {
   beforeEach(() => {
     vi.stubEnv("NEXT_PUBLIC_GTM_ID", "GTM-TESTID");
     window.dataLayer = [];
+    window.dkbUserData = undefined;
   });
 
   it("isEnabled returns true when env is set", async () => {
@@ -115,6 +116,15 @@ describe("gtm helpers (enabled)", () => {
     expect(window.dataLayer).toEqual([
       { email: "hola@dinkbit.es", tel: "+34600123456" },
     ]);
+  });
+
+  it("pushUserData mirrors data onto the persistent global", async () => {
+    const { pushUserData } = await importFresh();
+    pushUserData({ email: "a@b.es", phone: "600123456" });
+    expect(window.dkbUserData).toEqual({
+      email: "a@b.es",
+      tel: "+34600123456",
+    });
   });
 
   it("pushUserData omits missing fields and no-ops when empty", async () => {

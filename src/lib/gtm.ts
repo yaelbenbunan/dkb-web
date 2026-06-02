@@ -3,6 +3,11 @@ import type { ConsentState } from "@/lib/cookies-consent";
 declare global {
   interface Window {
     dataLayer?: unknown[];
+    /** First-party identifiers for Google Enhanced Conversions, kept on a
+     *  persistent global so the Google tag can read them even after the form
+     *  resets its inputs. Referenced in the Google tag's "JavaScript
+     *  variables" field as `dkbUserData.email` / `dkbUserData.tel`. */
+    dkbUserData?: { email?: string; tel?: string };
   }
 }
 
@@ -52,6 +57,9 @@ export function pushUserData(data: {
   const tel = data.phone ? normalizePhoneE164(data.phone) : "";
   if (tel) payload.tel = tel;
   if (Object.keys(payload).length === 0) return;
+  // Persistent global for the Google tag's enhanced-conversions JS variables —
+  // survives the form reset that clears the DOM inputs right after submit.
+  window.dkbUserData = { ...window.dkbUserData, ...payload };
   dataLayerPush(payload);
 }
 
