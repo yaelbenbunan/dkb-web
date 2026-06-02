@@ -100,6 +100,30 @@ describe("gtm helpers (enabled)", () => {
     ]);
   });
 
+  it("normalizePhoneE164 formats Spanish numbers", async () => {
+    const { normalizePhoneE164 } = await importFresh();
+    expect(normalizePhoneE164("600 123 456")).toBe("+34600123456");
+    expect(normalizePhoneE164("+34 600-123-456")).toBe("+34600123456");
+    expect(normalizePhoneE164("0034600123456")).toBe("+34600123456");
+    expect(normalizePhoneE164("+1 (415) 555-2671")).toBe("+14155552671");
+    expect(normalizePhoneE164("  ")).toBe("");
+  });
+
+  it("pushUserData pushes normalized email + tel", async () => {
+    const { pushUserData } = await importFresh();
+    pushUserData({ email: "  Hola@Dinkbit.ES ", phone: "600 123 456" });
+    expect(window.dataLayer).toEqual([
+      { email: "hola@dinkbit.es", tel: "+34600123456" },
+    ]);
+  });
+
+  it("pushUserData omits missing fields and no-ops when empty", async () => {
+    const { pushUserData } = await importFresh();
+    pushUserData({ phone: "600123456" });
+    pushUserData({ email: "", phone: "" });
+    expect(window.dataLayer).toEqual([{ tel: "+34600123456" }]);
+  });
+
   it("setConsent maps both granted correctly", async () => {
     const { setConsent } = await importFresh();
     setConsent({

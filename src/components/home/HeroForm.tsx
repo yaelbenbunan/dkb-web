@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { sendLead } from "@/lib/lead-action";
-import { track } from "@/lib/gtm";
+import { track, pushUserData } from "@/lib/gtm";
 
 interface ServiceOption {
   slug: string;
@@ -37,6 +37,10 @@ export function HeroForm({ services }: Props) {
           const r = await sendLead(fd);
           setResult(r);
           if (r.ok) {
+            pushUserData({
+              email: String(fd.get("email") ?? ""),
+              phone: String(fd.get("phone") ?? ""),
+            });
             track("generate_lead", {
               form_location: "hero_home",
               service: String(fd.get("service") ?? ""),

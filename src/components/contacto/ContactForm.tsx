@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { sendContactEmail } from "@/lib/contact-action";
 import { SOURCE_OPTIONS, CONTACT_INFO } from "@/lib/contact-info";
-import { track } from "@/lib/gtm";
+import { track, pushUserData } from "@/lib/gtm";
 import type {
   ContactActionResult,
   ContactFieldErrors,
@@ -52,6 +52,10 @@ export function ContactForm({ services }: Props) {
             const r = await sendContactEmail(fd);
             setResult(r);
             if (r.ok) {
+              pushUserData({
+                email: String(fd.get("email") ?? ""),
+                phone: String(fd.get("phone") ?? ""),
+              });
               track("generate_lead", { form_location: "contact_long" });
               formRef.current?.reset();
             }

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { sendPreviewLead } from "@/lib/preview-lead-action";
-import { track } from "@/lib/gtm";
+import { track, pushUserData } from "@/lib/gtm";
 import { StepBusinessType } from "./steps/StepBusinessType";
 import { StepIdentity } from "./steps/StepIdentity";
 import { StepOfferings } from "./steps/StepOfferings";
@@ -237,6 +237,7 @@ export function PreviewWizard() {
     startTransition(async () => {
       const r = await sendPreviewLead(fd);
       if (r.ok && r.leadId) {
+        pushUserData({ email: state.email, phone: state.phone });
         track("preview_lead_submit", {
           leadId: r.leadId,
           businessType: state.businessType,

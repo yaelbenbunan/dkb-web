@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { sendCallRequest } from "@/lib/call-request-action";
-import { track } from "@/lib/gtm";
+import { track, pushUserData } from "@/lib/gtm";
 
 interface Props {
   serviceTitle: string;
@@ -33,6 +33,7 @@ export function ServiceCtaForm({ serviceTitle }: Props) {
           const r = await sendCallRequest(fd);
           setResult(r);
           if (r.ok) {
+            pushUserData({ phone: String(fd.get("phone") ?? "") });
             track("generate_lead", {
               form_location: "service_sidebar",
               service: serviceTitle,
