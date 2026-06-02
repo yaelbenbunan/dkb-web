@@ -101,4 +101,8 @@ const inputStyle: React.CSSProperties = {
   padding: "0 12px",
   fontSize: 15,
   boxSizing: "border-box",
+  // Explicit colours: the site runs in dark theme, which would otherwise make
+  // the typed text white on the white field.
+  background: "#ffffff",
+  color: "#0f172a",
 };
