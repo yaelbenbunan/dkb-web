@@ -124,7 +124,7 @@ export function buildOfferEmail(input: OfferEmailInput): {
       <tr><td style="padding:28px 26px 26px;text-align:center;">
         <div style="display:inline-block;background:#ffffff;color:${accent};font-size:12px;font-weight:900;letter-spacing:1.5px;padding:7px 14px;border-radius:999px;text-transform:uppercase;">Oferta exclusiva · -50%</div>
         <div style="margin:18px 0 2px;font-size:21px;color:#ffffff;font-weight:800;">Tu web profesional, ${OFFER.sections}</div>
-        <div style="font-size:14px;color:#dbeafe;">Diseño a medida, lista para vender.</div>
+        <div style="font-size:14px;color:#dbeafe;">Diseño a medida para tu negocio.</div>
         <div style="margin:18px 0 4px;line-height:1;">
           <span style="font-size:21px;color:#bfdbfe;text-decoration:line-through;">${OFFER.priceNormal}</span>
           <span style="font-size:52px;font-weight:900;color:#ffffff;margin-left:12px;letter-spacing:-1px;">${OFFER.priceOffer}</span>
