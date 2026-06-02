@@ -201,9 +201,12 @@ export default async function ServiceDetail({
         />
       </header>
 
-      {/* Body 2/3 + 1/3 */}
-      <Container className="grid gap-12 py-20 lg:grid-cols-[2fr_1fr] lg:gap-14">
-        <div className="order-2 min-w-0 space-y-16 lg:order-1">
+      {/* Body 2/3 + 1/3. En móvil el orden es: formulario CTA → contenido →
+          "Otros servicios" (al final). En escritorio: contenido a la izquierda
+          y, en la columna derecha, CTA (sticky) arriba y "Otros servicios"
+          debajo. */}
+      <Container className="grid gap-12 py-20 lg:grid-cols-[2fr_1fr] lg:grid-rows-[auto_1fr] lg:gap-x-14 lg:gap-y-6">
+        <div className="order-2 min-w-0 space-y-16 lg:col-start-1 lg:row-start-1 lg:row-span-2">
           {/* Intro + bullets */}
           {(service.intro || service.bullets) && (
             <section>
@@ -290,39 +293,38 @@ export default async function ServiceDetail({
           )}
         </div>
 
-        {/* Aside sticky (desktop). On mobile it moves above the content so the
-            CTA form is reachable without scrolling past the whole article. */}
-        <aside className="order-1 lg:order-2 lg:sticky lg:top-28 lg:h-max lg:self-start">
-          <div className="space-y-5">
-            <ServiceCtaForm serviceTitle={service.title} />
+        {/* Formulario CTA: arriba en móvil, sticky en la columna derecha en
+            escritorio (para que el lead sea alcanzable sin scroll). */}
+        <div className="order-1 lg:col-start-2 lg:row-start-1 lg:sticky lg:top-28 lg:self-start">
+          <ServiceCtaForm serviceTitle={service.title} />
+        </div>
 
-            <nav className="surface rounded-2xl p-5">
-              <p className="px-2 text-xs font-semibold uppercase tracking-[0.2em] text-fg-muted">
-                Otros servicios
-              </p>
-              <ul className="mt-4 space-y-1">
-                {allServices.map((s) => {
-                  const isActive = s.slug === service.slug;
-                  return (
-                    <li key={s.slug}>
-                      <Link
-                        href={`/servicios/${s.slug}`}
-                        className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                          isActive
-                            ? "bg-accent/15 font-semibold text-accent-hover"
-                            : "text-fg-muted hover:bg-white/[0.04] hover:text-fg"
-                        }`}
-                      >
-                        <span>{s.title}</span>
-                        <span className="text-accent-hover">→</span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </nav>
-          </div>
-        </aside>
+        {/* Otros servicios: al final en móvil; debajo del CTA en escritorio. */}
+        <nav className="order-3 surface rounded-2xl p-5 lg:col-start-2 lg:row-start-2 lg:self-start">
+          <p className="px-2 text-xs font-semibold uppercase tracking-[0.2em] text-fg-muted">
+            Otros servicios
+          </p>
+          <ul className="mt-4 space-y-1">
+            {allServices.map((s) => {
+              const isActive = s.slug === service.slug;
+              return (
+                <li key={s.slug}>
+                  <Link
+                    href={`/servicios/${s.slug}`}
+                    className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                      isActive
+                        ? "bg-accent/15 font-semibold text-accent-hover"
+                        : "text-fg-muted hover:bg-white/[0.04] hover:text-fg"
+                    }`}
+                  >
+                    <span>{s.title}</span>
+                    <span className="text-accent-hover">→</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
       </Container>
     </article>
   );

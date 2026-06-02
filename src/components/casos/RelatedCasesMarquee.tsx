@@ -12,8 +12,8 @@ interface Props {
 
 /**
  * Carrusel de logos de casos relacionados con flechas + autoplay.
- * Muestra 2 logos en mobile y 4 en desktop. Avanza solo cada 4s; pausa al
- * interactuar con las flechas.
+ * Muestra 2 logos en mobile y 3 en desktop (logos más grandes). Avanza solo
+ * cada 4s; pausa al interactuar con las flechas.
  */
 export function RelatedCasesMarquee({ cases }: Props) {
   const [emblaRef, emblaApi] = useEmblaCarousel({
@@ -39,7 +39,7 @@ export function RelatedCasesMarquee({ cases }: Props) {
           {cases.map((c) => (
             <div
               key={c.slug}
-              className="min-w-0 flex-[0_0_25%] px-1"
+              className="min-w-0 flex-[0_0_50%] px-1 sm:flex-[0_0_33.333%]"
             >
               <Link
                 href={`/casos-de-exito/${c.slug}`}
@@ -53,7 +53,7 @@ export function RelatedCasesMarquee({ cases }: Props) {
                       alt={c.client}
                       width={240}
                       height={120}
-                      imgClassName="max-h-20 w-auto object-contain sm:max-h-24"
+                      imgClassName="max-h-24 w-auto object-contain sm:max-h-28"
                     />
                   </span>
                 ) : (
