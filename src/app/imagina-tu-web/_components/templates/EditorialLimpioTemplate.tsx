@@ -420,11 +420,21 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
           </div>
         </section>
       ) : isCompact ? (
-        // COMPACT hero — no photo. Punchy "landing" feel: headline on the left,
-        // a solid accent colour block with the CTA on the right. This is the main
-        // visual differentiator from the photo-led Editorial hero.
-        <section className={`relative ${padX} pb-12 pt-14`}>
-          <div className="mx-auto grid max-w-6xl items-stretch gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+        // COMPACT hero — "landing" feel: headline on the left, a solid accent
+        // colour block with the CTA on the right. Keeps a very discreet sector
+        // photo in the background (heavily faded) so there's always an image,
+        // while staying clearly distinct from the photo-led Editorial hero.
+        <section
+          className={`relative isolate overflow-hidden ${padX} pb-12 pt-14`}
+        >
+          {heroImg && (
+            <div
+              aria-hidden
+              className="absolute inset-0 -z-10 bg-cover bg-center"
+              style={{ backgroundImage: `url('${heroImg}')`, opacity: 0.14 }}
+            />
+          )}
+          <div className="relative mx-auto grid max-w-6xl items-stretch gap-8 lg:grid-cols-[1.15fr_0.85fr]">
             <motion.div {...fadeUp} className="flex flex-col justify-center">
               <span
                 style={{ color: palette.accent }}
