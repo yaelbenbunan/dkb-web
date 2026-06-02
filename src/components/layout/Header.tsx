@@ -19,10 +19,10 @@ export function Header() {
             <Image
               src="/img/logo/dinkbit.svg"
               alt="dinkbit"
-              width={140}
+              width={120}
               height={36}
               priority
-              className="h-9 w-auto"
+              className="h-9 w-[120px] shrink-0"
             />
           </Link>
           <nav className="hidden items-center gap-8 lg:flex lg:gap-10">

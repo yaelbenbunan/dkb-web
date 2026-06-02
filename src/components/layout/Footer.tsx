@@ -42,9 +42,9 @@ export function Footer() {
             <Image
               src="/img/logo/dinkbit.svg"
               alt="dinkbit"
-              width={140}
+              width={120}
               height={36}
-              className="h-9 w-auto"
+              className="h-9 w-[120px] shrink-0"
             />
           </Link>
           <p className="mt-6 max-w-sm text-base leading-relaxed text-fg">
