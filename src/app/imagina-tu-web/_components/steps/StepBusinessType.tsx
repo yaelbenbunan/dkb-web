@@ -31,22 +31,19 @@ export function StepBusinessType({ value, onChange }: Props) {
             Web para presentar tu marca, servicios y captar contactos.
           </p>
         </button>
-        <button
-          type="button"
-          onClick={() =>
-            onChange({ businessType: "ecommerce", ecommerceKind: value.ecommerceKind })
-          }
-          className={`rounded-xl border-2 p-6 text-left transition ${
-            value.businessType === "ecommerce"
-              ? "border-accent bg-accent/10"
-              : "border-border hover:border-accent/50"
-          }`}
+        {/* Ecommerce — todavía no desarrollado: no seleccionable */}
+        <div
+          aria-disabled="true"
+          className="relative cursor-not-allowed select-none rounded-xl border-2 border-dashed border-border p-6 text-left opacity-60"
         >
+          <span className="absolute right-3 top-3 rounded-full bg-accent/15 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-accent">
+            Próximamente
+          </span>
           <p className="text-lg font-semibold">🛒 Ecommerce</p>
           <p className="mt-1 text-sm text-fg-muted">
             Para vender online con catálogo, carrito y pagos.
           </p>
-        </button>
+        </div>
       </div>
 
       {value.businessType === "ecommerce" && (

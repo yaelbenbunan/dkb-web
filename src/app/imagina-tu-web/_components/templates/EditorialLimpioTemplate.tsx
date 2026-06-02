@@ -293,6 +293,19 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
     return pool[idx % pool.length];
   };
 
+  // Precompute portraits with a PER-GENDER index so two members of the same
+  // gender never land on the same photo (the old global index made the 1st and
+  // 3rd member collide when the pool had 2 photos).
+  const teamPortraits = (() => {
+    let m = 0;
+    let f = 0;
+    return team.slice(0, 4).map((member) => {
+      const gender = member.gender ?? guessGender(member.name);
+      const genderIdx = gender === "female" ? f++ : m++;
+      return pickPortrait(member, genderIdx);
+    });
+  })();
+
   return (
     <div style={wrapper}>
       {/* HEADER — minimal, hairline border underneath */}
@@ -1062,7 +1075,7 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
 
           <div className="grid gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-4">
             {team.slice(0, 4).map((member, i) => {
-              const portrait = pickPortrait(member, i);
+              const portrait = teamPortraits[i];
               return (
                 <motion.div
                   key={i}

@@ -99,6 +99,16 @@ export const PALETTES: Palette[] = [
     heroGradient:
       "linear-gradient(135deg, #ffffff 0%, #e5e5e5 50%, #c7c7c7 100%)",
   },
+  {
+    slug: "rosa-elegante",
+    name: "Rosa elegante",
+    bg: "#fdf2f8",
+    surface: "#ffffff",
+    text: "#3b1d2e",
+    accent: "#db2777",
+    heroGradient:
+      "linear-gradient(135deg, #fce7f3 0%, #fbcfe8 50%, #f9a8d4 100%)",
+  },
 ];
 
 // Six visually distinct typography options. Pairs (displayVar/bodyVar) are
