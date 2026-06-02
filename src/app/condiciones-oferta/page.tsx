@@ -104,7 +104,27 @@ export default function CondicionesOfertaPage() {
         causas justificadas, sin que ello afecte a los proyectos ya contratados.
       </p>
 
-      <h2>7. Responsable y contacto</h2>
+      <h2>7. Correo facilitado y envío de comunicaciones</h2>
+      <p>
+        Al utilizar el previsualizador y facilitar una dirección de correo
+        electrónico, el usuario declara que dicha dirección es de su titularidad
+        o que cuenta con autorización para facilitarla, y{" "}
+        <strong>
+          acepta expresamente que se envíe a esa dirección
+        </strong>{" "}
+        un correo con la previsualización generada, el PDF y la oferta comercial,
+        sin necesidad de ninguna confirmación adicional. Si el usuario introduce
+        el correo electrónico de un tercero sin su consentimiento, dicha
+        actuación es de su <strong>exclusiva responsabilidad</strong>: Dinkbit
+        Marketing S.L. queda exonerada de cualquier responsabilidad derivada del
+        envío a una dirección de un tercero facilitada por el usuario. El
+        destinatario de un correo no solicitado puede pedir la baja y la
+        supresión de sus datos escribiendo a{" "}
+        <a href="mailto:hola@dinkbit.es">hola@dinkbit.es</a>, y se procederá de
+        inmediato.
+      </p>
+
+      <h2>8. Responsable y contacto</h2>
       <p>
         Responsable: <strong>Dinkbit Marketing S.L.</strong> Para cualquier duda
         sobre la promoción puedes escribir a{" "}
