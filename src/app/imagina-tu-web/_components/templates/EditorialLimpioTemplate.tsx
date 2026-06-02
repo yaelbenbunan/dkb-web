@@ -338,11 +338,9 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
           (we always render white text here, regardless of the palette). When
           there's no sector photo we fall back to a clean editorial hero on the
           palette background. */}
-      {heroImg ? (
+      {!isCompact && heroImg ? (
         <section
-          className={`relative isolate flex items-center justify-center overflow-hidden ${padX} ${
-            isCompact ? "min-h-[70vh] py-20" : "min-h-[88vh] py-28"
-          }`}
+          className={`relative isolate flex min-h-[88vh] items-center justify-center overflow-hidden ${padX} py-28`}
         >
           {/* Background image with a slow Ken Burns zoom */}
           <motion.div
@@ -421,8 +419,85 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
             </motion.div>
           </div>
         </section>
+      ) : isCompact ? (
+        // COMPACT hero — no photo. Punchy "landing" feel: headline on the left,
+        // a solid accent colour block with the CTA on the right. This is the main
+        // visual differentiator from the photo-led Editorial hero.
+        <section className={`relative ${padX} pb-12 pt-14`}>
+          <div className="mx-auto grid max-w-6xl items-stretch gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+            <motion.div {...fadeUp} className="flex flex-col justify-center">
+              <span
+                style={{ color: palette.accent }}
+                className="mb-4 inline-block text-[11px] font-bold uppercase tracking-[0.32em]"
+              >
+                {assets.labels.servicesSectionPill}
+              </span>
+              <h1
+                style={display}
+                className={`text-balance ${heroTitleSize} font-bold leading-[1.04] tracking-tight`}
+              >
+                {headline}
+              </h1>
+              <p className="mt-5 max-w-lg text-lg leading-relaxed opacity-80">
+                {tagline}
+              </p>
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  style={accentBtn}
+                  className="inline-flex h-12 items-center gap-2 rounded-full px-7 text-sm font-semibold"
+                >
+                  {ctaText}
+                  <IconArrowRight className="size-4" />
+                </button>
+                <button
+                  type="button"
+                  style={ghostBtn}
+                  className="inline-flex h-12 items-center gap-2 rounded-full px-6 text-sm font-medium"
+                >
+                  {assets.labels.navServicesLabel}
+                </button>
+              </div>
+            </motion.div>
+
+            <motion.div
+              {...fadeUp}
+              transition={{ ...fadeUp.transition, delay: 0.1 }}
+              className="relative overflow-hidden rounded-3xl p-8 sm:p-10"
+              style={{
+                background: `linear-gradient(150deg, ${palette.accent}, ${palette.accent}cc)`,
+                color: fgOnAccent,
+              }}
+            >
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -right-12 -top-12 size-52 rounded-full"
+                style={{ background: "rgba(255,255,255,0.12)" }}
+              />
+              <div className="relative">
+                <div className="text-xs font-bold uppercase tracking-[0.2em] opacity-90">
+                  {assets.labels.ratingText}
+                </div>
+                <p
+                  style={display}
+                  className="mt-5 text-balance text-2xl font-bold leading-snug sm:text-3xl"
+                >
+                  {assets.labels.bridgeHeadline}
+                </p>
+                <button
+                  type="button"
+                  style={{ backgroundColor: "#ffffff", color: palette.accent }}
+                  className="mt-7 inline-flex h-12 items-center gap-2 rounded-full px-7 text-sm font-bold shadow-lg"
+                >
+                  {ctaText}
+                  <IconArrowRight className="size-4" />
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        </section>
       ) : (
-        // Fallback hero (compact mode / sectors with no photo pool).
+        // Fallback hero (sectors with no photo pool).
         <section className={`relative ${padX} ${padYHero}`}>
           <div className="mx-auto max-w-3xl text-center">
             <motion.span
@@ -646,7 +721,82 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
           ("Los platos que nos dan nombre") + the Carta destacada already cover
           the food, and this list would otherwise just repeat the cuisine label
           (e.g. "Mexicana / latina") whenever the AI copy isn't available. */}
-      {!isRestauracion && (
+      {!isRestauracion &&
+        (isCompact ? (
+          // COMPACT services — a compact card grid (vs Editorial's airy list).
+          <section
+            className={`relative isolate overflow-hidden ${padX} ${padY}`}
+            style={{ backgroundColor: palette.surface }}
+          >
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 -z-10"
+              style={{
+                background: `linear-gradient(160deg, ${palette.accent}0a 0%, transparent 50%)`,
+              }}
+            />
+            <div className="relative mx-auto max-w-6xl">
+              <motion.div {...fadeUp} className="mb-10 max-w-2xl">
+                <span
+                  style={{ color: palette.accent }}
+                  className="text-xs font-bold uppercase tracking-[0.32em]"
+                >
+                  {assets.labels.servicesSectionPill}
+                </span>
+                <h2
+                  style={display}
+                  className={`mt-4 text-balance ${titleSize} font-bold leading-[1.1]`}
+                >
+                  {servicesTitle}
+                </h2>
+                <p className="mt-4 text-lg leading-relaxed opacity-85">
+                  {assets.labels.servicesSectionSubtitle}
+                </p>
+              </motion.div>
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {services.map((s, i) => {
+                  const Icon = SERVICE_ICONS[i % SERVICE_ICONS.length];
+                  const tg = (s as { tagline?: string }).tagline;
+                  return (
+                    <motion.div
+                      key={i}
+                      {...fadeUp}
+                      transition={{ ...fadeUp.transition, delay: 0.04 * i }}
+                      className="rounded-2xl border p-6"
+                      style={{ ...hairline, backgroundColor: palette.bg }}
+                    >
+                      <div
+                        style={{ backgroundColor: palette.accent, color: fgOnAccent }}
+                        className="flex size-12 items-center justify-center rounded-xl shadow-md"
+                      >
+                        <Icon className="size-6" />
+                      </div>
+                      <h3
+                        style={display}
+                        className="mt-5 text-lg font-semibold sm:text-xl"
+                      >
+                        {s.name}
+                      </h3>
+                      {s.blurb && (
+                        <p className="mt-2 text-base leading-relaxed opacity-85">
+                          {s.blurb}
+                        </p>
+                      )}
+                      {tg && (
+                        <p
+                          style={{ color: palette.accent }}
+                          className="mt-3 text-[13px] font-semibold uppercase tracking-wider"
+                        >
+                          {tg}
+                        </p>
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        ) : (
       <section className={`relative isolate overflow-hidden ${padX} ${padY}`}>
         {/* Soft accent veil — dynamism without overwhelming the type */}
         <div
@@ -756,7 +906,7 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
           </motion.div>
         </div>
       </section>
-      )}
+        ))}
 
       {/* RESTAURACION — minimal dish strip when sector matches and photos exist */}
       {isRestauracion && dishPhotos.length > 0 && (
