@@ -753,7 +753,10 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
                   {assets.labels.servicesSectionSubtitle}
                 </p>
               </motion.div>
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Two-column list with outline-circle icons + hairline dividers
+                  and a hover arrow — reads as a "directory", distinct from the
+                  filled icon tiles of the valor-agregado section above. */}
+              <div className="grid gap-x-12 sm:grid-cols-2">
                 {services.map((s, i) => {
                   const Icon = SERVICE_ICONS[i % SERVICE_ICONS.length];
                   const tg = (s as { tagline?: string }).tagline;
@@ -762,34 +765,44 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
                       key={i}
                       {...fadeUp}
                       transition={{ ...fadeUp.transition, delay: 0.04 * i }}
-                      className="rounded-2xl border p-6"
-                      style={{ ...hairline, backgroundColor: palette.bg }}
+                      className="group flex items-start gap-5 border-t py-6"
+                      style={hairline}
                     >
                       <div
-                        style={{ backgroundColor: palette.accent, color: fgOnAccent }}
-                        className="flex size-12 items-center justify-center rounded-xl shadow-md"
+                        style={{
+                          color: palette.accent,
+                          borderColor: `${palette.accent}40`,
+                          backgroundColor: `${palette.accent}0d`,
+                        }}
+                        className="flex size-12 shrink-0 items-center justify-center rounded-full border"
                       >
                         <Icon className="size-6" />
                       </div>
-                      <h3
-                        style={display}
-                        className="mt-5 text-lg font-semibold sm:text-xl"
-                      >
-                        {s.name}
-                      </h3>
-                      {s.blurb && (
-                        <p className="mt-2 text-base leading-relaxed opacity-85">
-                          {s.blurb}
-                        </p>
-                      )}
-                      {tg && (
-                        <p
-                          style={{ color: palette.accent }}
-                          className="mt-3 text-[13px] font-semibold uppercase tracking-wider"
+                      <div className="flex-1">
+                        <h3
+                          style={display}
+                          className="text-lg font-semibold sm:text-xl"
                         >
-                          {tg}
-                        </p>
-                      )}
+                          {s.name}
+                        </h3>
+                        {s.blurb && (
+                          <p className="mt-1.5 text-base leading-relaxed opacity-85">
+                            {s.blurb}
+                          </p>
+                        )}
+                        {tg && (
+                          <p
+                            style={{ color: palette.accent }}
+                            className="mt-2 text-[13px] font-semibold uppercase tracking-wider"
+                          >
+                            {tg}
+                          </p>
+                        )}
+                      </div>
+                      <IconArrowRight
+                        className="mt-2 size-5 shrink-0 opacity-30 transition group-hover:translate-x-1 group-hover:opacity-100"
+                        style={{ color: palette.accent }}
+                      />
                     </motion.div>
                   );
                 })}

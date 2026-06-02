@@ -3,6 +3,7 @@
 import { previewLeadSchema } from "./preview-validation";
 import { generateLeadId } from "./preview-lead-id";
 import { mintFollowupToken } from "./preview-followup-token";
+import { saveLead } from "./imagina-leads";
 
 interface PreviewLeadResult {
   ok: boolean;
@@ -75,9 +76,28 @@ export async function sendPreviewLead(
   }
 
   const leadId = generateLeadId();
+  const d = parsed.data;
+
+  // Persist the lead the moment the form is submitted, so it lands in the panel
+  // even if the user closes the tab before the preview/PDF step. The follow-up
+  // later upserts the same row to add the PDF. Best-effort — never blocks.
+  await saveLead({
+    id: leadId,
+    name: d.name,
+    email: d.email,
+    phone: d.phone,
+    sector: d.sector,
+    businessName: d.businessName,
+    businessType: d.businessType,
+    style: d.style,
+    palette: d.palette,
+    valueProp: d.valueProp,
+    currentWebsite: d.currentWebsite || undefined,
+  });
+
   return {
     ok: true,
     leadId,
-    followupToken: mintFollowupToken(leadId, parsed.data.email),
+    followupToken: mintFollowupToken(leadId, d.email),
   };
 }
