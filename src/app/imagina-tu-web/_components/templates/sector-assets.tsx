@@ -383,11 +383,14 @@ export const CUISINES: { slug: Cuisine; label: string }[] = [
 // uploaded to public/img/imagina/restauracion/platos/<cuisine>/. Buckets
 // that are still empty stay as empty arrays so the fallback in
 // `getCuisinePhotos` kicks in.
+// Photos + dish texts are paired BY ORDER (photo[i] ↔ dish[i]) and provided by
+// the client so names always match the actual photo. Keep both arrays in sync.
 const CUISINE_PHOTOS: Record<Cuisine, string[]> = {
   tradicional: [
-    "/img/imagina/restauracion/platos/tradicional/39.jpg",
-    "/img/imagina/restauracion/platos/tradicional/40.jpg",
     "/img/imagina/restauracion/platos/tradicional/41.jpg",
+    "/img/imagina/restauracion/platos/tradicional/42.jpg",
+    "/img/imagina/restauracion/platos/tradicional/43.jpg",
+    "/img/imagina/restauracion/platos/tradicional/44.jpg",
   ],
   italiana: [
     "/img/imagina/restauracion/platos/italiana/foto-1.jpg",
@@ -399,21 +402,26 @@ const CUISINE_PHOTOS: Record<Cuisine, string[]> = {
     "/img/imagina/restauracion/platos/asiatica/36.jpg",
     "/img/imagina/restauracion/platos/asiatica/37.jpg",
     "/img/imagina/restauracion/platos/asiatica/38.jpg",
+    "/img/imagina/restauracion/platos/asiatica/39.jpg",
+    "/img/imagina/restauracion/platos/asiatica/40.jpg",
   ],
   mexicana: [
-    "/img/imagina/restauracion/platos/mexicana/42.jpg",
-    "/img/imagina/restauracion/platos/mexicana/43.jpg",
-    "/img/imagina/restauracion/platos/mexicana/44.jpg",
+    "/img/imagina/restauracion/platos/mexicana/45.jpg",
+    "/img/imagina/restauracion/platos/mexicana/46.jpg",
+    "/img/imagina/restauracion/platos/mexicana/47.jpg",
+    "/img/imagina/restauracion/platos/mexicana/48.jpg",
   ],
   americana: [
-    "/img/imagina/restauracion/platos/americana/48.jpg",
-    "/img/imagina/restauracion/platos/americana/49.jpg",
-    "/img/imagina/restauracion/platos/americana/50.jpg",
+    "/img/imagina/restauracion/platos/americana/53.jpg",
+    "/img/imagina/restauracion/platos/americana/54.jpg",
+    "/img/imagina/restauracion/platos/americana/55.jpg",
+    "/img/imagina/restauracion/platos/americana/56.jpg",
   ],
   fusion: [
     "/img/imagina/restauracion/platos/fusion/45.jpg",
     "/img/imagina/restauracion/platos/fusion/46.jpg",
     "/img/imagina/restauracion/platos/fusion/47.jpg",
+    "/img/imagina/restauracion/platos/fusion/52.jpg",
   ],
 };
 
@@ -438,84 +446,46 @@ interface FallbackDish {
   blurb: string;
 }
 
+// Provided by the client (textos_platos.csv), in the SAME order as
+// CUISINE_PHOTOS so each dish matches its photo. name=título, tagline=subtítulo,
+// blurb=descripción.
 const CUISINE_FALLBACK_DISHES: Record<Cuisine, FallbackDish[]> = {
-  italiana: [
-    {
-      name: "Spaghetti al pomodoro",
-      tagline: "Clásico imprescindible",
-      blurb:
-        "Pasta artesana, tomate San Marzano cocinado a fuego lento y un puñado de albahaca fresca.",
-    },
-    {
-      name: "Pizza Margherita",
-      tagline: "Receta napolitana",
-      blurb:
-        "Masa con masa madre, mozzarella di bufala y tomate de la huerta. Cocción al horno de leña.",
-    },
-    {
-      name: "Lasaña a la boloñesa",
-      tagline: "Sabor a domingo",
-      blurb:
-        "Capas de pasta fresca, ragù cocinado durante horas y bechamel cremosa al horno.",
-    },
-    {
-      name: "Tiramisú casero",
-      tagline: "Para terminar dulce",
-      blurb:
-        "Mascarpone, bizcochos de soletilla bañados en café espresso y un toque de cacao puro.",
-    },
-    {
-      name: "Risotto alla milanese",
-      tagline: "Plato bandera",
-      blurb:
-        "Arroz arborio, caldo de carne, azafrán y un nudo final de mantequilla y parmesano.",
-    },
-    {
-      name: "Burrata con tomate",
-      tagline: "Producto en primer plano",
-      blurb:
-        "Burrata di Andria, tomate rosa de temporada y aceite de oliva virgen extra. Sin más.",
-    },
+  tradicional: [
+    { name: "Paella de Marisco", tagline: "EL CLÁSICO", blurb: "Arroz al azafrán con gambas, mejillones y verduras cocinado en paella." },
+    { name: "Tortilla de Patatas", tagline: "IMPRESCINDIBLE", blurb: "Tortilla jugosa de patata y huevo, dorada por fuera y melosa por dentro." },
+    { name: "Croquetas Caseras", tagline: "PARA PICAR", blurb: "Croquetas cremosas rebozadas y fritas hasta quedar doradas y crujientes." },
+    { name: "Patatas Bravas", tagline: "EL TAPEO", blurb: "Patatas fritas con salsa brava picante y alioli suave para mojar." },
   ],
-  mexicana: [
-    { name: "Tacos al pastor", tagline: "Sabor de la calle", blurb: "Carne marinada con achiote y especias, piña fresca y cilantro." },
-    { name: "Guacamole tradicional", tagline: "Para empezar", blurb: "Aguacate, cebolla, cilantro, lima y chile servido con totopos crujientes." },
-    { name: "Enchiladas verdes", tagline: "Receta de la abuela", blurb: "Tortillas rellenas bañadas en salsa de tomatillo, crema y queso fresco." },
-    { name: "Mole poblano", tagline: "Plato bandera", blurb: "Salsa compleja con chiles, especias y chocolate, servida con pollo y arroz." },
-    { name: "Quesadilla de flor", tagline: "Hoy en la pizarra", blurb: "Tortilla recién hecha con flor de calabaza y queso oaxaca fundido." },
-    { name: "Chiles en nogada", tagline: "De temporada", blurb: "Chile poblano relleno con picadillo, salsa de nuez y granada." },
+  italiana: [
+    { name: "Espaguetis con Albóndigas", tagline: "EL DE TODA LA VIDA", blurb: "Pasta al dente con albóndigas en salsa de tomate y parmesano rallado." },
+    { name: "Pizza Margherita", tagline: "LA IMPRESCINDIBLE", blurb: "Masa napolitana con tomate, mozzarella fresca y albahaca, horneada al momento." },
+    { name: "Lasaña Boloñesa", tagline: "LA MÁS RECONFORTANTE", blurb: "Capas de pasta con ragú de carne y bechamel gratinada al horno." },
+    { name: "Pasta Alfredo con Pollo", tagline: "CREMOSA Y CLÁSICA", blurb: "Espaguetis en salsa cremosa de queso con pollo y un toque de perejil." },
   ],
   asiatica: [
-    { name: "Nigiri de salmón", tagline: "Para empezar", blurb: "Arroz vinagrado y salmón fresco cortado a mano, un toque de wasabi." },
-    { name: "Ramen tonkotsu", tagline: "Reconfortante", blurb: "Caldo de cerdo cocinado 12 horas, fideos al huevo, chashu y huevo curado." },
-    { name: "Gyozas a la plancha", tagline: "Casi imprescindible", blurb: "Empanadillas de cerdo y verduras, doradas por una cara y al vapor por la otra." },
-    { name: "Pad thai de gambas", tagline: "Wok del día", blurb: "Fideos de arroz salteados al wok con gambas, cacahuete y lima." },
-    { name: "Dim sum variado", tagline: "Para compartir", blurb: "Selección de bocados al vapor: cerdo, gamba y verdura." },
-    { name: "Mochi de matcha", tagline: "Para terminar", blurb: "Pasta de arroz dulce rellena de helado de matcha." },
+    { name: "Gyozas a la Plancha", tagline: "CASI IMPRESCINDIBLE", blurb: "Empanadillas de cerdo y verduras, doradas por una cara y al vapor por la otra." },
+    { name: "Pollo Guisado al Estilo Coreano", tagline: "RECOMENDADO", blurb: "Muslos de pollo cocinados a fuego lento con soja, patata y fideos de cristal." },
+    { name: "Rollitos de Primavera", tagline: "PARA EMPEZAR", blurb: "Crujientes rollitos rellenos de verduras servidos con salsa agridulce." },
+    { name: "Surtido de Sushi", tagline: "EL CLÁSICO", blurb: "Selección de nigiri, maki y sashimi de salmón fresco sobre tabla de madera." },
+    { name: "Pad Thai de Gambas", tagline: "EL MÁS PEDIDO", blurb: "Fideos de arroz salteados con gambas, brotes de soja, huevo y lima." },
   ],
-  tradicional: [
-    { name: "Tortilla de patatas", tagline: "Plato bandera", blurb: "Patata confitada en aceite de oliva, huevo de campo y cebolla pochada lentamente." },
-    { name: "Croquetas de jamón", tagline: "Casi imprescindible", blurb: "Bechamel cremosa con jamón ibérico, rebozadas y fritas al momento." },
-    { name: "Pulpo a la gallega", tagline: "Producto de Galicia", blurb: "Pulpo cocido, patata, pimentón de la Vera y aceite de oliva virgen extra." },
-    { name: "Solomillo al whisky", tagline: "Sabor de toda la vida", blurb: "Lomos de solomillo flambados con whisky, ajo y aceite de oliva." },
-    { name: "Pisto manchego", tagline: "De la huerta", blurb: "Pimiento, calabacín, cebolla y tomate cocinados a fuego lento con un huevo encima." },
-    { name: "Tarta de Santiago", tagline: "Para terminar dulce", blurb: "Almendra molida, huevo y azúcar. Sin gluten y con la cruz por encima." },
+  mexicana: [
+    { name: "Tacos de Carnitas", tagline: "EL AUTÉNTICO", blurb: "Tortilla de maíz con cerdo deshebrado, cebolla, cilantro, aguacate y lima." },
+    { name: "Tacos al Pastor", tagline: "EL MÁS PEDIDO", blurb: "Carne marinada con cebolla, cilantro y lima sobre tortilla de maíz." },
+    { name: "Fajitas de Ternera", tagline: "PARA COMPARTIR", blurb: "Tiras de ternera salteadas con pimientos, cebolla y queso fundido en sartén." },
+    { name: "Nachos con Guacamole", tagline: "EL APERITIVO", blurb: "Totopos con queso fundido, jalapeños, pico de gallo y guacamole casero." },
   ],
   americana: [
-    { name: "Smash burger doble", tagline: "Plato bandera", blurb: "Dos carnes prensadas a la plancha, queso fundido, salsa de la casa y pan brioche." },
-    { name: "Pulled pork BBQ", tagline: "Cocción lenta", blurb: "Cerdo deshilachado tras 12 horas en horno bajo, salsa BBQ ahumada y coleslaw." },
-    { name: "Buffalo wings", tagline: "Para compartir", blurb: "Alitas crujientes glaseadas con salsa buffalo y dip de queso azul." },
-    { name: "Mac & cheese trufado", tagline: "Reconfortante", blurb: "Macarrones con bechamel de quesos curados y aceite de trufa negra." },
-    { name: "Ribs glaseadas", tagline: "Sabor a humo", blurb: "Costillas de cerdo a baja temperatura con glaseado dulce y notas de bourbon." },
-    { name: "Apple pie casera", tagline: "Para terminar dulce", blurb: "Tarta de manzana con masa quebrada, canela y bola de helado de vainilla." },
+    { name: "Smash Burger Clásica", tagline: "LA FAVORITA", blurb: "Carne de vacuno jugosa con pan brioche tostado de sésamo y verduras frescas." },
+    { name: "Mac & Cheese Gratinado", tagline: "PARA COMPARTIR", blurb: "Macarrones cremosos bañados en una mezcla de quesos y gratinados al horno." },
+    { name: "Hot Dogs Gourmet", tagline: "CASI IMPRESCINDIBLE", blurb: "Salchicha en pan suave coronada con lechuga, tomate y mostaza casera." },
+    { name: "Burger con Bacon y Huevo", tagline: "LA MÁS COMPLETA", blurb: "Doble de queso, bacon crujiente y huevo frito, con patatas fritas de dos colores." },
   ],
   fusion: [
-    { name: "Tartar de atún oriental", tagline: "Hoy en la pizarra", blurb: "Atún rojo, sésamo, lima, jengibre y aceite de oliva virgen extra." },
-    { name: "Bao bun de cochinita", tagline: "Casi imprescindible", blurb: "Pan al vapor relleno de cochinita pibil, cebolla encurtida y cilantro." },
-    { name: "Risotto de pimentón", tagline: "Receta de autor", blurb: "Arroz arborio cremoso con pimentón de la Vera y polvo de chorizo." },
-    { name: "Ceviche nikkei", tagline: "Fresca y ligera", blurb: "Pescado curado en leche de tigre con soja, sésamo y boniato glaseado." },
-    { name: "Pescado del día a la brasa", tagline: "Producto en primer plano", blurb: "Pieza entera a la brasa con jugo dashi y guarnición de huerta." },
-    { name: "Coulant de matcha", tagline: "Para terminar", blurb: "Bizcocho fluido de matcha con corazón de chocolate blanco." },
+    { name: "Jardín de Otoño", tagline: "CREACIÓN DE AUTOR", blurb: "Bocado vegetal de inspiración nórdica presentado sobre musgo y madera natural." },
+    { name: "Postre Helado de Frutos Rojos", tagline: "EL FINAL PERFECTO", blurb: "Quenelle de helado sobre crumble con polvo de pistacho y flores comestibles." },
+    { name: "Pescado a la Brasa con Microbrotes", tagline: "PLATO DE TEMPORADA", blurb: "Lomo de pescado crujiente con tomate asado, alcaparras y emulsión de aceituna." },
+    { name: "Bao Bun Doble", tagline: "TENDENCIA", blurb: "Pan al vapor relleno de proteína crujiente, mayonesa picante y salsa teriyaki." },
   ],
 };
 
