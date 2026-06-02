@@ -369,7 +369,7 @@ export function PreviewWizard() {
           negocio. Sin compromiso.
         </p>
       </div>
-      <div className="rounded-2xl border border-border bg-bg-elevated p-6 sm:p-8">
+      <div className="surface rounded-2xl p-6 sm:p-8">
       {/* Progress */}
       <div className="mb-6">
         <div className="mb-2 flex items-center justify-between text-xs text-fg-muted">
