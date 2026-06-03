@@ -36,6 +36,30 @@ interface Args {
  *  We inject a temporary stylesheet that forces every node to its final,
  *  fully-visible state — sections animate in on scroll (`whileInView`), so
  *  off-screen ones would otherwise capture blank. */
+/** Resolve once every <img> inside `root` has finished loading (or errored),
+ *  so the capture never fotographs half-loaded photos. Bounded by `timeoutMs`
+ *  so a single stuck image can't block the whole flow. */
+async function waitForImages(root: HTMLElement, timeoutMs: number): Promise<void> {
+  const imgs = Array.from(root.querySelectorAll("img"));
+  const pending = imgs
+    .filter((img) => !(img.complete && img.naturalWidth > 0))
+    .map(
+      (img) =>
+        new Promise<void>((res) => {
+          img.addEventListener("load", () => res(), { once: true });
+          img.addEventListener("error", () => res(), { once: true });
+        }),
+    );
+  const decoded = imgs.map((img) =>
+    typeof img.decode === "function" ? img.decode().catch(() => {}) : Promise.resolve(),
+  );
+  const all = Promise.all([...pending, ...decoded]).then(() => undefined);
+  await Promise.race([
+    all,
+    new Promise<void>((r) => setTimeout(r, timeoutMs)),
+  ]);
+}
+
 export async function captureAndSendFollowup(args: Args): Promise<boolean> {
   let imageDataUrl = "";
   const node = document.getElementById("preview-capture-root");
@@ -47,18 +71,39 @@ export async function captureAndSendFollowup(args: Args): Promise<boolean> {
       "transition:none !important;filter:none !important;}";
     document.head.appendChild(style);
     try {
-      await new Promise((r) => requestAnimationFrame(() => r(null)));
-      await new Promise((r) => setTimeout(r, 150));
-      const { toJpeg } = await import("html-to-image");
       const el = node as HTMLElement;
-      const url = await toJpeg(el, {
-        quality: 0.82,
+      // 1) Wait for web fonts — otherwise the capture renders with fallback
+      //    typography and looks nothing like the live template.
+      try {
+        await (document as Document & { fonts?: FontFaceSet }).fonts?.ready;
+      } catch {
+        /* no-op: FontFaceSet unsupported */
+      }
+      // 2) Wait for every image (dish/team photos, logo, hero) to finish.
+      await waitForImages(el, 7000);
+      // 3) Let layout settle in its forced fully-visible state.
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
+      await new Promise((r) => setTimeout(r, 250));
+
+      const { toJpeg } = await import("html-to-image");
+      const opts = {
+        quality: 0.85,
         pixelRatio: 1.3,
         backgroundColor: "#ffffff",
         width: el.scrollWidth,
         height: el.scrollHeight,
         cacheBust: true,
-      });
+      };
+      // 4) html-to-image's first pass routinely misses fonts/images while it
+      //    builds its internal cache; the second pass is the reliable one.
+      //    Warm up (discarded), then capture for real.
+      try {
+        await toJpeg(el, opts);
+      } catch {
+        /* warm-up errors are non-fatal */
+      }
+      await new Promise((r) => setTimeout(r, 150));
+      const url = await toJpeg(el, opts);
       if (url && url.length > 5000) imageDataUrl = url;
     } catch (err) {
       console.error("preview capture failed (sending without PDF):", err);

@@ -74,14 +74,20 @@ export async function uploadPreviewPdf(
   const sb = getSupabaseAdmin();
   if (!sb) return null;
   const path = `${leadId}.pdf`;
-  const { error } = await sb.storage
-    .from(BUCKET)
-    .upload(path, pdf, { contentType: "application/pdf", upsert: true });
-  if (error) {
-    console.error("[imagina-leads] uploadPreviewPdf error:", error.message);
-    return null;
+  // Retry a few times — storage uploads can fail transiently, and a miss here
+  // means the lead's preview never reaches the panel.
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const { error } = await sb.storage
+      .from(BUCKET)
+      .upload(path, pdf, { contentType: "application/pdf", upsert: true });
+    if (!error) return path;
+    console.error(
+      `[imagina-leads] uploadPreviewPdf error (attempt ${attempt}/3):`,
+      error.message,
+    );
+    if (attempt < 3) await new Promise((r) => setTimeout(r, 500 * attempt));
   }
-  return path;
+  return null;
 }
 
 export async function updateLeadReview(
