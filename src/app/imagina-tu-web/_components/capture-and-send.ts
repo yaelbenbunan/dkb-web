@@ -60,18 +60,31 @@ async function waitForImages(root: HTMLElement, timeoutMs: number): Promise<void
   ]);
 }
 
+/** Scroll the window through the full page so every Motion `whileInView`
+ *  section fires its entrance animation (they use `once: true`, so they stay
+ *  visible afterwards). WITHOUT this, sections still off-screen at capture time
+ *  render BLANK — the CSS opacity override isn't enough because Motion drives
+ *  those styles imperatively via JS. Restores the scroll position when done. */
+async function triggerInViewAnimations(): Promise<void> {
+  const startY = window.scrollY;
+  const total = document.documentElement.scrollHeight;
+  const step = Math.max(300, Math.floor(window.innerHeight * 0.7));
+  for (let y = 0; y <= total; y += step) {
+    window.scrollTo(0, y);
+    await new Promise((r) => setTimeout(r, 130));
+  }
+  window.scrollTo(0, startY);
+  // Let the freshly-triggered entrance animations finish before freezing.
+  await new Promise((r) => setTimeout(r, 650));
+}
+
 export async function captureAndSendFollowup(args: Args): Promise<boolean> {
   let imageDataUrl = "";
   const node = document.getElementById("preview-capture-root");
   if (node) {
-    const style = document.createElement("style");
-    style.textContent =
-      "#preview-capture-root,#preview-capture-root *{opacity:1 !important;" +
-      "transform:none !important;animation:none !important;" +
-      "transition:none !important;filter:none !important;}";
-    document.head.appendChild(style);
+    const el = node as HTMLElement;
+    let style: HTMLStyleElement | null = null;
     try {
-      const el = node as HTMLElement;
       // 1) Wait for web fonts — otherwise the capture renders with fallback
       //    typography and looks nothing like the live template.
       try {
@@ -81,7 +94,16 @@ export async function captureAndSendFollowup(args: Args): Promise<boolean> {
       }
       // 2) Wait for every image (dish/team photos, logo, hero) to finish.
       await waitForImages(el, 7000);
-      // 3) Let layout settle in its forced fully-visible state.
+      // 3) Trigger every on-scroll section so nothing captures blank.
+      await triggerInViewAnimations();
+      // 4) Freeze the final state: force everything visible and kill the
+      //    scale()/transitions so html-to-image captures at full size.
+      style = document.createElement("style");
+      style.textContent =
+        "#preview-capture-root,#preview-capture-root *{opacity:1 !important;" +
+        "transform:none !important;animation:none !important;" +
+        "transition:none !important;filter:none !important;}";
+      document.head.appendChild(style);
       await new Promise((r) => requestAnimationFrame(() => r(null)));
       await new Promise((r) => setTimeout(r, 250));
 
@@ -94,7 +116,7 @@ export async function captureAndSendFollowup(args: Args): Promise<boolean> {
         height: el.scrollHeight,
         cacheBust: true,
       };
-      // 4) html-to-image's first pass routinely misses fonts/images while it
+      // 5) html-to-image's first pass routinely misses fonts/images while it
       //    builds its internal cache; the second pass is the reliable one.
       //    Warm up (discarded), then capture for real.
       try {
@@ -108,7 +130,7 @@ export async function captureAndSendFollowup(args: Args): Promise<boolean> {
     } catch (err) {
       console.error("preview capture failed (sending without PDF):", err);
     } finally {
-      style.remove();
+      style?.remove();
     }
   }
 
