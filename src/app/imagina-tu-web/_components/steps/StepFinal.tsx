@@ -40,13 +40,14 @@ export function StepFinal({ value, onChange }: Props) {
       </div>
 
       <div className="flex items-start gap-3 rounded-lg border border-accent/30 bg-accent/5 px-4 py-3 text-sm">
-        <span aria-hidden className="text-base leading-tight">📞</span>
+        <span aria-hidden className="text-base leading-tight">📱</span>
         <p className="text-fg-muted">
-          <strong className="text-fg">Te llamamos en menos de 24h</strong> para
-          enseñarte la propuesta completa y darte ideas para mejorar tu web —
-          gratis y sin compromiso. Asegúrate de poner un{" "}
-          <strong className="text-fg">teléfono y email correctos</strong>: te
-          enviamos ahí el enlace al preview.
+          <strong className="text-fg">
+            Asegúrate de poner un número correcto:
+          </strong>{" "}
+          te escribiremos por WhatsApp para revisar contigo la propuesta y
+          hacerte una <strong className="text-fg">oferta que no podrás
+          rechazar</strong>. Y te enviamos el enlace al preview a tu email.
         </p>
       </div>
 
