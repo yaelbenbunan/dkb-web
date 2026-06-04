@@ -17,15 +17,49 @@ export function countPhoneDigits(raw: string): number {
   return (raw.match(/\d/g) ?? []).length;
 }
 
-/** Accept Spanish (9 digits) and most international numbers up to 15 digits
- *  (E.164 max). Common spam submissions use repeated digits or very short
- *  numbers — both fail this check. */
+/** True if `s` contains an ascending or descending run of consecutive digits
+ *  of length ≥ `len` (e.g. "123456", "98765"). */
+function hasSequentialRun(s: string, len: number): boolean {
+  let asc = 1;
+  let desc = 1;
+  for (let i = 1; i < s.length; i++) {
+    const diff = s.charCodeAt(i) - s.charCodeAt(i - 1);
+    asc = diff === 1 ? asc + 1 : 1;
+    desc = diff === -1 ? desc + 1 : 1;
+    if (asc >= len || desc >= len) return true;
+  }
+  return false;
+}
+
+/** Accept Spanish (9 digits, starting 6–9) and international numbers up to 15
+ *  digits (E.164 max), while rejecting obvious fakes. Heuristics catch the most
+ *  common junk submissions:
+ *   - repeated digits (000000000, 111111111…)
+ *   - 4+ identical digits in a row (…0000…)
+ *   - too few distinct digits (+3400000000, 600600600…)
+ *   - long sequential runs (123456789, 987654321…)
+ */
 export function isValidContactPhone(raw: string): boolean {
-  const digits = countPhoneDigits(raw);
-  if (digits < 9 || digits > 15) return false;
-  // Reject obvious spam: same digit repeated (111111111, 999999999, etc.)
-  const onlyDigits = raw.replace(/\D/g, "");
-  if (/^(\d)\1+$/.test(onlyDigits)) return false;
+  const all = raw.replace(/\D/g, "");
+  if (all.length < 9 || all.length > 15) return false;
+
+  // National part: strip the country prefix (+34 / 0034 / 34) for ES numbers.
+  let national = all;
+  if (national.startsWith("0034")) national = national.slice(4);
+  else if (national.length === 11 && national.startsWith("34"))
+    national = national.slice(2);
+
+  const isSpanish = national.length === 9;
+  // Spanish 9-digit numbers always start with 6, 7, 8 or 9.
+  if (isSpanish && !/^[6-9]/.test(national)) return false;
+
+  // Run the anti-fake heuristics on the national part when it's a clean ES
+  // number, otherwise on the full string.
+  const d = isSpanish ? national : all;
+  if (/^(\d)\1+$/.test(d)) return false; // all the same digit
+  if (/(\d)\1{3,}/.test(d)) return false; // 4+ identical in a row
+  if (new Set(d).size < 4) return false; // too few distinct digits
+  if (hasSequentialRun(d, 6)) return false; // 123456… / 987654…
   return true;
 }
 

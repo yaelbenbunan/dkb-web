@@ -4,7 +4,40 @@ import {
   previewRatingSchema,
   copyResponseSchema,
   previewGenerateInputSchema,
+  isValidContactPhone,
 } from "@/lib/preview-validation";
+
+describe("isValidContactPhone", () => {
+  it("accepts real-looking numbers", () => {
+    for (const p of [
+      "+34 600 111 222",
+      "612 458 903",
+      "+34 911 234 587",
+      "0034 622 814 590",
+      "+44 7700 924156",
+    ]) {
+      expect(isValidContactPhone(p), p).toBe(true);
+    }
+  });
+
+  it("rejects fakes (repeated, sequential, too few digits, bad prefix)", () => {
+    for (const p of [
+      "+3400000000", // muchos ceros / pocos dígitos distintos
+      "000000000",
+      "111111111",
+      "600000000", // 0000+ seguidos
+      "123456789", // secuencial
+      "987654321", // secuencial inverso
+      "+34 612 345 678", // contiene 12345678 secuencial
+      "600600600", // pocos dígitos distintos
+      "123456", // demasiado corto
+      "012345678", // empieza por 0 (no válido en ES)
+      "512345678", // empieza por 5 (no válido en ES)
+    ]) {
+      expect(isValidContactPhone(p), p).toBe(false);
+    }
+  });
+});
 
 const validLead = {
   businessType: "ecommerce",
