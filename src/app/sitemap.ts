@@ -18,6 +18,7 @@ interface StaticRoute {
 const STATIC_ROUTES: StaticRoute[] = [
   { path: "", priority: 1.0, changeFrequency: "weekly" },
   { path: "/servicios", priority: 0.9, changeFrequency: "weekly" },
+  { path: "/kit-digital", priority: 0.9, changeFrequency: "weekly" },
   { path: "/casos-de-exito", priority: 0.9, changeFrequency: "weekly" },
   { path: "/blog", priority: 0.9, changeFrequency: "weekly" },
   { path: "/nosotros", priority: 0.8, changeFrequency: "monthly" },
