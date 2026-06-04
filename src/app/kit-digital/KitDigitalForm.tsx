@@ -43,8 +43,8 @@ export function KitDigitalForm({ deviceOptions, defaultDevice }: Props) {
         Solicita tu ordenador
       </p>
       <p className="mt-2 text-sm text-slate-700">
-        Completa el formulario y te ayudamos a tramitar tu Bono del Kit Digital.
-        Sin compromiso.
+        Completa el formulario y te contactamos para confirmar la disponibilidad
+        del modelo seleccionado. Sin compromiso.
       </p>
 
       <div className="mt-6 space-y-4">
@@ -132,7 +132,7 @@ export function KitDigitalForm({ deviceOptions, defaultDevice }: Props) {
         {result && (
           <p className={`text-sm ${result.ok ? "text-emerald-600" : "text-red-600"}`}>
             {result.ok
-              ? "¡Recibido! Te contactamos en menos de 24h para tramitar tu bono."
+              ? "¡Recibido! Te contactamos en menos de 24h para confirmar la disponibilidad del modelo seleccionado."
               : result.error}
           </p>
         )}

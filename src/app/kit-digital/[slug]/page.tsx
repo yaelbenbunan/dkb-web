@@ -197,7 +197,7 @@ export default async function DeviceDetail({
             </h2>
             <p className="mt-4 text-lg leading-relaxed text-fg-muted">
               Déjanos tus datos —ya con el modelo seleccionado— y un asesor te
-              contactará para tramitar tu Bono del Kit Digital.
+              contactará para confirmar la disponibilidad del modelo seleccionado.
             </p>
 
             <div className="surface mt-8 rounded-2xl p-6">

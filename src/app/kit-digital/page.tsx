@@ -250,8 +250,8 @@ export default function KitDigitalPage() {
               Empieza hoy tu solicitud
             </h2>
             <p className="mt-4 text-lg leading-relaxed text-fg-muted">
-              Déjanos tus datos y un asesor te contactará para tramitar tu Bono del
-              Kit Digital y elegir el equipo perfecto para ti.
+              Déjanos tus datos y un asesor te contactará para confirmar la
+              disponibilidad del modelo seleccionado.
             </p>
 
             <div className="mt-8 space-y-3">
