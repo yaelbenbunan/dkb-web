@@ -71,6 +71,15 @@ export function Footer() {
                 </Link>
               </li>
             ))}
+            {/* Solo en el footer (no en el menú principal) */}
+            <li>
+              <Link
+                href="/kit-digital"
+                className="text-base text-fg transition-colors hover:text-accent"
+              >
+                Kit Digital
+              </Link>
+            </li>
           </ul>
         </nav>
 
