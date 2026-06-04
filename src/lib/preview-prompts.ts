@@ -228,10 +228,16 @@ export function buildSectorInformativaCopyPrompt(input: PromptInput): string {
         "      'Para los grandes momentos', 'Clásico imprescindible'.\n" +
         "    · blurb: 1 frase sensorial (textura, ingredientes destacados,\n" +
         "      preparación). SIN precios, sin números inventados, sin marketing-speak."
-      : `- offerings[].blurb: OBLIGATORIO para CADA ${hints.offeringNoun}. Una\n` +
-        `  descripción breve (1 frase, ~8-18 palabras) que explique en qué\n` +
-        `  consiste ese ${hints.offeringNoun} concreto, honesta y sin números\n` +
-        "  inventados. Nunca dejes un servicio sin descripción.",
+      : `- offerings[]: tarjetas de ${hints.offeringNoun}s. Pon PRIMERO los que\n` +
+        `  indicó el usuario (mejorando su redacción). MUY IMPORTANTE: si el\n` +
+        `  usuario indicó menos de 4 ${hints.offeringNoun}s, AMPLÍA la lista hasta\n` +
+        `  4-6 desglosando ese ${hints.offeringNoun} en sub-${hints.offeringNoun}s,\n` +
+        "  especialidades o fases concretas, realistas y coherentes con el sector\n" +
+        "  y el negocio, para que la sección NUNCA quede pobre ni con una sola\n" +
+        `  tarjeta. Cada ${hints.offeringNoun} con:\n` +
+        `    · name: nombre claro y específico del ${hints.offeringNoun}.\n` +
+        "    · blurb: OBLIGATORIO. 1 frase (~8-18 palabras) que explique en qué\n" +
+        "      consiste, honesta y sin números inventados. Nunca lo dejes vacío.",
     "",
     "- valorAgregadoTitle: titular corto para la sección de valor agregado",
     "  (ej. 'Por qué elegirnos', 'Cuidamos cada detalle').",
