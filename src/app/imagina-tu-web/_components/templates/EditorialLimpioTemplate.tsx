@@ -892,53 +892,116 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
                 </button>
               </div>
             </div>
-            <ul className="space-y-2">
-              {services.map((s, i) => {
-                const Icon = SERVICE_ICONS[i % SERVICE_ICONS.length];
-                const tagline = (s as { tagline?: string }).tagline;
+            {services.length === 1 ? (
+              /* Un solo servicio: lo desarrollamos (descripción + "incluye")
+                 para que la columna no quede con un hueco enorme. */
+              (() => {
+                const s = services[0];
+                const Icon = SERVICE_ICONS[0];
+                const desc =
+                  s.blurb && s.blurb.length > 0
+                    ? s.blurb
+                    : `En ${s.name.toLowerCase()} ponemos toda nuestra experiencia a tu servicio: analizamos tu situación, te asesoramos con claridad y te proponemos la mejor solución para tu caso, sin compromiso.`;
+                const includes = [
+                  "Primer contacto sin compromiso",
+                  "Atención cercana y personalizada",
+                  "Soluciones adaptadas a tu caso",
+                  "Acompañamiento en todo el proceso",
+                ];
                 return (
-                  <motion.li
-                    key={i}
+                  <motion.div
                     {...fadeUp}
-                    transition={{ ...fadeUp.transition, delay: 0.04 * i }}
-                    className="group flex items-start gap-6 border-t py-6"
+                    className="flex h-full flex-col justify-center border-t py-8"
                     style={hairline}
                   >
-                    <div
-                      style={{ color: palette.accent }}
-                      className="flex size-12 shrink-0 items-center justify-center rounded-full"
-                    >
-                      <Icon className="size-7" />
-                    </div>
-                    <div className="flex-1">
-                      <h3
-                        style={display}
-                        className="text-xl font-semibold sm:text-2xl"
+                    <div className="flex items-start gap-6">
+                      <div
+                        style={{ color: palette.accent }}
+                        className="flex size-12 shrink-0 items-center justify-center rounded-full"
                       >
-                        {s.name}
-                      </h3>
-                      {s.blurb && (
-                        <p className="mt-2 text-base leading-relaxed opacity-85">
-                          {s.blurb}
-                        </p>
-                      )}
-                      {tagline && (
-                        <p
-                          style={{ color: palette.accent }}
-                          className="mt-2 text-[13px] font-semibold uppercase tracking-wider"
+                        <Icon className="size-7" />
+                      </div>
+                      <div>
+                        <h3
+                          style={display}
+                          className="text-2xl font-semibold leading-tight sm:text-3xl"
                         >
-                          {tagline}
+                          {s.name}
+                        </h3>
+                        <p className="mt-3 text-lg leading-relaxed opacity-85">
+                          {desc}
                         </p>
-                      )}
+                      </div>
                     </div>
-                    <IconArrowRight
-                      className="mt-3 size-5 opacity-30 transition group-hover:translate-x-1 group-hover:opacity-100"
-                      style={{ color: palette.accent }}
-                    />
-                  </motion.li>
+                    <ul className="mt-8 grid gap-x-6 gap-y-3 sm:grid-cols-2">
+                      {includes.map((p) => (
+                        <li key={p} className="flex items-start gap-2.5 text-base opacity-90">
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 14 14"
+                            fill="none"
+                            className="mt-1 shrink-0"
+                            style={{ color: palette.accent }}
+                          >
+                            <path d="M3 7.5L6 10.5L11 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          <span>{p}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </motion.div>
                 );
-              })}
-            </ul>
+              })()
+            ) : (
+              <ul className="space-y-2">
+                {services.map((s, i) => {
+                  const Icon = SERVICE_ICONS[i % SERVICE_ICONS.length];
+                  const tagline = (s as { tagline?: string }).tagline;
+                  return (
+                    <motion.li
+                      key={i}
+                      {...fadeUp}
+                      transition={{ ...fadeUp.transition, delay: 0.04 * i }}
+                      className="group flex items-start gap-6 border-t py-6"
+                      style={hairline}
+                    >
+                      <div
+                        style={{ color: palette.accent }}
+                        className="flex size-12 shrink-0 items-center justify-center rounded-full"
+                      >
+                        <Icon className="size-7" />
+                      </div>
+                      <div className="flex-1">
+                        <h3
+                          style={display}
+                          className="text-xl font-semibold sm:text-2xl"
+                        >
+                          {s.name}
+                        </h3>
+                        {s.blurb && (
+                          <p className="mt-2 text-base leading-relaxed opacity-85">
+                            {s.blurb}
+                          </p>
+                        )}
+                        {tagline && (
+                          <p
+                            style={{ color: palette.accent }}
+                            className="mt-2 text-[13px] font-semibold uppercase tracking-wider"
+                          >
+                            {tagline}
+                          </p>
+                        )}
+                      </div>
+                      <IconArrowRight
+                        className="mt-3 size-5 opacity-30 transition group-hover:translate-x-1 group-hover:opacity-100"
+                        style={{ color: palette.accent }}
+                      />
+                    </motion.li>
+                  );
+                })}
+              </ul>
+            )}
           </motion.div>
         </div>
       </section>

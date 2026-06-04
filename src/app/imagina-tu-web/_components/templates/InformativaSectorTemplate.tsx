@@ -751,6 +751,81 @@ export function InformativaSectorTemplate({ data, copy }: Props) {
               fgOnSurface={fgOnSurface}
               accentBtn={accentBtn}
             />
+          ) : services.length === 1 ? (
+            /* Un solo servicio: tarjeta desarrollada a ancho completo para que
+               no quede un hueco enorme en la cuadrícula. */
+            (() => {
+              const s = services[0];
+              const Icon = SERVICE_ICONS[0];
+              const desc =
+                s.blurb ||
+                `En ${titleize(s.name).toLowerCase()} ponemos toda nuestra experiencia a tu servicio: analizamos tu situación, te asesoramos con claridad y te proponemos la mejor solución para tu caso, sin compromiso.`;
+              const includes = [
+                "Primer contacto sin compromiso",
+                "Atención cercana y personalizada",
+                "Soluciones adaptadas a tu caso",
+                "Acompañamiento en todo el proceso",
+              ];
+              return (
+                <motion.article
+                  {...fadeUpProps}
+                  className="overflow-hidden rounded-3xl border p-8 shadow-sm sm:p-10"
+                  style={{
+                    backgroundColor: palette.surface,
+                    color: fgOnSurface,
+                    borderColor: palette.accent + "1f",
+                  }}
+                >
+                  <div className="flex items-start gap-6">
+                    <span
+                      className="grid size-14 shrink-0 place-items-center rounded-2xl"
+                      style={{
+                        background: `linear-gradient(135deg, ${palette.accent}22, ${palette.accent}11)`,
+                        color: palette.accent,
+                      }}
+                      aria-hidden
+                    >
+                      <Icon className="size-7" />
+                    </span>
+                    <div>
+                      <h3
+                        style={{ ...display, color: fgOnSurface }}
+                        className="text-2xl font-bold sm:text-3xl"
+                      >
+                        {titleize(s.name)}
+                      </h3>
+                      <p
+                        className="mt-3 text-lg leading-relaxed"
+                        style={{ color: fgOnSurface + "cc" }}
+                      >
+                        {desc}
+                      </p>
+                    </div>
+                  </div>
+                  <ul className="mt-8 grid gap-x-8 gap-y-3 sm:grid-cols-2">
+                    {includes.map((p) => (
+                      <li
+                        key={p}
+                        className="flex items-start gap-2.5 text-base"
+                        style={{ color: fgOnSurface + "dd" }}
+                      >
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 14 14"
+                          fill="none"
+                          className="mt-1 shrink-0"
+                          style={{ color: palette.accent }}
+                        >
+                          <path d="M3 7.5L6 10.5L11 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        <span>{p}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </motion.article>
+              );
+            })()
           ) : (
             <>
               <motion.div
