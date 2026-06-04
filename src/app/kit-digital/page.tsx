@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Image from "next/image";
+import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { Reveal } from "@/components/ui/Reveal";
 import { CONTACT_INFO } from "@/lib/contact-info";
@@ -27,52 +29,53 @@ export const metadata: Metadata = {
   },
 };
 
-function LaptopIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <rect x="4" y="5" width="16" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M2 19.5h20M9 19.5l.5-1.5h5l.5 1.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
+function eur(n: number): string {
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
-function DesktopIcon() {
+function DeviceCard({ device }: { device: KitDevice }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <rect x="3" y="4" width="18" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M9 20h6m-3-4v4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function DeviceCard({ device, free }: { device: KitDevice; free: boolean }) {
-  return (
-    <div className="surface surface-hover group flex h-full flex-col rounded-2xl p-5">
-      <div className="flex items-start justify-between gap-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/15 text-accent-hover">
-          {device.kind === "desktop" ? <DesktopIcon /> : <LaptopIcon />}
+    <Link
+      href={`/kit-digital/${device.slug}`}
+      className="surface surface-hover group flex h-full flex-col overflow-hidden rounded-2xl"
+    >
+      <div className="relative aspect-[4/3] w-full bg-white">
+        <Image
+          src={device.image}
+          alt={`${device.brand} ${device.name}`}
+          fill
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          className="object-contain p-4 transition-transform duration-300 group-hover:scale-[1.04]"
+        />
+        <span
+          className={`absolute left-3 top-3 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ring-1 ${
+            device.free
+              ? "bg-emerald-500/90 text-white ring-emerald-400/40"
+              : "bg-accent/90 text-white ring-accent/40"
+          }`}
+        >
+          {device.free ? "Gratis" : `desde ${eur(device.pricePay ?? 0)}€`}
         </span>
-        {free ? (
-          <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-emerald-400 ring-1 ring-emerald-500/30">
-            Gratis
-          </span>
-        ) : (
-          <span className="rounded-full bg-accent/15 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-accent ring-1 ring-accent/30">
-            Premium
-          </span>
-        )}
       </div>
-      <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-fg-muted">
-        {device.brand}
-      </p>
-      <p className="mt-1 text-base font-bold leading-snug text-fg">
-        {device.name}
-        {device.size && (
-          <span className="ml-1.5 text-sm font-semibold text-accent-hover">{device.size}</span>
-        )}
-      </p>
-      <p className="mt-2 text-sm leading-relaxed text-fg-muted">{device.blurb}</p>
-    </div>
+      <div className="flex flex-1 flex-col p-5">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fg-muted">
+          {device.brand}
+        </p>
+        <p className="mt-1 text-base font-bold leading-snug text-fg">
+          {device.name}
+          {device.size && (
+            <span className="ml-1.5 text-sm font-semibold text-accent-hover">{device.size}</span>
+          )}
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-fg-muted">{device.blurb}</p>
+        <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-accent-hover">
+          Ver ficha
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+            <path d="M3 7h8m0 0L7 3m4 4l-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+      </div>
+    </Link>
   );
 }
 
@@ -221,7 +224,7 @@ export default function KitDigitalPage() {
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FREE_DEVICES.map((d, i) => (
             <Reveal key={d.name + d.size} delay={Math.min(i, 6) * 0.05} scale>
-              <DeviceCard device={d} free />
+              <DeviceCard device={d} />
             </Reveal>
           ))}
         </div>
@@ -244,7 +247,7 @@ export default function KitDigitalPage() {
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {PREMIUM_DEVICES.map((d, i) => (
             <Reveal key={d.name + d.size} delay={Math.min(i, 6) * 0.04} scale>
-              <DeviceCard device={d} free={false} />
+              <DeviceCard device={d} />
             </Reveal>
           ))}
         </div>

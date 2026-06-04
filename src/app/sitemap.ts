@@ -4,6 +4,7 @@ import {
   getAllCaseStudies,
   getAllPosts,
 } from "@/lib/content";
+import { ALL_DEVICES } from "@/lib/kit-digital-data";
 
 const SITE = "https://www.dinkbit.es";
 
@@ -55,5 +56,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     changeFrequency: "monthly" as Freq,
     priority: 0.7,
   }));
-  return [...staticRoutes, ...services, ...cases, ...posts];
+  const kitDevices = ALL_DEVICES.map((d) => ({
+    url: `${SITE}/kit-digital/${d.slug}`,
+    lastModified: now,
+    changeFrequency: "monthly" as Freq,
+    priority: 0.6,
+  }));
+  return [...staticRoutes, ...services, ...cases, ...posts, ...kitDevices];
 }
