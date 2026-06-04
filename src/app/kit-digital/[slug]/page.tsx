@@ -35,7 +35,7 @@ export async function generateMetadata({
   const label = deviceLabel(d);
   return {
     title: `${label} con el Kit Digital — dinkbit`,
-    description: `${d.blurb} ${d.free ? "100% gratis con el Bono del Kit Digital." : `Aplica tu bono y paga solo ${d.pricePay}€.`}`,
+    description: `${d.blurb}. Con el Bono del Kit Digital pagas solo ${eur(d.pricePay)}€ (el bono cubre 1.000€).`,
     alternates: { canonical: `/kit-digital/${d.slug}` },
     openGraph: {
       type: "website",
@@ -59,7 +59,7 @@ export default async function DeviceDetail({
 
   const label = deviceLabel(device);
   const related = ALL_DEVICES.filter(
-    (d) => d.slug !== device.slug && d.free === device.free,
+    (d) => d.slug !== device.slug && d.apple === device.apple,
   ).slice(0, 3);
 
   const breadcrumbItems = [
@@ -83,7 +83,7 @@ export default async function DeviceDetail({
 
           <div className="mt-8 grid items-start gap-10 lg:grid-cols-[1fr_1fr] lg:gap-14">
             {/* Imagen */}
-            <div className="surface overflow-hidden rounded-3xl bg-white">
+            <div className="surface overflow-hidden rounded-3xl bg-white lg:sticky lg:top-24">
               <div className="relative aspect-[4/3] w-full">
                 <Image
                   src={device.image}
@@ -99,14 +99,8 @@ export default async function DeviceDetail({
             {/* Info */}
             <div>
               <div className="flex items-center gap-3">
-                <span
-                  className={`rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider ring-1 ${
-                    device.free
-                      ? "bg-emerald-500/15 text-emerald-400 ring-emerald-500/30"
-                      : "bg-accent/15 text-accent ring-accent/30"
-                  }`}
-                >
-                  {device.free ? "Gratis con el bono" : "Premium"}
+                <span className="rounded-full bg-accent/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-accent ring-1 ring-accent/30">
+                  {device.kind === "desktop" ? "Sobremesa" : "Portátil"}
                 </span>
                 <span className="text-xs font-semibold uppercase tracking-[0.2em] text-fg-muted">
                   {device.brand}
@@ -115,7 +109,6 @@ export default async function DeviceDetail({
 
               <h1 className="mt-4 text-3xl font-black tracking-tight md:text-4xl">
                 {device.name}
-                {device.size && <span className="text-accent"> {device.size}</span>}
               </h1>
 
               <p className="mt-4 text-lg leading-relaxed text-fg-muted">
@@ -124,25 +117,17 @@ export default async function DeviceDetail({
 
               {/* Precio */}
               <div className="mt-6 rounded-2xl border border-border bg-bg-elevated p-5">
-                {device.free ? (
-                  <div className="flex items-baseline gap-3">
-                    <span className="text-sm text-fg-muted line-through">1.000€</span>
-                    <span className="text-3xl font-black text-emerald-400">Gratis</span>
-                    <span className="text-sm text-fg-muted">con tu Bono Kit Digital</span>
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <span className="text-sm text-fg-muted">
-                      Valor {eur(device.priceTotal ?? 0)}€ —
-                    </span>
-                    <span className="text-sm font-semibold text-accent">
-                      bono cubre 1.000€
-                    </span>
-                    <span className="w-full text-3xl font-black text-fg">
-                      Pagas solo {eur(device.pricePay ?? 0)}€
-                    </span>
-                  </div>
-                )}
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <span className="text-sm text-fg-muted line-through">
+                    {eur(device.priceTotal)}€
+                  </span>
+                  <span className="text-sm font-semibold text-accent">
+                    bono cubre 1.000€
+                  </span>
+                  <span className="w-full text-3xl font-black text-fg">
+                    Pagas solo {eur(device.pricePay)}€
+                  </span>
+                </div>
               </div>
 
               {/* Highlights */}
@@ -175,6 +160,26 @@ export default async function DeviceDetail({
                 >
                   {CONTACT_INFO.phone}
                 </a>
+              </div>
+
+              {/* Ficha técnica */}
+              <div className="mt-8">
+                <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-fg-muted">
+                  Ficha técnica
+                </h2>
+                <dl className="mt-4 overflow-hidden rounded-2xl border border-border">
+                  {device.specs.map((s, i) => (
+                    <div
+                      key={s.label}
+                      className={`flex items-start justify-between gap-4 px-4 py-3 text-sm ${
+                        i % 2 === 0 ? "bg-bg-elevated" : "bg-bg-subtle"
+                      }`}
+                    >
+                      <dt className="font-semibold text-fg-muted">{s.label}</dt>
+                      <dd className="text-right font-medium text-fg">{s.value}</dd>
+                    </div>
+                  ))}
+                </dl>
               </div>
             </div>
           </div>
@@ -245,9 +250,9 @@ export default async function DeviceDetail({
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fg-muted">
                     {d.brand}
                   </p>
-                  <p className="mt-1 text-sm font-bold text-fg">
-                    {d.name}
-                    {d.size && <span className="text-accent"> {d.size}</span>}
+                  <p className="mt-1 text-sm font-bold text-fg">{d.name}</p>
+                  <p className="mt-1 text-sm font-semibold text-accent-hover">
+                    Pagas {eur(d.pricePay)}€
                   </p>
                 </div>
               </Link>

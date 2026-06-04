@@ -6,32 +6,31 @@ import { Reveal } from "@/components/ui/Reveal";
 import { CONTACT_INFO } from "@/lib/contact-info";
 import { KitDigitalForm } from "./KitDigitalForm";
 import {
-  FREE_DEVICES,
-  PREMIUM_DEVICES,
+  WINDOWS_DEVICES,
+  APPLE_DEVICES,
   ALL_DEVICE_OPTIONS,
   EMPLOYEE_RANGES,
   KIT_TERMS,
+  MIN_PAY,
   type KitDevice,
 } from "@/lib/kit-digital-data";
-
-export const metadata: Metadata = {
-  title: "Ordenador gratis con el Kit Digital — dinkbit",
-  description:
-    "¿Eres autónomo o tienes una empresa de hasta 2 empleados? Consigue un ordenador valorado en 1.000€ totalmente gratis con el Bono del Kit Digital. Portátiles y sobremesas de Acer, HP, Lenovo, Asus, Dell y Apple.",
-  alternates: { canonical: "/kit-digital" },
-  openGraph: {
-    type: "website",
-    url: "/kit-digital",
-    title: "Ordenador gratis con el Kit Digital — dinkbit",
-    description:
-      "Consigue un ordenador valorado en 1.000€ totalmente gratis con el Bono del Kit Digital. Tramitación, entrega y soporte incluidos.",
-    siteName: "dinkbit",
-  },
-};
 
 function eur(n: number): string {
   return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
+
+export const metadata: Metadata = {
+  title: "Ordenadores con el Kit Digital — dinkbit",
+  description: `Renueva tu equipo con el Bono del Kit Digital: cubre 1.000€ del precio y tú pagas desde ${MIN_PAY}€. Portátiles y sobremesas de Lenovo, Acer, Asus, Dell, Samsung y Apple, con tramitación, entrega y soporte incluidos.`,
+  alternates: { canonical: "/kit-digital" },
+  openGraph: {
+    type: "website",
+    url: "/kit-digital",
+    title: "Ordenadores con el Kit Digital — dinkbit",
+    description: `El Bono del Kit Digital cubre 1.000€ de tu nuevo ordenador. Equipos desde ${MIN_PAY}€, con tramitación, entrega y soporte incluidos.`,
+    siteName: "dinkbit",
+  },
+};
 
 function DeviceCard({ device }: { device: KitDevice }) {
   return (
@@ -47,26 +46,15 @@ function DeviceCard({ device }: { device: KitDevice }) {
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           className="object-contain p-4 transition-transform duration-300 group-hover:scale-[1.04]"
         />
-        <span
-          className={`absolute left-3 top-3 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ring-1 ${
-            device.free
-              ? "bg-emerald-500/90 text-white ring-emerald-400/40"
-              : "bg-accent/90 text-white ring-accent/40"
-          }`}
-        >
-          {device.free ? "Gratis" : `desde ${eur(device.pricePay ?? 0)}€`}
+        <span className="absolute left-3 top-3 rounded-full bg-accent/90 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white ring-1 ring-accent/40">
+          Pagas {eur(device.pricePay)}€
         </span>
       </div>
       <div className="flex flex-1 flex-col p-5">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fg-muted">
           {device.brand}
         </p>
-        <p className="mt-1 text-base font-bold leading-snug text-fg">
-          {device.name}
-          {device.size && (
-            <span className="ml-1.5 text-sm font-semibold text-accent-hover">{device.size}</span>
-          )}
-        </p>
+        <p className="mt-1 text-base font-bold leading-snug text-fg">{device.name}</p>
         <p className="mt-2 text-sm leading-relaxed text-fg-muted">{device.blurb}</p>
         <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-accent-hover">
           Ver ficha
@@ -103,21 +91,22 @@ export default function KitDigitalPage() {
                 className="mt-6 font-black leading-[1.02] tracking-tight"
                 style={{ fontSize: "var(--text-display-lg)" }}
               >
-                Tu próximo ordenador,{" "}
-                <span className="text-accent">totalmente gratis.</span>
+                Renueva tu ordenador{" "}
+                <span className="text-accent">con el Kit Digital.</span>
               </h1>
               <p className="mt-5 max-w-xl text-lg leading-relaxed text-fg-muted">
-                ¿Eres autónomo o tienes una empresa de hasta 2 empleados? Con el
-                Bono del Kit Digital puedes conseguir un ordenador valorado en{" "}
-                <strong className="text-fg">1.000€</strong> sin coste. Nosotros nos
+                El Bono del Kit Digital cubre{" "}
+                <strong className="text-fg">1.000€</strong> del precio de tu nuevo
+                equipo: tú pagas solo la diferencia, desde{" "}
+                <strong className="text-fg">{eur(MIN_PAY)}€</strong>. Nosotros nos
                 encargamos de toda la tramitación.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <a
-                  href="#solicitar"
+                  href="#catalogo"
                   className="inline-flex h-12 items-center gap-2 rounded-lg bg-accent px-6 text-base font-semibold text-white shadow-[0_8px_24px_-6px_rgba(24,123,239,0.6)] transition-all hover:-translate-y-0.5 hover:bg-accent-hover"
                 >
-                  Solicítalo ahora
+                  Ver catálogo
                   <svg width="16" height="16" viewBox="0 0 14 14" fill="none">
                     <path d="M3 7h8m0 0L7 3m4 4l-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
@@ -135,18 +124,16 @@ export default function KitDigitalPage() {
             <Reveal from="right" className="lg:justify-self-end">
               <div className="surface-elevated relative w-full max-w-sm rounded-3xl p-8 text-center">
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Valor del equipo
+                  El bono cubre
                 </p>
-                <p className="mt-2 text-5xl font-black text-slate-400 line-through decoration-2">
-                  1.000€
+                <p className="mt-2 text-6xl font-black text-[#0c1c40]">1.000€</p>
+                <p className="mt-5 text-sm font-semibold uppercase tracking-[0.2em] text-accent">
+                  Tu equipo desde
                 </p>
-                <p className="mt-4 text-sm font-semibold uppercase tracking-[0.2em] text-accent">
-                  Tu precio con el bono
-                </p>
-                <p className="mt-1 text-6xl font-black text-[#0c1c40]">0€</p>
+                <p className="mt-1 text-5xl font-black text-accent">{eur(MIN_PAY)}€</p>
                 <div className="mt-6 rounded-xl bg-accent/10 px-4 py-3 text-sm font-medium text-[#0c1c40]">
-                  Y al finalizar la fase II,{" "}
-                  <strong>te lo quedas por solo 1€.</strong>
+                  Tramitación, entrega y soporte técnico{" "}
+                  <strong>incluidos.</strong>
                 </div>
               </div>
             </Reveal>
@@ -158,10 +145,10 @@ export default function KitDigitalPage() {
       <Container className="pb-8">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { t: "100% subvencionado", d: "El bono cubre el equipo valorado hasta 1.000€. Sin coste para ti." },
+            { t: "El bono cubre 1.000€", d: "Descontamos 1.000€ del precio del equipo; pagas solo la diferencia." },
+            { t: "Tramitación incluida", d: "Nos encargamos de todo el papeleo del Kit Digital, de principio a fin." },
             { t: "Soporte técnico incluido", d: "Reparaciones en remoto o in situ y equipo de sustitución si hace falta." },
             { t: "Entrega en España", d: "Recibes el ordenador configurado y listo para trabajar." },
-            { t: "Te lo quedas por 1€", d: "Al terminar la fase II, el equipo pasa a ser tuyo." },
           ].map((v, i) => (
             <Reveal key={v.t} delay={Math.min(i, 4) * 0.07}>
               <div className="surface h-full rounded-2xl p-6">
@@ -192,8 +179,8 @@ export default function KitDigitalPage() {
           {[
             { n: "01", t: "Solicita el bono", d: "Te ayudamos con toda la tramitación del Kit Digital, de principio a fin." },
             { n: "02", t: "Elige tu equipo", d: "Del catálogo, escoge el portátil o sobremesa que mejor encaje contigo." },
-            { n: "03", t: "Recíbelo configurado", d: "Entrega dentro de España, listo para ponerte a trabajar." },
-            { n: "04", t: "Quédatelo por 1€", d: "Tras la fase II, el ordenador es tuyo para siempre." },
+            { n: "03", t: "Aplica el bono", d: "Descontamos 1.000€ del precio; abonas solo la diferencia." },
+            { n: "04", t: "Recíbelo configurado", d: "Entrega dentro de España, listo para ponerte a trabajar." },
           ].map((s, i) => (
             <Reveal key={s.n} delay={Math.min(i, 4) * 0.07}>
               <div className="surface h-full rounded-2xl p-6">
@@ -206,47 +193,47 @@ export default function KitDigitalPage() {
         </div>
       </Container>
 
-      {/* Catálogo: GRATIS */}
+      {/* Catálogo: PC / Windows */}
+      <div id="catalogo" className="scroll-mt-24" />
       <Container className="py-8">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-400">
-              Catálogo
-            </p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">
-              Equipos <span className="text-accent">100% gratis</span> con tu bono
-            </h2>
-            <p className="mt-2 max-w-2xl text-fg-muted">
-              Modelos valorados hasta 1.000€, cubiertos por completo por el Kit Digital.
-            </p>
-          </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent">
+            Catálogo
+          </p>
+          <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">
+            Portátiles y sobremesas
+          </h2>
+          <p className="mt-2 max-w-2xl text-fg-muted">
+            Equipos profesionales de Lenovo, Acer, Asus, Dell y Samsung. Todos con
+            el bono de 1.000€ ya descontado.
+          </p>
         </div>
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {FREE_DEVICES.map((d, i) => (
-            <Reveal key={d.name + d.size} delay={Math.min(i, 6) * 0.05} scale>
+          {WINDOWS_DEVICES.map((d, i) => (
+            <Reveal key={d.slug} delay={Math.min(i, 6) * 0.04} scale>
               <DeviceCard device={d} />
             </Reveal>
           ))}
         </div>
       </Container>
 
-      {/* Catálogo: Premium */}
+      {/* Catálogo: Apple */}
       <Container className="py-14">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent">
-            Catálogo premium
+            Apple
           </p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">
-            ¿Quieres más? <span className="text-accent">Amplía tu bono</span>
+            MacBook con el Kit Digital
           </h2>
           <p className="mt-2 max-w-2xl text-fg-muted">
-            Equipos por encima de 1.000€ — MacBook y la gama profesional de Lenovo.
-            Aplicas el bono y solo pagas la diferencia.
+            Toda la gama MacBook Air y Pro con chip M5. Aplica el bono y paga solo
+            la diferencia.
           </p>
         </div>
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {PREMIUM_DEVICES.map((d, i) => (
-            <Reveal key={d.name + d.size} delay={Math.min(i, 6) * 0.04} scale>
+          {APPLE_DEVICES.map((d, i) => (
+            <Reveal key={d.slug} delay={Math.min(i, 6) * 0.04} scale>
               <DeviceCard device={d} />
             </Reveal>
           ))}
