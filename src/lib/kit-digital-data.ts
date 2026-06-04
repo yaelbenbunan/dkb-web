@@ -497,8 +497,6 @@ export function getDevice(slug: string): KitDevice | undefined {
 
 export const ALL_DEVICE_OPTIONS: string[] = ALL_DEVICES.map(deviceLabel);
 
-export const EMPLOYEE_RANGES = ["0-2", "3-9", "10-49", "Más de 50"] as const;
-
 export const KIT_TERMS: string[] = [
   "El dispositivo se entrega dentro de España.",
   "Servicio de soporte técnico incluido (avisos por email, atención de lunes a viernes de 09:00 a 17:00).",

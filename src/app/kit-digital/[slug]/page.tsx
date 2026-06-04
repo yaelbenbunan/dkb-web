@@ -9,7 +9,6 @@ import { KitDigitalForm } from "../KitDigitalForm";
 import {
   ALL_DEVICES,
   ALL_DEVICE_OPTIONS,
-  EMPLOYEE_RANGES,
   KIT_TERMS,
   deviceLabel,
   getDevice,
@@ -219,7 +218,6 @@ export default async function DeviceDetail({
           <div className="lg:sticky lg:top-24 lg:h-max lg:self-start">
             <KitDigitalForm
               deviceOptions={ALL_DEVICE_OPTIONS}
-              employeeRanges={EMPLOYEE_RANGES}
               defaultDevice={label}
             />
           </div>

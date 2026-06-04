@@ -5,7 +5,6 @@ import { requestKitDigital } from "@/lib/kit-digital-action";
 
 interface Props {
   deviceOptions: string[];
-  employeeRanges: readonly string[];
   /** Modelo preseleccionado (desde la ficha de un equipo). */
   defaultDevice?: string;
 }
@@ -15,11 +14,7 @@ const inputClass =
 const labelClass =
   "text-xs font-bold uppercase tracking-wider text-accent";
 
-export function KitDigitalForm({
-  deviceOptions,
-  employeeRanges,
-  defaultDevice,
-}: Props) {
+export function KitDigitalForm({ deviceOptions, defaultDevice }: Props) {
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<{ ok: boolean; error?: string } | null>(
     null,
@@ -80,20 +75,6 @@ export function KitDigitalForm({
             />
           </label>
         </div>
-
-        <label className="block">
-          <span className={labelClass}>Número de empleados *</span>
-          <select name="employees" required defaultValue="" className={inputClass}>
-            <option value="" disabled>
-              Selecciona un rango
-            </option>
-            {employeeRanges.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
-        </label>
 
         <label className="block">
           <span className={labelClass}>Modelo de ordenador *</span>

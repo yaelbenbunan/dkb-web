@@ -8,7 +8,6 @@ const schema = z
     name: z.string().trim().min(2, "Demasiado corto"),
     email: z.string().trim().email("Email inválido"),
     phone: z.string().trim().min(6, "Teléfono demasiado corto"),
-    employees: z.string().trim().min(1, "Falta nº de empleados"),
     device: z.string().trim().min(1, "Falta modelo"),
     website: z.string().max(0, "Honeypot field must be empty"),
     formLoadedAt: z.number(),
@@ -30,7 +29,6 @@ export async function requestKitDigital(
     name: formData.get("name"),
     email: formData.get("email"),
     phone: formData.get("phone"),
-    employees: formData.get("employees"),
     device: formData.get("device"),
     website: formData.get("website") ?? "",
     formLoadedAt: Number(formData.get("formLoadedAt")),
@@ -49,7 +47,7 @@ export async function requestKitDigital(
   }
 
   const resend = new Resend(apiKey);
-  const { name, email, phone, employees, device } = parsed.data;
+  const { name, email, phone, device } = parsed.data;
 
   const { error } = await resend.emails.send({
     from,
@@ -60,7 +58,6 @@ export async function requestKitDigital(
       `Nombre: ${name}`,
       `Email: ${email}`,
       `Teléfono: ${phone}`,
-      `Nº de empleados: ${employees}`,
       `Modelo de interés: ${device}`,
       "",
       "Origen: landing /kit-digital de dinkbit.es.",

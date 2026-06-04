@@ -9,7 +9,6 @@ import {
   WINDOWS_DEVICES,
   APPLE_DEVICES,
   ALL_DEVICE_OPTIONS,
-  EMPLOYEE_RANGES,
   KIT_TERMS,
   MIN_PAY,
   type KitDevice,
@@ -299,10 +298,7 @@ export default function KitDigitalPage() {
           </div>
 
           <div className="lg:sticky lg:top-24 lg:h-max lg:self-start">
-            <KitDigitalForm
-              deviceOptions={ALL_DEVICE_OPTIONS}
-              employeeRanges={EMPLOYEE_RANGES}
-            />
+            <KitDigitalForm deviceOptions={ALL_DEVICE_OPTIONS} />
           </div>
         </Container>
       </section>
