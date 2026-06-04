@@ -779,57 +779,123 @@ export function EditorialLimpioTemplate({ data, copy, density = "spacious" }: Pr
               {/* Two-column list with outline-circle icons + hairline dividers
                   and a hover arrow — reads as a "directory", distinct from the
                   filled icon tiles of the valor-agregado section above. */}
-              <div className="grid gap-x-12 sm:grid-cols-2">
-                {services.map((s, i) => {
-                  const Icon = SERVICE_ICONS[i % SERVICE_ICONS.length];
-                  const tg = (s as { tagline?: string }).tagline;
+              {services.length === 1 ? (
+                /* Un solo servicio: lo desarrollamos para que no quede media
+                   cuadrícula vacía. */
+                (() => {
+                  const s = services[0];
+                  const Icon = SERVICE_ICONS[0];
+                  const desc =
+                    s.blurb && s.blurb.length > 0
+                      ? s.blurb
+                      : `En ${s.name.toLowerCase()} ponemos toda nuestra experiencia a tu servicio: analizamos tu situación, te asesoramos con claridad y te proponemos la mejor solución para tu caso, sin compromiso.`;
+                  const includes = [
+                    "Primer contacto sin compromiso",
+                    "Atención cercana y personalizada",
+                    "Soluciones adaptadas a tu caso",
+                    "Acompañamiento en todo el proceso",
+                  ];
                   return (
-                    <motion.div
-                      key={i}
-                      {...fadeUp}
-                      transition={{ ...fadeUp.transition, delay: 0.04 * i }}
-                      className="group flex items-start gap-5 border-t py-6"
-                      style={hairline}
-                    >
-                      <div
-                        style={{
-                          color: palette.accent,
-                          borderColor: `${palette.accent}40`,
-                          backgroundColor: `${palette.accent}0d`,
-                        }}
-                        className="flex size-12 shrink-0 items-center justify-center rounded-full border"
-                      >
-                        <Icon className="size-6" />
-                      </div>
-                      <div className="flex-1">
-                        <h3
-                          style={display}
-                          className="text-lg font-semibold sm:text-xl"
+                    <motion.div {...fadeUp} className="border-t py-8" style={hairline}>
+                      <div className="flex items-start gap-5">
+                        <div
+                          style={{
+                            color: palette.accent,
+                            borderColor: `${palette.accent}40`,
+                            backgroundColor: `${palette.accent}0d`,
+                          }}
+                          className="flex size-12 shrink-0 items-center justify-center rounded-full border"
                         >
-                          {s.name}
-                        </h3>
-                        {s.blurb && (
-                          <p className="mt-1.5 text-base leading-relaxed opacity-85">
-                            {s.blurb}
-                          </p>
-                        )}
-                        {tg && (
-                          <p
-                            style={{ color: palette.accent }}
-                            className="mt-2 text-[13px] font-semibold uppercase tracking-wider"
+                          <Icon className="size-6" />
+                        </div>
+                        <div>
+                          <h3
+                            style={display}
+                            className="text-xl font-semibold sm:text-2xl"
                           >
-                            {tg}
+                            {s.name}
+                          </h3>
+                          <p className="mt-2 text-lg leading-relaxed opacity-85">
+                            {desc}
                           </p>
-                        )}
+                        </div>
                       </div>
-                      <IconArrowRight
-                        className="mt-2 size-5 shrink-0 opacity-30 transition group-hover:translate-x-1 group-hover:opacity-100"
-                        style={{ color: palette.accent }}
-                      />
+                      <ul className="mt-7 grid gap-x-10 gap-y-3 sm:grid-cols-2">
+                        {includes.map((p) => (
+                          <li
+                            key={p}
+                            className="flex items-start gap-2.5 text-base opacity-90"
+                          >
+                            <svg
+                              width="18"
+                              height="18"
+                              viewBox="0 0 14 14"
+                              fill="none"
+                              className="mt-1 shrink-0"
+                              style={{ color: palette.accent }}
+                            >
+                              <path d="M3 7.5L6 10.5L11 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            <span>{p}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </motion.div>
                   );
-                })}
-              </div>
+                })()
+              ) : (
+                <div className="grid gap-x-12 sm:grid-cols-2">
+                  {services.map((s, i) => {
+                    const Icon = SERVICE_ICONS[i % SERVICE_ICONS.length];
+                    const tg = (s as { tagline?: string }).tagline;
+                    return (
+                      <motion.div
+                        key={i}
+                        {...fadeUp}
+                        transition={{ ...fadeUp.transition, delay: 0.04 * i }}
+                        className="group flex items-start gap-5 border-t py-6"
+                        style={hairline}
+                      >
+                        <div
+                          style={{
+                            color: palette.accent,
+                            borderColor: `${palette.accent}40`,
+                            backgroundColor: `${palette.accent}0d`,
+                          }}
+                          className="flex size-12 shrink-0 items-center justify-center rounded-full border"
+                        >
+                          <Icon className="size-6" />
+                        </div>
+                        <div className="flex-1">
+                          <h3
+                            style={display}
+                            className="text-lg font-semibold sm:text-xl"
+                          >
+                            {s.name}
+                          </h3>
+                          {s.blurb && (
+                            <p className="mt-1.5 text-base leading-relaxed opacity-85">
+                              {s.blurb}
+                            </p>
+                          )}
+                          {tg && (
+                            <p
+                              style={{ color: palette.accent }}
+                              className="mt-2 text-[13px] font-semibold uppercase tracking-wider"
+                            >
+                              {tg}
+                            </p>
+                          )}
+                        </div>
+                        <IconArrowRight
+                          className="mt-2 size-5 shrink-0 opacity-30 transition group-hover:translate-x-1 group-hover:opacity-100"
+                          style={{ color: palette.accent }}
+                        />
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </section>
         ) : (
