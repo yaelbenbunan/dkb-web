@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import Script from "next/script";
 import { Container } from "@/components/ui/Container";
 import { Reveal } from "@/components/ui/Reveal";
@@ -231,21 +232,37 @@ export function MarketingLandingPage({ landing }: Props) {
 function CaseCard({ caseRef }: { caseRef: MarketingCase }) {
   const study = getCaseStudyBySlug(caseRef.slug);
   if (!study) return null;
-  const logo =
-    study.clientLogo?.replace("/positivo.", "/negativo.") ??
-    `/img/casos/${study.slug}/logo/negativo.webp`;
+  const logoColor =
+    study.clientLogo ?? `/img/casos/${study.slug}/logo/positivo.webp`;
+  const logoWhite = logoColor.includes("/positivo.")
+    ? logoColor.replace("/positivo.", "/negativo.")
+    : `/img/casos/${study.slug}/logo/negativo.webp`;
 
   return (
-    <article className="flex h-full flex-col items-center text-center">
-      <div className="flex h-16 items-center justify-center">
-        <Image
-          src={logo}
-          alt={study.client}
-          width={220}
-          height={64}
-          className="h-12 w-auto max-w-[180px] object-contain"
-        />
-      </div>
+    <article className="group flex h-full flex-col items-center text-center">
+      <Link
+        href={`/casos-de-exito/${study.slug}`}
+        aria-label={`Ver caso de éxito: ${study.client}`}
+        className="flex h-28 w-full items-center justify-center rounded-2xl border border-border/60 bg-white px-8 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-accent hover:bg-accent hover:shadow-[0_12px_28px_-10px_rgba(24,123,239,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg-subtle"
+      >
+        <span className="relative inline-flex h-16 w-full items-center justify-center">
+          <Image
+            src={logoColor}
+            alt={study.client}
+            width={320}
+            height={96}
+            className="h-16 w-auto max-w-[220px] object-contain transition-opacity duration-200 group-hover:opacity-0"
+          />
+          <Image
+            src={logoWhite}
+            alt=""
+            aria-hidden
+            width={320}
+            height={96}
+            className="absolute inset-0 m-auto h-16 w-auto max-w-[220px] object-contain opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+          />
+        </span>
+      </Link>
       <p className="mt-5 text-pretty text-base leading-relaxed text-fg-muted">
         {caseRef.description}
       </p>
