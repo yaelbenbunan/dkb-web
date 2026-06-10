@@ -262,15 +262,25 @@ function CaseCard({ caseRef }: { caseRef: MarketingCase }) {
         aria-hidden
         className="pointer-events-none absolute -right-16 -top-20 h-44 w-44 rounded-full bg-accent/25 opacity-60 blur-3xl transition-opacity duration-300 group-hover:opacity-100"
       />
-      {/* Logo en blanco */}
-      <div className="relative flex h-20 items-center justify-center">
-        <Image
-          src={logoWhite}
-          alt={study.client}
-          width={320}
-          height={96}
-          className="h-14 w-auto max-w-[200px] object-contain opacity-90 transition-opacity duration-300 group-hover:opacity-100"
-        />
+      {/* Logo: blanco por defecto, a color en hover */}
+      <div className="relative flex h-24 items-center justify-center">
+        <span className="relative inline-flex h-20 w-full items-center justify-center">
+          <Image
+            src={logoWhite}
+            alt={study.client}
+            width={360}
+            height={120}
+            className="h-20 w-auto max-w-[260px] object-contain opacity-90 transition-opacity duration-300 group-hover:opacity-0"
+          />
+          <Image
+            src={logoColor}
+            alt=""
+            aria-hidden
+            width={360}
+            height={120}
+            className="absolute inset-0 m-auto h-20 w-auto max-w-[260px] object-contain opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+          />
+        </span>
       </div>
       <p className="relative mt-6 flex-1 text-pretty text-[15px] leading-relaxed text-fg-muted">
         {caseRef.description}
