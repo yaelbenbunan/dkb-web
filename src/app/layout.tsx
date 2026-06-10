@@ -2,15 +2,12 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Source_Sans_3 } from "next/font/google";
 import "./globals.css";
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
 import { CookieBanner } from "@/components/legal/CookieBanner";
 import { ScrollProgress } from "@/components/ui/ScrollProgress";
 import { Analytics } from "@/components/analytics/Analytics";
 import { GTM } from "@/components/analytics/GTM";
 import { GTMNoScript } from "@/components/analytics/GTMNoScript";
 import { LinkTracker } from "@/components/analytics/LinkTracker";
-import { WhatsAppBubble } from "@/components/layout/WhatsAppBubble";
 
 const sourceSans = Source_Sans_3({
   subsets: ["latin"],
@@ -170,12 +167,7 @@ export default function RootLayout({
           Saltar al contenido
         </a>
         <ScrollProgress />
-        <Header />
-        <main id="main-content" className="min-h-[calc(100vh-5rem)]">
-          {children}
-        </main>
-        <Footer />
-        <WhatsAppBubble />
+        {children}
         <CookieBanner />
         <Analytics />
         <LinkTracker />
