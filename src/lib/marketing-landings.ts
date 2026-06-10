@@ -179,19 +179,19 @@ export const MARKETING_CLINICAS: MarketingLanding = {
   faqs: [
     {
       q: "¿Tengo que cambiar mi web actual?",
-      a: "No siempre. Revisamos tu web y, si está bien orientada a conversión, trabajamos sobre ella. Si frena las citas, te proponemos mejorarla o rehacerla — siempre enfocada a resultados, no por hacer.",
+      a: "No siempre. Primero miramos cómo está la tuya. Si ya te trae citas, la aprovechamos. Y si te las está frenando, te decimos qué cambiaríamos o si compensa rehacerla. Solo tocamos lo que de verdad va a traerte pacientes.",
     },
     {
-      q: "¿Vosotros gestionáis las campañas o solo la web?",
-      a: "Nos encargamos de todo: la web y la gestión completa de las campañas en Google, Meta o el canal que mejor funcione para tu especialidad.",
+      q: "¿Vosotros lleváis las campañas o solo la web?",
+      a: "Las dos cosas. Hacemos la web y también llevamos las campañas en Google, Instagram o donde mejor te encuentren tus pacientes. Tú no tienes que estar pendiente de nada.",
     },
     {
       q: "¿En cuánto tiempo veré resultados?",
-      a: "Las campañas empiezan a traer contactos desde las primeras semanas. La parte de posicionamiento orgánico es progresiva, y la vamos construyendo en paralelo.",
+      a: "Con las campañas de pago, los primeros contactos suelen llegar en las primeras semanas. Salir bien posicionado en Google de forma natural lleva más tiempo, y lo vamos trabajando a la vez para que el resultado se mantenga.",
     },
     {
       q: "¿Trabajáis con mi especialidad?",
-      a: "Sí. Hemos trabajado con clínicas dentales, urología, estética y más. Adaptamos el mensaje y la segmentación a cada especialidad.",
+      a: "Sí. Hemos trabajado con clínicas dentales, de urología, estética y otras. Cada especialidad tiene su tipo de paciente, así que adaptamos el mensaje y a quién se lo mostramos.",
     },
   ],
 
@@ -292,19 +292,19 @@ export const MARKETING_NEGOCIOS: MarketingLanding = {
   faqs: [
     {
       q: "¿Tengo que cambiar mi web actual?",
-      a: "No siempre. Revisamos tu web y, si vende bien, trabajamos sobre ella. Si frena las ventas, te proponemos mejorarla o rehacerla — siempre enfocada a resultados, no por hacer.",
+      a: "No siempre. Primero miramos cómo está la tuya. Si ya te trae clientes, la aprovechamos. Y si los está espantando, te decimos qué cambiaríamos o si compensa rehacerla. Solo tocamos lo que de verdad va a darte ventas.",
     },
     {
-      q: "¿Vosotros gestionáis las campañas o solo la web?",
-      a: "Nos encargamos de todo: la web y la gestión completa de las campañas en Google, Meta o el canal que mejor funcione para tu negocio.",
+      q: "¿Vosotros lleváis las campañas o solo la web?",
+      a: "Las dos cosas. Hacemos la web y también llevamos las campañas en Google, Instagram o donde mejor funcione para tu negocio. Tú te dedicas a lo tuyo y nosotros a traerte clientes.",
     },
     {
       q: "¿Sirve aunque mi negocio sea pequeño y local?",
-      a: "Sí. Trabajamos la segmentación por zona para que tu inversión vaya a clientes de tu área que realmente pueden comprarte.",
+      a: "Sí, es justo donde más se nota. Mostramos tus anuncios solo a gente de tu zona, así no gastas dinero en personas que están demasiado lejos para comprarte.",
     },
     {
       q: "¿En cuánto tiempo veré resultados?",
-      a: "Las campañas empiezan a traer contactos desde las primeras semanas. El posicionamiento orgánico es progresivo y lo construimos en paralelo.",
+      a: "Con las campañas de pago, los primeros contactos suelen llegar en las primeras semanas. Salir bien posicionado en Google de forma natural lleva más tiempo, y lo vamos trabajando a la vez para que el resultado se mantenga.",
     },
   ],
 
