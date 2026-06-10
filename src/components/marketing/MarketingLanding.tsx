@@ -153,13 +153,26 @@ export function MarketingLandingPage({ landing }: Props) {
               </p>
             </div>
           </Reveal>
-          <div className="mx-auto mt-14 grid max-w-5xl gap-8 sm:grid-cols-3">
+          <div className="mx-auto mt-14 grid max-w-5xl gap-6 sm:grid-cols-3">
             {landing.cases.map((c, i) => (
               <Reveal key={c.slug} delay={i * 0.1}>
                 <CaseCard caseRef={c} />
               </Reveal>
             ))}
           </div>
+          <Reveal>
+            <div className="mt-12 flex justify-center">
+              <Link
+                href="/casos-de-exito"
+                className="group inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-border-strong px-7 text-base font-semibold text-fg transition-all hover:-translate-y-0.5 hover:border-accent hover:text-accent"
+              >
+                Ver todos los casos de éxito
+                <span className="transition-transform duration-200 group-hover:translate-x-1">
+                  <ArrowRightIcon />
+                </span>
+              </Link>
+            </div>
+          </Reveal>
         </Container>
       </section>
 
@@ -239,34 +252,50 @@ function CaseCard({ caseRef }: { caseRef: MarketingCase }) {
     : `/img/casos/${study.slug}/logo/negativo.webp`;
 
   return (
-    <article className="group flex h-full flex-col items-center text-center">
-      <Link
-        href={`/casos-de-exito/${study.slug}`}
-        aria-label={`Ver caso de éxito: ${study.client}`}
-        className="flex h-28 w-full items-center justify-center rounded-2xl border border-border/60 bg-white px-8 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-accent hover:bg-accent hover:shadow-[0_12px_28px_-10px_rgba(24,123,239,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg-subtle"
-      >
-        <span className="relative inline-flex h-16 w-full items-center justify-center">
-          <Image
-            src={logoColor}
-            alt={study.client}
-            width={320}
-            height={96}
-            className="h-16 w-auto max-w-[220px] object-contain transition-opacity duration-200 group-hover:opacity-0"
-          />
-          <Image
-            src={logoWhite}
-            alt=""
-            aria-hidden
-            width={320}
-            height={96}
-            className="absolute inset-0 m-auto h-16 w-auto max-w-[220px] object-contain opacity-0 transition-opacity duration-200 group-hover:opacity-100"
-          />
-        </span>
-      </Link>
-      <p className="mt-5 text-pretty text-base leading-relaxed text-fg-muted">
+    <Link
+      href={`/casos-de-exito/${study.slug}`}
+      aria-label={`Ver caso de éxito: ${study.client}`}
+      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/60 bg-bg-elevated p-7 transition-all duration-300 hover:-translate-y-1 hover:border-accent/60 hover:shadow-[0_24px_60px_-24px_rgba(24,123,239,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg-subtle"
+    >
+      {/* Brillo de marca */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-16 -top-20 h-44 w-44 rounded-full bg-accent/25 opacity-60 blur-3xl transition-opacity duration-300 group-hover:opacity-100"
+      />
+      {/* Logo en blanco */}
+      <div className="relative flex h-20 items-center justify-center">
+        <Image
+          src={logoWhite}
+          alt={study.client}
+          width={320}
+          height={96}
+          className="h-14 w-auto max-w-[200px] object-contain opacity-90 transition-opacity duration-300 group-hover:opacity-100"
+        />
+      </div>
+      <p className="relative mt-6 flex-1 text-pretty text-[15px] leading-relaxed text-fg-muted">
         {caseRef.description}
       </p>
-    </article>
+      <span className="relative mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-accent">
+        Ver caso
+        <span className="transition-transform duration-200 group-hover:translate-x-1">
+          <ArrowRightIcon />
+        </span>
+      </span>
+    </Link>
+  );
+}
+
+function ArrowRightIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M5 12h14M13 6l6 6-6 6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
