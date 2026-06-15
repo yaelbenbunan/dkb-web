@@ -21,10 +21,12 @@ export default async function PanelPage() {
     email: l.email,
     channel: l.channel,
     campaign: l.campaign,
+    website: l.current_website,
     notes: l.notes,
     followup: l.followup,
     account_manager: l.account_manager,
     status: String(l.status),
+    archived: l.archived,
   }));
 
   return (

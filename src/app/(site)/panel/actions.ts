@@ -11,6 +11,7 @@ import {
 import {
   updateLeadStatus,
   updateLeadField,
+  archiveLeads,
   deleteLeads,
   LEAD_STATUSES,
   type LeadStatus,
@@ -75,6 +76,18 @@ export async function setLeadFollowup(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (id) {
     await updateLeadField(id, "followup", String(formData.get("followup") ?? ""));
+    revalidatePath("/panel");
+  }
+}
+
+export async function archiveLeadsAction(formData: FormData) {
+  const ids = String(formData.get("ids") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const archived = String(formData.get("archived") ?? "true") === "true";
+  if (ids.length) {
+    await archiveLeads(ids, archived);
     revalidatePath("/panel");
   }
 }

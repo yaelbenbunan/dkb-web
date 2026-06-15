@@ -6,6 +6,7 @@ import {
   setLeadAccountManager,
   setLeadNotes,
   setLeadFollowup,
+  archiveLeadsAction,
   deleteLeadsAction,
 } from "./actions";
 import { LEAD_STATUSES, STATUS_COLORS } from "@/lib/lead-status";
@@ -19,10 +20,12 @@ export interface LeadRowView {
   email: string | null;
   channel: string | null;
   campaign: string | null;
+  website: string | null;
   notes: string | null;
   followup: string | null;
   account_manager: string | null;
   status: string;
+  archived: boolean;
 }
 
 function fmtDate(iso: string): string {
@@ -45,11 +48,42 @@ const CHANNEL_COLORS: Record<string, string> = {
   landing: "#0d9488",
 };
 
+/** Safe http(s) URL or null — never linkify javascript:/data: values. */
+function webHref(raw: string | null): string | null {
+  const v = (raw ?? "").trim();
+  if (!v) return null;
+  const withProto = /^https?:\/\//i.test(v) ? v : `https://${v}`;
+  try {
+    const u = new URL(withProto);
+    if (u.protocol === "http:" || u.protocol === "https:") return u.toString();
+  } catch {
+    /* not a URL */
+  }
+  return null;
+}
+
+const webLabel = (raw: string) =>
+  raw.replace(/^https?:\/\//i, "").replace(/\/$/, "");
+
 export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [deleting, startDelete] = useTransition();
+  const [statusFilter, setStatusFilter] = useState<string>("todos");
+  const [showArchived, setShowArchived] = useState(false);
+  const [busy, start] = useTransition();
 
-  const allSelected = leads.length > 0 && selected.size === leads.length;
+  // Pool for the current view (active vs archived), then status filter on top.
+  const pool = leads.filter((l) => (showArchived ? l.archived : !l.archived));
+  const visible =
+    statusFilter === "todos"
+      ? pool
+      : pool.filter((l) => l.status === statusFilter);
+
+  const archivedCount = leads.filter((l) => l.archived).length;
+  const statusCounts = (s: string) =>
+    pool.filter((l) => l.status === s).length;
+
+  const clearSel = () => setSelected(new Set());
+  const allSelected = visible.length > 0 && visible.every((l) => selected.has(l.id));
   const toggle = (id: string) =>
     setSelected((prev) => {
       const next = new Set(prev);
@@ -58,8 +92,23 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
       return next;
     });
   const toggleAll = () =>
-    setSelected(allSelected ? new Set() : new Set(leads.map((l) => l.id)));
+    setSelected(allSelected ? new Set() : new Set(visible.map((l) => l.id)));
 
+  const runBulk = (
+    action: (fd: FormData) => void | Promise<void>,
+    extra?: Record<string, string>,
+  ) => {
+    if (selected.size === 0) return;
+    const fd = new FormData();
+    fd.set("ids", [...selected].join(","));
+    for (const [k, v] of Object.entries(extra ?? {})) fd.set(k, v);
+    start(async () => {
+      await action(fd);
+      clearSel();
+    });
+  };
+
+  const onArchive = () => runBulk(archiveLeadsAction, { archived: String(!showArchived) });
   const onDelete = () => {
     if (selected.size === 0) return;
     if (
@@ -68,21 +117,73 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
       )
     )
       return;
-    const fd = new FormData();
-    fd.set("ids", [...selected].join(","));
-    startDelete(async () => {
-      await deleteLeadsAction(fd);
-      setSelected(new Set());
-    });
+    runBulk(deleteLeadsAction);
   };
 
   return (
     <>
+      {/* Toolbar: filtro por estado + archivados */}
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          gap: 8,
+          marginBottom: 14,
+        }}
+      >
+        <FilterChip
+          label="Todos"
+          count={pool.length}
+          active={statusFilter === "todos"}
+          color="#334155"
+          onClick={() => {
+            setStatusFilter("todos");
+            clearSel();
+          }}
+        />
+        {LEAD_STATUSES.map((s) => (
+          <FilterChip
+            key={s}
+            label={s}
+            count={statusCounts(s)}
+            active={statusFilter === s}
+            color={STATUS_COLORS[s] ?? "#334155"}
+            onClick={() => {
+              setStatusFilter(s);
+              clearSel();
+            }}
+          />
+        ))}
+        <div style={{ flex: 1 }} />
+        <button
+          type="button"
+          onClick={() => {
+            setShowArchived((v) => !v);
+            setStatusFilter("todos");
+            clearSel();
+          }}
+          style={{
+            border: "1px solid #cbd5e1",
+            background: showArchived ? "#0b1220" : "#fff",
+            color: showArchived ? "#fff" : "#475569",
+            borderRadius: 999,
+            padding: "6px 14px",
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          {showArchived ? "← Volver a activos" : `🗄 Archivados (${archivedCount})`}
+        </button>
+      </div>
+
+      {/* Barra de acciones en lote */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 12,
+          gap: 10,
           marginBottom: 12,
           minHeight: 34,
         }}
@@ -90,27 +191,27 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
         <span style={{ fontSize: 13, color: "#475569" }}>
           {selected.size > 0
             ? `${selected.size} seleccionado${selected.size > 1 ? "s" : ""}`
-            : `${leads.length} lead${leads.length === 1 ? "" : "s"}`}
+            : `${visible.length} lead${visible.length === 1 ? "" : "s"}`}
         </span>
         {selected.size > 0 && (
-          <button
-            type="button"
-            onClick={onDelete}
-            disabled={deleting}
-            style={{
-              border: "1px solid #fecaca",
-              background: "#fef2f2",
-              color: "#b91c1c",
-              borderRadius: 8,
-              padding: "6px 14px",
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: deleting ? "wait" : "pointer",
-              opacity: deleting ? 0.6 : 1,
-            }}
-          >
-            🗑 Eliminar
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={onArchive}
+              disabled={busy}
+              style={btnStyle("#0b1220", "#f1f5f9", busy)}
+            >
+              {showArchived ? "♻ Desarchivar" : "🗄 Archivar"}
+            </button>
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={busy}
+              style={btnStyle("#fef2f2", "#b91c1c", busy, "#fecaca")}
+            >
+              🗑 Eliminar
+            </button>
+          </>
         )}
       </div>
 
@@ -127,7 +228,7 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
             borderCollapse: "collapse",
             width: "100%",
             fontSize: 14,
-            minWidth: 1100,
+            minWidth: 1200,
           }}
         >
           <thead>
@@ -146,6 +247,7 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
                 "Nombre",
                 "Teléfono",
                 "Email",
+                "Web",
                 "Canal",
                 "Campaña",
                 "Notas adicionales",
@@ -160,10 +262,10 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
             </tr>
           </thead>
           <tbody>
-            {leads.length === 0 && (
+            {visible.length === 0 && (
               <tr>
                 <td
-                  colSpan={11}
+                  colSpan={12}
                   style={{
                     ...td,
                     textAlign: "center",
@@ -171,12 +273,13 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
                     padding: 28,
                   }}
                 >
-                  Aún no hay leads.
+                  {showArchived ? "No hay leads archivados." : "Aún no hay leads."}
                 </td>
               </tr>
             )}
-            {leads.map((l) => {
+            {visible.map((l) => {
               const isSel = selected.has(l.id);
+              const href = webHref(l.website);
               return (
                 <tr
                   key={l.id}
@@ -214,6 +317,20 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
                     {l.email ? (
                       <a href={`mailto:${l.email}`} style={{ color: "#187bef" }}>
                         {l.email}
+                      </a>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td style={td}>
+                    {href ? (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        style={{ color: "#187bef" }}
+                      >
+                        {webLabel(l.website ?? "")} ↗
                       </a>
                     ) : (
                       "—"
@@ -273,6 +390,52 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
         </table>
       </div>
     </>
+  );
+}
+
+function FilterChip({
+  label,
+  count,
+  active,
+  color,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  color: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        borderRadius: 999,
+        border: `1px solid ${active ? color : "#e2e8f0"}`,
+        background: active ? color : "#fff",
+        color: active ? "#fff" : "#475569",
+        fontWeight: 700,
+        fontSize: 12,
+        padding: "5px 12px",
+        cursor: "pointer",
+        textTransform: "capitalize",
+      }}
+    >
+      {label}
+      <span
+        style={{
+          fontSize: 11,
+          fontWeight: 800,
+          color: active ? "#fff" : "#94a3b8",
+        }}
+      >
+        {count}
+      </span>
+    </button>
   );
 }
 
@@ -414,6 +577,25 @@ function EditableCell({
       }}
     />
   );
+}
+
+function btnStyle(
+  bg: string,
+  color: string,
+  disabled: boolean,
+  border = "#334155",
+): React.CSSProperties {
+  return {
+    border: `1px solid ${border}`,
+    background: bg,
+    color,
+    borderRadius: 8,
+    padding: "6px 14px",
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: disabled ? "wait" : "pointer",
+    opacity: disabled ? 0.6 : 1,
+  };
 }
 
 const th: React.CSSProperties = {

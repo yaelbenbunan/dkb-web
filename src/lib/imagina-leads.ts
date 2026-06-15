@@ -30,6 +30,7 @@ export interface LeadRow {
   notes: string | null;
   followup: string | null;
   account_manager: string | null;
+  archived: boolean;
 }
 
 export interface SaveLeadInput {
@@ -140,6 +141,26 @@ export async function updateLeadField(
     return false;
   }
   return true;
+}
+
+/** Archive (or unarchive) one or more leads. Archived leads are hidden from
+ *  the panel by default. Returns the number of rows updated. */
+export async function archiveLeads(
+  ids: string[],
+  archived: boolean,
+): Promise<number> {
+  const sb = getSupabaseAdmin();
+  if (!sb || ids.length === 0) return 0;
+  const { data, error } = await sb
+    .from(TABLE)
+    .update({ archived })
+    .in("id", ids)
+    .select("id");
+  if (error) {
+    console.error("[imagina-leads] archiveLeads error:", error.message);
+    return 0;
+  }
+  return data?.length ?? 0;
 }
 
 /** Permanently delete one or more leads by id. Returns the number deleted. */
