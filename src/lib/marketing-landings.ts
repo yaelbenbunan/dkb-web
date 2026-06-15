@@ -91,6 +91,7 @@ export const MARKETING_CLINICAS: MarketingLanding = {
   key: "clinicas",
   path: "/marketing-clinicas",
   origin: "Landing Clínicas (Salud)",
+  heroImage: "/img/landings/header-clinicas.jpg",
 
   metaTitle: "Marketing para clínicas — más pacientes cada mes | dinkbit",
   metaDescription:
@@ -204,6 +205,7 @@ export const MARKETING_NEGOCIOS: MarketingLanding = {
   key: "negocios",
   path: "/marketing-negocios-locales",
   origin: "Landing Negocios locales",
+  heroImage: "/img/landings/header-negocios.jpg",
 
   metaTitle: "Marketing para negocios locales — más clientes | dinkbit",
   metaDescription:

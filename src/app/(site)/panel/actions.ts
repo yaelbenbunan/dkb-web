@@ -10,9 +10,12 @@ import {
 } from "@/lib/panel-auth";
 import {
   updateLeadStatus,
+  updateLeadField,
+  deleteLeads,
   LEAD_STATUSES,
   type LeadStatus,
 } from "@/lib/imagina-leads";
+import { ACCOUNT_MANAGERS } from "@/lib/account-managers";
 
 export async function panelLogin(formData: FormData) {
   const user = String(formData.get("user") ?? "");
@@ -46,6 +49,43 @@ export async function setLeadStatus(formData: FormData) {
   const status = String(formData.get("status") ?? "");
   if (id && LEAD_STATUSES.includes(status as LeadStatus)) {
     await updateLeadStatus(id, status as LeadStatus);
+    revalidatePath("/panel");
+  }
+}
+
+export async function setLeadAccountManager(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  const am = String(formData.get("account_manager") ?? "");
+  // Empty string clears the assignment; otherwise must be a known manager.
+  if (id && (am === "" || ACCOUNT_MANAGERS.includes(am as never))) {
+    await updateLeadField(id, "account_manager", am);
+    revalidatePath("/panel");
+  }
+}
+
+export async function setLeadNotes(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  if (id) {
+    await updateLeadField(id, "notes", String(formData.get("notes") ?? ""));
+    revalidatePath("/panel");
+  }
+}
+
+export async function setLeadFollowup(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  if (id) {
+    await updateLeadField(id, "followup", String(formData.get("followup") ?? ""));
+    revalidatePath("/panel");
+  }
+}
+
+export async function deleteLeadsAction(formData: FormData) {
+  const ids = String(formData.get("ids") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (ids.length) {
+    await deleteLeads(ids);
     revalidatePath("/panel");
   }
 }

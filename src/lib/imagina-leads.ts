@@ -25,6 +25,11 @@ export interface LeadRow {
   review_rating: string | null;
   review_comment: string | null;
   status: LeadStatus | string;
+  channel: string | null;
+  campaign: string | null;
+  notes: string | null;
+  followup: string | null;
+  account_manager: string | null;
 }
 
 export interface SaveLeadInput {
@@ -116,6 +121,41 @@ export async function updateLeadStatus(
     return false;
   }
   return true;
+}
+
+/** Update a single free-text/select field on a lead (account_manager, notes, followup). */
+export async function updateLeadField(
+  leadId: string,
+  field: "account_manager" | "notes" | "followup",
+  value: string,
+): Promise<boolean> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return false;
+  const { error } = await sb
+    .from(TABLE)
+    .update({ [field]: value.trim() || null })
+    .eq("id", leadId);
+  if (error) {
+    console.error(`[imagina-leads] updateLeadField(${field}) error:`, error.message);
+    return false;
+  }
+  return true;
+}
+
+/** Permanently delete one or more leads by id. Returns the number deleted. */
+export async function deleteLeads(ids: string[]): Promise<number> {
+  const sb = getSupabaseAdmin();
+  if (!sb || ids.length === 0) return 0;
+  const { data, error } = await sb
+    .from(TABLE)
+    .delete()
+    .in("id", ids)
+    .select("id");
+  if (error) {
+    console.error("[imagina-leads] deleteLeads error:", error.message);
+    return 0;
+  }
+  return data?.length ?? 0;
 }
 
 export async function listLeads(limit = 500): Promise<LeadRow[]> {
