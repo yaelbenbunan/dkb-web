@@ -9,10 +9,11 @@ export const LEAD_STATUSES = [
 ] as const;
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
 
+// One clearly distinct hue per status — solid, saturated, easy to scan.
 export const STATUS_COLORS: Record<string, string> = {
-  nuevo: "#2563eb",
-  contactado: "#7c3aed",
-  propuesta: "#d97706",
-  ganado: "#16a34a",
-  perdido: "#64748b",
+  nuevo: "#2563eb", // azul
+  contactado: "#0891b2", // cian
+  propuesta: "#d97706", // ámbar
+  ganado: "#16a34a", // verde
+  perdido: "#dc2626", // rojo
 };

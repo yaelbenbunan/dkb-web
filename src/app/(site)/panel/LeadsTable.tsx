@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import {
   setLeadStatus,
   setLeadAccountManager,
@@ -47,6 +47,7 @@ const CHANNEL_COLORS: Record<string, string> = {
 
 export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleting, startDelete] = useTransition();
 
   const allSelected = leads.length > 0 && selected.size === leads.length;
   const toggle = (id: string) =>
@@ -58,6 +59,22 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
     });
   const toggleAll = () =>
     setSelected(allSelected ? new Set() : new Set(leads.map((l) => l.id)));
+
+  const onDelete = () => {
+    if (selected.size === 0) return;
+    if (
+      !confirm(
+        `¿Eliminar ${selected.size} lead${selected.size > 1 ? "s" : ""}? Esta acción no se puede deshacer.`,
+      )
+    )
+      return;
+    const fd = new FormData();
+    fd.set("ids", [...selected].join(","));
+    startDelete(async () => {
+      await deleteLeadsAction(fd);
+      setSelected(new Set());
+    });
+  };
 
   return (
     <>
@@ -76,38 +93,24 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
             : `${leads.length} lead${leads.length === 1 ? "" : "s"}`}
         </span>
         {selected.size > 0 && (
-          <form
-            action={deleteLeadsAction}
-            onSubmit={(e) => {
-              if (
-                !confirm(
-                  `¿Eliminar ${selected.size} lead${selected.size > 1 ? "s" : ""}? Esta acción no se puede deshacer.`,
-                )
-              ) {
-                e.preventDefault();
-                return;
-              }
-              setSelected(new Set());
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={deleting}
+            style={{
+              border: "1px solid #fecaca",
+              background: "#fef2f2",
+              color: "#b91c1c",
+              borderRadius: 8,
+              padding: "6px 14px",
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: deleting ? "wait" : "pointer",
+              opacity: deleting ? 0.6 : 1,
             }}
-            style={{ margin: 0 }}
           >
-            <input type="hidden" name="ids" value={[...selected].join(",")} />
-            <button
-              type="submit"
-              style={{
-                border: "1px solid #fecaca",
-                background: "#fef2f2",
-                color: "#b91c1c",
-                borderRadius: 8,
-                padding: "6px 14px",
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              🗑 Eliminar
-            </button>
-          </form>
+            🗑 Eliminar
+          </button>
         )}
       </div>
 
@@ -239,22 +242,25 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
                   <td style={{ ...td, whiteSpace: "normal", minWidth: 240 }}>
                     <EditableCell
                       id={l.id}
-                      name="notes"
+                      field="notes"
                       action={setLeadNotes}
                       value={l.notes ?? ""}
                       placeholder="Añadir notas…"
                     />
                   </td>
                   <td style={td}>
-                    <AccountManagerSelect id={l.id} value={l.account_manager ?? ""} />
+                    <AccountManagerSelect
+                      id={l.id}
+                      value={l.account_manager ?? ""}
+                    />
                   </td>
                   <td style={td}>
-                    <StatusSelectInline id={l.id} value={l.status} />
+                    <StatusSelect id={l.id} value={l.status} />
                   </td>
                   <td style={{ ...td, whiteSpace: "normal", minWidth: 220 }}>
                     <EditableCell
                       id={l.id}
-                      name="followup"
+                      field="followup"
                       action={setLeadFollowup}
                       value={l.followup ?? ""}
                       placeholder="Ej: llamado, no contesta…"
@@ -270,109 +276,143 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
   );
 }
 
+/** Controlled select that persists via a server action with optimistic state.
+ *  No <form> — avoids React's form-reset snapping the value back. */
+function StatusSelect({ id, value }: { id: string; value: string }) {
+  const [val, setVal] = useState(value);
+  const [pending, start] = useTransition();
+  useEffect(() => setVal(value), [value]);
+
+  const color = STATUS_COLORS[val] ?? "#64748b";
+  return (
+    <select
+      value={val}
+      disabled={pending}
+      onChange={(e) => {
+        const next = e.target.value;
+        setVal(next);
+        const fd = new FormData();
+        fd.set("id", id);
+        fd.set("status", next);
+        start(() => setLeadStatus(fd));
+      }}
+      style={{
+        borderRadius: 999,
+        border: "none",
+        color: "#fff",
+        background: color,
+        fontWeight: 700,
+        fontSize: 12,
+        padding: "5px 12px",
+        cursor: pending ? "wait" : "pointer",
+        textTransform: "capitalize",
+        opacity: pending ? 0.6 : 1,
+        appearance: "none",
+      }}
+    >
+      {LEAD_STATUSES.map((s) => (
+        <option key={s} value={s} style={{ color: "#0f172a", background: "#fff" }}>
+          {s}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function AccountManagerSelect({ id, value }: { id: string; value: string }) {
+  const [val, setVal] = useState(value);
+  const [pending, start] = useTransition();
+  useEffect(() => setVal(value), [value]);
+
+  const color = AM_COLORS[val] ?? "#94a3b8";
+  const assigned = val !== "";
+  return (
+    <select
+      value={val}
+      disabled={pending}
+      onChange={(e) => {
+        const next = e.target.value;
+        setVal(next);
+        const fd = new FormData();
+        fd.set("id", id);
+        fd.set("account_manager", next);
+        start(() => setLeadAccountManager(fd));
+      }}
+      style={{
+        borderRadius: 999,
+        border: `1px solid ${assigned ? color : "#cbd5e1"}`,
+        color: assigned ? "#fff" : "#64748b",
+        background: assigned ? color : "#fff",
+        fontWeight: 700,
+        fontSize: 12,
+        padding: "5px 12px",
+        cursor: pending ? "wait" : "pointer",
+        opacity: pending ? 0.6 : 1,
+        appearance: "none",
+      }}
+    >
+      <option value="" style={{ color: "#0f172a", background: "#fff" }}>
+        Sin asignar
+      </option>
+      {ACCOUNT_MANAGERS.map((am) => (
+        <option key={am} value={am} style={{ color: "#0f172a", background: "#fff" }}>
+          {am}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+/** Controlled textarea that saves on blur (only when changed) via a server action. */
 function EditableCell({
   id,
-  name,
+  field,
   action,
   value,
   placeholder,
 }: {
   id: string;
-  name: "notes" | "followup";
+  field: "notes" | "followup";
   action: (formData: FormData) => void | Promise<void>;
   value: string;
   placeholder: string;
 }) {
-  const formRef = useRef<HTMLFormElement>(null);
-  return (
-    <form ref={formRef} action={action} style={{ margin: 0 }}>
-      <input type="hidden" name="id" value={id} />
-      <textarea
-        name={name}
-        defaultValue={value}
-        placeholder={placeholder}
-        rows={2}
-        onBlur={(e) => {
-          if (e.target.value !== value) formRef.current?.requestSubmit();
-        }}
-        style={{
-          width: "100%",
-          minWidth: 200,
-          resize: "vertical",
-          border: "1px solid #e2e8f0",
-          borderRadius: 8,
-          padding: "6px 8px",
-          fontSize: 13,
-          fontFamily: "inherit",
-          color: "#0f172a",
-          background: "#fff",
-        }}
-      />
-    </form>
-  );
-}
+  const [val, setVal] = useState(value);
+  const [pending, start] = useTransition();
+  const lastSaved = useRef(value);
+  useEffect(() => {
+    setVal(value);
+    lastSaved.current = value;
+  }, [value]);
 
-function AccountManagerSelect({ id, value }: { id: string; value: string }) {
-  const formRef = useRef<HTMLFormElement>(null);
-  const color = AM_COLORS[value] ?? "#94a3b8";
   return (
-    <form ref={formRef} action={setLeadAccountManager} style={{ margin: 0 }}>
-      <input type="hidden" name="id" value={id} />
-      <select
-        name="account_manager"
-        defaultValue={value}
-        onChange={() => formRef.current?.requestSubmit()}
-        style={{
-          borderRadius: 999,
-          border: `1px solid ${value ? color : "#cbd5e1"}`,
-          color: value ? color : "#64748b",
-          background: value ? `${color}14` : "#fff",
-          fontWeight: 700,
-          fontSize: 12,
-          padding: "5px 10px",
-          cursor: "pointer",
-        }}
-      >
-        <option value="">Sin asignar</option>
-        {ACCOUNT_MANAGERS.map((am) => (
-          <option key={am} value={am}>
-            {am}
-          </option>
-        ))}
-      </select>
-    </form>
-  );
-}
-
-function StatusSelectInline({ id, value }: { id: string; value: string }) {
-  const formRef = useRef<HTMLFormElement>(null);
-  const color = STATUS_COLORS[value] ?? "#cbd5e1";
-  return (
-    <form ref={formRef} action={setLeadStatus} style={{ margin: 0 }}>
-      <input type="hidden" name="id" value={id} />
-      <select
-        name="status"
-        defaultValue={value}
-        onChange={() => formRef.current?.requestSubmit()}
-        style={{
-          borderRadius: 999,
-          border: `1px solid ${color}`,
-          color,
-          background: `${color}14`,
-          fontWeight: 700,
-          fontSize: 12,
-          padding: "5px 10px",
-          cursor: "pointer",
-          textTransform: "capitalize",
-        }}
-      >
-        {LEAD_STATUSES.map((s) => (
-          <option key={s} value={s}>
-            {s}
-          </option>
-        ))}
-      </select>
-    </form>
+    <textarea
+      value={val}
+      placeholder={placeholder}
+      rows={2}
+      disabled={pending}
+      onChange={(e) => setVal(e.target.value)}
+      onBlur={() => {
+        if (val === lastSaved.current) return;
+        lastSaved.current = val;
+        const fd = new FormData();
+        fd.set("id", id);
+        fd.set(field, val);
+        start(() => action(fd));
+      }}
+      style={{
+        width: "100%",
+        minWidth: 200,
+        resize: "vertical",
+        border: "1px solid #e2e8f0",
+        borderRadius: 8,
+        padding: "6px 8px",
+        fontSize: 13,
+        fontFamily: "inherit",
+        color: "#0f172a",
+        background: pending ? "#f8fafc" : "#fff",
+      }}
+    />
   );
 }
 
