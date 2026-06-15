@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { listLeads } from "@/lib/imagina-leads";
 import { LeadsTable, type LeadRowView } from "./LeadsTable";
 import { panelLogout } from "./actions";
@@ -68,6 +69,12 @@ export default async function PanelPage() {
             dinkbit
           </span>
           <strong style={{ fontSize: 16 }}>Leads · CRM</strong>
+          <Link
+            href="/panel/calculadora"
+            style={{ fontSize: 13, color: "#cbd5e1", textDecoration: "none" }}
+          >
+            🧮 Calculadora
+          </Link>
         </div>
         <form action={panelLogout} style={{ margin: 0 }}>
           <button
