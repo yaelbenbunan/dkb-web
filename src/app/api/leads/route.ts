@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { createWebhookLead } from "@/lib/imagina-leads";
 
@@ -7,11 +8,22 @@ import { createWebhookLead } from "@/lib/imagina-leads";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Header only — never accept the secret via query string (it leaks into access
+// logs, proxies and browser history).
 function providedSecret(req: NextRequest): string | null {
   const header =
     req.headers.get("x-webhook-secret") ?? req.headers.get("authorization");
-  if (header) return header.replace(/^Bearer\s+/i, "").trim();
-  return req.nextUrl.searchParams.get("secret");
+  if (!header) return null;
+  return header.replace(/^Bearer\s+/i, "").trim();
+}
+
+// Constant-time compare to avoid leaking the secret through timing.
+function secretMatches(provided: string | null, expected: string): boolean {
+  if (!provided) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
 }
 
 export async function POST(req: NextRequest) {
@@ -22,7 +34,7 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
-  if (providedSecret(req) !== expected) {
+  if (!secretMatches(providedSecret(req), expected)) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
