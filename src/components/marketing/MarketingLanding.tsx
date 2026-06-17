@@ -108,19 +108,28 @@ export function MarketingLandingPage({ landing }: Props) {
               </p>
             </div>
           </Reveal>
-          <div className="mx-auto mt-14 grid max-w-5xl gap-12 md:grid-cols-2 md:gap-10 md:divide-x md:divide-border/60">
+          <div className="mx-auto mt-14 grid max-w-5xl gap-6 md:grid-cols-2">
             {landing.subservices.map((s, i) => (
-              <Reveal key={s.title} delay={i * 0.1} className="md:px-8 md:first:pl-0">
-                <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-accent-soft text-accent-hover">
+              <Reveal
+                key={s.title}
+                delay={i * 0.1}
+                className="surface surface-hover relative flex h-full flex-col overflow-hidden rounded-2xl p-7 md:p-8"
+              >
+                {/* Sheen de cristal */}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-white/[0.08] via-transparent to-transparent"
+                />
+                <span className="relative inline-flex h-12 w-12 items-center justify-center rounded-xl bg-accent-soft text-accent-hover ring-1 ring-inset ring-white/10">
                   {i === 0 ? <MonitorIcon /> : <MegaphoneIcon />}
                 </span>
-                <h3 className="mt-5 text-xl font-bold leading-snug text-fg">
+                <h3 className="relative mt-5 text-xl font-bold leading-snug text-fg">
                   {s.title}
                 </h3>
-                <p className="mt-3 text-base leading-relaxed text-fg-muted">
+                <p className="relative mt-3 text-base leading-relaxed text-fg-muted">
                   {s.description}
                 </p>
-                <ul className="mt-6 grid gap-2.5">
+                <ul className="relative mt-6 grid gap-2.5 border-t border-border/50 pt-6">
                   {s.includes.map((inc) => (
                     <li
                       key={inc}
@@ -255,12 +264,17 @@ function CaseCard({ caseRef }: { caseRef: MarketingCase }) {
     <Link
       href={`/casos-de-exito/${study.slug}`}
       aria-label={`Ver caso de éxito: ${study.client}`}
-      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/60 bg-bg-elevated p-7 transition-all duration-300 hover:-translate-y-1 hover:border-accent/60 hover:shadow-[0_24px_60px_-24px_rgba(24,123,239,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg-subtle"
+      className="surface surface-hover group relative flex h-full flex-col overflow-hidden rounded-2xl p-7 transition-transform duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg-subtle"
     >
       {/* Brillo de marca */}
       <div
         aria-hidden
         className="pointer-events-none absolute -right-16 -top-20 h-44 w-44 rounded-full bg-accent/25 opacity-60 blur-3xl transition-opacity duration-300 group-hover:opacity-100"
+      />
+      {/* Sheen de cristal */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-white/[0.08] via-transparent to-transparent"
       />
       {/* Logo: blanco por defecto, a color en hover */}
       <div className="relative flex h-24 items-center justify-center">
