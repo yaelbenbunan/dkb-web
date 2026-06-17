@@ -193,23 +193,28 @@ export function MarketingLandingPage({ landing }: Props) {
               {landing.faqsTitle}
             </h2>
           </Reveal>
-          <Reveal>
-            <div className="mt-10 divide-y divide-border/60 border-y border-border/60">
-              {landing.faqs.map((f) => (
-                <details key={f.q} className="group py-5">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-base font-bold text-fg">
+          <div className="mt-10 grid gap-3">
+            {landing.faqs.map((f, i) => (
+              <Reveal key={f.q} delay={i * 0.05}>
+                <details className="group surface surface-hover relative overflow-hidden rounded-2xl">
+                  {/* Sheen de cristal */}
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-white/[0.08] via-transparent to-transparent"
+                  />
+                  <summary className="relative flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 text-base font-bold text-fg">
                     {f.q}
                     <span className="shrink-0 text-accent transition-transform group-open:rotate-45">
                       <PlusIcon />
                     </span>
                   </summary>
-                  <p className="mt-3 text-base leading-relaxed text-fg-muted">
+                  <p className="relative px-6 pb-6 text-base leading-relaxed text-fg-muted">
                     {f.a}
                   </p>
                 </details>
-              ))}
-            </div>
-          </Reveal>
+              </Reveal>
+            ))}
+          </div>
         </Container>
       </section>
 
