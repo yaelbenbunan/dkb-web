@@ -9,6 +9,11 @@ const schema = z
     email: z.string().trim().email("Email inválido"),
     phone: z.string().trim().min(6, "Teléfono demasiado corto"),
     device: z.string().trim().min(1, "Falta modelo"),
+    nif: z.string().trim().min(8, "NIF inválido"),
+    address: z.string().trim().min(4, "Dirección demasiado corta"),
+    postalCode: z.string().trim().regex(/^\d{5}$/, "Código postal inválido"),
+    city: z.string().trim().min(2, "Ciudad demasiado corta"),
+    bono: z.string().trim().min(1, "Falta número de bono"),
     website: z.string().max(0, "Honeypot field must be empty"),
     formLoadedAt: z.number(),
   })
@@ -30,6 +35,11 @@ export async function requestKitDigital(
     email: formData.get("email"),
     phone: formData.get("phone"),
     device: formData.get("device"),
+    nif: formData.get("nif"),
+    address: formData.get("address"),
+    postalCode: formData.get("postalCode"),
+    city: formData.get("city"),
+    bono: formData.get("bono"),
     website: formData.get("website") ?? "",
     formLoadedAt: Number(formData.get("formLoadedAt")),
   });
@@ -47,7 +57,8 @@ export async function requestKitDigital(
   }
 
   const resend = new Resend(apiKey);
-  const { name, email, phone, device } = parsed.data;
+  const { name, email, phone, device, nif, address, postalCode, city, bono } =
+    parsed.data;
 
   const { error } = await resend.emails.send({
     from,
@@ -59,6 +70,11 @@ export async function requestKitDigital(
       `Email: ${email}`,
       `Teléfono: ${phone}`,
       `Modelo de interés: ${device}`,
+      `NIF: ${nif}`,
+      `Número de bono: ${bono}`,
+      `Dirección de entrega: ${address}`,
+      `Código postal: ${postalCode}`,
+      `Ciudad: ${city}`,
       "",
       "Origen: landing /kit-digital de dinkbit.es.",
     ].join("\n"),

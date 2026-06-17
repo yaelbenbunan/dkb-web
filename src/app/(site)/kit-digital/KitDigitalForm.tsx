@@ -98,6 +98,59 @@ export function KitDigitalForm({ deviceOptions, defaultDevice }: Props) {
             ))}
           </select>
         </label>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block">
+            <span className={labelClass}>NIF *</span>
+            <input
+              name="nif"
+              required
+              placeholder="B12345678"
+              className={inputClass}
+            />
+          </label>
+          <label className="block">
+            <span className={labelClass}>Número de bono *</span>
+            <input
+              name="bono"
+              required
+              placeholder="Nº de bono Kit Digital"
+              className={inputClass}
+            />
+          </label>
+        </div>
+
+        <label className="block">
+          <span className={labelClass}>Dirección de entrega *</span>
+          <input
+            name="address"
+            required
+            placeholder="Calle, número, piso"
+            className={inputClass}
+          />
+        </label>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block">
+            <span className={labelClass}>Código postal *</span>
+            <input
+              name="postalCode"
+              required
+              inputMode="numeric"
+              placeholder="28001"
+              className={inputClass}
+            />
+          </label>
+          <label className="block">
+            <span className={labelClass}>Ciudad *</span>
+            <input
+              name="city"
+              required
+              placeholder="Madrid"
+              className={inputClass}
+            />
+          </label>
+        </div>
       </div>
 
       {/* Honeypot */}
