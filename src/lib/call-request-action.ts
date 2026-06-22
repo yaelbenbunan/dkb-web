@@ -2,6 +2,8 @@
 
 import { Resend } from "resend";
 import { z } from "zod";
+import { createWebhookLead } from "./imagina-leads";
+import { callRequestLead } from "./web-lead-origin";
 
 const callRequestSchema = z
   .object({
@@ -35,6 +37,10 @@ export async function sendCallRequest(
   if (!parsed.success) {
     return { ok: false, error: "Datos inválidos. Revisa los campos." };
   }
+
+  // Persist every web lead to the CRM (best-effort, never throws) before the
+  // email — so the lead is never lost even if Resend is down or misconfigured.
+  await createWebhookLead(callRequestLead(parsed.data));
 
   const apiKey = process.env.RESEND_API_KEY;
   const to = process.env.CONTACT_EMAIL_TO;
