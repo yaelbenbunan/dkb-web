@@ -3,7 +3,7 @@
 import { Resend } from "resend";
 import { z } from "zod";
 import { createWebhookLead } from "./imagina-leads";
-import { kitDigitalLead } from "./web-lead-origin";
+import { kitDigitalLead, utmFromFormData } from "./web-lead-origin";
 
 const schema = z
   .object({
@@ -52,7 +52,7 @@ export async function requestKitDigital(
 
   // Persist every web lead to the CRM (best-effort, never throws) before the
   // email. Only model/bono reach the CRM — NIF/address stay in the email.
-  await createWebhookLead(kitDigitalLead(parsed.data));
+  await createWebhookLead(kitDigitalLead(parsed.data, utmFromFormData(formData)));
 
   const apiKey = process.env.RESEND_API_KEY;
   const to = process.env.CONTACT_EMAIL_TO;

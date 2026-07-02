@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { appendUtms } from "@/lib/utm";
 import Link from "next/link";
 import { sendContactEmail } from "@/lib/contact-action";
 import { SOURCE_OPTIONS, CONTACT_INFO } from "@/lib/contact-info";
@@ -47,6 +48,7 @@ export function ContactForm({ services }: Props) {
         noValidate
         action={(fd) => {
           fd.set("formLoadedAt", String(loadedAt.current));
+          appendUtms(fd);
           setTouched(new Set());
           startTransition(async () => {
             const r = await sendContactEmail(fd);

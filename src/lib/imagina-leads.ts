@@ -127,7 +127,7 @@ export async function updateLeadStatus(
 /** Update a single free-text/select field on a lead (account_manager, notes, followup). */
 export async function updateLeadField(
   leadId: string,
-  field: "account_manager" | "notes" | "followup",
+  field: "account_manager" | "notes" | "followup" | "channel" | "campaign",
   value: string,
 ): Promise<boolean> {
   const sb = getSupabaseAdmin();

@@ -80,6 +80,22 @@ export async function setLeadFollowup(formData: FormData) {
   }
 }
 
+export async function setLeadChannel(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  if (id) {
+    await updateLeadField(id, "channel", String(formData.get("channel") ?? ""));
+    revalidatePath("/panel");
+  }
+}
+
+export async function setLeadCampaign(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  if (id) {
+    await updateLeadField(id, "campaign", String(formData.get("campaign") ?? ""));
+    revalidatePath("/panel");
+  }
+}
+
 export async function archiveLeadsAction(formData: FormData) {
   const ids = String(formData.get("ids") ?? "")
     .split(",")

@@ -8,6 +8,7 @@ import { Analytics } from "@/components/analytics/Analytics";
 import { GTM } from "@/components/analytics/GTM";
 import { GTMNoScript } from "@/components/analytics/GTMNoScript";
 import { LinkTracker } from "@/components/analytics/LinkTracker";
+import { UtmCapture } from "@/components/analytics/UtmCapture";
 
 const sourceSans = Source_Sans_3({
   subsets: ["latin"],
@@ -171,6 +172,7 @@ export default function RootLayout({
         <CookieBanner />
         <Analytics />
         <LinkTracker />
+        <UtmCapture />
       </body>
     </html>
   );

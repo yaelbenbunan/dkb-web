@@ -8,7 +8,7 @@ import {
   type ContactFieldErrors,
 } from "./validation";
 import { createWebhookLead } from "./imagina-leads";
-import { contactLead } from "./web-lead-origin";
+import { contactLead, utmFromFormData } from "./web-lead-origin";
 
 export async function sendContactEmail(
   formData: FormData,
@@ -42,7 +42,7 @@ export async function sendContactEmail(
 
   // Persist every web lead to the CRM (best-effort, never throws) before the
   // email — so the lead is never lost even if Resend is down or misconfigured.
-  await createWebhookLead(contactLead(parsed.data));
+  await createWebhookLead(contactLead(parsed.data, utmFromFormData(formData)));
 
   const apiKey = process.env.RESEND_API_KEY;
   const to = process.env.CONTACT_EMAIL_TO;

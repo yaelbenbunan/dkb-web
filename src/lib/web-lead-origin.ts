@@ -7,95 +7,164 @@ import type { WebhookLeadInput } from "./imagina-leads";
  * truth for that mapping so the origin labelling stays consistent across forms
  * and can be unit-tested without touching Resend or Supabase.
  *
- * Convention: paid landings are attributed to their acquisition channel
- * (Google Ads Performance Max — our only Meta campaign is "leads", which comes
- * in through the webhook, not these on-site forms). Organic on-site forms use
- * `channel: "Web"` and spell out the exact form in `notes`.
+ * Convention: cada formulario tiene un canal/campaña por defecto (tráfico
+ * orgánico del sitio → `channel: "Web"`). Si la visita traía UTMs (o un clic de
+ * anuncio), `attribution()` sobrescribe el canal/campaña con el origen real:
+ * p.ej. `utm_source=google&utm_campaign=search` → canal "Google Ads",
+ * campaña "search". Así basta con etiquetar los anuncios con UTMs.
  */
 
-export function homeHeroLead(d: {
-  name: string;
-  email: string;
-  phone: string;
-  service: string;
-}): WebhookLeadInput {
+export interface UtmInput {
+  utmSource?: string | null;
+  utmMedium?: string | null;
+  utmCampaign?: string | null;
+}
+
+// Extrae las UTMs que el formulario adjuntó al FormData (ver lib/utm.ts).
+// Server-safe: no toca `window`.
+export function utmFromFormData(fd: FormData): UtmInput {
+  const g = (k: string) => {
+    const v = fd.get(k);
+    return typeof v === "string" && v.trim() ? v.trim() : null;
+  };
+  return {
+    utmSource: g("utm_source"),
+    utmMedium: g("utm_medium"),
+    utmCampaign: g("utm_campaign"),
+  };
+}
+
+// Deriva canal + campaña a partir de las UTMs de la visita. Sin UTMs, devuelve
+// los valores por defecto del formulario. Normaliza las fuentes conocidas a la
+// etiqueta de canal que usamos en el CRM.
+export function attribution(
+  utm: UtmInput | undefined,
+  def: { channel: string; campaign: string | null },
+): { channel: string; campaign: string | null } {
+  const source = (utm?.utmSource ?? "").trim().toLowerCase();
+  const campaign = (utm?.utmCampaign ?? "").trim();
+  if (!source) return def;
+  // Etiquetas de canal consistentes con las ya usadas en el CRM (ver
+  // CHANNEL_COLORS del panel): "google ads" en minúscula, "Meta", etc.
+  const channel = /google|adwords|g[-_ ]?ads/.test(source)
+    ? "google ads"
+    : /meta|facebook|fb|instagram|\big\b/.test(source)
+      ? "Meta"
+      : /bing|microsoft/.test(source)
+        ? "Microsoft Ads"
+        : /linkedin/.test(source)
+          ? "LinkedIn"
+          : /tiktok/.test(source)
+            ? "TikTok"
+            : // fuente desconocida: se conserva tal cual (capitalizada)
+              source.charAt(0).toUpperCase() + source.slice(1);
+  return { channel, campaign: campaign || def.campaign };
+}
+
+export function homeHeroLead(
+  d: {
+    name: string;
+    email: string;
+    phone: string;
+    service: string;
+  },
+  utm?: UtmInput,
+): WebhookLeadInput {
+  const { channel, campaign } = attribution(utm, { channel: "Web", campaign: null });
   return {
     name: d.name,
     email: d.email,
     phone: d.phone,
-    channel: "Web",
-    campaign: null,
+    channel,
+    campaign,
     notes: `Origen: formulario rápido del Home (Hero) · Servicio de interés: ${d.service}`,
   };
 }
 
-export function marketingLandingLead(d: {
-  name: string;
-  phone: string;
-  email?: string | null;
-  businessType: string;
-  budget: string;
-  origin: string;
-}): WebhookLeadInput {
+export function marketingLandingLead(
+  d: {
+    name: string;
+    phone: string;
+    email?: string | null;
+    businessType: string;
+    budget: string;
+    origin: string;
+  },
+  utm?: UtmInput,
+): WebhookLeadInput {
+  // Landing de pago: por defecto Google Ads / Pmax; las UTMs concretan la campaña.
+  const { channel, campaign } = attribution(utm, { channel: "google ads", campaign: "Pmax" });
   return {
     name: d.name,
     email: d.email ?? null,
     phone: d.phone,
-    channel: "google ads",
-    campaign: "Pmax",
+    channel,
+    campaign,
     notes: `Origen: ${d.origin} · Tipo: ${d.businessType} · Presupuesto: ${d.budget}`,
   };
 }
 
-export function callRequestLead(d: {
-  name: string;
-  phone: string;
-  service: string;
-}): WebhookLeadInput {
+export function callRequestLead(
+  d: {
+    name: string;
+    phone: string;
+    service: string;
+  },
+  utm?: UtmInput,
+): WebhookLeadInput {
+  const { channel, campaign } = attribution(utm, { channel: "Web", campaign: null });
   return {
     name: d.name,
     email: null,
     phone: d.phone,
-    channel: "Web",
-    campaign: null,
+    channel,
+    campaign,
     notes: `Origen: solicitud de llamada (CTA de la página de servicio) · Servicio de interés: ${d.service}`,
   };
 }
 
-export function contactLead(d: {
-  name: string;
-  email: string;
-  phone: string;
-  service: string;
-  source: string;
-}): WebhookLeadInput {
+export function contactLead(
+  d: {
+    name: string;
+    email: string;
+    phone: string;
+    service: string;
+    source: string;
+  },
+  utm?: UtmInput,
+): WebhookLeadInput {
+  const { channel, campaign } = attribution(utm, { channel: "Web", campaign: null });
   return {
     name: d.name,
     email: d.email,
     phone: d.phone,
-    channel: "Web",
-    campaign: null,
+    channel,
+    campaign,
     notes: `Origen: formulario de contacto · Servicio de interés: ${d.service} · Cómo nos conoció: ${d.source}`,
   };
 }
 
-export function kitDigitalLead(d: {
-  name: string;
-  email: string;
-  phone: string;
-  device: string;
-  bono: string;
-  // nif/address are accepted for signature parity with the form but are NOT
-  // persisted to the CRM — that fulfillment PII stays in the email only.
-  nif?: string;
-  address?: string;
-}): WebhookLeadInput {
+export function kitDigitalLead(
+  d: {
+    name: string;
+    email: string;
+    phone: string;
+    device: string;
+    bono: string;
+    // nif/address are accepted for signature parity with the form but are NOT
+    // persisted to the CRM — that fulfillment PII stays in the email only.
+    nif?: string;
+    address?: string;
+  },
+  utm?: UtmInput,
+): WebhookLeadInput {
+  const { channel, campaign } = attribution(utm, { channel: "Web", campaign: "Kit Digital" });
   return {
     name: d.name,
     email: d.email,
     phone: d.phone,
-    channel: "Web",
-    campaign: "Kit Digital",
+    channel,
+    campaign,
     notes: `Origen: landing /kit-digital · Modelo: ${d.device} · Bono: ${d.bono}`,
   };
 }

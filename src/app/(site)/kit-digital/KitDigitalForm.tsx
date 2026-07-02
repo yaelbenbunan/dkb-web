@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { appendUtms } from "@/lib/utm";
 import { requestKitDigital } from "@/lib/kit-digital-action";
 
 interface Props {
@@ -31,6 +32,7 @@ export function KitDigitalForm({ deviceOptions, defaultDevice }: Props) {
       ref={formRef}
       action={(fd) => {
         fd.set("formLoadedAt", String(loadedAt.current));
+        appendUtms(fd);
         startTransition(async () => {
           const r = await requestKitDigital(fd);
           setResult(r);

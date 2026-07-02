@@ -3,7 +3,7 @@
 import { Resend } from "resend";
 import { z } from "zod";
 import { createWebhookLead } from "./imagina-leads";
-import { homeHeroLead } from "./web-lead-origin";
+import { homeHeroLead, utmFromFormData } from "./web-lead-origin";
 
 const leadSchema = z
   .object({
@@ -40,7 +40,7 @@ export async function sendLead(formData: FormData): Promise<LeadActionResult> {
 
   // Persist every web lead to the CRM (best-effort, never throws) before the
   // email — so the lead is never lost even if Resend is down or misconfigured.
-  await createWebhookLead(homeHeroLead(parsed.data));
+  await createWebhookLead(homeHeroLead(parsed.data, utmFromFormData(formData)));
 
   const apiKey = process.env.RESEND_API_KEY;
   const to = process.env.CONTACT_EMAIL_TO;

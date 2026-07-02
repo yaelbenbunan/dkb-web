@@ -3,7 +3,7 @@
 import { Resend } from "resend";
 import { z } from "zod";
 import { createWebhookLead } from "./imagina-leads";
-import { marketingLandingLead } from "./web-lead-origin";
+import { marketingLandingLead, utmFromFormData } from "./web-lead-origin";
 
 /**
  * Lead de las landings de captación (/marketing-clinicas y
@@ -55,7 +55,7 @@ export async function sendMarketingLead(
 
   // Persist every web lead to the CRM (best-effort, never throws) before the
   // email. Landing conversions are attributed to Google Ads / Pmax.
-  await createWebhookLead(marketingLandingLead(parsed.data));
+  await createWebhookLead(marketingLandingLead(parsed.data, utmFromFormData(formData)));
 
   const apiKey = process.env.RESEND_API_KEY;
   const to = process.env.CONTACT_EMAIL_TO;

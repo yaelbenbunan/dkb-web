@@ -6,6 +6,8 @@ import {
   setLeadAccountManager,
   setLeadNotes,
   setLeadFollowup,
+  setLeadChannel,
+  setLeadCampaign,
   archiveLeadsAction,
   deleteLeadsAction,
 } from "./actions";
@@ -45,8 +47,24 @@ function fmtDate(iso: string): string {
 const CHANNEL_COLORS: Record<string, string> = {
   Meta: "#1d4ed8",
   "google ads": "#b45309",
+  "Microsoft Ads": "#0e7490",
+  LinkedIn: "#1d4ed8",
+  TikTok: "#0f172a",
   landing: "#0d9488",
+  Web: "#475569",
 };
+
+// Canales seleccionables en el panel. Incluye los valores que ya generan los
+// formularios/atribución para poder corregir un lead a mano cuando haga falta.
+const CHANNEL_OPTIONS = [
+  "Web",
+  "google ads",
+  "Meta",
+  "Microsoft Ads",
+  "LinkedIn",
+  "TikTok",
+  "landing",
+];
 
 /** Safe http(s) URL or null — never linkify javascript:/data: values. */
 function webHref(raw: string | null): string | null {
@@ -337,25 +355,17 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
                     )}
                   </td>
                   <td style={td}>
-                    {l.channel ? (
-                      <span
-                        style={{
-                          display: "inline-block",
-                          borderRadius: 999,
-                          padding: "3px 9px",
-                          fontSize: 12,
-                          fontWeight: 700,
-                          color: CHANNEL_COLORS[l.channel] ?? "#334155",
-                          background: `${CHANNEL_COLORS[l.channel] ?? "#94a3b8"}14`,
-                        }}
-                      >
-                        {l.channel}
-                      </span>
-                    ) : (
-                      "—"
-                    )}
+                    <ChannelSelect id={l.id} value={l.channel ?? ""} />
                   </td>
-                  <td style={td}>{l.campaign ?? "—"}</td>
+                  <td style={td}>
+                    <InlineText
+                      id={l.id}
+                      field="campaign"
+                      action={setLeadCampaign}
+                      value={l.campaign ?? ""}
+                      placeholder="—"
+                    />
+                  </td>
                   <td style={{ ...td, whiteSpace: "normal", minWidth: 240 }}>
                     <EditableCell
                       id={l.id}
@@ -523,6 +533,105 @@ function AccountManagerSelect({ id, value }: { id: string; value: string }) {
         </option>
       ))}
     </select>
+  );
+}
+
+/** Canal editable: dropdown con los canales conocidos + libre para corregir la
+ *  atribución de un lead (p.ej. cuando aún no llegaba con UTMs). */
+function ChannelSelect({ id, value }: { id: string; value: string }) {
+  const [val, setVal] = useState(value);
+  const [pending, start] = useTransition();
+  useEffect(() => setVal(value), [value]);
+
+  // Si el valor guardado no está en la lista, se añade para no perderlo.
+  const options = CHANNEL_OPTIONS.includes(val) || val === "" ? CHANNEL_OPTIONS : [val, ...CHANNEL_OPTIONS];
+  const set = val !== "";
+  const color = CHANNEL_COLORS[val] ?? "#94a3b8";
+  return (
+    <select
+      value={val}
+      disabled={pending}
+      onChange={(e) => {
+        const next = e.target.value;
+        setVal(next);
+        const fd = new FormData();
+        fd.set("id", id);
+        fd.set("channel", next);
+        start(() => setLeadChannel(fd));
+      }}
+      style={{
+        borderRadius: 999,
+        border: `1px solid ${set ? color : "#cbd5e1"}`,
+        color: set ? "#fff" : "#64748b",
+        background: set ? color : "#fff",
+        fontWeight: 700,
+        fontSize: 12,
+        padding: "5px 12px",
+        cursor: pending ? "wait" : "pointer",
+        opacity: pending ? 0.6 : 1,
+        appearance: "none",
+      }}
+    >
+      <option value="" style={{ color: "#0f172a", background: "#fff" }}>
+        Sin canal
+      </option>
+      {options.map((c) => (
+        <option key={c} value={c} style={{ color: "#0f172a", background: "#fff" }}>
+          {c}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+/** Campo de una línea que guarda al salir (blur), solo si cambió. Para valores
+ *  cortos como la campaña. */
+function InlineText({
+  id,
+  field,
+  action,
+  value,
+  placeholder,
+}: {
+  id: string;
+  field: string;
+  action: (formData: FormData) => void | Promise<void>;
+  value: string;
+  placeholder: string;
+}) {
+  const [val, setVal] = useState(value);
+  const [pending, start] = useTransition();
+  const lastSaved = useRef(value);
+  useEffect(() => {
+    setVal(value);
+    lastSaved.current = value;
+  }, [value]);
+  return (
+    <input
+      value={val}
+      placeholder={placeholder}
+      disabled={pending}
+      onChange={(e) => setVal(e.target.value)}
+      onBlur={() => {
+        if (val === lastSaved.current) return;
+        lastSaved.current = val;
+        const fd = new FormData();
+        fd.set("id", id);
+        fd.set(field, val);
+        start(() => action(fd));
+      }}
+      style={{
+        width: "100%",
+        minWidth: 110,
+        border: "1px solid #e2e8f0",
+        borderRadius: 8,
+        padding: "6px 8px",
+        fontSize: 13,
+        fontFamily: "inherit",
+        color: "#0f172a",
+        background: pending ? "#f8fafc" : "#fff",
+      }}
+    />
   );
 }
 

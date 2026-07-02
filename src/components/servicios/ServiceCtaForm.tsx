@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { sendCallRequest } from "@/lib/call-request-action";
 import { track, pushUserData } from "@/lib/gtm";
+import { appendUtms } from "@/lib/utm";
 
 interface Props {
   serviceTitle: string;
@@ -29,6 +30,7 @@ export function ServiceCtaForm({ serviceTitle }: Props) {
       action={(fd) => {
         fd.set("formLoadedAt", String(loadedAt.current));
         fd.set("service", serviceTitle);
+        appendUtms(fd);
         startTransition(async () => {
           const r = await sendCallRequest(fd);
           setResult(r);

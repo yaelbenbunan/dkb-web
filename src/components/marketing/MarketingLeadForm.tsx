@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { appendUtms } from "@/lib/utm";
 import { sendMarketingLead } from "@/lib/marketing-lead-action";
 import { track, pushUserData } from "@/lib/gtm";
 import {
@@ -35,6 +36,7 @@ export function MarketingLeadForm({ landing, formLocation }: Props) {
       ref={formRef}
       action={(fd) => {
         fd.set("formLoadedAt", String(loadedAt.current));
+        appendUtms(fd);
         fd.set("origin", landing.origin);
         startTransition(async () => {
           const r = await sendMarketingLead(fd);

@@ -1,11 +1,51 @@
 import { describe, expect, test } from "vitest";
 import {
+  attribution,
   callRequestLead,
   contactLead,
   homeHeroLead,
   kitDigitalLead,
   marketingLandingLead,
 } from "../web-lead-origin";
+
+describe("attribution (UTMs → canal/campaña)", () => {
+  const def = { channel: "Web", campaign: null };
+  test("without UTMs keeps the form default", () => {
+    expect(attribution(undefined, def)).toEqual(def);
+    expect(attribution({ utmSource: "" }, def)).toEqual(def);
+  });
+  test("maps google sources to google ads and uses utm_campaign", () => {
+    expect(attribution({ utmSource: "google", utmCampaign: "search" }, def)).toEqual({
+      channel: "google ads",
+      campaign: "search",
+    });
+    expect(attribution({ utmSource: "google-ads" }, def).channel).toBe("google ads");
+  });
+  test("maps meta sources to Meta", () => {
+    expect(attribution({ utmSource: "facebook", utmCampaign: "leads" }, def)).toEqual({
+      channel: "Meta",
+      campaign: "leads",
+    });
+  });
+  test("falls back to the default campaign when utm_campaign is absent", () => {
+    expect(attribution({ utmSource: "google" }, { channel: "Web", campaign: "Kit Digital" })).toEqual({
+      channel: "google ads",
+      campaign: "Kit Digital",
+    });
+  });
+});
+
+describe("builders honour UTM attribution", () => {
+  test("call request from a Google Ads search click", () => {
+    const row = callRequestLead(
+      { name: "Alexander", phone: "+593988121671", service: "Desarrollo web" },
+      { utmSource: "google", utmCampaign: "search" },
+    );
+    expect(row.channel).toBe("google ads");
+    expect(row.campaign).toBe("search");
+    expect(row.notes).toContain("Desarrollo web");
+  });
+});
 
 // Every web form that captures a lead must land in the CRM with the conversion
 // origin recorded in one of the fields (channel / campaign / notes). These

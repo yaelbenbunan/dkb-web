@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { appendUtms } from "@/lib/utm";
 import { sendLead } from "@/lib/lead-action";
 import { track, pushUserData } from "@/lib/gtm";
 
@@ -33,6 +34,7 @@ export function HeroForm({ services }: Props) {
       ref={formRef}
       action={(fd) => {
         fd.set("formLoadedAt", String(loadedAt.current));
+        appendUtms(fd);
         startTransition(async () => {
           const r = await sendLead(fd);
           setResult(r);
