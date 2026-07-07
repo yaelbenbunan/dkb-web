@@ -132,6 +132,16 @@ export function KitDigitalForm({ deviceOptions, defaultDevice }: Props) {
           />
         </label>
 
+        <label className="block">
+          <span className={labelClass}>Dirección fiscal *</span>
+          <input
+            name="fiscalAddress"
+            required
+            placeholder="Calle, número, piso, CP y ciudad"
+            className={inputClass}
+          />
+        </label>
+
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
             <span className={labelClass}>Código postal *</span>

@@ -13,6 +13,7 @@ const schema = z
     device: z.string().trim().min(1, "Falta modelo"),
     nif: z.string().trim().min(8, "NIF inválido"),
     address: z.string().trim().min(4, "Dirección demasiado corta"),
+    fiscalAddress: z.string().trim().min(4, "Dirección fiscal demasiado corta"),
     postalCode: z.string().trim().regex(/^\d{5}$/, "Código postal inválido"),
     city: z.string().trim().min(2, "Ciudad demasiado corta"),
     bono: z.string().trim().min(1, "Falta número de bono"),
@@ -39,6 +40,7 @@ export async function requestKitDigital(
     device: formData.get("device"),
     nif: formData.get("nif"),
     address: formData.get("address"),
+    fiscalAddress: formData.get("fiscalAddress"),
     postalCode: formData.get("postalCode"),
     city: formData.get("city"),
     bono: formData.get("bono"),
@@ -63,8 +65,18 @@ export async function requestKitDigital(
   }
 
   const resend = new Resend(apiKey);
-  const { name, email, phone, device, nif, address, postalCode, city, bono } =
-    parsed.data;
+  const {
+    name,
+    email,
+    phone,
+    device,
+    nif,
+    address,
+    fiscalAddress,
+    postalCode,
+    city,
+    bono,
+  } = parsed.data;
 
   const { error } = await resend.emails.send({
     from,
@@ -79,6 +91,7 @@ export async function requestKitDigital(
       `NIF: ${nif}`,
       `Número de bono: ${bono}`,
       `Dirección de entrega: ${address}`,
+      `Dirección fiscal: ${fiscalAddress}`,
       `Código postal: ${postalCode}`,
       `Ciudad: ${city}`,
       "",
