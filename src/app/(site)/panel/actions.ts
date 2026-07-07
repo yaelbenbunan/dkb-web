@@ -13,6 +13,7 @@ import {
   updateLeadField,
   archiveLeads,
   deleteLeads,
+  createManualLead,
   LEAD_STATUSES,
   type LeadStatus,
 } from "@/lib/imagina-leads";
@@ -94,6 +95,32 @@ export async function setLeadCampaign(formData: FormData) {
     await updateLeadField(id, "campaign", String(formData.get("campaign") ?? ""));
     revalidatePath("/panel");
   }
+}
+
+export async function createLeadAction(
+  formData: FormData,
+): Promise<{ ok: boolean; error?: string }> {
+  const name = String(formData.get("name") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  // Un lead necesita al menos un dato para poder contactar/identificarlo.
+  if (!name && !phone && !email) {
+    return { ok: false, error: "Añade al menos nombre, teléfono o email." };
+  }
+  const res = await createManualLead({
+    name,
+    phone,
+    email,
+    website: String(formData.get("website") ?? ""),
+    channel: String(formData.get("channel") ?? ""),
+    campaign: String(formData.get("campaign") ?? ""),
+    notes: String(formData.get("notes") ?? ""),
+  });
+  if (!res.ok) {
+    return { ok: false, error: "No se pudo crear el lead. Inténtalo de nuevo." };
+  }
+  revalidatePath("/panel");
+  return { ok: true };
 }
 
 export async function archiveLeadsAction(formData: FormData) {

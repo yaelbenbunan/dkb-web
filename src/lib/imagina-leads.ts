@@ -183,6 +183,46 @@ export async function createWebhookLead(
   return { ok: true, id: row.id };
 }
 
+export interface ManualLeadInput {
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  channel?: string | null;
+  campaign?: string | null;
+  notes?: string | null;
+}
+
+/** Insert a lead captured by hand from the panel. Always a fresh row (random
+ *  id, status "nuevo"); channel defaults to "Web" when not specified. */
+export async function createManualLead(
+  input: ManualLeadInput,
+): Promise<{ ok: boolean; id?: string; error?: string }> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return { ok: false, error: "supabase_not_configured" };
+  const clean = (v?: string | null) => {
+    const t = (v ?? "").trim();
+    return t || null;
+  };
+  const row = {
+    id: crypto.randomUUID(),
+    name: clean(input.name),
+    email: clean(input.email),
+    phone: clean(input.phone),
+    current_website: clean(input.website),
+    channel: clean(input.channel) ?? "Web",
+    campaign: clean(input.campaign),
+    notes: clean(input.notes),
+    status: "nuevo",
+  };
+  const { error } = await sb.from(TABLE).insert(row);
+  if (error) {
+    console.error("[imagina-leads] createManualLead error:", error.message);
+    return { ok: false, error: error.message };
+  }
+  return { ok: true, id: row.id };
+}
+
 /** Archive (or unarchive) one or more leads. Archived leads are hidden from
  *  the panel by default. Returns the number of rows updated. */
 export async function archiveLeads(

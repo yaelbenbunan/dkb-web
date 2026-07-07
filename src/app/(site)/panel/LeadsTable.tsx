@@ -10,6 +10,7 @@ import {
   setLeadCampaign,
   archiveLeadsAction,
   deleteLeadsAction,
+  createLeadAction,
 } from "./actions";
 import { LEAD_STATUSES, STATUS_COLORS } from "@/lib/lead-status";
 import { ACCOUNT_MANAGERS, AM_COLORS } from "@/lib/account-managers";
@@ -87,6 +88,7 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<string>("todos");
   const [showArchived, setShowArchived] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [busy, start] = useTransition();
 
   // Pool for the current view (active vs archived), then status filter on top.
@@ -231,7 +233,21 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
             </button>
           </>
         )}
+        <div style={{ flex: 1 }} />
+        {!showArchived && selected.size === 0 && (
+          <button
+            type="button"
+            onClick={() => setAdding((v) => !v)}
+            style={btnStyle(adding ? "#e2e8f0" : "#187bef", adding ? "#334155" : "#fff", false, adding ? "#cbd5e1" : "#187bef")}
+          >
+            {adding ? "Cancelar" : "+ Añadir lead"}
+          </button>
+        )}
       </div>
+
+      {adding && !showArchived && (
+        <AddLeadPanel onDone={() => setAdding(false)} />
+      )}
 
       <div
         style={{
@@ -402,6 +418,139 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
     </>
   );
 }
+
+/** Formulario para dar de alta un lead a mano. Se inserta con estado "nuevo";
+ *  el resto de campos (account manager, seguimiento…) se editan luego en línea. */
+function AddLeadPanel({ onDone }: { onDone: () => void }) {
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  return (
+    <form
+      ref={formRef}
+      action={(fd) => {
+        setError(null);
+        start(async () => {
+          const r = await createLeadAction(fd);
+          if (r.ok) {
+            formRef.current?.reset();
+            onDone();
+          } else {
+            setError(r.error ?? "No se pudo crear el lead.");
+          }
+        });
+      }}
+      style={{
+        background: "#fff",
+        border: "1px solid #e2e8f0",
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 14,
+      }}
+    >
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: 12,
+        }}
+      >
+        <Field label="Nombre">
+          <input name="name" placeholder="Nombre y apellidos" style={addInput} />
+        </Field>
+        <Field label="Teléfono">
+          <input name="phone" type="tel" placeholder="+34 600 000 000" style={addInput} />
+        </Field>
+        <Field label="Email">
+          <input name="email" type="email" placeholder="nombre@email.com" style={addInput} />
+        </Field>
+        <Field label="Web">
+          <input name="website" placeholder="ejemplo.com" style={addInput} />
+        </Field>
+        <Field label="Canal">
+          <select name="channel" defaultValue="Web" style={addInput}>
+            {CHANNEL_OPTIONS.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Campaña">
+          <input name="campaign" placeholder="Campaña / origen" style={addInput} />
+        </Field>
+      </div>
+
+      <div style={{ marginTop: 12 }}>
+        <Field label="Notas">
+          <textarea
+            name="notes"
+            rows={2}
+            placeholder="Contexto, cómo llegó, siguiente paso…"
+            style={{ ...addInput, resize: "vertical", minHeight: 46 }}
+          />
+        </Field>
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 14 }}>
+        <button
+          type="submit"
+          disabled={pending}
+          style={btnStyle("#187bef", "#fff", pending, "#187bef")}
+        >
+          {pending ? "Guardando…" : "Guardar lead"}
+        </button>
+        <button
+          type="button"
+          onClick={onDone}
+          disabled={pending}
+          style={btnStyle("#fff", "#475569", pending, "#cbd5e1")}
+        >
+          Cancelar
+        </button>
+        {error && (
+          <span style={{ fontSize: 13, color: "#b91c1c", fontWeight: 600 }}>
+            {error}
+          </span>
+        )}
+      </div>
+    </form>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label style={{ display: "block" }}>
+      <span
+        style={{
+          display: "block",
+          fontSize: 11,
+          fontWeight: 700,
+          color: "#64748b",
+          textTransform: "uppercase",
+          letterSpacing: 0.5,
+          marginBottom: 5,
+        }}
+      >
+        {label}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+const addInput: React.CSSProperties = {
+  width: "100%",
+  border: "1px solid #e2e8f0",
+  borderRadius: 8,
+  padding: "8px 10px",
+  fontSize: 14,
+  fontFamily: "inherit",
+  color: "#0f172a",
+  background: "#fff",
+  boxSizing: "border-box",
+};
 
 function FilterChip({
   label,
