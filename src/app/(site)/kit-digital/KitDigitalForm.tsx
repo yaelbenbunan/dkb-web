@@ -123,21 +123,21 @@ export function KitDigitalForm({ deviceOptions, defaultDevice }: Props) {
         </div>
 
         <label className="block">
-          <span className={labelClass}>Dirección de entrega *</span>
-          <input
-            name="address"
-            required
-            placeholder="Calle, número, piso"
-            className={inputClass}
-          />
-        </label>
-
-        <label className="block">
           <span className={labelClass}>Dirección fiscal *</span>
           <input
             name="fiscalAddress"
             required
             placeholder="Calle, número, piso, CP y ciudad"
+            className={inputClass}
+          />
+        </label>
+
+        <label className="block">
+          <span className={labelClass}>Dirección de entrega *</span>
+          <input
+            name="address"
+            required
+            placeholder="Calle, número, piso"
             className={inputClass}
           />
         </label>
