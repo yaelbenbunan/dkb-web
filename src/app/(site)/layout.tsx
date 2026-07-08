@@ -1,6 +1,7 @@
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { WhatsAppBubble } from "@/components/layout/WhatsAppBubble";
+import { PromoPopup } from "@/components/promo/PromoPopup";
 
 /**
  * Layout del sitio "completo": header con navegación, footer y burbuja de
@@ -18,6 +19,7 @@ export default function SiteLayout({
       </main>
       <Footer />
       <WhatsAppBubble />
+      <PromoPopup />
     </>
   );
 }
