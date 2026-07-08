@@ -41,7 +41,11 @@ export async function subscribePromo(
   const lead = await createWebhookLead(
     promoVeranoLead({ email, consentAt }, utmFromFormData(formData)),
   );
-  const leadId = lead.id ?? email;
+  if (!lead.ok || !lead.id) {
+    console.error("[promo] lead persist failed:", lead.error);
+    return { ok: false, error: "No pudimos completar tu solicitud. Inténtalo de nuevo en un momento." };
+  }
+  const leadId = lead.id;
 
   // 2) BEST-EFFORT: alta en Mailchimp (single opt-in) + tag.
   await addOrUpdateMember(email, [PROMO.mailchimpTag]);

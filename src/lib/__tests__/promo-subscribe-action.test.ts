@@ -67,4 +67,12 @@ describe("subscribePromo", () => {
     expect(res.ok).toBe(true);
     expect(createWebhookLeadMock).toHaveBeenCalledTimes(1);
   });
+
+  test("returns ok:false and skips Mailchimp+email when the lead cannot be persisted", async () => {
+    createWebhookLeadMock.mockResolvedValue({ ok: false, error: "supabase_not_configured" });
+    const res = await subscribePromo(valid());
+    expect(res.ok).toBe(false);
+    expect(addOrUpdateMemberMock).not.toHaveBeenCalled();
+    expect(sendMock).not.toHaveBeenCalled();
+  });
 });
