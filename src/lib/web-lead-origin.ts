@@ -168,3 +168,19 @@ export function kitDigitalLead(
     notes: `Origen: landing /kit-digital · Modelo: ${d.device} · Bono: ${d.bono}`,
   };
 }
+
+export function promoVeranoLead(
+  d: { email: string; consentAt: string },
+  utm?: UtmInput,
+): WebhookLeadInput {
+  // El canal refleja el origen del tráfico (organic → "promo-verano"), pero la
+  // campaña se fija SIEMPRE a la de la promo para poder filtrar todos sus leads
+  // juntos en el CRM, venga el visitante de donde venga.
+  const { channel } = attribution(utm, { channel: "promo-verano", campaign: null });
+  return {
+    email: d.email,
+    channel,
+    campaign: "promo-verano-2026",
+    notes: `Origen: popup Promo Verano -50% · Consentimiento comunicaciones comerciales: ${d.consentAt}`,
+  };
+}

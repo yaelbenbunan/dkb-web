@@ -6,6 +6,7 @@ import {
   homeHeroLead,
   kitDigitalLead,
   marketingLandingLead,
+  promoVeranoLead,
 } from "../web-lead-origin";
 
 describe("attribution (UTMs → canal/campaña)", () => {
@@ -146,5 +147,26 @@ describe("kitDigitalLead", () => {
     // NIF / address are fulfillment PII — they belong in the email, not the CRM notes.
     expect(row.notes).not.toContain("12345678Z");
     expect(row.notes).not.toContain("Calle Falsa 123");
+  });
+});
+
+describe("promoVeranoLead", () => {
+  test("organic visit → channel promo-verano, fixed campaign, consent recorded", () => {
+    const row = promoVeranoLead({ email: "lead@example.com", consentAt: "2026-07-08T10:00:00.000Z" });
+    expect(row.email).toBe("lead@example.com");
+    expect(row.channel).toBe("promo-verano");
+    expect(row.campaign).toBe("promo-verano-2026");
+    expect(row.notes).toContain("Promo Verano");
+    expect(row.notes).toContain("Consentimiento");
+    expect(row.notes).toContain("2026-07-08T10:00:00.000Z");
+  });
+
+  test("ad traffic sets the channel from UTMs but keeps the promo campaign", () => {
+    const row = promoVeranoLead(
+      { email: "lead@example.com", consentAt: "2026-07-08T10:00:00.000Z" },
+      { utmSource: "google", utmCampaign: "verano-search" },
+    );
+    expect(row.channel).toBe("google ads");
+    expect(row.campaign).toBe("promo-verano-2026");
   });
 });
