@@ -1,6 +1,8 @@
 import "server-only";
 import { getSupabaseAdmin } from "./supabase-admin";
 import { LEAD_STATUSES, type LeadStatus } from "./lead-status";
+import type { PromoQuestionnaireInput } from "./promo-questionnaire";
+import { promoQuestionnaireFields, formatQuestionnaireNotes } from "./promo-questionnaire";
 
 const TABLE = "imagina_leads";
 const BUCKET = "imagina-previews";
@@ -300,4 +302,39 @@ export async function getSignedPdfUrl(
     return null;
   }
   return data?.signedUrl ?? null;
+}
+
+/** Notas actuales del lead (para no pisar la marca de consentimiento). */
+export async function getLeadNotes(leadId: string): Promise<string> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return "";
+  const { data } = await sb.from(TABLE).select("notes").eq("id", leadId).maybeSingle();
+  return (data?.notes as string | null) ?? "";
+}
+
+/** Sube el logo que aporta el cliente al bucket privado; devuelve su ruta. */
+export async function uploadPromoLogo(leadId: string, file: File): Promise<string | null> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return null;
+  const ext = (file.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
+  const path = `promo/${leadId}-logo.${ext}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const { error } = await sb.storage
+    .from(BUCKET)
+    .upload(path, buffer, { contentType: file.type || "image/png", upsert: true });
+  if (error) {
+    console.error("[imagina-leads] uploadPromoLogo error:", error.message);
+    return null;
+  }
+  return path;
+}
+
+/** Persiste las respuestas del cuestionario sobre el lead existente, sin pisar
+ *  la nota de consentimiento (se antepone al bloque del cuestionario). */
+export async function savePromoQuestionnaire(input: PromoQuestionnaireInput): Promise<void> {
+  await saveLead(promoQuestionnaireFields(input));
+  const prev = await getLeadNotes(input.leadId);
+  const block = formatQuestionnaireNotes(input);
+  const combined = prev ? `${prev}\n\n— Cuestionario —\n${block}` : block;
+  await updateLeadField(input.leadId, "notes", combined);
 }
