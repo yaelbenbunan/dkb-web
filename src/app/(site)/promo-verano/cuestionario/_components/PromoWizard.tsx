@@ -56,7 +56,7 @@ export function PromoWizard({ token, leadId, email }: { token: string; leadId: s
       { label: "Sube tu logo (opcional)", field: "logo", required: false, file: true },
       { label: "Webs de referencia que te gusten (opcional)", field: "references", required: false, area: true },
       { label: "Redes / presencia actual (opcional)", field: "social", required: false },
-      { label: "¿Algo más que debamos saber? (opcional)", field: "extra", required: true, area: true },
+      { label: "¿Algo más que debamos saber? (opcional)", field: "extra", required: false, area: true },
     ],
     [],
   );
