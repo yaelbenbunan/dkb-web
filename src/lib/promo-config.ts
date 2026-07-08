@@ -10,6 +10,8 @@ export const PROMO = {
   /** Remitente verificado en Resend. */
   fromEmail: "hola@dinkbit.es",
   siteUrl: "https://www.dinkbit.es",
+  /** Landing con los detalles de la promo (destino del "Más información"). */
+  landingPath: "/promo-verano",
   questionnairePath: "/promo-verano/cuestionario",
   /** No volver a mostrar el popup al mismo visitante en N días. */
   frequencyDays: 7,

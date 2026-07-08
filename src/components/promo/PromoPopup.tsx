@@ -2,55 +2,30 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
-import { subscribePromo } from "@/lib/promo-subscribe-action";
+import { useEffect, useState } from "react";
+import { PromoEmailForm } from "@/components/promo/PromoEmailForm";
 import { shouldShowPopup, markPopupSeen } from "@/lib/promo-popup-storage";
 import { PROMO, isPromoActive } from "@/lib/promo-config";
-import { appendUtms } from "@/lib/utm";
-
-type View = "hidden" | "form" | "success";
 
 export function PromoPopup() {
   const pathname = usePathname();
-  const [view, setView] = useState<View>("hidden");
-  const [consent, setConsent] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
-  const loadedAt = useRef(0);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    // No mostrar en la ruta del cuestionario, ni fuera de la ventana de promo,
-    // ni si la frecuencia lo impide.
-    if (pathname?.startsWith(PROMO.questionnairePath)) return;
+    // No mostrar en las rutas de la promo (landing/cuestionario), ni fuera de
+    // la ventana de promo, ni si la frecuencia lo impide.
+    if (pathname?.startsWith(PROMO.landingPath)) return;
     if (!isPromoActive(Date.now())) return;
     if (!shouldShowPopup(Date.now(), PROMO.frequencyDays, window.localStorage)) return;
-    const id = window.setTimeout(() => {
-      loadedAt.current = Date.now();
-      setView("form");
-    }, PROMO.showDelayMs);
+    const id = window.setTimeout(() => setOpen(true), PROMO.showDelayMs);
     return () => window.clearTimeout(id);
   }, [pathname]);
 
-  if (view === "hidden") return null;
+  if (!open) return null;
 
   const dismiss = () => {
     markPopupSeen(Date.now(), window.localStorage);
-    setView("hidden");
-  };
-
-  const onSubmit = (formData: FormData) => {
-    setError(null);
-    formData.set("formLoadedAt", String(loadedAt.current));
-    appendUtms(formData);
-    startTransition(async () => {
-      const res = await subscribePromo(formData);
-      if (res.ok) {
-        markPopupSeen(Date.now(), window.localStorage);
-        setView("success");
-      } else {
-        setError(res.error ?? "No se pudo completar. Inténtalo de nuevo.");
-      }
-    });
+    setOpen(false);
   };
 
   return (
@@ -71,82 +46,30 @@ export function PromoPopup() {
           ✕
         </button>
 
-        {view === "success" ? (
-          <div className="text-center">
-            <p className="text-2xl">📩</p>
-            <h2 className="mt-2 text-xl font-bold text-fg">¡Listo!</h2>
-            <p className="mt-2 text-sm text-fg-muted">
-              Revisa tu correo: te hemos enviado los detalles de la promoción de verano.
-            </p>
-            <button
-              type="button"
-              onClick={() => setView("hidden")}
-              className="mt-5 h-11 rounded-lg bg-accent px-5 text-sm font-semibold text-white hover:bg-accent-hover"
-            >
-              Cerrar
-            </button>
-          </div>
-        ) : (
-          <form action={onSubmit} className="flex flex-col gap-4">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-accent">
-                Promo Verano · -{PROMO.discountPct}%
-              </p>
-              <h2 className="mt-2 text-2xl font-black leading-tight text-fg">
-                Este verano, tu web o ecommerce al {PROMO.discountPct}% 🌴
-              </h2>
-              <p className="mt-2 text-sm leading-relaxed text-fg-muted">
-                Déjanos tu email y te enviamos toda la info de la promoción.
-              </p>
-            </div>
+        <div className="mb-4">
+          <p className="text-xs font-bold uppercase tracking-widest text-accent">
+            Promo Verano · -{PROMO.discountPct}%
+          </p>
+          <h2 className="mt-2 text-2xl font-black leading-tight text-fg">
+            Este verano, tu web o ecommerce al {PROMO.discountPct}% 🌴
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-fg-muted">
+            Déjanos tu email y te enviamos toda la info de la promoción.
+          </p>
+        </div>
 
-            {/* Honeypot: invisible para humanos */}
-            <input
-              type="text"
-              name="website"
-              tabIndex={-1}
-              autoComplete="off"
-              className="hidden"
-              aria-hidden="true"
-            />
+        {/* Al enviarse con éxito, marcamos la frecuencia para no repetir el popup */}
+        <PromoEmailForm onSuccess={() => markPopupSeen(Date.now(), window.localStorage)} />
 
-            <input
-              type="email"
-              name="email"
-              required
-              placeholder="Tu email"
-              aria-label="Tu email"
-              className="h-11 rounded-lg border border-border-strong bg-bg-subtle px-4 text-sm text-fg outline-none focus:border-accent"
-            />
-
-            <label className="flex items-start gap-2 text-xs leading-relaxed text-fg-muted">
-              <input
-                type="checkbox"
-                name="consent"
-                checked={consent}
-                onChange={(e) => setConsent(e.target.checked)}
-                className="mt-0.5"
-              />
-              <span>
-                He leído y acepto la{" "}
-                <Link href="/privacidad" className="font-semibold text-accent hover:underline">
-                  política de privacidad
-                </Link>{" "}
-                y el envío de comunicaciones comerciales.
-              </span>
-            </label>
-
-            {error && <p className="text-xs font-semibold text-red-500">{error}</p>}
-
-            <button
-              type="submit"
-              disabled={!consent || pending}
-              className="h-11 rounded-lg bg-accent px-5 text-sm font-semibold text-white transition-all hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {pending ? "Enviando…" : "Quiero la info"}
-            </button>
-          </form>
-        )}
+        <p className="mt-4 text-center text-xs text-fg-muted">
+          <Link
+            href={PROMO.landingPath}
+            onClick={dismiss}
+            className="font-semibold text-accent hover:underline"
+          >
+            Más información sobre la promoción →
+          </Link>
+        </p>
       </div>
     </div>
   );

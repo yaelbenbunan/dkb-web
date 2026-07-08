@@ -10,9 +10,10 @@ describe("PromoWizard", () => {
   beforeEach(() => { submitMock.mockReset().mockResolvedValue({ ok: true }); });
   afterEach(cleanup);
 
-  test("renders the first question and can advance", () => {
+  test("renders the first group and can advance", () => {
     render(<PromoWizard token="tok" leadId="lead-1" email="lead@example.com" />);
-    expect(screen.getByText(/tu nombre|cómo te llamas/i)).toBeInTheDocument();
+    expect(screen.getByText(/datos de contacto/i)).toBeInTheDocument();
+    expect(screen.getByText(/nombre y apellidos/i)).toBeInTheDocument();
     // el botón de avanzar existe
     expect(screen.getByRole("button", { name: /siguiente/i })).toBeInTheDocument();
   });

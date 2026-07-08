@@ -16,7 +16,7 @@ const schema = z
     email: z.email("Email inválido"),
     name: z.string().min(2, "Falta tu nombre"),
     businessName: z.string().min(1, "Falta el nombre del negocio"),
-    phone: z.string().optional().default(""),
+    phone: z.string().min(6, "Falta el teléfono"),
     activity: z.string().min(2, "Cuéntanos a qué te dedicas"),
     sector: z.string().min(1, "Elige un sector"),
     services: z.string().min(2, "Indica tus servicios"),
