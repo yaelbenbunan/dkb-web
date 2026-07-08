@@ -4,7 +4,8 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 /** Server-only Supabase client using the SECRET service_role key. It bypasses
  *  RLS, so it must NEVER be imported into client code. Our `imagina_leads`
  *  table has RLS enabled with no policies, so this is the only way to read or
- *  write it — the soda app's anon/publishable keys see zero rows. */
+ *  write it — anon/publishable keys see zero rows. Project: "dinkbit-leads"
+ *  (ref wnboyesnlrbtwfmhcxmc; el nombre puede cambiar, el ref no). */
 let cached: SupabaseClient | null = null;
 
 export function getSupabaseAdmin(): SupabaseClient | null {
