@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { subscribePromo } from "@/lib/promo-subscribe-action";
 import { shouldShowPopup, markPopupSeen } from "@/lib/promo-popup-storage";
 import { PROMO, isPromoActive } from "@/lib/promo-config";
+import { appendUtms } from "@/lib/utm";
 
 type View = "hidden" | "form" | "success";
 
@@ -40,6 +41,7 @@ export function PromoPopup() {
   const onSubmit = (formData: FormData) => {
     setError(null);
     formData.set("formLoadedAt", String(loadedAt.current));
+    appendUtms(formData);
     startTransition(async () => {
       const res = await subscribePromo(formData);
       if (res.ok) {
@@ -113,6 +115,7 @@ export function PromoPopup() {
               name="email"
               required
               placeholder="Tu email"
+              aria-label="Tu email"
               className="h-11 rounded-lg border border-border-strong bg-bg-subtle px-4 text-sm text-fg outline-none focus:border-accent"
             />
 
