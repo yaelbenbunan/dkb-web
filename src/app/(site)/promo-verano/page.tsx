@@ -59,7 +59,7 @@ export default function PromoVeranoLanding() {
         <p className="mb-4 text-center text-sm font-semibold text-fg">
           Déjanos tu email y te enviamos toda la info 👇
         </p>
-        <PromoEmailForm submitLabel="Quiero la info" />
+        <PromoEmailForm />
       </div>
 
       {/* Qué incluye */}

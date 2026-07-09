@@ -13,7 +13,7 @@ import { appendUtms } from "@/lib/utm";
  */
 export function PromoEmailForm({
   onSuccess,
-  submitLabel = "Quiero la info",
+  submitLabel = "Quiero mi 50% de descuento",
 }: {
   onSuccess?: () => void;
   submitLabel?: string;

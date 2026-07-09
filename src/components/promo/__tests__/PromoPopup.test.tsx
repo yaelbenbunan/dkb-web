@@ -24,7 +24,7 @@ describe("PromoPopup", () => {
     showPopup();
     vi.useRealTimers();
     await screen.findByRole("dialog");
-    const submit = screen.getByRole("button", { name: /quiero la info/i });
+    const submit = screen.getByRole("button", { name: /quiero mi 50% de descuento/i });
     expect(submit).toBeDisabled();
     fireEvent.click(screen.getByLabelText(/acepto/i));
     expect(submit).toBeEnabled();
@@ -36,7 +36,7 @@ describe("PromoPopup", () => {
     await screen.findByRole("dialog");
     fireEvent.change(screen.getByPlaceholderText(/email/i), { target: { value: "lead@example.com" } });
     fireEvent.click(screen.getByLabelText(/acepto/i));
-    fireEvent.click(screen.getByRole("button", { name: /quiero la info/i }));
+    fireEvent.click(screen.getByRole("button", { name: /quiero mi 50% de descuento/i }));
     await waitFor(() => expect(subscribeMock).toHaveBeenCalledTimes(1));
     expect(await screen.findByText(/revisa tu correo/i)).toBeInTheDocument();
   });
