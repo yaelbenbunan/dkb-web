@@ -9,6 +9,8 @@ export const PROMO = {
   campaign: "promo-verano-2026",
   /** Remitente verificado en Resend. */
   fromEmail: "hola@dinkbit.es",
+  /** Nombre visible del remitente (se muestra en la bandeja en vez de "hola"). */
+  fromName: "dinkbit",
   /** Contacto para los CTA del email (WhatsApp y llamada). */
   whatsappNumber: "34657559397",
   phoneNumber: "+34657559397",

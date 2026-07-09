@@ -55,7 +55,7 @@ export async function subscribePromo(
     const { subject, html, text } = buildPromoEmail();
     const resend = new Resend(apiKey);
     const { error } = await resend.emails.send({
-      from: PROMO.fromEmail,
+      from: `${PROMO.fromName} <${PROMO.fromEmail}>`,
       to: email,
       subject,
       html,
