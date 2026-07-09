@@ -5,7 +5,6 @@ import { z } from "zod";
 import { createWebhookLead } from "./imagina-leads";
 import { promoVeranoLead, utmFromFormData } from "./web-lead-origin";
 import { addOrUpdateMember } from "./mailchimp";
-import { mintPromoToken } from "./promo-token";
 import { buildPromoEmail } from "./promo-email";
 import { PROMO } from "./promo-config";
 
@@ -45,16 +44,15 @@ export async function subscribePromo(
     console.error("[promo] lead persist failed:", lead.error);
     return { ok: false, error: "No pudimos completar tu solicitud. Inténtalo de nuevo en un momento." };
   }
-  const leadId = lead.id;
 
   // 2) BEST-EFFORT: alta en Mailchimp (single opt-in) + tag.
   await addOrUpdateMember(email, [PROMO.mailchimpTag]);
 
-  // 3) BEST-EFFORT: email de bienvenida con CTA al cuestionario.
+  // 3) BEST-EFFORT: email de bienvenida con los detalles de la promo y CTA a
+  //    WhatsApp / llamada (el enlace del cuestionario se envía a mano después).
   const apiKey = process.env.RESEND_API_KEY;
   if (apiKey) {
-    const token = mintPromoToken(leadId, email);
-    const { subject, html, text } = buildPromoEmail({ email, leadId, token });
+    const { subject, html, text } = buildPromoEmail();
     const resend = new Resend(apiKey);
     const { error } = await resend.emails.send({
       from: PROMO.fromEmail,
