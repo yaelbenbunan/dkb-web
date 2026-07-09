@@ -4,7 +4,7 @@
 //
 // El CTA lleva a WhatsApp / llamada (NO al cuestionario): primero hablamos con
 // el interesado y, a quien confirme, le enviamos el enlace del cuestionario a mano.
-import { PROMO, promoDeadlineLabel } from "./promo-config";
+import { PROMO, promoDeadlineLabel, PROMO_PRICES, PROMO_PRICE_DISCLAIMER } from "./promo-config";
 
 const FONT_STACK = "'Source Sans Pro','Source Sans 3',Helvetica,Arial,sans-serif";
 const ACCENT = "#187bef";
@@ -31,6 +31,24 @@ export function buildPromoEmail(): { subject: string; html: string; text: string
   const includeRows = INCLUYE.map(
     (item) =>
       `<tr><td style="padding:4px 0;font-size:15px;color:#334155;">✓&nbsp; ${item}</td></tr>`,
+  ).join("");
+
+  const priceGroups = PROMO_PRICES.map(
+    (g) => `
+      <div style="margin-top:12px;font-size:12px;font-weight:800;color:${ACCENT};text-transform:uppercase;letter-spacing:1px;">${g.group}</div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${g.rows
+          .map(
+            (r) => `<tr>
+          <td style="padding:6px 0;font-size:14px;color:#334155;">${r.label}</td>
+          <td align="right" style="padding:6px 0;white-space:nowrap;">
+            <span style="font-size:13px;color:#94a3b8;text-decoration:line-through;">${r.before}</span>
+            <span style="font-size:16px;font-weight:800;color:#0f172a;margin-left:8px;">${r.now}</span>
+          </td>
+        </tr>`,
+          )
+          .join("")}
+      </table>`,
   ).join("");
 
   const html = `<!doctype html>
@@ -67,6 +85,13 @@ export function buildPromoEmail(): { subject: string; html: string; text: string
     </table>
   </td></tr>
 
+  <!-- PRECIOS -->
+  <tr><td style="padding:18px 36px 4px;">
+    <div style="font-size:13px;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:1px;">Precios con la promo</div>
+    ${priceGroups}
+    <p style="margin:12px 0 0;font-size:10px;color:#94a3b8;line-height:1.5;">${PROMO_PRICE_DISCLAIMER}</p>
+  </td></tr>
+
   <!-- CTA: WhatsApp + llamada -->
   <tr><td style="padding:26px 36px 8px;text-align:center;">
     <p style="margin:0 0 16px;font-size:16px;color:#0f172a;font-weight:700;">¿Hablamos? Te contamos cómo aprovecharlo:</p>
@@ -97,6 +122,13 @@ export function buildPromoEmail(): { subject: string; html: string; text: string
     "",
     "Qué incluye tu web:",
     ...INCLUYE.map((i) => `- ${i}`),
+    "",
+    "Precios con la promo:",
+    ...PROMO_PRICES.flatMap((g) => [
+      `${g.group}:`,
+      ...g.rows.map((r) => `  - ${r.label}: ${r.before} -> ${r.now}`),
+    ]),
+    PROMO_PRICE_DISCLAIMER,
     "",
     "¿Hablamos? Te contamos cómo aprovecharlo:",
     `WhatsApp: ${waHref}`,

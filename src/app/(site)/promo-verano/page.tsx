@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { PromoEmailForm } from "@/components/promo/PromoEmailForm";
-import { PROMO, promoDeadlineLabel } from "@/lib/promo-config";
+import { PROMO, promoDeadlineLabel, PROMO_PRICES, PROMO_PRICE_DISCLAIMER } from "@/lib/promo-config";
 
 export const metadata: Metadata = {
   title: `Promo Verano · Tu web o ecommerce al ${PROMO.discountPct}% | dinkbit`,
@@ -75,6 +75,30 @@ export default function PromoVeranoLanding() {
             </li>
           ))}
         </ul>
+      </section>
+
+      {/* Precios */}
+      <section className="mt-14">
+        <h2 className="text-xl font-bold text-fg">Precios con la promo</h2>
+        <div className="mt-4 flex flex-col gap-6">
+          {PROMO_PRICES.map((group) => (
+            <div key={group.group}>
+              <p className="text-xs font-bold uppercase tracking-wide text-accent">{group.group}</p>
+              <ul className="mt-2 divide-y divide-border-strong/50 rounded-xl border border-border-strong/60">
+                {group.rows.map((row) => (
+                  <li key={row.label} className="flex items-center justify-between gap-4 px-4 py-3">
+                    <span className="text-sm text-fg">{row.label}</span>
+                    <span className="shrink-0 whitespace-nowrap">
+                      <span className="text-sm text-fg-muted line-through">{row.before}</span>
+                      <span className="ml-2 text-base font-bold text-fg">{row.now}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-xs text-fg-muted">{PROMO_PRICE_DISCLAIMER}</p>
       </section>
 
       {/* FAQ */}

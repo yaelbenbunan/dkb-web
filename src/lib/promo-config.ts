@@ -23,6 +23,36 @@ export const PROMO = {
   showDelayMs: 8000,
 } as const;
 
+/** Precios de la promo (fuente única para el email y la landing). `before` es el
+ *  precio normal (tachado) y `now` el precio con el -50%. */
+export interface PromoPriceRow {
+  label: string;
+  before: string;
+  now: string;
+}
+
+export const PROMO_PRICES: { group: string; rows: PromoPriceRow[] }[] = [
+  {
+    group: "Webs",
+    rows: [
+      { label: "Landing / One page", before: "1.000€", now: "500€" },
+      { label: "Web completa (hasta 4 secciones)", before: "2.000€", now: "1.000€" },
+      { label: "Web premium (hasta 8 secciones + blog)", before: "3.000€", now: "1.500€" },
+    ],
+  },
+  {
+    group: "Ecommerce",
+    rows: [
+      { label: "Tienda online (hasta 50 productos)", before: "3.000€", now: "1.500€" },
+      { label: "Tienda online (+50 productos)", before: "4.000€", now: "2.000€" },
+    ],
+  },
+];
+
+/** Letra pequeña de los precios. */
+export const PROMO_PRICE_DISCLAIMER =
+  "Precios orientativos, IVA no incluido. No incluyen la creación de contenidos (textos e imágenes), que aporta el cliente.";
+
 export function isPromoActive(now: number): boolean {
   return now <= Date.parse(PROMO.deadlineISO);
 }

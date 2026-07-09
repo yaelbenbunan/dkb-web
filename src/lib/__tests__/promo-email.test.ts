@@ -23,4 +23,12 @@ describe("buildPromoEmail", () => {
     expect(out.html).toContain("agosto");
     expect(out.html.toLowerCase()).toContain("comunicaciones comerciales");
   });
+
+  test("shows the promo prices (struck + offer)", () => {
+    expect(out.html).toContain("Precios con la promo");
+    expect(out.html).toContain("1.000€"); // precio tachado one page
+    expect(out.html).toContain("500€"); // precio con promo one page
+    expect(out.html).toContain("1.500€"); // ecommerce con promo
+    expect(out.text).toContain("500€");
+  });
 });
