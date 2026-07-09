@@ -22,7 +22,7 @@ export const PROMO = {
   /** No volver a mostrar el popup al mismo visitante en N días. */
   frequencyDays: 7,
   /** Retardo antes de mostrar el popup. */
-  showDelayMs: 8000,
+  showDelayMs: 3000,
 } as const;
 
 /** Precios de la promo (fuente única para el email y la landing). `before` es el

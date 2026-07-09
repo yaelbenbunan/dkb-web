@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PromoEmailForm } from "@/components/promo/PromoEmailForm";
@@ -60,16 +59,6 @@ export function PromoPopup() {
 
         {/* Al enviarse con éxito, marcamos la frecuencia para no repetir el popup */}
         <PromoEmailForm onSuccess={() => markPopupSeen(Date.now(), window.localStorage)} />
-
-        <p className="mt-4 text-center text-xs text-fg-muted">
-          <Link
-            href={PROMO.landingPath}
-            onClick={dismiss}
-            className="font-semibold text-accent hover:underline"
-          >
-            Más información sobre la promoción →
-          </Link>
-        </p>
       </div>
     </div>
   );
