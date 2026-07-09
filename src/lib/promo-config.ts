@@ -44,7 +44,7 @@ export const PROMO_PRICES: { group: string; rows: PromoPriceRow[] }[] = [
     group: "Ecommerce",
     rows: [
       { label: "Tienda online (hasta 50 productos)", before: "3.000€", now: "1.500€" },
-      { label: "Tienda online (+50 productos)", before: "3.000€", now: "1.500€" },
+      { label: "Tienda online (+50 productos)", before: "3.000€", now: "1.850€" },
     ],
   },
 ];
