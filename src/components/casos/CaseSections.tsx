@@ -257,6 +257,31 @@ function MockupFrame({
     );
   }
 
+  if (kind === "post") {
+    // Publicaciones de redes / capturas de anuncios: centradas y con ancho
+    // acotado para que no ocupen toda la columna (evita el efecto "gigante"
+    // con imágenes verticales tipo story o pequeñas de baja resolución).
+    return (
+      <div
+        className="mx-auto w-full max-w-[320px] overflow-hidden rounded-2xl ring-1"
+        style={{
+          backgroundColor: "var(--mockup-body)",
+          boxShadow: "var(--mockup-shadow)",
+          ["--tw-ring-color" as string]: "var(--mockup-ring)",
+        }}
+      >
+        <Image
+          src={src}
+          alt={alt}
+          width={720}
+          height={900}
+          priority={priority}
+          className="h-auto w-full object-cover"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-hidden rounded-2xl shadow-[0_25px_50px_-15px_rgba(0,0,0,0.5)]">
       <Image

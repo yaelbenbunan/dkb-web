@@ -24,6 +24,7 @@ export type MockupKind =
   | "mobile"
   | "mobile-tilt"
   | "brand"
+  | "post"
   | "none";
 
 export interface CaseImage {
