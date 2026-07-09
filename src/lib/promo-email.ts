@@ -87,7 +87,7 @@ export function buildPromoEmail(): { subject: string; html: string; text: string
 
   <!-- PRECIOS -->
   <tr><td style="padding:18px 36px 4px;">
-    <div style="font-size:13px;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:1px;">Precios con la promo</div>
+    <div style="font-size:13px;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:1px;">Precios con la promo *</div>
     ${priceGroups}
     <p style="margin:12px 0 0;font-size:10px;color:#94a3b8;line-height:1.5;">${PROMO_PRICE_DISCLAIMER}</p>
   </td></tr>

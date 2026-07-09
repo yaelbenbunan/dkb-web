@@ -79,7 +79,7 @@ export default function PromoVeranoLanding() {
 
       {/* Precios */}
       <section className="mt-14">
-        <h2 className="text-xl font-bold text-fg">Precios con la promo</h2>
+        <h2 className="text-xl font-bold text-fg">Precios con la promo *</h2>
         <div className="mt-4 flex flex-col gap-6">
           {PROMO_PRICES.map((group) => (
             <div key={group.group}>

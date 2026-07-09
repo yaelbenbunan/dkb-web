@@ -36,22 +36,22 @@ export const PROMO_PRICES: { group: string; rows: PromoPriceRow[] }[] = [
     group: "Webs",
     rows: [
       { label: "Landing / One page", before: "1.000€", now: "500€" },
-      { label: "Web completa (hasta 4 secciones)", before: "2.000€", now: "1.000€" },
-      { label: "Web premium (hasta 8 secciones + blog)", before: "3.000€", now: "1.500€" },
+      { label: "Web completa (hasta 4 páginas)", before: "2.000€", now: "1.000€" },
+      { label: "Web premium (+8 páginas + blog)", before: "4.000€", now: "2.000€" },
     ],
   },
   {
     group: "Ecommerce",
     rows: [
       { label: "Tienda online (hasta 50 productos)", before: "3.000€", now: "1.500€" },
-      { label: "Tienda online (+50 productos)", before: "4.000€", now: "2.000€" },
+      { label: "Tienda online (+50 productos)", before: "3.000€", now: "1.500€" },
     ],
   },
 ];
 
 /** Letra pequeña de los precios. */
 export const PROMO_PRICE_DISCLAIMER =
-  "Precios orientativos, IVA no incluido. No incluyen la creación de contenidos (textos e imágenes), que aporta el cliente.";
+  "* El precio final depende de cada proyecto y puede variar según el número de páginas, funcionalidades, etc. Precios orientativos, IVA no incluido. No incluyen la creación de contenidos (textos e imágenes), que aporta el cliente.";
 
 export function isPromoActive(now: number): boolean {
   return now <= Date.parse(PROMO.deadlineISO);
