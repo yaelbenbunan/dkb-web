@@ -3,6 +3,7 @@
 export const LEAD_STATUSES = [
   "nuevo",
   "contactado",
+  "ilocalizable",
   "propuesta",
   "ganado",
   "perdido",
@@ -13,6 +14,7 @@ export type LeadStatus = (typeof LEAD_STATUSES)[number];
 export const STATUS_COLORS: Record<string, string> = {
   nuevo: "#2563eb", // azul
   contactado: "#0891b2", // cian
+  ilocalizable: "#64748b", // gris pizarra
   propuesta: "#d97706", // ámbar
   ganado: "#16a34a", // verde
   perdido: "#dc2626", // rojo
