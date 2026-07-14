@@ -44,6 +44,22 @@ describe("subscribePromo", () => {
     expect(sent.to).toBe("lead@example.com");
   });
 
+  test("forwards an optional phone to the persisted lead", async () => {
+    await subscribePromo(formFor({
+      email: "lead@example.com",
+      phone: "600 123 456",
+      consent: "on",
+      website: "",
+      formLoadedAt: String(Date.now() - 5000),
+    }));
+    expect(createWebhookLeadMock.mock.calls[0][0].phone).toBe("600 123 456");
+  });
+
+  test("omits the phone when the field is left empty", async () => {
+    await subscribePromo(valid());
+    expect(createWebhookLeadMock.mock.calls[0][0].phone).toBeNull();
+  });
+
   test("rejects without consent and does not persist", async () => {
     const res = await subscribePromo(formFor({
       email: "lead@example.com", consent: "", website: "", formLoadedAt: String(Date.now() - 5000),

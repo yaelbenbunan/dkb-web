@@ -159,6 +159,16 @@ describe("promoVeranoLead", () => {
     expect(row.notes).toContain("Promo Verano");
     expect(row.notes).toContain("Consentimiento");
     expect(row.notes).toContain("2026-07-08T10:00:00.000Z");
+    expect(row.phone).toBeNull();
+  });
+
+  test("records the phone when the lead provides one", () => {
+    const row = promoVeranoLead({
+      email: "lead@example.com",
+      phone: "600123456",
+      consentAt: "2026-07-08T10:00:00.000Z",
+    });
+    expect(row.phone).toBe("600123456");
   });
 
   test("ad traffic sets the channel from UTMs but keeps the promo campaign", () => {

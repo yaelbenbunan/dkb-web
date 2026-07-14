@@ -73,6 +73,16 @@ export function PromoEmailForm({
         className="h-11 rounded-lg border border-border-strong bg-bg-subtle px-4 text-sm text-fg outline-none focus:border-accent"
       />
 
+      <input
+        type="tel"
+        name="phone"
+        inputMode="tel"
+        autoComplete="tel"
+        placeholder="Tu teléfono (opcional)"
+        aria-label="Tu teléfono (opcional)"
+        className="h-11 rounded-lg border border-border-strong bg-bg-subtle px-4 text-sm text-fg outline-none focus:border-accent"
+      />
+
       <label className="flex items-start gap-2 text-xs leading-relaxed text-fg-muted">
         <input
           type="checkbox"

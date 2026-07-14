@@ -170,7 +170,7 @@ export function kitDigitalLead(
 }
 
 export function promoVeranoLead(
-  d: { email: string; consentAt: string },
+  d: { email: string; phone?: string | null; consentAt: string },
   utm?: UtmInput,
 ): WebhookLeadInput {
   // El canal refleja el origen del tráfico (organic → "promo-verano"), pero la
@@ -179,6 +179,8 @@ export function promoVeranoLead(
   const { channel } = attribution(utm, { channel: "promo-verano", campaign: null });
   return {
     email: d.email,
+    // Teléfono opcional: vía de contacto adicional al email cuando el lead lo aporta.
+    phone: d.phone ?? null,
     channel,
     campaign: "promo-verano-2026",
     notes: `Origen: popup Promo Verano -50% · Consentimiento comunicaciones comerciales: ${d.consentAt}`,

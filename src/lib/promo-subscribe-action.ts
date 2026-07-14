@@ -11,6 +11,8 @@ import { PROMO } from "./promo-config";
 const schema = z
   .object({
     email: z.email("Email inválido"),
+    // Teléfono opcional: vía de contacto adicional al email. Cadena vacía ⇒ sin teléfono.
+    phone: z.string().max(40).optional(),
     // El checkbox sólo llega ("on") si el usuario lo marca; ausente ⇒ null ⇒ falla.
     consent: z.literal("on", { message: "Debes aceptar para continuar" }),
     website: z.string().max(0, "Honeypot field must be empty"),
@@ -26,6 +28,7 @@ export async function subscribePromo(
 ): Promise<{ ok: boolean; error?: string }> {
   const parsed = schema.safeParse({
     email: formData.get("email"),
+    phone: formData.get("phone") ?? undefined,
     consent: formData.get("consent"),
     website: formData.get("website") ?? "",
     formLoadedAt: Number(formData.get("formLoadedAt")),
@@ -34,11 +37,12 @@ export async function subscribePromo(
     return { ok: false, error: "Revisa el email y acepta las condiciones." };
   }
   const email = parsed.data.email.trim().toLowerCase();
+  const phone = parsed.data.phone?.trim() || undefined;
 
   // 1) CRÍTICO: guardar el lead antes que nada (nunca se pierde).
   const consentAt = new Date().toISOString();
   const lead = await createWebhookLead(
-    promoVeranoLead({ email, consentAt }, utmFromFormData(formData)),
+    promoVeranoLead({ email, phone, consentAt }, utmFromFormData(formData)),
   );
   if (!lead.ok || !lead.id) {
     console.error("[promo] lead persist failed:", lead.error);
