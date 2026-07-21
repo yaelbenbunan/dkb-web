@@ -18,6 +18,21 @@ function toNegativePath(src: string): string {
   return src.replace("positivo.", "negativo.");
 }
 
+/**
+ * Marcas monocromas: su "positivo" es tinta negra sobre transparente porque no
+ * existe una versión en color. Hacer el swap sobre fondo oscuro las haría
+ * desaparecer (negro sobre negro), así que se quedan siempre en negativo:
+ * blanco en dark, invertido a negro en light por `.client-logo-bw` (globals.css).
+ *
+ * Se listan por prefijo de ruta para que aplique en las cuatro superficies que
+ * usan este componente (grid de casos, cabecera, relacionados y marquee).
+ */
+const MONOCHROME_LOGOS = ["/img/casos/hydrup/"];
+
+function isMonochrome(src: string): boolean {
+  return MONOCHROME_LOGOS.some((prefix) => src.startsWith(prefix));
+}
+
 interface Props {
   src: string;
   alt: string;
@@ -38,7 +53,7 @@ export function ClientLogoSwap({
 }: Props) {
   const negativeSrc = toNegativePath(src);
 
-  if (staticWhite) {
+  if (staticWhite || isMonochrome(src)) {
     return (
       <span className="client-logo-bw inline-flex">
         <Image
