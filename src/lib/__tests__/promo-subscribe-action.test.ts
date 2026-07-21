@@ -19,6 +19,7 @@ function formFor(fields: Record<string, string>): FormData {
 }
 
 const valid = () => formFor({
+  name: "Ana",
   email: "lead@example.com",
   consent: "on",
   website: "",
@@ -46,6 +47,7 @@ describe("subscribePromo", () => {
 
   test("forwards an optional phone to the persisted lead", async () => {
     await subscribePromo(formFor({
+      name: "Ana",
       email: "lead@example.com",
       phone: "600 123 456",
       consent: "on",
@@ -53,6 +55,19 @@ describe("subscribePromo", () => {
       formLoadedAt: String(Date.now() - 5000),
     }));
     expect(createWebhookLeadMock.mock.calls[0][0].phone).toBe("600 123 456");
+  });
+
+  test("forwards the name to the persisted lead", async () => {
+    await subscribePromo(valid());
+    expect(createWebhookLeadMock.mock.calls[0][0].name).toBe("Ana");
+  });
+
+  test("rejects when the name is missing and does not persist", async () => {
+    const res = await subscribePromo(formFor({
+      email: "lead@example.com", consent: "on", website: "", formLoadedAt: String(Date.now() - 5000),
+    }));
+    expect(res.ok).toBe(false);
+    expect(createWebhookLeadMock).not.toHaveBeenCalled();
   });
 
   test("omits the phone when the field is left empty", async () => {

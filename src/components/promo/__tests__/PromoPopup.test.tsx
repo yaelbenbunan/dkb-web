@@ -30,10 +30,11 @@ describe("PromoPopup", () => {
     expect(submit).toBeEnabled();
   });
 
-  test("submitting a valid email calls the action and shows success", async () => {
+  test("submitting a valid name and email calls the action and shows success", async () => {
     showPopup();
     vi.useRealTimers();
     await screen.findByRole("dialog");
+    fireEvent.change(screen.getByPlaceholderText(/nombre/i), { target: { value: "Ana" } });
     fireEvent.change(screen.getByPlaceholderText(/email/i), { target: { value: "lead@example.com" } });
     fireEvent.click(screen.getByLabelText(/acepto/i));
     fireEvent.click(screen.getByRole("button", { name: /quiero mi 50% de descuento/i }));

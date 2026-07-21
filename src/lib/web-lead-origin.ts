@@ -170,7 +170,7 @@ export function kitDigitalLead(
 }
 
 export function promoVeranoLead(
-  d: { email: string; phone?: string | null; consentAt: string },
+  d: { name?: string | null; email: string; phone?: string | null; consentAt: string },
   utm?: UtmInput,
 ): WebhookLeadInput {
   // El canal refleja el origen del tráfico (organic → "promo-verano"), pero la
@@ -178,6 +178,8 @@ export function promoVeranoLead(
   // juntos en el CRM, venga el visitante de donde venga.
   const { channel } = attribution(utm, { channel: "promo-verano", campaign: null });
   return {
+    // Nombre de pila: por quién preguntar cuando contactemos con el lead.
+    name: d.name ?? null,
     email: d.email,
     // Teléfono opcional: vía de contacto adicional al email cuando el lead lo aporta.
     phone: d.phone ?? null,

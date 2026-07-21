@@ -12,7 +12,7 @@ import {
   deleteLeadsAction,
   createLeadAction,
 } from "./actions";
-import { LEAD_STATUSES, STATUS_COLORS } from "@/lib/lead-status";
+import { LEAD_STATUSES, STATUS_COLORS, statusLabel } from "@/lib/lead-status";
 import { ACCOUNT_MANAGERS, AM_COLORS } from "@/lib/account-managers";
 
 export interface LeadRowView {
@@ -165,7 +165,7 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
         {LEAD_STATUSES.map((s) => (
           <FilterChip
             key={s}
-            label={s}
+            label={statusLabel(s)}
             count={statusCounts(s)}
             active={statusFilter === s}
             color={STATUS_COLORS[s] ?? "#334155"}
@@ -581,7 +581,6 @@ function FilterChip({
         fontSize: 12,
         padding: "5px 12px",
         cursor: "pointer",
-        textTransform: "capitalize",
       }}
     >
       {label}
@@ -627,14 +626,13 @@ function StatusSelect({ id, value }: { id: string; value: string }) {
         fontSize: 12,
         padding: "5px 12px",
         cursor: pending ? "wait" : "pointer",
-        textTransform: "capitalize",
         opacity: pending ? 0.6 : 1,
         appearance: "none",
       }}
     >
       {LEAD_STATUSES.map((s) => (
         <option key={s} value={s} style={{ color: "#0f172a", background: "#fff" }}>
-          {s}
+          {statusLabel(s)}
         </option>
       ))}
     </select>

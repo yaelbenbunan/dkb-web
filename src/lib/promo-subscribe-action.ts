@@ -10,6 +10,8 @@ import { PROMO } from "./promo-config";
 
 const schema = z
   .object({
+    // Nombre: sirve para saber por quién preguntar al contactar con el lead.
+    name: z.string().trim().min(2, "Nombre inválido").max(80),
     email: z.email("Email inválido"),
     // Teléfono opcional: vía de contacto adicional al email. Cadena vacía ⇒ sin teléfono.
     phone: z.string().max(40).optional(),
@@ -27,6 +29,7 @@ export async function subscribePromo(
   formData: FormData,
 ): Promise<{ ok: boolean; error?: string }> {
   const parsed = schema.safeParse({
+    name: formData.get("name") ?? "",
     email: formData.get("email"),
     phone: formData.get("phone") ?? undefined,
     consent: formData.get("consent"),
@@ -34,15 +37,16 @@ export async function subscribePromo(
     formLoadedAt: Number(formData.get("formLoadedAt")),
   });
   if (!parsed.success) {
-    return { ok: false, error: "Revisa el email y acepta las condiciones." };
+    return { ok: false, error: "Revisa tu nombre y email, y acepta las condiciones." };
   }
+  const name = parsed.data.name;
   const email = parsed.data.email.trim().toLowerCase();
   const phone = parsed.data.phone?.trim() || undefined;
 
   // 1) CRÍTICO: guardar el lead antes que nada (nunca se pierde).
   const consentAt = new Date().toISOString();
   const lead = await createWebhookLead(
-    promoVeranoLead({ email, phone, consentAt }, utmFromFormData(formData)),
+    promoVeranoLead({ name, email, phone, consentAt }, utmFromFormData(formData)),
   );
   if (!lead.ok || !lead.id) {
     console.error("[promo] lead persist failed:", lead.error);
@@ -56,7 +60,7 @@ export async function subscribePromo(
   //    WhatsApp / llamada (el enlace del cuestionario se envía a mano después).
   const apiKey = process.env.RESEND_API_KEY;
   if (apiKey) {
-    const { subject, html, text } = buildPromoEmail();
+    const { subject, html, text } = buildPromoEmail({ name });
     const resend = new Resend(apiKey);
     const { error } = await resend.emails.send({
       from: `${PROMO.fromName} <${PROMO.fromEmail}>`,

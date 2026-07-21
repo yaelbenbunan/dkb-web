@@ -17,8 +17,23 @@ const INCLUYE = [
   "Opción de tienda online (ecommerce)",
 ];
 
-export function buildPromoEmail(): { subject: string; html: string; text: string } {
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+export function buildPromoEmail(
+  opts: { name?: string | null } = {},
+): { subject: string; html: string; text: string } {
   const deadline = promoDeadlineLabel();
+  // Saludo con el nombre de pila que dejó el lead. Sin nombre, saludo genérico.
+  const firstName = (opts.name ?? "").trim().split(/\s+/)[0] ?? "";
+  const greetingText = firstName ? `Hola ${firstName},` : "Hola,";
+  const greetingHtml = firstName ? `Hola ${escapeHtml(firstName)},` : "Hola,";
   const waMsg = encodeURIComponent(
     "Hola, me interesa la promo de verano del 50% para mi web/ecommerce.",
   );
@@ -69,7 +84,7 @@ export function buildPromoEmail(): { subject: string; html: string; text: string
       Este verano, tu web o ecommerce al ${PROMO.discountPct}% 🌴
     </h1>
     <p style="margin:16px 0 0;font-size:17px;line-height:1.55;color:#475569;">
-      Gracias por tu interés. Durante este verano lanzamos todas nuestras webs y
+      <strong style="color:#0f172a;">${greetingHtml}</strong> gracias por tu interés. Durante este verano lanzamos todas nuestras webs y
       tiendas online con un <strong style="color:${ACCENT};">${PROMO.discountPct}% de descuento</strong>.
       Oferta válida hasta el <strong>${deadline}</strong>.
     </p>
@@ -117,6 +132,8 @@ export function buildPromoEmail(): { subject: string; html: string; text: string
 
   const text = [
     `Este verano, tu web o ecommerce al ${PROMO.discountPct}%.`,
+    "",
+    `${greetingText} gracias por tu interés.`,
     "",
     `Durante este verano lanzamos todas nuestras webs y tiendas online con un ${PROMO.discountPct}% de descuento. Válido hasta el ${deadline}.`,
     "",

@@ -65,6 +65,16 @@ export function PromoEmailForm({
       />
 
       <input
+        type="text"
+        name="name"
+        required
+        autoComplete="given-name"
+        placeholder="Tu nombre"
+        aria-label="Tu nombre"
+        className="h-11 rounded-lg border border-border-strong bg-bg-subtle px-4 text-sm text-fg outline-none focus:border-accent"
+      />
+
+      <input
         type="email"
         name="email"
         required

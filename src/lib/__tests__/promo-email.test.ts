@@ -31,4 +31,21 @@ describe("buildPromoEmail", () => {
     expect(out.html).toContain("1.500€"); // ecommerce con promo
     expect(out.text).toContain("500€");
   });
+
+  test("greets the lead by first name in HTML and text", () => {
+    const named = buildPromoEmail({ name: "Ana Pérez Gil" });
+    expect(named.html).toContain("Hola Ana,");
+    expect(named.text).toContain("Hola Ana,");
+  });
+
+  test("falls back to a generic greeting without a name", () => {
+    expect(out.html).toContain("Hola,");
+    expect(out.text).toContain("Hola,");
+  });
+
+  test("escapes HTML in the name", () => {
+    const evil = buildPromoEmail({ name: "<img src=x onerror=alert(1)>" });
+    expect(evil.html).not.toContain("<img src=x");
+    expect(evil.html).toContain("&lt;img");
+  });
 });
