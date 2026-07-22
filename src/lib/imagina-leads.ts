@@ -153,6 +153,9 @@ export interface WebhookLeadInput {
   phone?: string | null;
   channel?: string | null;
   campaign?: string | null;
+  /** Dedicated columns (used by web builders that capture them, e.g. Kit Digital 2026). */
+  sector?: string | null;
+  businessType?: string | null;
   notes?: string | null;
 }
 
@@ -174,6 +177,8 @@ export async function createWebhookLead(
     phone: clean(input.phone),
     channel: clean(input.channel) ?? "Meta",
     campaign: clean(input.campaign),
+    sector: clean(input.sector),
+    business_type: clean(input.businessType),
     notes: clean(input.notes),
     status: "nuevo",
   };

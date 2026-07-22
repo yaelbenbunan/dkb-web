@@ -169,6 +169,49 @@ export function kitDigitalLead(
   };
 }
 
+export function kitDigital2026Lead(
+  d: {
+    name: string;
+    email: string;
+    phone: string;
+    // Servicios de interés (multi): Web, SEO, Redes sociales, Ordenador, etc.
+    services: string[];
+    businessType: "pyme" | "autonomo";
+    // Pyme → tramo de empleados; autónomo → antigüedad de alta. Solo uno aplica.
+    employees?: string | null;
+    seniority?: string | null;
+    // Sector (multi, opcional) — más para nosotros que para el Kit Digital.
+    sectors: string[];
+  },
+  utm?: UtmInput,
+): WebhookLeadInput {
+  // Landing de captación: por defecto orgánico (Web); la campaña se fija SIEMPRE
+  // a "Kit Digital 2026" para poder filtrar todos sus leads juntos en el CRM.
+  const { channel } = attribution(utm, { channel: "Web", campaign: "Kit Digital 2026" });
+  const typeLabel = d.businessType === "pyme" ? "Pyme" : "Autónomo";
+  const detail =
+    d.businessType === "pyme"
+      ? `Empleados: ${d.employees ?? "—"}`
+      : `Antigüedad de alta: ${d.seniority ?? "—"}`;
+  const sectors = d.sectors.filter((s) => s.trim());
+  return {
+    name: d.name,
+    email: d.email,
+    phone: d.phone,
+    channel,
+    campaign: "Kit Digital 2026",
+    // Columnas dedicadas para filtrar en el panel.
+    sector: sectors.length ? sectors.join(", ") : null,
+    businessType: typeLabel,
+    notes: [
+      "Origen: landing /kit-digital-2026 (vuelta del Kit Digital)",
+      `Servicios de interés: ${d.services.join(", ") || "—"}`,
+      `${typeLabel} · ${detail}`,
+      `Sectores: ${sectors.join(", ") || "—"}`,
+    ].join(" · "),
+  };
+}
+
 export function promoVeranoLead(
   d: { name?: string | null; email: string; phone?: string | null; consentAt: string },
   utm?: UtmInput,

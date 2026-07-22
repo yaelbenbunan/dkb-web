@@ -4,6 +4,7 @@ import {
   callRequestLead,
   contactLead,
   homeHeroLead,
+  kitDigital2026Lead,
   kitDigitalLead,
   marketingLandingLead,
   promoVeranoLead,
@@ -147,6 +148,63 @@ describe("kitDigitalLead", () => {
     // NIF / address are fulfillment PII — they belong in the email, not the CRM notes.
     expect(row.notes).not.toContain("12345678Z");
     expect(row.notes).not.toContain("Calle Falsa 123");
+  });
+});
+
+describe("kitDigital2026Lead", () => {
+  test("pyme: default campaign, business_type column, services and sectors in notes", () => {
+    const row = kitDigital2026Lead({
+      name: "Nuria",
+      email: "nuria@example.com",
+      phone: "633333333",
+      services: ["Web", "SEO"],
+      businessType: "pyme",
+      employees: "3-9",
+      sectors: ["Hostelería/restauración", "Comercio/retail"],
+    });
+    expect(row.channel).toBe("Web");
+    expect(row.campaign).toBe("Kit Digital 2026");
+    expect(row.businessType).toBe("Pyme");
+    // sector column carries the multi-select union for panel filtering.
+    expect(row.sector).toBe("Hostelería/restauración, Comercio/retail");
+    expect(row.notes).toContain("kit-digital-2026");
+    expect(row.notes).toContain("Web, SEO");
+    expect(row.notes).toContain("3-9");
+    expect(row.notes).toContain("Hostelería/restauración");
+  });
+
+  test("autónomo: records seniority instead of employees", () => {
+    const row = kitDigital2026Lead({
+      name: "Ismael",
+      email: "ismael@example.com",
+      phone: "644444444",
+      services: ["Redes sociales"],
+      businessType: "autonomo",
+      seniority: "más de 6 meses",
+      sectors: [],
+    });
+    expect(row.businessType).toBe("Autónomo");
+    // No sectors selected → sector column stays null.
+    expect(row.sector).toBeNull();
+    expect(row.notes).toContain("más de 6 meses");
+    expect(row.notes).toContain("Redes sociales");
+  });
+
+  test("ad traffic sets the channel from UTMs but keeps the Kit Digital 2026 campaign", () => {
+    const row = kitDigital2026Lead(
+      {
+        name: "Nuria",
+        email: "nuria@example.com",
+        phone: "633333333",
+        services: ["Web"],
+        businessType: "pyme",
+        employees: "1-2",
+        sectors: [],
+      },
+      { utmSource: "google", utmCampaign: "kit-search" },
+    );
+    expect(row.channel).toBe("google ads");
+    expect(row.campaign).toBe("Kit Digital 2026");
   });
 });
 
