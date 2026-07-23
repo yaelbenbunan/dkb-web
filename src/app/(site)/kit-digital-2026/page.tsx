@@ -59,7 +59,7 @@ export default function KitDigital2026Page() {
   return (
     <>
       {/* Hero + formulario */}
-      <header className="relative isolate overflow-hidden py-16 md:py-24">
+      <header className="relative isolate overflow-hidden py-10 md:py-24">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 -z-10 spotlight-accent"
@@ -70,13 +70,13 @@ export default function KitDigital2026Page() {
           className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-40 fade-edges-y"
         />
         <Container>
-          <div className="grid items-start gap-12 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="grid items-start gap-6 md:gap-12 lg:grid-cols-[1.05fr_0.95fr]">
             <div className="lg:pt-6">
               <p className="inline-flex items-center gap-2 rounded-full bg-accent/15 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-accent ring-1 ring-accent/30">
                 Kit Digital
               </p>
               <h1
-                className="mt-6 font-black leading-[1.02] tracking-tight"
+                className="mt-5 font-black leading-[1.02] tracking-tight"
                 style={{ fontSize: "var(--text-display-lg)" }}
               >
                 Sé el primero en solicitar el Kit Digital{" "}
@@ -85,25 +85,8 @@ export default function KitDigital2026Page() {
               <p className="mt-5 max-w-xl text-lg leading-relaxed text-fg-muted">
                 Déjanos tus datos y{" "}
                 <strong className="text-fg">te avisamos en cuanto haya novedades</strong>
-                . Nosotros nos encargamos de toda la tramitación, sin que tengas
-                que pelearte con el papeleo.
+                .
               </p>
-
-              <ul className="mt-8 space-y-3">
-                {[
-                  "Nos encargamos de toda la tramitación.",
-                  "Te avisamos en cuanto se reactive. Sin compromiso.",
-                ].map((t) => (
-                  <li key={t} className="flex items-start gap-3 text-fg">
-                    <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent-hover">
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                        <path d="M3 7.5L6 10.5L11 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </span>
-                    <span className="text-[15px] leading-relaxed">{t}</span>
-                  </li>
-                ))}
-              </ul>
             </div>
 
             <Reveal from="right" className="lg:justify-self-end lg:sticky lg:top-24">

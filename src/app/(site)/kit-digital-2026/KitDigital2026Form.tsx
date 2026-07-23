@@ -87,10 +87,7 @@ export function KitDigital2026Form() {
       <p className="text-2xl font-bold leading-tight text-[#0c1c40]">
         Apúntate a la lista
       </p>
-      <p className="mt-2 text-sm text-slate-700">
-        Déjanos tus datos y te avisamos en cuanto el Kit Digital se reactive. Sin
-        compromiso.
-      </p>
+      <p className="mt-2 text-sm text-slate-700">Sin compromiso.</p>
 
       <div className="mt-6 space-y-5">
         <label className="block">
