@@ -90,12 +90,11 @@ export function KitDigital2026Form() {
       <p className="mt-2 text-sm text-slate-700">Sin compromiso.</p>
 
       <div className="mt-6 space-y-5">
-        <label className="block">
-          <span className={labelClass}>Nombre *</span>
-          <input name="name" required placeholder="Tu nombre" className={inputClass} />
-        </label>
-
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <label className="block">
+            <span className={labelClass}>Nombre *</span>
+            <input name="name" required placeholder="Tu nombre" className={inputClass} />
+          </label>
           <label className="block">
             <span className={labelClass}>Teléfono *</span>
             <input

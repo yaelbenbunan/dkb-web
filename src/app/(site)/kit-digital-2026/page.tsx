@@ -59,42 +59,42 @@ export default function KitDigital2026Page() {
   return (
     <>
       {/* Hero + formulario */}
-      <header className="relative isolate flex min-h-[calc(100svh-5rem)] items-start overflow-hidden py-10 md:py-16 lg:items-center lg:py-0">
+      <header className="relative isolate flex min-h-[calc(100svh-5rem)] flex-col justify-center overflow-hidden py-10 md:py-14">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 -z-10 spotlight-accent"
-          style={{ ["--sx" as string]: "78%", ["--sy" as string]: "22%" }}
+          style={{ ["--sx" as string]: "50%", ["--sy" as string]: "12%" }}
         />
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-40 fade-edges-y"
         />
         <Container className="w-full">
-          <div className="grid items-start gap-6 md:gap-12 lg:grid-cols-[1.05fr_0.95fr]">
-            <div className="lg:pt-6">
-              <p className="inline-flex items-center gap-2 rounded-full bg-accent/15 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-accent ring-1 ring-accent/30">
-                Kit Digital
-              </p>
-              <h1
-                className="mt-5 font-black leading-[1.02] tracking-tight"
-                style={{ fontSize: "var(--text-display-lg)" }}
-              >
-                Sé el primero en solicitar el Kit Digital{" "}
-                <span className="text-accent">cuando se reactive.</span>
-              </h1>
-              <p className="mt-5 max-w-xl text-lg leading-relaxed text-fg-muted">
-                Déjanos tus datos y{" "}
-                <strong className="text-fg">te avisamos en cuanto haya novedades</strong>
-                .
-              </p>
-            </div>
-
-            <Reveal from="right" className="lg:justify-self-end lg:sticky lg:top-24">
-              <div id="apuntarme" className="scroll-mt-24">
-                <KitDigital2026Form />
-              </div>
-            </Reveal>
+          {/* Texto potente, arriba */}
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="inline-flex items-center gap-2 rounded-full bg-accent/15 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-accent ring-1 ring-accent/30">
+              Kit Digital
+            </p>
+            <h1
+              className="mt-5 font-black leading-[1.02] tracking-tight"
+              style={{ fontSize: "var(--text-display-lg)" }}
+            >
+              Sé el primero en solicitar el Kit Digital{" "}
+              <span className="text-accent">cuando se reactive.</span>
+            </h1>
+            <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-fg-muted">
+              Déjanos tus datos y{" "}
+              <strong className="text-fg">te avisamos en cuanto haya novedades</strong>
+              .
+            </p>
           </div>
+
+          {/* Formulario, protagonista debajo */}
+          <Reveal className="mx-auto mt-8 max-w-3xl">
+            <div id="apuntarme" className="scroll-mt-24">
+              <KitDigital2026Form />
+            </div>
+          </Reveal>
         </Container>
       </header>
 
