@@ -59,7 +59,7 @@ export default function KitDigital2026Page() {
   return (
     <>
       {/* Hero + formulario */}
-      <header className="relative isolate overflow-hidden py-10 md:py-24">
+      <header className="relative isolate flex min-h-[calc(100svh-5rem)] items-start overflow-hidden py-10 md:py-16 lg:items-center lg:py-0">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 -z-10 spotlight-accent"
@@ -69,7 +69,7 @@ export default function KitDigital2026Page() {
           aria-hidden
           className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-40 fade-edges-y"
         />
-        <Container>
+        <Container className="w-full">
           <div className="grid items-start gap-6 md:gap-12 lg:grid-cols-[1.05fr_0.95fr]">
             <div className="lg:pt-6">
               <p className="inline-flex items-center gap-2 rounded-full bg-accent/15 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-accent ring-1 ring-accent/30">
