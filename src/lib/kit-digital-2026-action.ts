@@ -2,6 +2,7 @@
 
 import { Resend } from "resend";
 import { z } from "zod";
+import { buildKitDigital2026Email } from "./kit-digital-2026-email";
 import { createWebhookLead } from "./imagina-leads";
 import { kitDigital2026Lead, utmFromFormData } from "./web-lead-origin";
 
@@ -129,24 +130,13 @@ export async function requestKitDigital2026(
 
   // 2) Autoresponder al lead (best-effort): un fallo aquí no invalida el envío
   //    — el aviso interno ya se entregó y el lead está en el CRM.
-  const firstName = d.name.split(/\s+/)[0] || d.name;
+  const autoEmail = buildKitDigital2026Email({ name: d.name });
   const { error: autoErr } = await resend.emails.send({
     from,
     to: d.email,
-    subject: "Gracias — te avisamos cuando el Kit Digital se reactive",
-    text: [
-      `Hola ${firstName},`,
-      "",
-      "Gracias por dejarnos tus datos. Ya estás en nuestra lista del Kit Digital.",
-      "",
-      "Te avisaremos en cuanto se reactive y nos encargaremos de toda la",
-      "tramitación por ti. Si necesitamos algún dato más, te contactamos.",
-      "",
-      "Cualquier duda, responde a este correo.",
-      "",
-      "Un saludo,",
-      "El equipo de Dinkbit",
-    ].join("\n"),
+    subject: autoEmail.subject,
+    html: autoEmail.html,
+    text: autoEmail.text,
   });
   if (autoErr) {
     console.error("Resend error (kit-digital-2026, autoresponder):", autoErr);
