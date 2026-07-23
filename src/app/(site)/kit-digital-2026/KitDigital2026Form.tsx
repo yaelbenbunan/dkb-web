@@ -64,9 +64,8 @@ export function KitDigital2026Form() {
         <p className="text-3xl">🎉</p>
         <h2 className="mt-3 text-2xl font-bold text-[#0c1c40]">¡Listo!</h2>
         <p className="mt-3 text-sm leading-relaxed text-slate-700">
-          Ya estás en nuestra lista para el Kit Digital 2026. Te hemos enviado un
-          correo con los próximos pasos. En cuanto se abra el plazo preparamos y
-          tramitamos tu solicitud.
+          Ya estás en la lista. Te avisaremos en cuanto el Kit Digital se
+          reactive y nos encargaremos de tu tramitación.
         </p>
       </div>
     );
@@ -86,10 +85,10 @@ export function KitDigital2026Form() {
       className="surface-elevated relative rounded-3xl p-7 sm:p-9"
     >
       <p className="text-2xl font-bold leading-tight text-[#0c1c40]">
-        Apúntate a la vuelta del Kit Digital
+        Apúntate a la lista
       </p>
       <p className="mt-2 text-sm text-slate-700">
-        Déjanos tus datos y te avisamos en cuanto se abra el plazo. Sin
+        Déjanos tus datos y te avisamos en cuanto el Kit Digital se reactive. Sin
         compromiso.
       </p>
 
