@@ -129,7 +129,8 @@ export async function updateLeadStatus(
   return true;
 }
 
-/** Update a single free-text/select field on a lead (account_manager, notes, followup). */
+/** Update a single free-text/select field on a lead (account_manager, notes,
+ *  followup, channel, campaign, name, email, phone). */
 export async function updateLeadField(
   leadId: string,
   field:
