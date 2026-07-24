@@ -190,6 +190,70 @@ export async function createWebhookLead(
   return { ok: true, id: row.id };
 }
 
+const KD2026_CAMPAIGN = "Kit Digital 2026";
+
+/** Enriquece la fila existente (match por email en la campaña) o crea una nueva.
+ *  Al enriquecer: conserva channel/campaign/status; rellena name/phone solo si
+ *  faltaban; setea sector/business_type; appende notes. */
+export async function upsertKitDigital2026Lead(
+  lead: WebhookLeadInput,
+): Promise<{ ok: boolean; id?: string; matched: boolean; error?: string }> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return { ok: false, matched: false, error: "supabase_not_configured" };
+  const clean = (v?: string | null) => {
+    const t = (v ?? "").trim();
+    return t || null;
+  };
+  const email = clean(lead.email);
+
+  // Buscar fila existente (con sus campos para decidir el merge).
+  const existing = email
+    ? (
+        await sb
+          .from(TABLE)
+          .select("id,name,phone,notes")
+          .ilike("email", email)
+          .eq("campaign", KD2026_CAMPAIGN)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      ).data
+    : null;
+
+  if (!existing) {
+    const res = await createWebhookLead(lead);
+    return { ...res, matched: false };
+  }
+
+  const row = existing as {
+    id: string;
+    name: string | null;
+    phone: string | null;
+    notes: string | null;
+  };
+  const update: Record<string, string | null> = {
+    sector: clean(lead.sector),
+    business_type: clean(lead.businessType),
+  };
+  // name/phone: solo si faltaban (no pisar dato bueno con vacío).
+  if (!clean(row.name) && clean(lead.name)) update.name = clean(lead.name);
+  if (!clean(row.phone) && clean(lead.phone)) update.phone = clean(lead.phone);
+  // notes: appendear al bloque previo.
+  const incoming = clean(lead.notes);
+  if (incoming) {
+    update.notes = row.notes
+      ? `${row.notes}\n\n— Datos de la landing —\n${incoming}`
+      : incoming;
+  }
+
+  const { error } = await sb.from(TABLE).update(update).eq("id", row.id);
+  if (error) {
+    console.error("[imagina-leads] upsertKitDigital2026Lead update error:", error.message);
+    return { ok: false, id: row.id, matched: true, error: error.message };
+  }
+  return { ok: true, id: row.id, matched: true };
+}
+
 export interface ManualLeadInput {
   name?: string | null;
   email?: string | null;
