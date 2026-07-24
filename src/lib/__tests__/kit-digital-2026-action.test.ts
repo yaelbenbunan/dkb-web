@@ -1,13 +1,12 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 // The Kit Digital 2026 capture landing must persist every valid submission to
-// the CRM and send TWO emails: the internal team notification (critical) and a
-// thank-you autoresponder to the lead (best-effort). Resend and the CRM module
-// are mocked so no network/DB is touched.
+// the CRM via upsert and send ONE email: the internal team notification (critical).
+// Resend and the CRM module are mocked so no network/DB is touched.
 
-const { sendMock, createWebhookLeadMock } = vi.hoisted(() => ({
+const { sendMock, upsertMock } = vi.hoisted(() => ({
   sendMock: vi.fn(),
-  createWebhookLeadMock: vi.fn(),
+  upsertMock: vi.fn(),
 }));
 
 vi.mock("resend", () => ({
@@ -17,7 +16,7 @@ vi.mock("resend", () => ({
 }));
 
 vi.mock("../imagina-leads", () => ({
-  createWebhookLead: createWebhookLeadMock,
+  upsertKitDigital2026Lead: upsertMock,
 }));
 
 import { requestKitDigital2026 } from "../kit-digital-2026-action";
@@ -49,40 +48,36 @@ const validPyme = () => ({
 describe("requestKitDigital2026", () => {
   beforeEach(() => {
     sendMock.mockReset().mockResolvedValue({ error: null });
-    createWebhookLeadMock.mockReset().mockResolvedValue({ ok: true, id: "x" });
+    upsertMock.mockReset().mockResolvedValue({ ok: true, id: "x", matched: false });
     process.env.RESEND_API_KEY = "test-key";
     process.env.CONTACT_EMAIL_TO = "to@example.com";
     process.env.CONTACT_EMAIL_FROM = "from@dinkbit.es";
   });
 
-  test("valid pyme lead → persists to CRM and sends internal + autoresponder emails", async () => {
+  test("valid pyme lead → upsert al CRM y SOLO email interno (sin autoresponder)", async () => {
     const { fields, multi } = validPyme();
     const res = await requestKitDigital2026(formFor(fields, multi));
 
     expect(res.ok).toBe(true);
-    expect(createWebhookLeadMock).toHaveBeenCalledTimes(1);
-    const row = createWebhookLeadMock.mock.calls[0][0];
+    expect(upsertMock).toHaveBeenCalledTimes(1);
+    const row = upsertMock.mock.calls[0][0];
     expect(row.campaign).toBe("Kit Digital 2026");
     expect(row.businessType).toBe("Pyme");
     expect(row.sector).toContain("Hostelería/restauración");
     expect(row.notes).toContain("Web, SEO");
 
-    // Two emails: internal notification + autoresponder to the lead.
-    expect(sendMock).toHaveBeenCalledTimes(2);
+    // Un solo email: el interno al equipo. NO se manda autoresponder al lead.
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    expect(sendMock.mock.calls[0][0].to).toBe("to@example.com");
     const recipients = sendMock.mock.calls.map((c) => c[0].to);
-    expect(recipients).toContain("to@example.com");
-    expect(recipients).toContain("nuria@example.com");
+    expect(recipients).not.toContain("nuria@example.com");
   });
 
-  test("autoresponder failure does not fail the submission", async () => {
-    // First email (internal) ok, second (autoresponder) errors.
-    sendMock
-      .mockReset()
-      .mockResolvedValueOnce({ error: null })
-      .mockResolvedValueOnce({ error: { message: "bounce" } });
+  test("fallo del email interno devuelve error", async () => {
+    sendMock.mockReset().mockResolvedValue({ error: { message: "smtp down" } });
     const { fields, multi } = validPyme();
     const res = await requestKitDigital2026(formFor(fields, multi));
-    expect(res.ok).toBe(true);
+    expect(res.ok).toBe(false);
   });
 
   test("rejects the honeypot", async () => {
@@ -91,7 +86,7 @@ describe("requestKitDigital2026", () => {
       formFor({ ...fields, website: "spam" }, multi),
     );
     expect(res.ok).toBe(false);
-    expect(createWebhookLeadMock).not.toHaveBeenCalled();
+    expect(upsertMock).not.toHaveBeenCalled();
   });
 
   test("rejects a too-fast submission (time-trap)", async () => {
@@ -100,7 +95,7 @@ describe("requestKitDigital2026", () => {
       formFor({ ...fields, formLoadedAt: String(Date.now()) }, multi),
     );
     expect(res.ok).toBe(false);
-    expect(createWebhookLeadMock).not.toHaveBeenCalled();
+    expect(upsertMock).not.toHaveBeenCalled();
   });
 
   test("requires at least one service", async () => {
@@ -109,7 +104,7 @@ describe("requestKitDigital2026", () => {
       formFor(fields, { services: [], sectors: [] }),
     );
     expect(res.ok).toBe(false);
-    expect(createWebhookLeadMock).not.toHaveBeenCalled();
+    expect(upsertMock).not.toHaveBeenCalled();
   });
 
   test("pyme without employees is rejected", async () => {
@@ -156,7 +151,7 @@ describe("requestKitDigital2026", () => {
       ),
     );
     expect(res.ok).toBe(true);
-    const row = createWebhookLeadMock.mock.calls[0][0];
+    const row = upsertMock.mock.calls[0][0];
     expect(row.businessType).toBe("Autónomo");
   });
 
