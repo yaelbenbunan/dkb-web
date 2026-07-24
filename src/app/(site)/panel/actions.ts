@@ -14,10 +14,12 @@ import {
   archiveLeads,
   deleteLeads,
   createManualLead,
+  listLeads,
   LEAD_STATUSES,
   type LeadStatus,
 } from "@/lib/imagina-leads";
 import { ACCOUNT_MANAGERS } from "@/lib/account-managers";
+import { sendKitDigital2026Email } from "@/lib/kit-digital-2026-resend";
 
 export async function panelLogin(formData: FormData) {
   const user = String(formData.get("user") ?? "");
@@ -97,6 +99,30 @@ export async function setLeadCampaign(formData: FormData) {
   }
 }
 
+export async function setLeadName(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  if (id) {
+    await updateLeadField(id, "name", String(formData.get("name") ?? ""));
+    revalidatePath("/panel");
+  }
+}
+
+export async function setLeadEmail(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  if (id) {
+    await updateLeadField(id, "email", String(formData.get("email") ?? ""));
+    revalidatePath("/panel");
+  }
+}
+
+export async function setLeadPhone(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  if (id) {
+    await updateLeadField(id, "phone", String(formData.get("phone") ?? ""));
+    revalidatePath("/panel");
+  }
+}
+
 export async function createLeadAction(
   formData: FormData,
 ): Promise<{ ok: boolean; error?: string }> {
@@ -120,6 +146,25 @@ export async function createLeadAction(
     return { ok: false, error: "No se pudo crear el lead. Inténtalo de nuevo." };
   }
   revalidatePath("/panel");
+  return { ok: true };
+}
+
+export async function resendKitDigitalEmailAction(
+  formData: FormData,
+): Promise<{ ok: boolean; error?: string }> {
+  const id = String(formData.get("id") ?? "");
+  if (!id) return { ok: false, error: "Falta el id." };
+  const lead = (await listLeads()).find((l) => l.id === id);
+  if (!lead) return { ok: false, error: "Lead no encontrado." };
+  if (lead.campaign !== "Kit Digital 2026") {
+    return { ok: false, error: "Solo para leads de Kit Digital 2026." };
+  }
+  const email = (lead.email ?? "").trim();
+  if (!email) return { ok: false, error: "El lead no tiene email." };
+
+  const res = await sendKitDigital2026Email({ leadId: id, name: lead.name, email });
+  revalidatePath("/panel");
+  if (!res.ok) return { ok: false, error: "No se pudo reenviar. Inténtalo de nuevo." };
   return { ok: true };
 }
 
