@@ -5,12 +5,18 @@ import { handleKitDigital2026MetaLead } from "@/lib/kit-digital-2026-meta";
 // Endpoint dedicado para leads de la campaña de Meta Lead Ads del Kit Digital.
 // Zapier reenvía aquí el lead crudo → se guarda en el CRM (canal Meta, campaña
 // "Kit Digital 2026") y se le manda el email "casi has terminado" con el botón
-// a la landing. Mismo secreto que /api/leads.
+// a la landing.
+//
+// Secreto propio: usa KIT_DIGITAL_2026_WEBHOOK_SECRET si está definido (así esta
+// campaña tiene su propio secreto, independiente del de otras campañas que usan
+// /api/leads). Si no está, cae al compartido LEADS_WEBHOOK_SECRET para no romper
+// nada durante la transición.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
-  const expected = process.env.LEADS_WEBHOOK_SECRET;
+  const expected =
+    process.env.KIT_DIGITAL_2026_WEBHOOK_SECRET ?? process.env.LEADS_WEBHOOK_SECRET;
   if (!expected) {
     return NextResponse.json({ ok: false, error: "webhook_not_configured" }, { status: 500 });
   }
