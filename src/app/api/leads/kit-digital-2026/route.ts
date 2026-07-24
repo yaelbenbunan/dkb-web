@@ -1,20 +1,18 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createWebhookLead } from "@/lib/imagina-leads";
 import { providedSecret, secretMatches } from "@/lib/webhook-auth";
+import { handleKitDigital2026MetaLead } from "@/lib/kit-digital-2026-meta";
 
-// Inbound lead webhook — e.g. Zapier (Meta Lead Ads) → POST here → CRM table.
-// Protected by a shared secret. Accepts JSON or form-encoded bodies and is
-// lenient about field names so the Zap mapping is easy.
+// Endpoint dedicado para leads de la campaña de Meta Lead Ads del Kit Digital.
+// Zapier reenvía aquí el lead crudo → se guarda en el CRM (canal Meta, campaña
+// "Kit Digital 2026") y se le manda el email "casi has terminado" con el botón
+// a la landing. Mismo secreto que /api/leads.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   const expected = process.env.LEADS_WEBHOOK_SECRET;
   if (!expected) {
-    return NextResponse.json(
-      { ok: false, error: "webhook_not_configured" },
-      { status: 500 },
-    );
+    return NextResponse.json({ ok: false, error: "webhook_not_configured" }, { status: 500 });
   }
   if (!secretMatches(providedSecret(req), expected)) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
@@ -47,20 +45,14 @@ export async function POST(req: NextRequest) {
   const phone = pick("phone", "phone_number", "phoneNumber", "telefono", "teléfono");
 
   if (!name && !email && !phone) {
-    return NextResponse.json(
-      { ok: false, error: "missing_name_email_or_phone" },
-      { status: 400 },
-    );
+    return NextResponse.json({ ok: false, error: "missing_name_email_or_phone" }, { status: 400 });
   }
 
-  const res = await createWebhookLead({
+  const res = await handleKitDigital2026MetaLead({
     id: pick("id", "leadgen_id", "lead_id", "external_id"),
     name,
     email,
     phone,
-    channel: pick("channel", "canal") ?? "Meta",
-    campaign: pick("campaign", "campaign_name", "campaña", "campana"),
-    notes: pick("notes", "notas", "message", "mensaje", "extra"),
   });
 
   if (!res.ok) {
@@ -69,7 +61,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true, id: res.id });
 }
 
-// Simple health check so you can confirm the URL is live from a browser.
+// Health check para confirmar la URL desde el navegador.
 export function GET() {
-  return NextResponse.json({ ok: true, service: "leads-webhook", method: "POST" });
+  return NextResponse.json({ ok: true, service: "kit-digital-2026-meta-webhook", method: "POST" });
 }

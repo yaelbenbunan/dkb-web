@@ -55,7 +55,14 @@ const STEPS = [
   { n: "03", t: "Nos encargamos", d: "Preparamos y tramitamos tu solicitud por ti, sin papeleo." },
 ];
 
-export default function KitDigital2026Page() {
+export default async function KitDigital2026Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ email?: string }>;
+}) {
+  const { email } = await searchParams;
+  const initialEmail = typeof email === "string" ? email : "";
+
   return (
     <>
       {/* Hero + formulario */}
@@ -92,7 +99,7 @@ export default function KitDigital2026Page() {
           {/* Formulario, protagonista debajo */}
           <Reveal className="mx-auto mt-8 max-w-3xl">
             <div id="apuntarme" className="scroll-mt-24">
-              <KitDigital2026Form />
+              <KitDigital2026Form initialEmail={initialEmail} />
             </div>
           </Reveal>
         </Container>

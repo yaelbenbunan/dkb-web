@@ -44,7 +44,7 @@ function CheckPill({ name, value }: { name: string; value: string }) {
   );
 }
 
-export function KitDigital2026Form() {
+export function KitDigital2026Form({ initialEmail = "" }: { initialEmail?: string }) {
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<{ ok: boolean; error?: string } | null>(
     null,
@@ -113,6 +113,7 @@ export function KitDigital2026Form() {
               name="email"
               type="email"
               required
+              defaultValue={initialEmail}
               placeholder="Tu mejor email"
               className={inputClass}
             />

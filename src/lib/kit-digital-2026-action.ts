@@ -2,8 +2,7 @@
 
 import { Resend } from "resend";
 import { z } from "zod";
-import { buildKitDigital2026Email } from "./kit-digital-2026-email";
-import { createWebhookLead } from "./imagina-leads";
+import { upsertKitDigital2026Lead } from "./imagina-leads";
 import { kitDigital2026Lead, utmFromFormData } from "./web-lead-origin";
 
 const schema = z
@@ -73,7 +72,7 @@ export async function requestKitDigital2026(
 
   // Persist every web lead to the CRM (best-effort, never throws) before the
   // emails — so the lead is never lost even if Resend is down or misconfigured.
-  await createWebhookLead(
+  await upsertKitDigital2026Lead(
     kitDigital2026Lead(
       {
         name: d.name,
@@ -126,20 +125,6 @@ export async function requestKitDigital2026(
   if (error) {
     console.error("Resend error (kit-digital-2026, interno):", error);
     return { ok: false, error: "No se pudo enviar. Inténtalo más tarde." };
-  }
-
-  // 2) Autoresponder al lead (best-effort): un fallo aquí no invalida el envío
-  //    — el aviso interno ya se entregó y el lead está en el CRM.
-  const autoEmail = buildKitDigital2026Email({ name: d.name });
-  const { error: autoErr } = await resend.emails.send({
-    from,
-    to: d.email,
-    subject: autoEmail.subject,
-    html: autoEmail.html,
-    text: autoEmail.text,
-  });
-  if (autoErr) {
-    console.error("Resend error (kit-digital-2026, autoresponder):", autoErr);
   }
 
   return { ok: true };
