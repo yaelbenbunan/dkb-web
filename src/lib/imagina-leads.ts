@@ -33,6 +33,9 @@ export interface LeadRow {
   followup: string | null;
   account_manager: string | null;
   archived: boolean;
+  email_status: string | null;
+  email_message_id: string | null;
+  email_updated_at: string | null;
 }
 
 export interface SaveLeadInput {
@@ -126,10 +129,19 @@ export async function updateLeadStatus(
   return true;
 }
 
-/** Update a single free-text/select field on a lead (account_manager, notes, followup). */
+/** Update a single free-text/select field on a lead (account_manager, notes,
+ *  followup, channel, campaign, name, email, phone). */
 export async function updateLeadField(
   leadId: string,
-  field: "account_manager" | "notes" | "followup" | "channel" | "campaign",
+  field:
+    | "account_manager"
+    | "notes"
+    | "followup"
+    | "channel"
+    | "campaign"
+    | "name"
+    | "email"
+    | "phone",
   value: string,
 ): Promise<boolean> {
   const sb = getSupabaseAdmin();
@@ -413,4 +425,46 @@ export async function savePromoQuestionnaire(input: PromoQuestionnaireInput): Pr
   const block = formatQuestionnaireNotes(input);
   const combined = prev ? `${prev}\n\n— Cuestionario —\n${block}` : block;
   await updateLeadField(input.leadId, "notes", combined);
+}
+
+/** Marca el email como enviado y guarda el message_id de Resend (para casar los
+ *  eventos del webhook). Best-effort. */
+export async function setLeadEmailSent(
+  leadId: string,
+  messageId: string,
+): Promise<void> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return;
+  const { error } = await sb
+    .from(TABLE)
+    .update({
+      email_status: "sent",
+      email_message_id: messageId,
+      email_updated_at: new Date().toISOString(),
+    })
+    .eq("id", leadId);
+  if (error) console.error("[imagina-leads] setLeadEmailSent error:", error.message);
+}
+
+/** Actualiza el estado del email de la fila cuyo message_id casa con el evento de
+ *  Resend. Devuelve el nº de filas actualizadas (0 si no rastreamos ese email). */
+export async function setLeadEmailStatusByMessageId(
+  messageId: string,
+  status: string,
+): Promise<number> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return 0;
+  const { data, error } = await sb
+    .from(TABLE)
+    .update({ email_status: status, email_updated_at: new Date().toISOString() })
+    .eq("email_message_id", messageId)
+    .select("id");
+  if (error) {
+    console.error(
+      "[imagina-leads] setLeadEmailStatusByMessageId error:",
+      error.message,
+    );
+    return 0;
+  }
+  return data?.length ?? 0;
 }
