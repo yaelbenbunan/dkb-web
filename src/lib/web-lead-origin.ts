@@ -200,6 +200,8 @@ export function kitDigital2026Lead(
     phone: d.phone,
     channel,
     campaign: "Kit Digital 2026",
+    // Entra ya etiquetado como "Interés en Kit Digital" (slug kit-digital).
+    status: "kit-digital",
     // Columnas dedicadas para filtrar en el panel.
     sector: sectors.length ? sectors.join(", ") : null,
     businessType: typeLabel,

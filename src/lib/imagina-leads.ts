@@ -157,6 +157,9 @@ export interface WebhookLeadInput {
   sector?: string | null;
   businessType?: string | null;
   notes?: string | null;
+  /** Estado inicial del lead en el panel. Por defecto "nuevo"; los flujos de una
+   *  campaña concreta pueden entrar ya etiquetados (p.ej. "kit-digital"). */
+  status?: LeadStatus | string | null;
 }
 
 /** Insert a lead coming from an external webhook (Zapier → Meta Lead Ads, etc.).
@@ -180,7 +183,7 @@ export async function createWebhookLead(
     sector: clean(input.sector),
     business_type: clean(input.businessType),
     notes: clean(input.notes),
-    status: "nuevo",
+    status: clean(input.status) ?? "nuevo",
   };
   const { error } = await sb.from(TABLE).upsert(row, { onConflict: "id" });
   if (error) {

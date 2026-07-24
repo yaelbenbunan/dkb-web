@@ -164,6 +164,8 @@ describe("kitDigital2026Lead", () => {
     });
     expect(row.channel).toBe("Web");
     expect(row.campaign).toBe("Kit Digital 2026");
+    // Entra ya etiquetado "Interés en Kit Digital".
+    expect(row.status).toBe("kit-digital");
     expect(row.businessType).toBe("Pyme");
     // sector column carries the multi-select union for panel filtering.
     expect(row.sector).toBe("Hostelería/restauración, Comercio/retail");

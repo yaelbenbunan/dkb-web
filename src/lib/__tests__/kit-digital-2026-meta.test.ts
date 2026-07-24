@@ -37,6 +37,8 @@ describe("handleKitDigital2026MetaLead", () => {
     expect(row.id).toBe("lg-123");
     expect(row.channel).toBe("Meta");
     expect(row.campaign).toBe("Kit Digital 2026");
+    // Entra ya etiquetado "Interés en Kit Digital".
+    expect(row.status).toBe("kit-digital");
     // Email al lead con CTA a la landing prefilled.
     expect(sendMock).toHaveBeenCalledTimes(1);
     const msg = sendMock.mock.calls[0][0];

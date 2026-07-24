@@ -28,6 +28,8 @@ export async function handleKitDigital2026MetaLead(input: {
     phone: clean(input.phone),
     channel: "Meta",
     campaign: CAMPAIGN,
+    // Entra ya etiquetado como "Interés en Kit Digital" (slug kit-digital).
+    status: "kit-digital",
     notes: "Origen: Meta Lead Ads (campaña Kit Digital) · pendiente de completar datos en la landing",
   });
   if (!saved.ok) return saved;
