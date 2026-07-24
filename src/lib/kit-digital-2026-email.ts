@@ -25,7 +25,7 @@ function escapeHtml(s: string): string {
 
 /** Qué falta — pasos que se muestran como filas con check de acento. */
 const STEPS: readonly string[] = [
-  "Cuéntanos qué necesitas para tu negocio (2 minutos).",
+  "Cuéntanos algunos detalles sobre tu negocio (2 minutos).",
   "Nos encargamos de toda la tramitación del Kit Digital por ti.",
   "Te avisamos en cuanto la convocatoria se reactive.",
 ];
@@ -42,7 +42,7 @@ export function buildKitDigital2026Email(input: {
   const accent = `#${KD_EMAIL.accentHex}`;
   const subject = "Casi está — solo falta un paso para tu Kit Digital";
   const preheader =
-    "Ya casi está. Solo falta que nos cuentes qué necesitas y nos encargamos de todo.";
+    "Ya casi está. Cuéntanos algunos detalles sobre tu negocio y nos encargamos de todo.";
   const ctaUrl = input.email
     ? `${KD_EMAIL.landingUrl}?email=${encodeURIComponent(input.email)}`
     : KD_EMAIL.landingUrl;
@@ -86,7 +86,8 @@ export function buildKitDigital2026Email(input: {
     </h1>
     <p style="margin:16px 0 0;font-size:17px;line-height:1.55;color:#475569;">
       Gracias por tu interés en el <strong style="color:${accent};">Kit Digital</strong>.
-      Solo falta <strong>un paso más</strong>: cuéntanos qué necesitas y nos encargamos del resto.
+      Solo falta <strong>un paso más</strong>: cuéntanos algunos detalles sobre tu negocio
+      y nos encargamos del resto.
     </p>
   </td></tr>
 
