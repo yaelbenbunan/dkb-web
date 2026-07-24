@@ -8,11 +8,16 @@ import {
   setLeadFollowup,
   setLeadChannel,
   setLeadCampaign,
+  setLeadName,
+  setLeadEmail,
+  setLeadPhone,
+  resendKitDigitalEmailAction,
   archiveLeadsAction,
   deleteLeadsAction,
   createLeadAction,
 } from "./actions";
 import { LEAD_STATUSES, STATUS_COLORS, statusLabel } from "@/lib/lead-status";
+import { emailStatusLabel, EMAIL_STATUS_COLORS } from "@/lib/email-status";
 import { ACCOUNT_MANAGERS, AM_COLORS } from "@/lib/account-managers";
 
 export interface LeadRowView {
@@ -28,6 +33,7 @@ export interface LeadRowView {
   followup: string | null;
   account_manager: string | null;
   status: string;
+  email_status: string | null;
   archived: boolean;
 }
 
@@ -281,6 +287,7 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
                 "Nombre",
                 "Teléfono",
                 "Email",
+                "Estado email",
                 "Web",
                 "Canal",
                 "Campaña",
@@ -299,7 +306,7 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
             {visible.length === 0 && (
               <tr>
                 <td
-                  colSpan={12}
+                  colSpan={13}
                   style={{
                     ...td,
                     textAlign: "center",
@@ -334,27 +341,40 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
                   <td style={{ ...td, color: "#64748b", fontSize: 13 }}>
                     {fmtDate(l.created_at)}
                   </td>
-                  <td style={{ ...td, fontWeight: 600 }}>{l.name ?? "—"}</td>
-                  <td style={td}>
-                    {l.phone ? (
-                      <a
-                        href={`tel:${l.phone.replace(/\s+/g, "")}`}
-                        style={{ color: "#187bef" }}
-                      >
-                        {l.phone}
-                      </a>
-                    ) : (
-                      "—"
-                    )}
+                  <td style={{ ...td, fontWeight: 600, minWidth: 160 }}>
+                    <InlineText
+                      id={l.id}
+                      field="name"
+                      action={setLeadName}
+                      value={l.name ?? ""}
+                      placeholder="—"
+                    />
+                  </td>
+                  <td style={{ ...td, minWidth: 150 }}>
+                    <InlineText
+                      id={l.id}
+                      field="phone"
+                      action={setLeadPhone}
+                      value={l.phone ?? ""}
+                      placeholder="—"
+                    />
+                  </td>
+                  <td style={{ ...td, minWidth: 190 }}>
+                    <InlineText
+                      id={l.id}
+                      field="email"
+                      action={setLeadEmail}
+                      value={l.email ?? ""}
+                      placeholder="—"
+                    />
                   </td>
                   <td style={td}>
-                    {l.email ? (
-                      <a href={`mailto:${l.email}`} style={{ color: "#187bef" }}>
-                        {l.email}
-                      </a>
-                    ) : (
-                      "—"
-                    )}
+                    <EmailStatusCell
+                      id={l.id}
+                      status={l.email_status}
+                      campaign={l.campaign}
+                      hasEmail={!!(l.email ?? "").trim()}
+                    />
                   </td>
                   <td style={td}>
                     {href ? (
@@ -832,6 +852,78 @@ function EditableCell({
         background: pending ? "#f8fafc" : "#fff",
       }}
     />
+  );
+}
+
+/** Badge de estado del email + botón Reenviar para leads de Kit Digital 2026.
+ *  El botón se resalta (rojo) cuando el email rebotó o fue marcado como spam. */
+function EmailStatusCell({
+  id,
+  status,
+  campaign,
+  hasEmail,
+}: {
+  id: string;
+  status: string | null;
+  campaign: string | null;
+  hasEmail: boolean;
+}) {
+  const [pending, start] = useTransition();
+  const [msg, setMsg] = useState<string | null>(null);
+  const color = status ? EMAIL_STATUS_COLORS[status] ?? "#94a3b8" : "#cbd5e1";
+  const canResend = campaign === "Kit Digital 2026" && hasEmail;
+  const failed = status === "bounced" || status === "complained";
+
+  const resend = () => {
+    setMsg(null);
+    const fd = new FormData();
+    fd.set("id", id);
+    start(async () => {
+      const r = await resendKitDigitalEmailAction(fd);
+      setMsg(r.ok ? "Reenviado ✓" : r.error ?? "Error");
+    });
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 120 }}>
+      <span
+        style={{
+          display: "inline-block",
+          alignSelf: "flex-start",
+          borderRadius: 999,
+          background: status ? color : "#fff",
+          color: status ? "#fff" : "#94a3b8",
+          border: status ? "none" : "1px solid #e2e8f0",
+          fontWeight: 700,
+          fontSize: 12,
+          padding: "3px 10px",
+        }}
+      >
+        {emailStatusLabel(status)}
+      </span>
+      {canResend && (
+        <button
+          type="button"
+          onClick={resend}
+          disabled={pending}
+          style={{
+            alignSelf: "flex-start",
+            border: `1px solid ${failed ? "#dc2626" : "#cbd5e1"}`,
+            background: failed ? "#fef2f2" : "#fff",
+            color: failed ? "#b91c1c" : "#475569",
+            borderRadius: 8,
+            padding: "4px 10px",
+            fontSize: 12,
+            fontWeight: 700,
+            cursor: pending ? "wait" : "pointer",
+            opacity: pending ? 0.6 : 1,
+          }}
+        >
+          {pending ? "Enviando…" : failed ? "⟳ Reenviar" : "Reenviar"}
+        </button>
+      )}
+      {msg && <span style={{ fontSize: 11, color: "#64748b" }}>{msg}</span>}
+    </div>
   );
 }
 

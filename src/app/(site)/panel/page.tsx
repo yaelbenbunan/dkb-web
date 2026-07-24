@@ -27,6 +27,7 @@ export default async function PanelPage() {
     followup: l.followup,
     account_manager: l.account_manager,
     status: String(l.status),
+    email_status: l.email_status,
     archived: l.archived,
   }));
 
