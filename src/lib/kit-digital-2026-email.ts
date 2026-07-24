@@ -23,23 +23,29 @@ function escapeHtml(s: string): string {
     .replace(/'/g, "&#39;");
 }
 
-/** Qué pasa ahora — pasos que se muestran como filas con check de acento. */
+/** Qué falta — pasos que se muestran como filas con check de acento. */
 const STEPS: readonly string[] = [
-  "Te avisamos en cuanto el Kit Digital se reactive.",
-  "Nos encargamos de toda la tramitación por ti.",
-  "Si necesitamos algún dato más, te contactamos.",
+  "Cuéntanos qué necesitas para tu negocio (2 minutos).",
+  "Nos encargamos de toda la tramitación del Kit Digital por ti.",
+  "Te avisamos en cuanto la convocatoria se reactive.",
 ];
 
-export function buildKitDigital2026Email(input: { name: string }): {
+export function buildKitDigital2026Email(input: {
+  name: string;
+  email?: string;
+}): {
   subject: string;
   html: string;
   text: string;
 } {
   const first = escapeHtml((input.name || "").trim().split(/\s+/)[0] || "hola");
   const accent = `#${KD_EMAIL.accentHex}`;
-  const subject = "Gracias — te avisamos cuando el Kit Digital se reactive";
+  const subject = "Casi está — solo falta un paso para tu Kit Digital";
   const preheader =
-    "Ya estás en la lista del Kit Digital. Te avisamos en cuanto se reactive y nos encargamos de la tramitación.";
+    "Ya casi está. Solo falta que nos cuentes qué necesitas y nos encargamos de todo.";
+  const ctaUrl = input.email
+    ? `${KD_EMAIL.landingUrl}?email=${encodeURIComponent(input.email)}`
+    : KD_EMAIL.landingUrl;
 
   const stepsHtml = STEPS.map(
     (s) => `
@@ -76,19 +82,19 @@ export function buildKitDigital2026Email(input: { name: string }): {
   <!-- HERO -->
   <tr><td style="padding:14px 36px 6px;">
     <h1 style="margin:0;font-size:30px;line-height:1.12;color:#0f172a;font-weight:900;letter-spacing:-0.5px;">
-      ¡Gracias, ${first}! 🎉
+      ¡Casi has terminado, ${first}! 🚀
     </h1>
     <p style="margin:16px 0 0;font-size:17px;line-height:1.55;color:#475569;">
-      Ya estás en nuestra <strong style="color:${accent};">lista del Kit Digital</strong>.
-      Serás de los primeros en enterarte en cuanto se reactive.
+      Gracias por tu interés en el <strong style="color:${accent};">Kit Digital</strong>.
+      Solo falta <strong>un paso más</strong>: cuéntanos qué necesitas y nos encargamos del resto.
     </p>
   </td></tr>
 
-  <!-- "QUÉ PASA AHORA" card -->
+  <!-- "QUÉ FALTA" card -->
   <tr><td style="padding:22px 36px 6px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fc;border:1px solid #e2e8f0;border-radius:14px;">
       <tr><td style="padding:20px 22px 14px;">
-        <p style="margin:0 0 6px;font-size:12px;font-weight:800;letter-spacing:1.5px;color:${accent};text-transform:uppercase;">Qué pasa ahora</p>
+        <p style="margin:0 0 6px;font-size:12px;font-weight:800;letter-spacing:1.5px;color:${accent};text-transform:uppercase;">Qué falta</p>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
           ${stepsHtml}
         </table>
@@ -98,7 +104,7 @@ export function buildKitDigital2026Email(input: { name: string }): {
 
   <!-- CTA -->
   <tr><td style="padding:24px 36px 8px;text-align:center;">
-    <a href="${KD_EMAIL.landingUrl}" style="display:inline-block;background:${accent};color:#ffffff;font-size:16px;font-weight:800;text-decoration:none;padding:15px 32px;border-radius:12px;box-shadow:0 10px 24px -10px ${accent};">Descubre lo que hacemos →</a>
+    <a href="${ctaUrl}" style="display:inline-block;background:${accent};color:#ffffff;font-size:16px;font-weight:800;text-decoration:none;padding:15px 32px;border-radius:12px;box-shadow:0 10px 24px -10px ${accent};">Completar mis datos →</a>
     <p style="margin:14px 0 0;font-size:13px;color:#64748b;">O responde a este correo si tienes cualquier duda.</p>
   </td></tr>
 
@@ -114,12 +120,12 @@ export function buildKitDigital2026Email(input: { name: string }): {
   const text = [
     `Hola ${(input.name || "").trim().split(/\s+/)[0] || "hola"},`,
     "",
-    "Gracias por dejarnos tus datos. Ya estás en nuestra lista del Kit Digital.",
+    "Gracias por tu interés en el Kit Digital. Solo falta un paso más.",
     "",
-    "Qué pasa ahora:",
+    "Qué falta:",
     ...STEPS.map((s) => `· ${s}`),
     "",
-    "Cualquier duda, responde a este correo.",
+    `Completa tus datos aquí: ${ctaUrl}`,
     "",
     "Un saludo,",
     "El equipo de Dinkbit",
