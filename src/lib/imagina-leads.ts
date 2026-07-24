@@ -205,6 +205,10 @@ export async function upsertKitDigital2026Lead(
     return t || null;
   };
   const email = clean(lead.email);
+  // Escapa los comodines de LIKE (\, %, _) para que el email se matchee de
+  // forma literal (case-insensitive), no como patrón — un "_" en el local-part
+  // del email es común y no debe actuar como comodín.
+  const emailLike = email ? email.replace(/[\\%_]/g, (c) => `\\${c}`) : null;
 
   // Buscar fila existente (con sus campos para decidir el merge).
   const existing = email
@@ -212,7 +216,7 @@ export async function upsertKitDigital2026Lead(
         await sb
           .from(TABLE)
           .select("id,name,phone,notes")
-          .ilike("email", email)
+          .ilike("email", emailLike!)
           .eq("campaign", KD2026_CAMPAIGN)
           .order("created_at", { ascending: false })
           .limit(1)

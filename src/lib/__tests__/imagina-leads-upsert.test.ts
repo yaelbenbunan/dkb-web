@@ -6,7 +6,8 @@ const state: {
   selectRow: Record<string, unknown> | null;
   updated: Record<string, unknown> | null;
   upserted: Record<string, unknown> | null;
-} = { selectRow: null, updated: null, upserted: null };
+  ilikePattern: string | null;
+} = { selectRow: null, updated: null, upserted: null, ilikePattern: null };
 
 const { getAdminMock } = vi.hoisted(() => ({ getAdminMock: vi.fn() }));
 
@@ -19,7 +20,10 @@ function fakeClient() {
         // SELECT chain: select().ilike().eq().order().limit().maybeSingle()
         select() {
           const chain = {
-            ilike() { return chain; },
+            ilike(column: string, pattern: string) {
+              state.ilikePattern = pattern;
+              return chain;
+            },
             eq() { return chain; },
             order() { return chain; },
             limit() { return chain; },
@@ -60,6 +64,7 @@ describe("upsertKitDigital2026Lead", () => {
     state.selectRow = null;
     state.updated = null;
     state.upserted = null;
+    state.ilikePattern = null;
     getAdminMock.mockReset().mockReturnValue(fakeClient());
   });
 
@@ -109,5 +114,16 @@ describe("upsertKitDigital2026Lead", () => {
     await upsertKitDigital2026Lead(leadInput());
     expect(state.updated).not.toHaveProperty("name");
     expect(state.updated).not.toHaveProperty("phone");
+  });
+
+  test("escapa comodines LIKE en email (_ en el local-part)", async () => {
+    const leadWithUnderscore = {
+      ...leadInput(),
+      email: "john_doe@example.com",
+    };
+    state.selectRow = null; // sin match, solo queremos capturar el patrón
+    await upsertKitDigital2026Lead(leadWithUnderscore);
+    // El patrón enviado a ilike debe escapar el underscore
+    expect(state.ilikePattern).toBe("john\\_doe@example.com");
   });
 });
