@@ -78,7 +78,8 @@ function fakeClient() {
         select(_cols?: string) {
           state.selectedTable = table;
           const builder = {
-            eq() {
+            eq(field: string, value: unknown) {
+              state.eqCalls.push({ field, value });
               return builder;
             },
             not() {
@@ -111,9 +112,10 @@ import {
   updateCampaign,
   setCampaignStatus,
   listEmailTemplates,
+  getBuiltinTemplates,
   saveEmailTemplate,
   insertCampaignRecipients,
-  setCampaignRecipientMessageId,
+  setRecipientMessageId,
 } from "../campaigns";
 
 describe("campaigns", () => {
@@ -151,10 +153,11 @@ describe("campaigns", () => {
     expect(state.eqCalls[0]).toEqual({ field: "id", value: "camp-1" });
   });
 
-  test("updateCampaign serializa blocks si es objeto", async () => {
-    await updateCampaign("camp-1", { blocks: [{ id: "a", type: "hero" }] as unknown });
-    expect(typeof state.updated!.blocks).toBe("string");
-    expect(state.updated!.blocks).toContain("hero");
+  test("updateCampaign pasa blocks como objeto/array (jsonb, sin doble-encode)", async () => {
+    const blocks = [{ id: "a", type: "hero" }];
+    await updateCampaign("camp-1", { blocks: blocks as unknown });
+    expect(Array.isArray(state.updated!.blocks)).toBe(true);
+    expect(state.updated!.blocks).toEqual(blocks);
   });
 
   test("setCampaignStatus actualiza el status por id", async () => {
@@ -185,6 +188,14 @@ describe("campaigns", () => {
     expect(rows).toEqual([{ id: "t1", name: "Tpl" }]);
   });
 
+  test("getBuiltinTemplates filtra is_builtin=true", async () => {
+    state.returnRows = [{ id: "t1", name: "Builtin" }];
+    const rows = await getBuiltinTemplates();
+    expect(state.selectedTable).toBe("email_templates");
+    expect(state.eqCalls).toContainEqual({ field: "is_builtin", value: true });
+    expect(rows).toEqual([{ id: "t1", name: "Builtin" }]);
+  });
+
   test("saveEmailTemplate inserta con is_builtin false", async () => {
     const res = await saveEmailTemplate({ name: "Tpl", blocks: [{ id: "a" }] });
     expect(state.insertedTable).toBe("email_templates");
@@ -204,8 +215,8 @@ describe("campaigns", () => {
     expect(rows[1].status).toBe("sent");
   });
 
-  test("setCampaignRecipientMessageId actualiza por campaign_id + lead_id", async () => {
-    await setCampaignRecipientMessageId("camp-1", "lead-1", "msg-123");
+  test("setRecipientMessageId actualiza por campaign_id + lead_id", async () => {
+    await setRecipientMessageId("camp-1", "lead-1", "msg-123");
     expect(state.updatedTable).toBe("campaign_recipients");
     expect(state.updated!.message_id).toBe("msg-123");
     expect(state.eqCalls).toContainEqual({ field: "campaign_id", value: "camp-1" });

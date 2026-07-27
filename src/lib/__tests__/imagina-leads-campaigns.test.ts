@@ -9,6 +9,7 @@ const state: {
   selectedTable: string | null;
   eqCalls: { field: string; value: unknown }[];
   notCalls: { field: string; op: string; value: unknown }[];
+  orCalls: string[];
   returnLeadRows: unknown[];
 } = {
   updatedTable: null,
@@ -19,6 +20,7 @@ const state: {
   selectedTable: null,
   eqCalls: [],
   notCalls: [],
+  orCalls: [],
   returnLeadRows: [],
 };
 
@@ -55,6 +57,10 @@ function fakeClient() {
               state.notCalls.push({ field, op, value });
               return builder;
             },
+            or(filter: string) {
+              state.orCalls.push(filter);
+              return builder;
+            },
             then(res: (v: { data: unknown[]; error: null }) => unknown) {
               return Promise.resolve({ data: state.returnLeadRows, error: null }).then(res);
             },
@@ -81,6 +87,7 @@ describe("campaign helpers en imagina-leads", () => {
     state.selectedTable = null;
     state.eqCalls = [];
     state.notCalls = [];
+    state.orCalls = [];
     state.returnLeadRows = [];
     getAdminMock.mockReset().mockReturnValue(fakeClient());
   });
@@ -101,15 +108,15 @@ describe("campaign helpers en imagina-leads", () => {
     expect(n).toBe(0);
   });
 
-  test("listEmailableLeads aplica consent/email/email_status", async () => {
+  test("listEmailableLeads aplica consent/email/email_status (incluye NULL)", async () => {
     state.returnLeadRows = [{ id: "lead-1" }];
     const rows = await listEmailableLeads();
     expect(state.selectedTable).toBe("imagina_leads");
     expect(state.eqCalls).toContainEqual({ field: "consent", value: true });
     expect(state.notCalls.some((c) => c.field === "email" && c.op === "is")).toBe(true);
-    expect(
-      state.notCalls.some((c) => c.field === "email_status" && c.op === "in"),
-    ).toBe(true);
+    const orFilter = state.orCalls[0];
+    expect(orFilter).toContain("email_status.is.null");
+    expect(orFilter).toContain("not.in.(bounced,complained)");
     expect(rows).toEqual([{ id: "lead-1" }]);
   });
 

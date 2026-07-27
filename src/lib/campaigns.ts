@@ -59,8 +59,9 @@ export async function createCampaign(
   return { id: (data as { id: string }).id };
 }
 
-/** Actualiza campos de una campaña por id. `blocks`, si viene como objeto, se
- *  serializa a JSON antes de persistir. Best-effort. */
+/** Actualiza campos de una campaña por id. `blocks` es jsonb: se pasa tal
+ *  cual (objeto/array), sin serializar, para que supabase-js lo persista
+ *  como JSON nativo. Best-effort. */
 export async function updateCampaign(
   id: string,
   patch: Partial<{
@@ -78,9 +79,6 @@ export async function updateCampaign(
   const sb = getSupabaseAdmin();
   if (!sb) return;
   const payload: Record<string, unknown> = { ...patch };
-  if ("blocks" in payload && payload.blocks !== null && typeof payload.blocks === "object") {
-    payload.blocks = JSON.stringify(payload.blocks);
-  }
   const { error } = await sb.from(CAMPAIGNS_TABLE).update(payload).eq("id", id);
   if (error) console.error("[campaigns] updateCampaign error:", error.message);
 }
@@ -136,6 +134,22 @@ export async function listEmailTemplates(): Promise<EmailTemplateRow[]> {
   return (data ?? []) as EmailTemplateRow[];
 }
 
+/** Plantillas sembradas/predefinidas (`is_builtin = true`). Best-effort. */
+export async function getBuiltinTemplates(): Promise<EmailTemplateRow[]> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return [];
+  const { data, error } = await sb
+    .from(TEMPLATES_TABLE)
+    .select("*")
+    .eq("is_builtin", true)
+    .order("created_at", { ascending: false });
+  if (error) {
+    console.error("[campaigns] getBuiltinTemplates error:", error.message);
+    return [];
+  }
+  return (data ?? []) as EmailTemplateRow[];
+}
+
 /** Guarda una plantilla creada por el usuario (nunca sembrada/built-in). */
 export async function saveEmailTemplate(
   input: { name: string; description?: string; blocks: unknown },
@@ -182,7 +196,7 @@ export async function insertCampaignRecipients(
 
 /** Guarda el message_id de Resend para un destinatario concreto de una
  *  campaña (para casar los eventos del webhook). Best-effort. */
-export async function setCampaignRecipientMessageId(
+export async function setRecipientMessageId(
   campaignId: string,
   leadId: string,
   messageId: string,
@@ -195,6 +209,6 @@ export async function setCampaignRecipientMessageId(
     .eq("campaign_id", campaignId)
     .eq("lead_id", leadId);
   if (error) {
-    console.error("[campaigns] setCampaignRecipientMessageId error:", error.message);
+    console.error("[campaigns] setRecipientMessageId error:", error.message);
   }
 }

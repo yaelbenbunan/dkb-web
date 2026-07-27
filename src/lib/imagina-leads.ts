@@ -516,7 +516,7 @@ export async function listEmailableLeads(filter?: {
     .select("*")
     .eq("consent", true)
     .not("email", "is", null)
-    .not("email_status", "in", "(bounced,complained)");
+    .or("email_status.is.null,email_status.not.in.(bounced,complained)");
   if (filter?.status) query = query.eq("status", filter.status);
   if (filter?.campaign) query = query.eq("campaign", filter.campaign);
   if (filter?.channel) query = query.eq("channel", filter.channel);
