@@ -33,4 +33,38 @@ describe("renderCampaignEmail", () => {
     ], DEFAULT_STYLE, ctx);
     expect(html).not.toContain("javascript:");
   });
+  test("un accent malicioso no rompe el atributo style (hero/button)", () => {
+    const malicious = '#fff" onmouseover="alert(1)';
+    const { html } = renderCampaignEmail([
+      { id: "1", type: "hero", props: { title: "T", accent: malicious } },
+      { id: "2", type: "button", props: { label: "x", url: "https://x.com", accent: malicious } },
+      { id: "f", type: "footer", props: { orgLine: "d", unsubscribe: true } },
+    ], DEFAULT_STYLE, ctx);
+    expect(html).not.toContain("onmouseover");
+  });
+  test("un fontStack malicioso no rompe el <style> ni inyecta <script>", () => {
+    const malicious = 'x;} body{} a[href]{color:red}"><script>alert(1)</script>';
+    const { html } = renderCampaignEmail([
+      { id: "1", type: "paragraph", props: { text: "hola" } },
+      { id: "f", type: "footer", props: { orgLine: "d", unsubscribe: true } },
+    ], { ...DEFAULT_STYLE, fontStack: malicious }, ctx);
+    expect(html).not.toContain("<script>");
+    expect(html).not.toContain(malicious);
+    expect(html).toContain(DEFAULT_STYLE.fontStack as string);
+  });
+  test("un image.src con javascript: se sanea", () => {
+    const { html } = renderCampaignEmail([
+      { id: "1", type: "image", props: { src: "javascript:alert(1)" } },
+      { id: "f", type: "footer", props: { orgLine: "d", unsubscribe: true } },
+    ], DEFAULT_STYLE, ctx);
+    expect(html).not.toContain("javascript:");
+  });
+  test("checklist escapa HTML de los items", () => {
+    const { html } = renderCampaignEmail([
+      { id: "1", type: "checklist", props: { items: ["<b>x</b>"] } },
+      { id: "f", type: "footer", props: { orgLine: "d", unsubscribe: true } },
+    ], DEFAULT_STYLE, ctx);
+    expect(html).toContain("&lt;b&gt;");
+    expect(html).not.toContain("<b>x</b>");
+  });
 });
