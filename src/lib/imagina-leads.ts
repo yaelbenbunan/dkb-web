@@ -477,3 +477,53 @@ export async function setLeadConsent(leadId: string, consent: boolean): Promise<
   const { error } = await sb.from(TABLE).update({ consent }).eq("id", leadId);
   if (error) console.error("[imagina-leads] setLeadConsent error:", error.message);
 }
+
+/** Actualiza el estado del destinatario de campaña cuyo message_id casa con el
+ *  evento de Resend (tabla `campaign_recipients`, no `imagina_leads`). Devuelve
+ *  el nº de filas actualizadas (0 si no rastreamos ese envío). */
+export async function setCampaignRecipientStatusByMessageId(
+  messageId: string,
+  status: string,
+): Promise<number> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return 0;
+  const { data, error } = await sb
+    .from("campaign_recipients")
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq("message_id", messageId)
+    .select("id");
+  if (error) {
+    console.error(
+      "[imagina-leads] setCampaignRecipientStatusByMessageId error:",
+      error.message,
+    );
+    return 0;
+  }
+  return data?.length ?? 0;
+}
+
+/** Leads "emailables": consentimiento explícito, email presente y sin rebote ni
+ *  queja registrados. Admite filtros opcionales de status/campaign/channel. */
+export async function listEmailableLeads(filter?: {
+  status?: string;
+  campaign?: string;
+  channel?: string;
+}): Promise<LeadRow[]> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return [];
+  let query = sb
+    .from(TABLE)
+    .select("*")
+    .eq("consent", true)
+    .not("email", "is", null)
+    .not("email_status", "in", "(bounced,complained)");
+  if (filter?.status) query = query.eq("status", filter.status);
+  if (filter?.campaign) query = query.eq("campaign", filter.campaign);
+  if (filter?.channel) query = query.eq("channel", filter.channel);
+  const { data, error } = await query;
+  if (error) {
+    console.error("[imagina-leads] listEmailableLeads error:", error.message);
+    return [];
+  }
+  return (data ?? []) as LeadRow[];
+}
