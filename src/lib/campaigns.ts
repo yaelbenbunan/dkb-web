@@ -1,5 +1,6 @@
 import "server-only";
 import { getSupabaseAdmin } from "./supabase-admin";
+import { BUILTIN_TEMPLATES } from "./campaign-templates-builtin";
 
 const CAMPAIGNS_TABLE = "campaigns";
 const RECIPIENTS_TABLE = "campaign_recipients";
@@ -137,7 +138,18 @@ export async function listEmailTemplates(): Promise<EmailTemplateRow[]> {
 /** Plantillas sembradas/predefinidas (`is_builtin = true`). Best-effort. */
 export async function getBuiltinTemplates(): Promise<EmailTemplateRow[]> {
   const sb = getSupabaseAdmin();
-  if (!sb) return [];
+  if (!sb) {
+    // Fallback si no hay Supabase configurado
+    const now = new Date().toISOString();
+    return BUILTIN_TEMPLATES.map((t) => ({
+      id: t.id,
+      created_at: now,
+      name: t.name,
+      description: t.description ?? null,
+      blocks: t.blocks,
+      is_builtin: true,
+    }));
+  }
   const { data, error } = await sb
     .from(TEMPLATES_TABLE)
     .select("*")
@@ -145,9 +157,31 @@ export async function getBuiltinTemplates(): Promise<EmailTemplateRow[]> {
     .order("created_at", { ascending: false });
   if (error) {
     console.error("[campaigns] getBuiltinTemplates error:", error.message);
-    return [];
+    // Fallback a plantillas builtin si hay error
+    const now = new Date().toISOString();
+    return BUILTIN_TEMPLATES.map((t) => ({
+      id: t.id,
+      created_at: now,
+      name: t.name,
+      description: t.description ?? null,
+      blocks: t.blocks,
+      is_builtin: true,
+    }));
   }
-  return (data ?? []) as EmailTemplateRow[];
+  const dbRows = (data ?? []) as EmailTemplateRow[];
+  if (dbRows.length > 0) {
+    return dbRows;
+  }
+  // Fallback si no hay filas en la BD
+  const now = new Date().toISOString();
+  return BUILTIN_TEMPLATES.map((t) => ({
+    id: t.id,
+    created_at: now,
+    name: t.name,
+    description: t.description ?? null,
+    blocks: t.blocks,
+    is_builtin: true,
+  }));
 }
 
 /** Guarda una plantilla creada por el usuario (nunca sembrada/built-in). */

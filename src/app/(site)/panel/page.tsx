@@ -77,6 +77,12 @@ export default async function PanelPage() {
           >
             🧮 Calculadora
           </Link>
+          <Link
+            href="/panel/campanas"
+            style={{ fontSize: 13, color: "#cbd5e1", textDecoration: "none" }}
+          >
+            ✉️ Campañas
+          </Link>
         </div>
         <form action={panelLogout} style={{ margin: 0 }}>
           <button
