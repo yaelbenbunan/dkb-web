@@ -36,6 +36,8 @@ export interface LeadRow {
   email_status: string | null;
   email_message_id: string | null;
   email_updated_at: string | null;
+  /** Consentimiento de comunicaciones comerciales (para campañas). null = sin definir. */
+  consent: boolean | null;
 }
 
 export interface SaveLeadInput {
