@@ -468,3 +468,10 @@ export async function setLeadEmailStatusByMessageId(
   }
   return data?.length ?? 0;
 }
+
+export async function setLeadConsent(leadId: string, consent: boolean): Promise<void> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return;
+  const { error } = await sb.from(TABLE).update({ consent }).eq("id", leadId);
+  if (error) console.error("[imagina-leads] setLeadConsent error:", error.message);
+}
