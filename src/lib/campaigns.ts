@@ -79,7 +79,10 @@ export async function updateCampaign(
 ): Promise<void> {
   const sb = getSupabaseAdmin();
   if (!sb) return;
-  const payload: Record<string, unknown> = { ...patch };
+  // Siempre se toca updated_at, aunque no venga en el patch: el wizard re-sincroniza
+  // sus bloques con un efecto que depende de este campo (ver CampaignWizard.tsx),
+  // así que si no cambia, la IA nunca refresca el editor tras escribir bloques.
+  const payload: Record<string, unknown> = { ...patch, updated_at: new Date().toISOString() };
   const { error } = await sb.from(CAMPAIGNS_TABLE).update(payload).eq("id", id);
   if (error) console.error("[campaigns] updateCampaign error:", error.message);
 }
@@ -224,7 +227,11 @@ export async function insertCampaignRecipients(
     message_id: r.message_id ?? null,
     status: r.status ?? "pending",
   }));
-  const { error } = await sb.from(RECIPIENTS_TABLE).insert(payload);
+  // upsert (no insert): un reintento de envío (mismo campaign_id + lead_id) no debe
+  // reventar contra la unique constraint — pisa la fila anterior con el estado nuevo.
+  const { error } = await sb
+    .from(RECIPIENTS_TABLE)
+    .upsert(payload, { onConflict: "campaign_id,lead_id" });
   if (error) console.error("[campaigns] insertCampaignRecipients error:", error.message);
 }
 

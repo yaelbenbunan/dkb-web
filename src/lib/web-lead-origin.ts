@@ -202,6 +202,9 @@ export function kitDigital2026Lead(
     campaign: "Kit Digital 2026",
     // Entra ya etiquetado como "Interés en Kit Digital" (slug kit-digital).
     status: "kit-digital",
+    // El formulario exige el checkbox de consentimiento (consent: z.literal(true)
+    // en kit-digital-2026-action.ts) — se registra para que el lead sea emailable.
+    consent: true,
     // Columnas dedicadas para filtrar en el panel.
     sector: sectors.length ? sectors.join(", ") : null,
     businessType: typeLabel,
@@ -230,6 +233,10 @@ export function promoVeranoLead(
     phone: d.phone ?? null,
     channel,
     campaign: "promo-verano-2026",
+    // El formulario exige el checkbox "acepto ... el envío de comunicaciones
+    // comerciales" (consent: "on" en promo-subscribe-action.ts) — se registra
+    // para que el lead sea emailable.
+    consent: true,
     notes: `Origen: popup Promo Verano -50% · Consentimiento comunicaciones comerciales: ${d.consentAt}`,
   };
 }

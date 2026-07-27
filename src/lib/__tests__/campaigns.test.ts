@@ -10,6 +10,9 @@ const state: {
   returnRows: unknown[];
   returnRow: Record<string, unknown> | null;
   insertReturnId: string;
+  upsertedTable: string | null;
+  upserted: Record<string, unknown> | Record<string, unknown>[] | null;
+  upsertOptions: { onConflict?: string } | null;
 } = {
   insertedTable: null,
   inserted: null,
@@ -20,6 +23,9 @@ const state: {
   returnRows: [],
   returnRow: null,
   insertReturnId: "new-id",
+  upsertedTable: null,
+  upserted: null,
+  upsertOptions: null,
 };
 
 const { getAdminMock } = vi.hoisted(() => ({ getAdminMock: vi.fn() }));
@@ -40,6 +46,19 @@ function fakeClient() {
                 },
               };
             },
+            then(res: (v: { error: null }) => unknown) {
+              return Promise.resolve({ error: null }).then(res);
+            },
+          };
+        },
+        upsert(
+          payload: Record<string, unknown> | Record<string, unknown>[],
+          options?: { onConflict?: string },
+        ) {
+          state.upsertedTable = table;
+          state.upserted = payload;
+          state.upsertOptions = options ?? null;
+          return {
             then(res: (v: { error: null }) => unknown) {
               return Promise.resolve({ error: null }).then(res);
             },
@@ -129,6 +148,9 @@ describe("campaigns", () => {
     state.returnRows = [];
     state.returnRow = null;
     state.insertReturnId = "new-id";
+    state.upsertedTable = null;
+    state.upserted = null;
+    state.upsertOptions = null;
     getAdminMock.mockReset().mockReturnValue(fakeClient());
   });
 
@@ -204,15 +226,16 @@ describe("campaigns", () => {
     expect(res).toEqual({ id: "new-id" });
   });
 
-  test("insertCampaignRecipients inserta filas con status pending", async () => {
+  test("insertCampaignRecipients upsertea filas con status pending (onConflict campaign_id,lead_id)", async () => {
     await insertCampaignRecipients([
       { campaign_id: "camp-1", lead_id: "lead-1", email: "a@x.com" },
       { campaign_id: "camp-1", lead_id: "lead-2", email: "b@x.com", status: "sent" },
     ]);
-    expect(state.insertedTable).toBe("campaign_recipients");
-    const rows = state.inserted as Record<string, unknown>[];
+    expect(state.upsertedTable).toBe("campaign_recipients");
+    const rows = state.upserted as Record<string, unknown>[];
     expect(rows[0].status).toBe("pending");
     expect(rows[1].status).toBe("sent");
+    expect(state.upsertOptions).toEqual({ onConflict: "campaign_id,lead_id" });
   });
 
   test("setRecipientMessageId actualiza por campaign_id + lead_id", async () => {

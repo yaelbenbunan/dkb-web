@@ -215,6 +215,23 @@ describe("sendCampaign", () => {
     expect(res.ok).toBe(false);
     expect(batchSendMock).not.toHaveBeenCalled();
   });
+
+  test("campaña ya enviada (status:'sent') → ok:false y NO reenvía", async () => {
+    getCampaignMock.mockResolvedValue({
+      id: "c1",
+      status: "sent",
+      subject: "Asunto",
+      from_email: "hola@dinkbit.es",
+      blocks: VALID_BLOCKS,
+    });
+
+    const res = await sendCampaign("c1", ["lead-1"]);
+
+    expect(res).toEqual({ ok: false, sent: 0, skipped: 0, error: "La campaña ya fue enviada." });
+    expect(batchSendMock).not.toHaveBeenCalled();
+    expect(listEmailableLeadsMock).not.toHaveBeenCalled();
+    expect(setCampaignStatusMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("sendCampaignTest", () => {

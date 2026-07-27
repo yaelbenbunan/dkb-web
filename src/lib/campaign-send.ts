@@ -76,10 +76,18 @@ export async function sendCampaign(
   if (!validated.ok) return { ok: false, sent: 0, skipped: 0, error: validated.error };
   const { subject, from_email, blocks } = validated;
 
+  // Guard contra doble envío: un reintento (doble clic, doble llamada) sobre una
+  // campaña ya enviada no debe volver a mandar los emails.
+  if (campaign.status === "sent") {
+    return { ok: false, sent: 0, skipped: 0, error: "La campaña ya fue enviada." };
+  }
+
   const wanted = new Set(leadIds);
   const allEmailable = await listEmailableLeads();
   const emailable = allEmailable.filter((lead) => wanted.has(lead.id) && isEmailableLead(lead));
   const skipped = leadIds.length - emailable.length;
+
+  await setCampaignStatus(campaignId, "sending");
 
   const resend = getResendClient();
   let sent = 0;
