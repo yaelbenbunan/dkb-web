@@ -29,6 +29,7 @@ export default async function PanelPage() {
     status: String(l.status),
     email_status: l.email_status,
     archived: l.archived,
+    consent: l.consent,
   }));
 
   return (

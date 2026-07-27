@@ -15,6 +15,8 @@ import {
   archiveLeadsAction,
   deleteLeadsAction,
   createLeadAction,
+  setLeadConsentAction,
+  bulkSetConsentAction,
 } from "./actions";
 import { LEAD_STATUSES, STATUS_COLORS, statusLabel } from "@/lib/lead-status";
 import { emailStatusLabel, EMAIL_STATUS_COLORS } from "@/lib/email-status";
@@ -35,6 +37,8 @@ export interface LeadRowView {
   status: string;
   email_status: string | null;
   archived: boolean;
+  /** Consentimiento de comunicaciones comerciales (para campañas). null = sin definir. */
+  consent: boolean | null;
 }
 
 function fmtDate(iso: string): string {
@@ -135,6 +139,7 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
   };
 
   const onArchive = () => runBulk(archiveLeadsAction, { archived: String(!showArchived) });
+  const onMarkConsent = () => runBulk(bulkSetConsentAction, { consent: "true" });
   const onDelete = () => {
     if (selected.size === 0) return;
     if (
@@ -231,6 +236,14 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
             </button>
             <button
               type="button"
+              onClick={onMarkConsent}
+              disabled={busy}
+              style={btnStyle("#f0fdf4", "#16a34a", busy, "#bbf7d0")}
+            >
+              ✓ Marcar consentimiento
+            </button>
+            <button
+              type="button"
               onClick={onDelete}
               disabled={busy}
               style={btnStyle("#fef2f2", "#b91c1c", busy, "#fecaca")}
@@ -288,6 +301,7 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
                 "Teléfono",
                 "Email",
                 "Estado email",
+                "Consent",
                 "Web",
                 "Canal",
                 "Campaña",
@@ -306,7 +320,7 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
             {visible.length === 0 && (
               <tr>
                 <td
-                  colSpan={13}
+                  colSpan={14}
                   style={{
                     ...td,
                     textAlign: "center",
@@ -375,6 +389,9 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
                       campaign={l.campaign}
                       hasEmail={!!(l.email ?? "").trim()}
                     />
+                  </td>
+                  <td style={td}>
+                    <ConsentSelect id={l.id} value={l.consent} />
                   </td>
                   <td style={td}>
                     {href ? (
@@ -747,6 +764,58 @@ function ChannelSelect({ id, value }: { id: string; value: string }) {
           {c}
         </option>
       ))}
+    </select>
+  );
+}
+
+/** Consentimiento de comunicaciones comerciales: sí/no/— (sin definir). El
+ *  estado "—" solo se muestra mientras el lead no tiene valor guardado; una vez
+ *  fijado a sí/no no hay forma de volver a "sin definir" desde la UI (no existe
+ *  un "unset" en el modelo — `setLeadConsent` solo acepta booleano). */
+function ConsentSelect({ id, value }: { id: string; value: boolean | null }) {
+  const toStr = (v: boolean | null) => (v === null ? "" : v ? "true" : "false");
+  const [val, setVal] = useState(toStr(value));
+  const [pending, start] = useTransition();
+  useEffect(() => setVal(toStr(value)), [value]);
+
+  const color = val === "true" ? "#16a34a" : val === "false" ? "#dc2626" : "#94a3b8";
+  const set = val !== "";
+  return (
+    <select
+      value={val}
+      disabled={pending}
+      onChange={(e) => {
+        const next = e.target.value;
+        setVal(next);
+        const fd = new FormData();
+        fd.set("id", id);
+        fd.set("consent", next === "true" ? "true" : "false");
+        start(() => setLeadConsentAction(fd));
+      }}
+      style={{
+        borderRadius: 999,
+        border: `1px solid ${set ? color : "#cbd5e1"}`,
+        color: set ? "#fff" : "#64748b",
+        background: set ? color : "#fff",
+        fontWeight: 700,
+        fontSize: 12,
+        padding: "5px 12px",
+        cursor: pending ? "wait" : "pointer",
+        opacity: pending ? 0.6 : 1,
+        appearance: "none",
+      }}
+    >
+      {val === "" && (
+        <option value="" style={{ color: "#0f172a", background: "#fff" }}>
+          —
+        </option>
+      )}
+      <option value="true" style={{ color: "#0f172a", background: "#fff" }}>
+        Sí
+      </option>
+      <option value="false" style={{ color: "#0f172a", background: "#fff" }}>
+        No
+      </option>
     </select>
   );
 }

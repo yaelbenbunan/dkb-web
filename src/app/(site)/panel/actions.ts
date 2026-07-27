@@ -15,6 +15,7 @@ import {
   deleteLeads,
   createManualLead,
   listLeads,
+  setLeadConsent,
   LEAD_STATUSES,
   type LeadStatus,
 } from "@/lib/imagina-leads";
@@ -187,6 +188,27 @@ export async function deleteLeadsAction(formData: FormData) {
     .filter(Boolean);
   if (ids.length) {
     await deleteLeads(ids);
+    revalidatePath("/panel");
+  }
+}
+
+export async function setLeadConsentAction(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  const consent = String(formData.get("consent") ?? "") === "true";
+  if (id) {
+    await setLeadConsent(id, consent);
+    revalidatePath("/panel");
+  }
+}
+
+export async function bulkSetConsentAction(formData: FormData) {
+  const ids = String(formData.get("ids") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const consent = String(formData.get("consent") ?? "") === "true";
+  if (ids.length) {
+    await Promise.all(ids.map((id) => setLeadConsent(id, consent)));
     revalidatePath("/panel");
   }
 }
