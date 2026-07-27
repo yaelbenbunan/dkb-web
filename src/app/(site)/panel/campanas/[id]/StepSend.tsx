@@ -19,6 +19,7 @@ export function StepSend({
   const [confirming, setConfirming] = useState(false);
   const [pending, start] = useTransition();
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [done, setDone] = useState(false);
 
   const canSend = selectedCount > 0 && subject.trim().length > 0;
 
@@ -28,6 +29,7 @@ export function StepSend({
       const res = await sendCampaignAction(campaignId, selectedIds.join(","));
       if (res.ok) {
         setResult({ ok: true, msg: `Enviada: ${res.sent ?? 0} · Omitidos: ${res.skipped ?? 0}` });
+        setDone(true);
       } else {
         setResult({ ok: false, msg: res.error || "No se pudo enviar la campaña." });
       }
@@ -59,11 +61,22 @@ export function StepSend({
         </p>
       )}
 
-      {!confirming ? (
+      {done && result ? (
+        <p
+          style={{
+            fontSize: 14,
+            fontWeight: 600,
+            color: result.ok ? "#16a34a" : "#b91c1c",
+            margin: 0,
+          }}
+        >
+          {result.msg}
+        </p>
+      ) : !confirming ? (
         <button
           type="button"
           onClick={() => setConfirming(true)}
-          disabled={!canSend || pending}
+          disabled={!canSend || pending || done}
           style={{
             background: "#187bef",
             color: "#fff",
@@ -72,8 +85,8 @@ export function StepSend({
             padding: "10px 20px",
             fontSize: 14,
             fontWeight: 600,
-            cursor: !canSend || pending ? "not-allowed" : "pointer",
-            opacity: !canSend || pending ? 0.6 : 1,
+            cursor: !canSend || pending || done ? "not-allowed" : "pointer",
+            opacity: !canSend || pending || done ? 0.6 : 1,
             alignSelf: "flex-start",
           }}
         >
@@ -122,7 +135,7 @@ export function StepSend({
         </div>
       )}
 
-      {result && (
+      {result && !done && (
         <p
           style={{
             fontSize: 14,

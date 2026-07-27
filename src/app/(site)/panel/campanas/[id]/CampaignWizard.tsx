@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { saveBlocksAction, setCampaignMetaAction } from "../actions";
 import { blocksSchema, DEFAULT_STYLE, type Block, type CampaignStyle } from "@/lib/campaign-blocks";
 import type { CampaignRow, EmailTemplateRow } from "@/lib/campaigns";
@@ -46,6 +46,13 @@ export function CampaignWizard({
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const parsed = blocksSchema.safeParse(campaign.blocks);
+    setBlocksState(parsed.success ? parsed.data : []);
+    // depend on updated_at so it re-syncs whenever the server row changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaign.updated_at]);
 
   const goTo = (next: WizardStep) => {
     // Persist name/subject/fromEmail before navigating away from a step where
