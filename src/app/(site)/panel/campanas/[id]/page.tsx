@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getCampaign, listEmailTemplates, getBuiltinTemplates } from "@/lib/campaigns";
 import type { EmailTemplateRow } from "@/lib/campaigns";
+import { listEmailableLeads } from "@/lib/imagina-leads";
 import { CampaignWizard } from "./CampaignWizard";
 
 export const metadata = {
@@ -85,6 +86,8 @@ export default async function CampaignPage({
     templates.push(t);
   }
 
+  const emailableLeads = await listEmailableLeads();
+
   return (
     <div style={containerStyle}>
       <header style={headerStyle}>
@@ -111,7 +114,7 @@ export default async function CampaignPage({
       </header>
 
       <div style={{ padding: 22 }}>
-        <CampaignWizard campaign={campaign} templates={templates} />
+        <CampaignWizard campaign={campaign} templates={templates} emailableLeads={emailableLeads} />
       </div>
     </div>
   );

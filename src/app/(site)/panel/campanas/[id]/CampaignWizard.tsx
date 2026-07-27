@@ -1,11 +1,15 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { saveBlocksAction } from "../actions";
+import { saveBlocksAction, setCampaignMetaAction } from "../actions";
 import { blocksSchema, DEFAULT_STYLE, type Block, type CampaignStyle } from "@/lib/campaign-blocks";
 import type { CampaignRow, EmailTemplateRow } from "@/lib/campaigns";
+import type { LeadRow } from "@/lib/imagina-leads";
 import { PreviewFrame } from "./PreviewFrame";
 import { StepConcept } from "./StepConcept";
+import { StepDesign } from "./StepDesign";
+import { StepRecipients } from "./StepRecipients";
+import { StepSend } from "./StepSend";
 
 export type WizardStep = 1 | 2 | 3 | 4;
 
@@ -26,9 +30,11 @@ function parseInitialBlocks(raw: unknown): Block[] {
 export function CampaignWizard({
   campaign,
   templates,
+  emailableLeads,
 }: {
   campaign: CampaignRow;
   templates: EmailTemplateRow[];
+  emailableLeads: LeadRow[];
 }) {
   const initialBlocks = parseInitialBlocks(campaign.blocks);
   const [step, setStep] = useState<WizardStep>(initialBlocks.length > 0 ? 2 : 1);
@@ -37,10 +43,19 @@ export function CampaignWizard({
   const [subject, setSubject] = useState(campaign.subject ?? "");
   const [fromEmail, setFromEmail] = useState(campaign.from_email ?? "hola@dinkbit.es");
   const [name, setName] = useState(campaign.name ?? "");
+  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const goTo = (next: WizardStep) => setStep(next);
+  const goTo = (next: WizardStep) => {
+    // Persist name/subject/fromEmail before navigating away from a step where
+    // they can be edited — the details row is shown on every step, but only
+    // steps 1-3 are "before send", so this is a good boundary to flush.
+    if (step >= 1 && step <= 3) {
+      void setCampaignMetaAction(campaign.id, name, subject, fromEmail);
+    }
+    setStep(next);
+  };
 
   const setBlocks = (next: Block[]) => {
     setBlocksState(next);
@@ -171,9 +186,28 @@ export function CampaignWizard({
               goTo={goTo}
             />
           )}
-          {step === 2 && <div>Paso 2 (en construcción)</div>}
-          {step === 3 && <div>Paso 3 (en construcción)</div>}
-          {step === 4 && <div>Paso 4 (en construcción)</div>}
+          {step === 2 && (
+            <StepDesign campaignId={campaign.id} blocks={blocks} setBlocks={setBlocks} />
+          )}
+          {step === 3 && (
+            <StepRecipients
+              campaignId={campaign.id}
+              emailableLeads={emailableLeads}
+              selected={selectedLeadIds}
+              setSelected={setSelectedLeadIds}
+              subject={subject}
+              fromEmail={fromEmail}
+            />
+          )}
+          {step === 4 && (
+            <StepSend
+              campaignId={campaign.id}
+              subject={subject}
+              fromEmail={fromEmail}
+              selectedCount={selectedLeadIds.size}
+              selectedIds={[...selectedLeadIds]}
+            />
+          )}
 
           <div
             style={{
