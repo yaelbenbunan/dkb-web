@@ -36,6 +36,8 @@ export interface LeadRow {
   email_status: string | null;
   email_message_id: string | null;
   email_updated_at: string | null;
+  /** Consentimiento de comunicaciones comerciales (para campañas). null = sin definir. */
+  consent: boolean | null;
 }
 
 export interface SaveLeadInput {
@@ -172,6 +174,9 @@ export interface WebhookLeadInput {
   /** Estado inicial del lead en el panel. Por defecto "nuevo"; los flujos de una
    *  campaña concreta pueden entrar ya etiquetados (p.ej. "kit-digital"). */
   status?: LeadStatus | string | null;
+  /** Consentimiento de comunicaciones comerciales, cuando el formulario lo
+   *  recoge con un checkbox explícito. null/undefined = sin definir (no tocar). */
+  consent?: boolean | null;
 }
 
 /** Insert a lead coming from an external webhook (Zapier → Meta Lead Ads, etc.).
@@ -196,6 +201,7 @@ export async function createWebhookLead(
     business_type: clean(input.businessType),
     notes: clean(input.notes),
     status: clean(input.status) ?? "nuevo",
+    consent: input.consent ?? null,
   };
   const { error } = await sb.from(TABLE).upsert(row, { onConflict: "id" });
   if (error) {
@@ -250,13 +256,16 @@ export async function upsertKitDigital2026Lead(
     phone: string | null;
     notes: string | null;
   };
-  const update: Record<string, string | null> = {
+  const update: Record<string, string | boolean | null> = {
     sector: clean(lead.sector),
     business_type: clean(lead.businessType),
   };
   // name/phone: solo si faltaban (no pisar dato bueno con vacío).
   if (!clean(row.name) && clean(lead.name)) update.name = clean(lead.name);
   if (!clean(row.phone) && clean(lead.phone)) update.phone = clean(lead.phone);
+  // consent: un submit que enriquece un lead ya existente también cuenta como
+  // consentimiento explícito — se registra si venía marcado.
+  if (lead.consent === true) update.consent = true;
   // notes: appendear al bloque previo.
   const incoming = clean(lead.notes);
   if (incoming) {
@@ -467,4 +476,81 @@ export async function setLeadEmailStatusByMessageId(
     return 0;
   }
   return data?.length ?? 0;
+}
+
+export async function setLeadConsent(leadId: string, consent: boolean): Promise<void> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return;
+  const { error } = await sb.from(TABLE).update({ consent }).eq("id", leadId);
+  if (error) console.error("[imagina-leads] setLeadConsent error:", error.message);
+}
+
+/** Actualiza el estado del destinatario de campaña cuyo message_id casa con el
+ *  evento de Resend (tabla `campaign_recipients`, no `imagina_leads`). Si el
+ *  evento es un rebote o una queja, propaga también el estado al lead (tabla
+ *  `imagina_leads`) para que deje de ser emailable — best-effort, no aborta si
+ *  falla. Devuelve el nº de filas de `campaign_recipients` actualizadas (0 si
+ *  no rastreamos ese envío). */
+export async function setCampaignRecipientStatusByMessageId(
+  messageId: string,
+  status: string,
+): Promise<number> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return 0;
+  const { data, error } = await sb
+    .from("campaign_recipients")
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq("message_id", messageId)
+    .select("id,lead_id");
+  if (error) {
+    console.error(
+      "[imagina-leads] setCampaignRecipientStatusByMessageId error:",
+      error.message,
+    );
+    return 0;
+  }
+  const rows = (data ?? []) as { id: string; lead_id: string }[];
+  if ((status === "bounced" || status === "complained") && rows.length > 0) {
+    const leadUpdate: Record<string, unknown> = {
+      email_status: status,
+      email_updated_at: new Date().toISOString(),
+    };
+    if (status === "complained") leadUpdate.consent = false;
+    for (const row of rows) {
+      const { error: leadError } = await sb.from(TABLE).update(leadUpdate).eq("id", row.lead_id);
+      if (leadError) {
+        console.error(
+          "[imagina-leads] setCampaignRecipientStatusByMessageId → lead update error:",
+          leadError.message,
+        );
+      }
+    }
+  }
+  return rows.length;
+}
+
+/** Leads "emailables": consentimiento explícito, email presente y sin rebote ni
+ *  queja registrados. Admite filtros opcionales de status/campaign/channel. */
+export async function listEmailableLeads(filter?: {
+  status?: string;
+  campaign?: string;
+  channel?: string;
+}): Promise<LeadRow[]> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return [];
+  let query = sb
+    .from(TABLE)
+    .select("*")
+    .eq("consent", true)
+    .not("email", "is", null)
+    .or("email_status.is.null,email_status.not.in.(bounced,complained)");
+  if (filter?.status) query = query.eq("status", filter.status);
+  if (filter?.campaign) query = query.eq("campaign", filter.campaign);
+  if (filter?.channel) query = query.eq("channel", filter.channel);
+  const { data, error } = await query;
+  if (error) {
+    console.error("[imagina-leads] listEmailableLeads error:", error.message);
+    return [];
+  }
+  return (data ?? []) as LeadRow[];
 }

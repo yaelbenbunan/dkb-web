@@ -166,6 +166,8 @@ describe("kitDigital2026Lead", () => {
     expect(row.campaign).toBe("Kit Digital 2026");
     // Entra ya etiquetado "Interés en Kit Digital".
     expect(row.status).toBe("kit-digital");
+    // El formulario exige el checkbox de consentimiento (consent: z.literal(true)).
+    expect(row.consent).toBe(true);
     expect(row.businessType).toBe("Pyme");
     // sector column carries the multi-select union for panel filtering.
     expect(row.sector).toBe("Hostelería/restauración, Comercio/retail");
@@ -216,6 +218,8 @@ describe("promoVeranoLead", () => {
     expect(row.email).toBe("lead@example.com");
     expect(row.channel).toBe("promo-verano");
     expect(row.campaign).toBe("promo-verano-2026");
+    // El formulario exige el checkbox de comunicaciones comerciales (consent: "on").
+    expect(row.consent).toBe(true);
     expect(row.notes).toContain("Promo Verano");
     expect(row.notes).toContain("Consentimiento");
     expect(row.notes).toContain("2026-07-08T10:00:00.000Z");

@@ -29,6 +29,7 @@ export default async function PanelPage() {
     status: String(l.status),
     email_status: l.email_status,
     archived: l.archived,
+    consent: l.consent,
   }));
 
   return (
@@ -75,6 +76,12 @@ export default async function PanelPage() {
             style={{ fontSize: 13, color: "#cbd5e1", textDecoration: "none" }}
           >
             🧮 Calculadora
+          </Link>
+          <Link
+            href="/panel/campanas"
+            style={{ fontSize: 13, color: "#cbd5e1", textDecoration: "none" }}
+          >
+            ✉️ Campañas
           </Link>
         </div>
         <form action={panelLogout} style={{ margin: 0 }}>

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { verifyResendSignature, resendEventStatus } from "@/lib/resend-webhook";
-import { setLeadEmailStatusByMessageId } from "@/lib/imagina-leads";
+import { setLeadEmailStatusByMessageId, setCampaignRecipientStatusByMessageId } from "@/lib/imagina-leads";
 
 // Recibe los eventos de entrega de Resend (Svix) y actualiza el estado del email
 // del lead en el CRM. La firma se verifica SIEMPRE; sin firma válida no se muta nada.
@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
   const messageId = event.data?.email_id ?? event.data?.id ?? null;
   if (status && messageId) {
     await setLeadEmailStatusByMessageId(messageId, status);
+    await setCampaignRecipientStatusByMessageId(messageId, status);
   }
   // 200 con firma válida aunque no case ninguna fila → evita reintentos de Resend.
   return NextResponse.json({ ok: true });
