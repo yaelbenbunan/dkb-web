@@ -49,6 +49,18 @@ export async function POST(req: NextRequest) {
   const name = pick("name", "full_name", "fullName", "nombre");
   const email = pick("email", "correo", "e-mail");
   const phone = pick("phone", "phone_number", "phoneNumber", "telefono", "teléfono");
+  // Respuesta de la casilla de consentimiento del formulario de Meta. El nombre
+  // del campo lo elige quien crea la pregunta, así que se aceptan las variantes
+  // habituales; parseConsentAnswer() decide si es un sí, un no o un desconocido.
+  const consent = pick(
+    "consent",
+    "consentimiento",
+    "acepto_recibir_comunicaciones",
+    "comunicaciones_comerciales",
+    "marketing_consent",
+    "optin",
+    "opt_in",
+  );
 
   if (!name && !email && !phone) {
     return NextResponse.json({ ok: false, error: "missing_name_email_or_phone" }, { status: 400 });
@@ -59,6 +71,7 @@ export async function POST(req: NextRequest) {
     name,
     email,
     phone,
+    consent,
   });
 
   if (!res.ok) {
