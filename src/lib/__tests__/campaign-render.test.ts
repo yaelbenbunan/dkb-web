@@ -26,12 +26,34 @@ describe("renderCampaignEmail", () => {
     expect(html).not.toContain("<script>alert(1)</script>");
     expect(html).toContain("&lt;script&gt;");
   });
-  test("la url del botón se sanea (solo http/https)", () => {
+  test("la url del botón se sanea (bloquea javascript:)", () => {
     const { html } = renderCampaignEmail([
       { id: "1", type: "button", props: { label: "x", url: "javascript:alert(1)" } },
       { id: "f", type: "footer", props: { orgLine: "d", unsubscribe: true } },
     ], DEFAULT_STYLE, ctx);
     expect(html).not.toContain("javascript:");
+  });
+  test("un botón de llamada conserva el enlace tel:", () => {
+    const { html, text } = renderCampaignEmail([
+      { id: "1", type: "button", props: { label: "Llámanos", url: "tel:+34657559397" } },
+      { id: "f", type: "footer", props: { orgLine: "d", unsubscribe: true } },
+    ], DEFAULT_STYLE, ctx);
+    expect(html).toContain('href="tel:+34657559397"');
+    expect(text).toContain("tel:+34657559397");
+  });
+  test("un botón de email conserva el enlace mailto:", () => {
+    const { html } = renderCampaignEmail([
+      { id: "1", type: "button", props: { label: "Escríbenos", url: "mailto:hola@dinkbit.es" } },
+      { id: "f", type: "footer", props: { orgLine: "d", unsubscribe: true } },
+    ], DEFAULT_STYLE, ctx);
+    expect(html).toContain('href="mailto:hola@dinkbit.es"');
+  });
+  test("una imagen solo admite http/https (tel: no es una fuente válida)", () => {
+    const { html } = renderCampaignEmail([
+      { id: "1", type: "image", props: { src: "tel:+34657559397" } },
+      { id: "f", type: "footer", props: { orgLine: "d", unsubscribe: true } },
+    ], DEFAULT_STYLE, ctx);
+    expect(html).not.toContain("tel:");
   });
   test("un accent malicioso no rompe el atributo style (hero/button)", () => {
     const malicious = '#fff" onmouseover="alert(1)';

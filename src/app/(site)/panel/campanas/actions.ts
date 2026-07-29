@@ -9,9 +9,22 @@ import {
   getBuiltinTemplates,
   saveEmailTemplate,
 } from "@/lib/campaigns";
-import { generateCampaignBlocks, editCampaignBlocks } from "@/lib/campaign-ai";
+import {
+  generateCampaignBlocks,
+  editCampaignBlocks,
+  type BlocksFailureReason,
+} from "@/lib/campaign-ai";
 import { sendCampaign, sendCampaignTest } from "@/lib/campaign-send";
 import { blocksSchema, type Block } from "@/lib/campaign-blocks";
+
+const AI_FAILURE_MESSAGE: Record<BlocksFailureReason, string> = {
+  "missing-api-key":
+    "Falta configurar OPENAI_API_KEY en el servidor, así que no se llegó a llamar a la IA.",
+  "api-error":
+    "No se pudo contactar con OpenAI (API caída, clave inválida o sin saldo). Vuelve a intentarlo.",
+  "invalid-response":
+    "La IA devolvió una propuesta que no encaja con los bloques del email. Vuelve a intentarlo o reformula el concepto.",
+};
 
 export async function createDraftAction(): Promise<{ id: string } | { error: string }> {
   const res = await createCampaign({});
@@ -44,14 +57,14 @@ export async function generateAction(
     }
   }
 
-  const blocks = await generateCampaignBlocks({
+  const res = await generateCampaignBlocks({
     concept: trimmedConcept,
     refs: refs.trim() || undefined,
     templateBlocks,
   });
-  if (!blocks) return { ok: false, error: "La IA no pudo generar los bloques." };
+  if (!res.ok) return { ok: false, error: AI_FAILURE_MESSAGE[res.reason] };
 
-  await updateCampaign(campaignId, { blocks, concept: trimmedConcept });
+  await updateCampaign(campaignId, { blocks: res.blocks, concept: trimmedConcept });
   revalidatePath("/panel/campanas");
   return { ok: true };
 }
@@ -72,10 +85,10 @@ export async function editAction(
     return { ok: false, error: "La campaña no tiene bloques válidos." };
   }
 
-  const blocks = await editCampaignBlocks(parsed.data, trimmedInstruction);
-  if (!blocks) return { ok: false, error: "La IA no pudo editar los bloques." };
+  const res = await editCampaignBlocks(parsed.data, trimmedInstruction);
+  if (!res.ok) return { ok: false, error: AI_FAILURE_MESSAGE[res.reason] };
 
-  await updateCampaign(campaignId, { blocks });
+  await updateCampaign(campaignId, { blocks: res.blocks });
   revalidatePath("/panel/campanas");
   return { ok: true };
 }

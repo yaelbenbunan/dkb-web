@@ -11,6 +11,20 @@ export interface GenerateCampaignBlocksInput {
   templateBlocks?: Block[];
 }
 
+/**
+ * Por qué no hubo bloques. Sin esto los tres fallos posibles (no hay clave
+ * configurada, la API no responde, el modelo devuelve algo que no valida)
+ * llegaban al panel como el mismo mensaje y no había forma de distinguirlos.
+ */
+export type BlocksFailureReason =
+  | "missing-api-key"
+  | "api-error"
+  | "invalid-response";
+
+export type BlocksResult =
+  | { ok: true; blocks: Block[] }
+  | { ok: false; reason: BlocksFailureReason };
+
 const SYSTEM_PROMPT = `Eres un asistente que diseña emails de campañas de marketing para dinkbit componiéndolos a partir de bloques estructurados.
 
 Tipos de bloque disponibles (7):
@@ -42,10 +56,14 @@ export function ensureFooter(blocks: Block[]): Block[] {
 async function requestBlocks(
   systemPrompt: string,
   userPrompt: string,
-): Promise<Block[] | null> {
+): Promise<BlocksResult> {
   const client = getOpenAIClient();
-  if (!client) return null;
+  if (!client) {
+    console.error("campaign-ai: OPENAI_API_KEY no está configurada en este entorno.");
+    return { ok: false, reason: "missing-api-key" };
+  }
 
+  let lastReason: BlocksFailureReason = "invalid-response";
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const completion = await client.chat.completions.create({
@@ -58,13 +76,17 @@ async function requestBlocks(
         temperature: 0.7,
       });
       const raw = completion.choices[0]?.message.content;
-      if (!raw) continue;
+      if (!raw) {
+        lastReason = "invalid-response";
+        continue;
+      }
 
       let parsed: unknown;
       try {
         parsed = JSON.parse(raw);
       } catch (err) {
         console.error("campaign-ai: invalid JSON from OpenAI:", err);
+        lastReason = "invalid-response";
         continue;
       }
 
@@ -79,21 +101,23 @@ async function requestBlocks(
           "campaign-ai: response failed schema validation:",
           validated.error.issues,
         );
+        lastReason = "invalid-response";
         continue;
       }
 
-      return ensureFooter(validated.data);
+      return { ok: true, blocks: ensureFooter(validated.data) };
     } catch (err) {
       console.error("campaign-ai: OpenAI request failed:", err);
+      lastReason = "api-error";
     }
   }
 
-  return null;
+  return { ok: false, reason: lastReason };
 }
 
 export async function generateCampaignBlocks(
   input: GenerateCampaignBlocksInput,
-): Promise<Block[] | null> {
+): Promise<BlocksResult> {
   const parts = [`Concepto de la campaña: ${input.concept}`];
   if (input.refs) parts.push(`Referencias/tono: ${input.refs}`);
   if (input.templateBlocks && input.templateBlocks.length > 0) {
@@ -113,7 +137,7 @@ export async function generateCampaignBlocks(
 export async function editCampaignBlocks(
   blocks: Block[],
   instruction: string,
-): Promise<Block[] | null> {
+): Promise<BlocksResult> {
   const userPrompt = [
     `Bloques actuales del email: ${JSON.stringify(blocks)}`,
     `Instrucción de edición: ${instruction}`,

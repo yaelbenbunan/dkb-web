@@ -3,9 +3,19 @@ import type { Block, CampaignStyle } from "./campaign-blocks";
 function esc(s: string): string {
   return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 }
+// Fuentes de imagen: solo se pueden servir por http/https.
 function safeUrl(raw: string): string {
   try { const u = new URL(raw); return (u.protocol === "http:" || u.protocol === "https:") ? u.toString() : "#"; }
   catch { return "#"; }
+}
+// Destinos de enlace: además de la web, los CTA de llamada y de email son
+// legítimos en un correo, así que tel: y mailto: también pasan.
+function safeLinkUrl(raw: string): string {
+  try {
+    const u = new URL(raw);
+    const ok = ["http:", "https:", "tel:", "mailto:"].includes(u.protocol);
+    return ok ? u.toString() : "#";
+  } catch { return "#"; }
 }
 function safeColor(v: string | undefined, fallback: string): string {
   return v && /^#?[0-9a-fA-F]{3,8}$/.test(v.trim()) ? v.trim() : fallback;
@@ -46,14 +56,14 @@ export function renderCampaignEmail(
       }
       case "button": {
         const a = safeColor(b.props.accent, accent);
-        const url = safeUrl(b.props.url);
+        const url = safeLinkUrl(b.props.url);
         textLines.push(`${b.props.label}: ${url}`);
         return `<tr><td style="padding:20px 36px;text-align:center;"><a href="${url}" style="display:inline-block;background:${a};color:#fff;font-size:16px;font-weight:800;text-decoration:none;padding:14px 30px;border-radius:12px;">${esc(b.props.label)}</a></td></tr>`;
       }
       case "image": {
         const src = safeUrl(b.props.src);
         const img = `<img src="${src}" alt="${esc(b.props.alt ?? "")}" style="display:block;max-width:100%;border:0;" />`;
-        return `<tr><td style="padding:10px 36px;text-align:center;">${b.props.href ? `<a href="${safeUrl(b.props.href)}">${img}</a>` : img}</td></tr>`;
+        return `<tr><td style="padding:10px 36px;text-align:center;">${b.props.href ? `<a href="${safeLinkUrl(b.props.href)}">${img}</a>` : img}</td></tr>`;
       }
       case "divider":
         return `<tr><td style="padding:8px 36px;"><hr style="border:none;border-top:1px solid #e2e8f0;margin:0;" /></td></tr>`;
