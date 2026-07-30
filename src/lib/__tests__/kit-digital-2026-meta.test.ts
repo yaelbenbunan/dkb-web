@@ -8,10 +8,7 @@ const { createWebhookLeadMock, sendEmailMock } = vi.hoisted(() => ({
 vi.mock("../imagina-leads", () => ({ createWebhookLead: createWebhookLeadMock }));
 vi.mock("../kit-digital-2026-resend", () => ({ sendKitDigital2026Email: sendEmailMock }));
 
-import {
-  handleKitDigital2026MetaLead,
-  parseConsentAnswer,
-} from "../kit-digital-2026-meta";
+import { handleKitDigital2026MetaLead } from "../kit-digital-2026-meta";
 
 describe("handleKitDigital2026MetaLead", () => {
   beforeEach(() => {
@@ -62,25 +59,5 @@ describe("handleKitDigital2026MetaLead", () => {
   test("casilla desmarcada → consent false (rechazo explícito, no ausencia)", async () => {
     await handleKitDigital2026MetaLead({ name: "M", email: "m@example.com", consent: "false" });
     expect(createWebhookLeadMock.mock.calls[0][0].consent).toBe(false);
-  });
-});
-
-describe("parseConsentAnswer", () => {
-  test("acepta las formas afirmativas que manda Meta según idioma y tipo de pregunta", () => {
-    for (const v of ["true", "TRUE", "on", "yes", "Yes", "si", "sí", "SÍ", "1", " true "]) {
-      expect(parseConsentAnswer(v)).toBe(true);
-    }
-  });
-
-  test("acepta las formas negativas", () => {
-    for (const v of ["false", "off", "no", "No", "0"]) {
-      expect(parseConsentAnswer(v)).toBe(false);
-    }
-  });
-
-  test("ausencia o valor irreconocible → null, nunca true", () => {
-    for (const v of [null, undefined, "", "   ", "quizá", "opt_in_unknown"]) {
-      expect(parseConsentAnswer(v)).toBeNull();
-    }
   });
 });

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createWebhookLead } from "@/lib/imagina-leads";
 import { providedSecret, secretMatches } from "@/lib/webhook-auth";
+import { CONSENT_KEYS, parseConsentAnswer } from "@/lib/consent";
 
 // Inbound lead webhook — e.g. Zapier (Meta Lead Ads) → POST here → CRM table.
 // Protected by a shared secret. Accepts JSON or form-encoded bodies and is
@@ -60,7 +61,11 @@ export async function POST(req: NextRequest) {
     phone,
     channel: pick("channel", "canal") ?? "Meta",
     campaign: pick("campaign", "campaign_name", "campaña", "campana"),
-    notes: pick("notes", "notas", "message", "mensaje", "extra"),
+    notes: pick("notes", "notas", "notas adicionales", "message", "mensaje", "extra"),
+    // Respuesta de la casilla de consentimiento del formulario de Meta. Sin
+    // esto el lead entra con consent null y queda fuera de las campañas aunque
+    // el usuario la hubiera marcado.
+    consent: parseConsentAnswer(pick(...CONSENT_KEYS)),
   });
 
   if (!res.ok) {
