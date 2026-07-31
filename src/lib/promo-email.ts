@@ -4,7 +4,14 @@
 //
 // El CTA lleva a WhatsApp / llamada (NO al cuestionario): primero hablamos con
 // el interesado y, a quien confirme, le enviamos el enlace del cuestionario a mano.
-import { PROMO, promoDeadlineLabel, PROMO_PRICES, PROMO_PRICE_DISCLAIMER } from "./promo-config";
+import {
+  PROMO,
+  promoDeadlineLabel,
+  promoReservationLabel,
+  PROMO_RESERVATION_DAYS,
+  PROMO_PRICES,
+  PROMO_PRICE_DISCLAIMER,
+} from "./promo-config";
 
 const FONT_STACK = "'Source Sans Pro','Source Sans 3',Helvetica,Arial,sans-serif";
 const ACCENT = "#187bef";
@@ -27,9 +34,14 @@ function escapeHtml(s: string): string {
 }
 
 export function buildPromoEmail(
-  opts: { name?: string | null } = {},
+  opts: { name?: string | null; sentAt?: number } = {},
 ): { subject: string; html: string; text: string } {
   const deadline = promoDeadlineLabel();
+  // El precio se reserva N días desde ESTE envío. Un plazo personal aprieta más
+  // que la fecha global de la campaña, y se calcula aquí porque en un correo no
+  // se puede pintar una cuenta atrás: no hay JS y las imágenes suelen venir
+  // bloqueadas. Una fecha concreta se lee siempre.
+  const reserved = promoReservationLabel(opts.sentAt ?? Date.now());
   // Saludo con el nombre de pila que dejó el lead. Sin nombre, saludo genérico.
   const firstName = (opts.name ?? "").trim().split(/\s+/)[0] ?? "";
   const greetingText = firstName ? `Hola ${firstName},` : "Hola,";
@@ -40,30 +52,22 @@ export function buildPromoEmail(
   const waHref = `https://wa.me/${PROMO.whatsappNumber}?text=${waMsg}`;
   const telHref = `tel:${PROMO.phoneNumber}`;
 
-  const subject = `Tu web o ecommerce al ${PROMO.discountPct}% este verano 🌴`;
-  const preheader = `Hasta el ${deadline}. Escríbenos por WhatsApp o llámanos y te contamos cómo aprovecharlo.`;
+  const subject = `Tu precio está reservado hasta el ${reserved} 🌴`;
+  const preheader = `Te guardamos el ${PROMO.discountPct}% hasta el ${reserved}. Escríbenos y lo cerramos.`;
 
   const includeRows = INCLUYE.map(
     (item) =>
       `<tr><td style="padding:4px 0;font-size:15px;color:#334155;">✓&nbsp; ${item}</td></tr>`,
   ).join("");
 
-  const priceGroups = PROMO_PRICES.map(
-    (g) => `
-      <div style="margin-top:12px;font-size:12px;font-weight:800;color:${ACCENT};text-transform:uppercase;letter-spacing:1px;">${g.group}</div>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-        ${g.rows
-          .map(
-            (r) => `<tr>
-          <td style="padding:6px 0;font-size:14px;color:#334155;">${r.label}</td>
-          <td align="right" style="padding:6px 0;white-space:nowrap;">
-            <span style="font-size:13px;color:#94a3b8;text-decoration:line-through;">${r.before}</span>
-            <span style="font-size:16px;font-weight:800;color:#0f172a;margin-left:8px;">${r.now}</span>
+  const priceRows = PROMO_PRICES.map(
+    (r) => `<tr>
+          <td style="padding:10px 0;font-size:16px;font-weight:700;color:#0f172a;">${r.label} *</td>
+          <td align="right" style="padding:10px 0;white-space:nowrap;">
+            <span style="font-size:14px;color:#94a3b8;text-decoration:line-through;">${r.before}</span>
+            <span style="font-size:20px;font-weight:900;color:${ACCENT};margin-left:10px;">${r.now}</span>
           </td>
         </tr>`,
-          )
-          .join("")}
-      </table>`,
   ).join("");
 
   const html = `<!doctype html>
@@ -86,7 +90,8 @@ export function buildPromoEmail(
     <p style="margin:16px 0 0;font-size:17px;line-height:1.55;color:#475569;">
       <strong style="color:#0f172a;">${greetingHtml}</strong> gracias por tu interés. Durante este verano lanzamos todas nuestras webs y
       tiendas online con un <strong style="color:${ACCENT};">${PROMO.discountPct}% de descuento</strong>.
-      Oferta válida hasta el <strong>${deadline}</strong>.
+      Te reservamos ese precio <strong style="color:#0f172a;">${PROMO_RESERVATION_DAYS} días</strong>:
+      hasta el <strong style="color:#0f172a;">${reserved}</strong>.
     </p>
   </td></tr>
 
@@ -103,13 +108,22 @@ export function buildPromoEmail(
   <!-- PRECIOS -->
   <tr><td style="padding:18px 36px 4px;">
     <div style="font-size:13px;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:1px;">Precios con la promo *</div>
-    ${priceGroups}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;">${priceRows}</table>
     <p style="margin:12px 0 0;font-size:10px;color:#94a3b8;line-height:1.5;">${PROMO_PRICE_DISCLAIMER}</p>
   </td></tr>
 
+  <!-- PLAZO -->
+  <tr><td style="padding:20px 36px 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;">
+      <tr><td style="padding:14px 18px;text-align:center;font-size:15px;color:#9a3412;line-height:1.5;">
+        ⏳ Este precio es tuyo hasta el <strong>${reserved}</strong>. Después vuelve a la tarifa normal.
+      </td></tr>
+    </table>
+  </td></tr>
+
   <!-- CTA: WhatsApp + llamada -->
-  <tr><td style="padding:26px 36px 8px;text-align:center;">
-    <p style="margin:0 0 16px;font-size:16px;color:#0f172a;font-weight:700;">¿Hablamos? Te contamos cómo aprovecharlo:</p>
+  <tr><td style="padding:22px 36px 8px;text-align:center;">
+    <p style="margin:0 0 16px;font-size:16px;color:#0f172a;font-weight:700;">Escríbenos y lo cerramos hoy mismo:</p>
     <a href="${waHref}" style="display:inline-block;background:${WHATSAPP_GREEN};color:#ffffff;font-size:17px;font-weight:800;text-decoration:none;padding:16px 32px;border-radius:12px;margin:0 6px 12px;">💬 Hablar por WhatsApp</a>
     <br>
     <a href="${telHref}" style="display:inline-block;color:${ACCENT};font-size:16px;font-weight:700;text-decoration:none;padding:8px 0;">📞 O llámanos: ${PROMO.phoneDisplay}</a>
@@ -141,13 +155,12 @@ export function buildPromoEmail(
     ...INCLUYE.map((i) => `- ${i}`),
     "",
     "Precios con la promo:",
-    ...PROMO_PRICES.flatMap((g) => [
-      `${g.group}:`,
-      ...g.rows.map((r) => `  - ${r.label}: ${r.before} -> ${r.now}`),
-    ]),
+    ...PROMO_PRICES.map((r) => `  - ${r.label}: ${r.before} -> ${r.now}`),
     PROMO_PRICE_DISCLAIMER,
     "",
-    "¿Hablamos? Te contamos cómo aprovecharlo:",
+    `Este precio es tuyo hasta el ${reserved}. Después vuelve a la tarifa normal.`,
+    "",
+    "Escríbenos y lo cerramos hoy mismo:",
     `WhatsApp: ${waHref}`,
     `Teléfono: ${PROMO.phoneDisplay} (${telHref})`,
     "",

@@ -65,7 +65,7 @@ export async function subscribePromo(
   //    WhatsApp / llamada (el enlace del cuestionario se envía a mano después).
   const apiKey = process.env.RESEND_API_KEY;
   if (apiKey) {
-    const { subject, html, text } = buildPromoEmail({ name });
+    const { subject, html, text } = buildPromoEmail({ name, sentAt: Date.now() });
     const resend = new Resend(apiKey);
     const { data, error } = await resend.emails.send({
       from: `${PROMO.fromName} <${PROMO.fromEmail}>`,

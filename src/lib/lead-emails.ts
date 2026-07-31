@@ -79,7 +79,8 @@ export function kitDigital2026Autoresponder(input: {
     preheader: "Te avisamos en cuanto se abra la convocatoria.",
     bulletsLabel: "Qué pasa ahora",
     bullets: [
-      "Revisamos tu perfil y qué ayudas te encajan.",
+      // Nada de "revisamos tu perfil y qué ayudas te encajan": eso ocurre una vez
+      // concedido el bono, no ahora, y prometerlo aquí adelanta un paso que no toca.
       "Te avisamos en cuanto se publique la convocatoria oficial.",
       "Nos encargamos de toda la tramitación por ti.",
     ],

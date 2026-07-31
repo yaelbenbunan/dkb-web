@@ -6,9 +6,11 @@ import { PROMO } from "../promo-config";
 describe("buildPromoEmail", () => {
   const out = buildPromoEmail();
 
-  test("subject mentions the 50% summer offer", () => {
-    expect(out.subject).toContain("50");
-    expect(out.subject.toLowerCase()).toContain("verano");
+  test("el asunto lleva la fecha límite personal, que es el gancho de urgencia", () => {
+    // El asunto ya no anuncia el descuento: la urgencia convierte mejor que la
+    // cifra, que además va en el cuerpo y en el preheader.
+    expect(out.subject.toLowerCase()).toContain("reservado");
+    expect(out.subject).toMatch(/\d/);
   });
 
   test("CTA goes to WhatsApp and phone, not the questionnaire", () => {
@@ -24,12 +26,24 @@ describe("buildPromoEmail", () => {
     expect(out.html.toLowerCase()).toContain("comunicaciones comerciales");
   });
 
-  test("shows the promo prices (struck + offer)", () => {
+  test("muestra las tres soluciones con precio tachado y precio de promo", () => {
     expect(out.html).toContain("Precios con la promo");
-    expect(out.html).toContain("1.000€"); // precio tachado one page
-    expect(out.html).toContain("500€"); // precio con promo one page
-    expect(out.html).toContain("1.500€"); // ecommerce con promo
+    for (const label of ["One page", "Sitio web", "Ecommerce"]) {
+      expect(out.html).toContain(label);
+    }
+    expect(out.html).toContain("1.000€"); // tachado de One page
+    expect(out.html).toContain("500€"); // One page con promo
+    expect(out.html).toContain("2.000€"); // tachado de Sitio web y Ecommerce
     expect(out.text).toContain("500€");
+  });
+
+  test("reserva el precio con una fecha concreta, no con una cuenta atrás", () => {
+    // En un correo no hay JS y las imágenes suelen venir bloqueadas: la fecha
+    // se calcula al enviar y se imprime, que es lo único que se lee siempre.
+    const out5 = buildPromoEmail({ sentAt: Date.parse("2026-07-01T10:00:00+02:00") });
+    expect(out5.subject).toContain("6 de julio");
+    expect(out5.html).toContain("6 de julio");
+    expect(out5.text).toContain("6 de julio");
   });
 
   test("greets the lead by first name in HTML and text", () => {
