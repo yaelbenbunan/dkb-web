@@ -19,7 +19,7 @@ interface StaticRoute {
 const STATIC_ROUTES: StaticRoute[] = [
   { path: "", priority: 1.0, changeFrequency: "weekly" },
   { path: "/servicios", priority: 0.9, changeFrequency: "weekly" },
-  { path: "/kit-digital", priority: 0.9, changeFrequency: "weekly" },
+  { path: "/puesto-seguro", priority: 0.9, changeFrequency: "weekly" },
   { path: "/kit-digital-2026", priority: 0.9, changeFrequency: "weekly" },
   { path: "/casos-de-exito", priority: 0.9, changeFrequency: "weekly" },
   { path: "/blog", priority: 0.9, changeFrequency: "weekly" },
@@ -58,7 +58,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
   const kitDevices = ALL_DEVICES.map((d) => ({
-    url: `${SITE}/kit-digital/${d.slug}`,
+    url: `${SITE}/puesto-seguro/${d.slug}`,
     lastModified: now,
     changeFrequency: "monthly" as Freq,
     priority: 0.6,

@@ -74,7 +74,7 @@ export function Footer() {
             {/* Solo en el footer (no en el menú principal) */}
             <li>
               <Link
-                href="/kit-digital"
+                href="/puesto-seguro"
                 className="text-base text-fg transition-colors hover:text-accent"
               >
                 Kit Digital

@@ -35,10 +35,10 @@ export async function generateMetadata({
   return {
     title: `${label} con el Kit Digital — dinkbit`,
     description: `${d.blurb}. Con el Bono del Kit Digital pagas solo ${eur(d.pricePay)}€ (el bono cubre 1.000€).`,
-    alternates: { canonical: `/kit-digital/${d.slug}` },
+    alternates: { canonical: `/puesto-seguro/${d.slug}` },
     openGraph: {
       type: "website",
-      url: `/kit-digital/${d.slug}`,
+      url: `/puesto-seguro/${d.slug}`,
       title: `${label} con el Kit Digital — dinkbit`,
       description: d.blurb,
       images: [d.image],
@@ -63,7 +63,7 @@ export default async function DeviceDetail({
 
   const breadcrumbItems = [
     { label: "Inicio", href: "/" },
-    { label: "Kit Digital", href: "/kit-digital" },
+    { label: "Kit Digital", href: "/puesto-seguro" },
     { label: label },
   ];
 
@@ -232,7 +232,7 @@ export default async function DeviceDetail({
             {related.map((d) => (
               <Link
                 key={d.slug}
-                href={`/kit-digital/${d.slug}`}
+                href={`/puesto-seguro/${d.slug}`}
                 className="surface surface-hover group flex flex-col overflow-hidden rounded-2xl"
               >
                 <div className="relative aspect-[4/3] w-full bg-white">

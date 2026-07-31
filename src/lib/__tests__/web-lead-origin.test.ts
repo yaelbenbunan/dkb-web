@@ -131,7 +131,7 @@ describe("contactLead", () => {
 });
 
 describe("kitDigitalLead", () => {
-  test("records the kit-digital origin with model and bono, no sensitive PII", () => {
+  test("records the puesto-seguro origin with model and bono, no sensitive PII", () => {
     const row = kitDigitalLead({
       name: "Marta",
       email: "marta@example.com",
@@ -142,7 +142,7 @@ describe("kitDigitalLead", () => {
       address: "Calle Falsa 123",
     });
     expect(row.campaign).toBe("Kit Digital");
-    expect(row.notes).toContain("kit-digital");
+    expect(row.notes).toContain("puesto-seguro");
     expect(row.notes).toContain("Portátil X");
     expect(row.notes).toContain("BONO-123");
     // NIF / address are fulfillment PII — they belong in the email, not the CRM notes.

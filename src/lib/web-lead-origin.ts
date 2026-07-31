@@ -165,7 +165,7 @@ export function kitDigitalLead(
     phone: d.phone,
     channel,
     campaign,
-    notes: `Origen: landing /kit-digital · Modelo: ${d.device} · Bono: ${d.bono}`,
+    notes: `Origen: landing /puesto-seguro · Modelo: ${d.device} · Bono: ${d.bono}`,
   };
 }
 

@@ -95,7 +95,7 @@ export async function requestKitDigital(
       `Código postal: ${postalCode}`,
       `Ciudad: ${city}`,
       "",
-      "Origen: landing /kit-digital de dinkbit.es.",
+      "Origen: landing /puesto-seguro de dinkbit.es.",
     ].join("\n"),
   });
 

@@ -21,10 +21,10 @@ function eur(n: number): string {
 export const metadata: Metadata = {
   title: "Ordenadores con el Kit Digital — dinkbit",
   description: `Renueva tu equipo con el Bono del Kit Digital: cubre 1.000€ del precio y tú pagas desde ${MIN_PAY}€. Portátiles y sobremesas de Lenovo, Acer, Asus, Dell, Samsung y Apple, con tramitación, entrega y soporte incluidos.`,
-  alternates: { canonical: "/kit-digital" },
+  alternates: { canonical: "/puesto-seguro" },
   openGraph: {
     type: "website",
-    url: "/kit-digital",
+    url: "/puesto-seguro",
     title: "Ordenadores con el Kit Digital — dinkbit",
     description: `El Bono del Kit Digital cubre 1.000€ de tu nuevo ordenador. Equipos desde ${MIN_PAY}€, con tramitación, entrega y soporte incluidos.`,
     siteName: "dinkbit",
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
 function DeviceCard({ device }: { device: KitDevice }) {
   return (
     <Link
-      href={`/kit-digital/${device.slug}`}
+      href={`/puesto-seguro/${device.slug}`}
       className="surface surface-hover group flex h-full flex-col overflow-hidden rounded-2xl"
     >
       <div className="relative aspect-[4/3] w-full bg-white">

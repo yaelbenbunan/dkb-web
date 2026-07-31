@@ -29,6 +29,22 @@ const config: NextConfig = {
       destination: "/casos-de-exito/reformas-servilucas",
       permanent: true,
     },
+    // La landing de ordenadores con el bono pasa a llamarse Puesto Seguro.
+    // 301 (permanent) para que Google traspase el posicionamiento de la URL
+    // vieja, que llevaba tiempo indexada, en vez de tratarla como una página
+    // nueva sin historial. Ojo: NO puede afectar a /kit-digital-2026, que es
+    // otra landing distinta — de ahí que las fuentes sean la ruta exacta y
+    // sus hijas, y no un comodín /kit-digital(.*).
+    {
+      source: "/kit-digital",
+      destination: "/puesto-seguro",
+      permanent: true,
+    },
+    {
+      source: "/kit-digital/:slug",
+      destination: "/puesto-seguro/:slug",
+      permanent: true,
+    },
   ],
 };
 
