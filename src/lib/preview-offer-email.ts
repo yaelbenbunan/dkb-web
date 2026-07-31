@@ -10,7 +10,7 @@ export const OFFER = {
   /** Sender — must be on the Resend-verified domain (dinkbit.es). */
   fromEmail: "hola@dinkbit.es",
   /** Where the user's replies / CTA go. */
-  contactEmail: "hola@dinkbit.es",
+  contactEmail: "hola@dinkbit.com",
   siteUrl: "https://www.dinkbit.es",
   logoUrl: "https://www.dinkbit.es/img/logo/dinkbit-email.png",
   termsUrl: "https://www.dinkbit.es/condiciones-oferta",

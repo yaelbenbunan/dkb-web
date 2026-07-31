@@ -120,7 +120,7 @@ export default function CondicionesOfertaPage() {
         envío a una dirección de un tercero facilitada por el usuario. El
         destinatario de un correo no solicitado puede pedir la baja y la
         supresión de sus datos escribiendo a{" "}
-        <a href="mailto:hola@dinkbit.es">hola@dinkbit.es</a>, y se procederá de
+        <a href="mailto:hola@dinkbit.com">hola@dinkbit.com</a>, y se procederá de
         inmediato.
       </p>
 
@@ -128,7 +128,7 @@ export default function CondicionesOfertaPage() {
       <p>
         Responsable: <strong>Dinkbit Marketing S.L.</strong> Para cualquier duda
         sobre la promoción puedes escribir a{" "}
-        <a href="mailto:hola@dinkbit.es">hola@dinkbit.es</a>. Consulta también el{" "}
+        <a href="mailto:hola@dinkbit.com">hola@dinkbit.com</a>. Consulta también el{" "}
         <a href="/aviso-legal">Aviso Legal</a> y la{" "}
         <a href="/privacidad">Política de Privacidad</a>.
       </p>

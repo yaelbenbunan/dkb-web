@@ -1,5 +1,6 @@
 import type { BrandedEmailInput } from "./email-layout";
 import { BRAND } from "./email-layout";
+import { CONTACT_INFO } from "./contact-info";
 
 /**
  * Textos de los acuses de recibo que se mandan al lead tras rellenar cada
@@ -13,7 +14,22 @@ import { BRAND } from "./email-layout";
 
 const CASOS_URL = `${BRAND.siteUrl}/casos-de-exito`;
 
-/** Formulario rápido del Home (hero): nombre, teléfono, email y servicio. */
+/**
+ * Atajo a WhatsApp para los formularios en los que la persona está esperando
+ * que la llamemos: le damos una vía más rápida si no quiere esperar. No se
+ * pone en los que ya han terminado un trámite, donde solo añadiría ruido.
+ */
+const WHATSAPP_CTA = {
+  label: "Escríbenos por WhatsApp",
+  url: CONTACT_INFO.socials.whatsapp,
+} as const;
+
+/**
+ * Formulario rápido del Home (hero). Solo pide nombre, teléfono, email y
+ * servicio, así que el correo no puede fingir que sabe lo que necesita esta
+ * persona: da las gracias, promete contacto y ofrece WhatsApp por si tiene
+ * prisa. Sin viñetas — no hay proceso que explicar todavía.
+ */
 export function homeHeroAutoresponder(input: {
   name?: string | null;
   service?: string | null;
@@ -21,19 +37,13 @@ export function homeHeroAutoresponder(input: {
   return {
     subject: "Hemos recibido tu solicitud",
     eyebrow: "Solicitud",
-    heading: "Hemos recibido tu solicitud",
+    heading: "Gracias por tu interés",
     name: input.name,
     intro: input.service
-      ? `gracias por interesarte en ${input.service.toLowerCase()}. Ya tenemos tus datos y te respondemos en menos de 24 horas laborables.`
-      : "gracias por contarnos lo que necesitas. Ya tenemos tus datos y te respondemos en menos de 24 horas laborables.",
-    preheader: "Te respondemos en menos de 24 horas laborables.",
-    bulletsLabel: "Qué pasa ahora",
-    bullets: [
-      "Revisamos lo que nos has contado.",
-      "Te llamamos o escribimos para concretar los detalles.",
-      "Te preparamos una propuesta sin compromiso.",
-    ],
-    cta: { label: "Ver trabajos que hemos hecho", url: CASOS_URL },
+      ? `gracias por tu interés en ${input.service.toLowerCase()}. Nos ponemos en contacto contigo en menos de 24 horas para que nos cuentes con calma qué necesitas.`
+      : "gracias por tu interés. Nos ponemos en contacto contigo en menos de 24 horas para que nos cuentes con calma qué necesitas.",
+    preheader: "Te contactamos en menos de 24 horas.",
+    cta: WHATSAPP_CTA,
   };
 }
 
@@ -45,15 +55,9 @@ export function contactAutoresponder(input: { name?: string | null }): BrandedEm
     heading: "Hemos recibido tu mensaje",
     name: input.name,
     intro:
-      "gracias por escribirnos. Tu mensaje ya está con nosotros y te respondemos en menos de 24 horas laborables.",
-    preheader: "Tu mensaje ya está con nosotros.",
-    bulletsLabel: "Qué pasa ahora",
-    bullets: [
-      "Leemos tu mensaje y vemos quién puede ayudarte mejor.",
-      "Te respondemos por email o te llamamos, como prefieras.",
-      "Si hace falta, agendamos una llamada para verlo con calma.",
-    ],
-    cta: { label: "Ver trabajos que hemos hecho", url: CASOS_URL },
+      "gracias por escribirnos. Te respondemos en menos de 24 horas laborables. Si tienes prisa, escríbenos por WhatsApp y lo vemos al momento.",
+    preheader: "Te respondemos en menos de 24 horas laborables.",
+    cta: WHATSAPP_CTA,
   };
 }
 
@@ -116,17 +120,11 @@ export function marketingLandingAutoresponder(input: {
   return {
     subject: "Hemos recibido tu solicitud de presupuesto",
     eyebrow: "Presupuesto",
-    heading: "Hemos recibido tu solicitud",
+    heading: "Gracias por tu interés",
     name: input.name,
     intro:
-      "gracias por contarnos sobre tu negocio. Preparamos una propuesta a tu medida y te llamamos en menos de 24 horas laborables.",
+      "gracias por contarnos sobre tu negocio. Te llamamos en menos de 24 horas laborables para afinar el presupuesto contigo, sin compromiso.",
     preheader: "Te llamamos en menos de 24 horas laborables.",
-    bulletsLabel: "Qué pasa ahora",
-    bullets: [
-      "Estudiamos tu negocio y qué necesitas de verdad.",
-      "Te llamamos para afinar el presupuesto contigo.",
-      "Te pasamos la propuesta por escrito, sin compromiso.",
-    ],
-    cta: { label: "Ver trabajos que hemos hecho", url: CASOS_URL },
+    cta: WHATSAPP_CTA,
   };
 }

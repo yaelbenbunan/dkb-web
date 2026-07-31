@@ -34,7 +34,7 @@ export const DEFAULT_STYLE: CampaignStyle = {
   fontStack: "'Source Sans Pro','Source Sans 3',Helvetica,Arial,sans-serif",
 };
 export const DEFAULT_FOOTER_BLOCK: Block = {
-  id: "footer", type: "footer", props: { orgLine: "dinkbit · www.dinkbit.es · hola@dinkbit.es", unsubscribe: true },
+  id: "footer", type: "footer", props: { orgLine: "dinkbit · www.dinkbit.es · hola@dinkbit.com", unsubscribe: true },
 };
 
 // id sin Date.now()/random prohibidos en workflows, pero aquí (app) sí valen.

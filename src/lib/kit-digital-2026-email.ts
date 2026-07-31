@@ -5,7 +5,7 @@
 export const KD_EMAIL = {
   accentHex: "187bef",
   fromEmail: "hola@dinkbit.es",
-  contactEmail: "hola@dinkbit.es",
+  contactEmail: "hola@dinkbit.com",
   siteUrl: "https://www.dinkbit.es",
   landingUrl: "https://www.dinkbit.es/kit-digital-2026",
   logoUrl: "https://www.dinkbit.es/img/logo/dinkbit-email.png",

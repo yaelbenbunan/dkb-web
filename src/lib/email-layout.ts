@@ -11,10 +11,15 @@
  * Gmail y Apple Mail. La referencia visual es buildKitDigital2026Email().
  */
 
+import { CONTACT_INFO } from "./contact-info";
+
 export const BRAND = {
   accentHex: "#187bef",
   siteUrl: "https://www.dinkbit.es",
-  contactEmail: "hola@dinkbit.es",
+  // La dirección que se muestra sale de contact-info para que no se separe de
+  // la del sitio. Es .com a propósito: es el buzón que tiene la redirección
+  // activa, así que las respuestas llegan. El .es no está monitorizado.
+  contactEmail: CONTACT_INFO.email,
   logoUrl: "https://www.dinkbit.es/img/logo/dinkbit-email.png",
 } as const;
 
