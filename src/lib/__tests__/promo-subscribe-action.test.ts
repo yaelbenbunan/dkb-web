@@ -21,7 +21,8 @@ function formFor(fields: Record<string, string>): FormData {
 const valid = () => formFor({
   name: "Ana",
   email: "lead@example.com",
-  consent: "on",
+  phone: "600 123 456",
+  privacy: "on", consent: "on",
   website: "",
   formLoadedAt: String(Date.now() - 5000),
 });
@@ -45,12 +46,12 @@ describe("subscribePromo", () => {
     expect(sent.to).toBe("lead@example.com");
   });
 
-  test("forwards an optional phone to the persisted lead", async () => {
+  test("forwards the phone to the persisted lead", async () => {
     await subscribePromo(formFor({
       name: "Ana",
       email: "lead@example.com",
       phone: "600 123 456",
-      consent: "on",
+      privacy: "on", consent: "on",
       website: "",
       formLoadedAt: String(Date.now() - 5000),
     }));
@@ -64,15 +65,19 @@ describe("subscribePromo", () => {
 
   test("rejects when the name is missing and does not persist", async () => {
     const res = await subscribePromo(formFor({
-      email: "lead@example.com", consent: "on", website: "", formLoadedAt: String(Date.now() - 5000),
+      email: "lead@example.com", privacy: "on", consent: "on", website: "", formLoadedAt: String(Date.now() - 5000),
     }));
     expect(res.ok).toBe(false);
     expect(createWebhookLeadMock).not.toHaveBeenCalled();
   });
 
-  test("omits the phone when the field is left empty", async () => {
-    await subscribePromo(valid());
-    expect(createWebhookLeadMock.mock.calls[0][0].phone).toBeNull();
+  test("rechaza sin teléfono: en la promo es obligatorio para poder contactar", async () => {
+    const res = await subscribePromo(formFor({
+      name: "Ana", email: "lead@example.com", phone: "",
+      privacy: "on", consent: "on", website: "", formLoadedAt: String(Date.now() - 5000),
+    }));
+    expect(res.ok).toBe(false);
+    expect(createWebhookLeadMock).not.toHaveBeenCalled();
   });
 
   test("rejects without consent and does not persist", async () => {
@@ -85,7 +90,7 @@ describe("subscribePromo", () => {
 
   test("rejects the honeypot", async () => {
     const res = await subscribePromo(formFor({
-      email: "lead@example.com", consent: "on", website: "bot", formLoadedAt: String(Date.now() - 5000),
+      email: "lead@example.com", privacy: "on", consent: "on", website: "bot", formLoadedAt: String(Date.now() - 5000),
     }));
     expect(res.ok).toBe(false);
     expect(createWebhookLeadMock).not.toHaveBeenCalled();

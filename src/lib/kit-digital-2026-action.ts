@@ -4,6 +4,8 @@ import { Resend } from "resend";
 import { z } from "zod";
 import { upsertKitDigital2026Lead } from "./imagina-leads";
 import { kitDigital2026Lead, utmFromFormData } from "./web-lead-origin";
+import { sendLeadAutoresponder } from "./lead-autoresponder";
+import { kitDigital2026Autoresponder } from "./lead-emails";
 
 const schema = z
   .object({
@@ -72,7 +74,7 @@ export async function requestKitDigital2026(
 
   // Persist every web lead to the CRM (best-effort, never throws) before the
   // emails — so the lead is never lost even if Resend is down or misconfigured.
-  await upsertKitDigital2026Lead(
+  const saved = await upsertKitDigital2026Lead(
     kitDigital2026Lead(
       {
         name: d.name,
@@ -125,6 +127,17 @@ export async function requestKitDigital2026(
   if (error) {
     console.error("Resend error (kit-digital-2026, interno):", error);
     return { ok: false, error: "No se pudo enviar. Inténtalo más tarde." };
+  }
+
+  // Acuse de recibo, SOLO si el lead es nuevo. Si `matched` es true venía de
+  // Meta y ya recibió el correo de "casi está" con el botón a esta landing:
+  // escribirle otra vez a los dos minutos sobra y quema la lista.
+  if (!saved.matched) {
+    await sendLeadAutoresponder({
+      leadId: saved.id,
+      to: d.email,
+      mail: kitDigital2026Autoresponder({ name: d.name }),
+    });
   }
 
   return { ok: true };

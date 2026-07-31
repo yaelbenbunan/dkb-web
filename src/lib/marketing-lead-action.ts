@@ -4,6 +4,9 @@ import { Resend } from "resend";
 import { z } from "zod";
 import { createWebhookLead } from "./imagina-leads";
 import { marketingLandingLead, utmFromFormData } from "./web-lead-origin";
+import { consentFromFormData } from "./consent";
+import { sendLeadAutoresponder } from "./lead-autoresponder";
+import { marketingLandingAutoresponder } from "./lead-emails";
 
 /**
  * Lead de las landings de captación (/marketing-clinicas y
@@ -55,7 +58,12 @@ export async function sendMarketingLead(
 
   // Persist every web lead to the CRM (best-effort, never throws) before the
   // email. Landing conversions are attributed to Google Ads / Pmax.
-  await createWebhookLead(marketingLandingLead(parsed.data, utmFromFormData(formData)));
+  const saved = await createWebhookLead(
+    marketingLandingLead(
+      { ...parsed.data, consent: consentFromFormData(formData) },
+      utmFromFormData(formData),
+    ),
+  );
 
   const apiKey = process.env.RESEND_API_KEY;
   const to = process.env.CONTACT_EMAIL_TO;
@@ -94,5 +102,18 @@ export async function sendMarketingLead(
       error: "No se pudo enviar la solicitud. Inténtalo más tarde.",
     };
   }
+  // Acuse de recibo al lead. Best-effort: si falla, el lead ya está
+  // guardado y el equipo avisado, así que no se le devuelve un error a
+  // quien acaba de rellenar el formulario.
+  // En esta landing el email es opcional: sin él no hay a dónde escribir, y el
+  // lead se queda solo con el teléfono para que le llamen.
+  if (email) {
+    await sendLeadAutoresponder({
+      leadId: saved.id,
+      to: email,
+      mail: marketingLandingAutoresponder({ name }),
+    });
+  }
+
   return { ok: true };
 }

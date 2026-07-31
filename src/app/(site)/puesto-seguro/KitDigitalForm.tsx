@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { appendUtms } from "@/lib/utm";
 import { requestKitDigital } from "@/lib/kit-digital-action";
+import { ConsentCheckbox } from "@/components/forms/ConsentCheckbox";
 
 interface Props {
   deviceOptions: string[];
@@ -166,6 +167,8 @@ export function KitDigitalForm({ deviceOptions, defaultDevice }: Props) {
       </div>
 
       {/* Honeypot */}
+      <ConsentCheckbox className="mt-5" />
+
       <input
         type="text"
         name="website"

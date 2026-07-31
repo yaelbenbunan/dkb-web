@@ -46,3 +46,16 @@ export function parseConsentAnswer(raw?: string | null): boolean | null {
   console.warn(`[consent] respuesta de consentimiento no reconocida: ${JSON.stringify(raw)}`);
   return null;
 }
+
+/**
+ * Lee la casilla de consentimiento de un formulario web.
+ *
+ * Devuelve boolean, nunca null: en estos formularios SIEMPRE se pregunta, así
+ * que la ausencia del campo significa "la vio y no la marcó" (un no explícito),
+ * no "no se le preguntó". El null se reserva para los leads antiguos y para los
+ * webhooks sin pregunta de consentimiento.
+ */
+export function consentFromFormData(fd: FormData): boolean {
+  const v = fd.get("consent");
+  return typeof v === "string" && CONSENT_YES.has(v.trim().toLowerCase());
+}

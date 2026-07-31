@@ -9,6 +9,9 @@ import {
 } from "./validation";
 import { createWebhookLead } from "./imagina-leads";
 import { contactLead, utmFromFormData } from "./web-lead-origin";
+import { consentFromFormData } from "./consent";
+import { sendLeadAutoresponder } from "./lead-autoresponder";
+import { contactAutoresponder } from "./lead-emails";
 
 export async function sendContactEmail(
   formData: FormData,
@@ -42,7 +45,12 @@ export async function sendContactEmail(
 
   // Persist every web lead to the CRM (best-effort, never throws) before the
   // email — so the lead is never lost even if Resend is down or misconfigured.
-  await createWebhookLead(contactLead(parsed.data, utmFromFormData(formData)));
+  const saved = await createWebhookLead(
+    contactLead(
+      { ...parsed.data, consent: consentFromFormData(formData) },
+      utmFromFormData(formData),
+    ),
+  );
 
   const apiKey = process.env.RESEND_API_KEY;
   const to = process.env.CONTACT_EMAIL_TO;
@@ -76,5 +84,14 @@ export async function sendContactEmail(
     console.error("Resend error:", error);
     return { ok: false, error: "No se pudo enviar el mensaje. Inténtalo más tarde." };
   }
+  // Acuse de recibo al lead. Best-effort: si falla, el lead ya está
+  // guardado y el equipo avisado, así que no se le devuelve un error a
+  // quien acaba de rellenar el formulario.
+  await sendLeadAutoresponder({
+    leadId: saved.id,
+    to: email,
+    mail: contactAutoresponder({ name }),
+  });
+
   return { ok: true };
 }

@@ -28,7 +28,7 @@ const WHATSAPP_CTA = {
  * Formulario rápido del Home (hero). Solo pide nombre, teléfono, email y
  * servicio, así que el correo no puede fingir que sabe lo que necesita esta
  * persona: da las gracias, promete contacto y ofrece WhatsApp por si tiene
- * prisa. Sin viñetas — no hay proceso que explicar todavía.
+ * prisa. Sin viñetas: no hay proceso que explicar todavía.
  */
 export function homeHeroAutoresponder(input: {
   name?: string | null;
@@ -40,8 +40,8 @@ export function homeHeroAutoresponder(input: {
     heading: "Gracias por tu interés",
     name: input.name,
     intro: input.service
-      ? `gracias por tu interés en ${input.service.toLowerCase()}. Nos ponemos en contacto contigo en menos de 24 horas para que nos cuentes con calma qué necesitas.`
-      : "gracias por tu interés. Nos ponemos en contacto contigo en menos de 24 horas para que nos cuentes con calma qué necesitas.",
+      ? `gracias por tu interés en **${input.service}**. Nos pondremos en contacto contigo **en menos de 24 horas** para que nos cuentes con calma qué necesitas.`
+      : "gracias por tu interés. Nos pondremos en contacto contigo **en menos de 24 horas** para que nos cuentes con calma qué necesitas.",
     preheader: "Te contactamos en menos de 24 horas.",
     cta: WHATSAPP_CTA,
   };
@@ -55,8 +55,8 @@ export function contactAutoresponder(input: { name?: string | null }): BrandedEm
     heading: "Hemos recibido tu mensaje",
     name: input.name,
     intro:
-      "gracias por escribirnos. Te respondemos en menos de 24 horas laborables. Si tienes prisa, escríbenos por WhatsApp y lo vemos al momento.",
-    preheader: "Te respondemos en menos de 24 horas laborables.",
+      "gracias por escribirnos. Te responderemos **en menos de 24 horas** laborables. Si tienes prisa, escríbenos por WhatsApp y lo vemos al momento.",
+    preheader: "Te responderemos en menos de 24 horas laborables.",
     cta: WHATSAPP_CTA,
   };
 }
@@ -97,18 +97,17 @@ export function puestoSeguroAutoresponder(input: {
   name?: string | null;
 }): BrandedEmailInput {
   return {
-    subject: "Hemos recibido tu información — Puesto Seguro",
+    subject: "Hemos recibido tu información",
     eyebrow: "Puesto Seguro",
     heading: "Hemos recibido tu información",
     name: input.name,
     intro:
-      "gracias por confiar en nosotros. Ya tenemos todos tus datos y vamos a darte de alta en la plataforma de Puesto Seguro.",
+      "gracias por confiar en nosotros. Ya tenemos todos tus datos y vamos a darte de alta en la plataforma para tramitar la solicitud de tu equipo.",
     preheader: "Te damos de alta en la plataforma y te escribimos con los pasos.",
     bulletsLabel: "Qué pasa ahora",
     bullets: [
-      "Damos de alta tu Puesto Seguro en la plataforma.",
-      "Recibirás un correo con los pasos a seguir para activarlo.",
-      "Estate pendiente de tu bandeja de entrada — revisa también la carpeta de spam.",
+      "Te damos de alta en la plataforma para solicitar tu Puesto Seguro.",
+      "Recibirás un correo con los pasos a seguir. Estate pendiente de tu bandeja de entrada (revisa también la carpeta de spam).",
     ],
   };
 }
@@ -123,8 +122,8 @@ export function marketingLandingAutoresponder(input: {
     heading: "Gracias por tu interés",
     name: input.name,
     intro:
-      "gracias por contarnos sobre tu negocio. Te llamamos en menos de 24 horas laborables para afinar el presupuesto contigo, sin compromiso.",
-    preheader: "Te llamamos en menos de 24 horas laborables.",
+      "gracias por tu interés. Te llamaremos **en menos de 24 horas** laborables para conocer mejor tu negocio y qué necesitas. Con eso claro, te preparamos un presupuesto a tu medida y sin compromiso.",
+    preheader: "Te llamamos para conocer tu negocio y prepararte un presupuesto.",
     cta: WHATSAPP_CTA,
   };
 }

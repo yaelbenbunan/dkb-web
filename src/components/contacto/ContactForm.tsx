@@ -11,6 +11,7 @@ import type {
   ContactFieldErrors,
   ContactFieldName,
 } from "@/lib/validation";
+import { ConsentCheckbox } from "@/components/forms/ConsentCheckbox";
 
 interface Props {
   services: { slug: string; title: string }[];
@@ -161,6 +162,9 @@ export function ContactForm({ services }: Props) {
             </p>
           )}
         </div>
+
+        <ConsentCheckbox className="mt-5" />
+
 
         <input
           type="text"

@@ -67,6 +67,7 @@ export function homeHeroLead(
     email: string;
     phone: string;
     service: string;
+    consent?: boolean;
   },
   utm?: UtmInput,
 ): WebhookLeadInput {
@@ -77,6 +78,7 @@ export function homeHeroLead(
     phone: d.phone,
     channel,
     campaign,
+    consent: d.consent ?? null,
     notes: `Origen: formulario rápido del Home (Hero) · Servicio de interés: ${d.service}`,
   };
 }
@@ -89,6 +91,7 @@ export function marketingLandingLead(
     businessType: string;
     budget: string;
     origin: string;
+    consent?: boolean;
   },
   utm?: UtmInput,
 ): WebhookLeadInput {
@@ -100,6 +103,7 @@ export function marketingLandingLead(
     phone: d.phone,
     channel,
     campaign,
+    consent: d.consent ?? null,
     notes: `Origen: ${d.origin} · Tipo: ${d.businessType} · Presupuesto: ${d.budget}`,
   };
 }
@@ -109,6 +113,7 @@ export function callRequestLead(
     name: string;
     phone: string;
     service: string;
+    consent?: boolean;
   },
   utm?: UtmInput,
 ): WebhookLeadInput {
@@ -119,6 +124,7 @@ export function callRequestLead(
     phone: d.phone,
     channel,
     campaign,
+    consent: d.consent ?? null,
     notes: `Origen: solicitud de llamada (CTA de la página de servicio) · Servicio de interés: ${d.service}`,
   };
 }
@@ -130,6 +136,7 @@ export function contactLead(
     phone: string;
     service: string;
     source: string;
+    consent?: boolean;
   },
   utm?: UtmInput,
 ): WebhookLeadInput {
@@ -140,6 +147,7 @@ export function contactLead(
     phone: d.phone,
     channel,
     campaign,
+    consent: d.consent ?? null,
     notes: `Origen: formulario de contacto · Servicio de interés: ${d.service} · Cómo nos conoció: ${d.source}`,
   };
 }
@@ -155,6 +163,7 @@ export function kitDigitalLead(
     // persisted to the CRM — that fulfillment PII stays in the email only.
     nif?: string;
     address?: string;
+    consent?: boolean;
   },
   utm?: UtmInput,
 ): WebhookLeadInput {
@@ -165,6 +174,7 @@ export function kitDigitalLead(
     phone: d.phone,
     channel,
     campaign,
+    consent: d.consent ?? null,
     notes: `Origen: landing /puesto-seguro · Modelo: ${d.device} · Bono: ${d.bono}`,
   };
 }

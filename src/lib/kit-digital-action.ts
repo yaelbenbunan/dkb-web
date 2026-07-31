@@ -4,6 +4,9 @@ import { Resend } from "resend";
 import { z } from "zod";
 import { createWebhookLead } from "./imagina-leads";
 import { kitDigitalLead, utmFromFormData } from "./web-lead-origin";
+import { consentFromFormData } from "./consent";
+import { sendLeadAutoresponder } from "./lead-autoresponder";
+import { puestoSeguroAutoresponder } from "./lead-emails";
 
 const schema = z
   .object({
@@ -54,7 +57,12 @@ export async function requestKitDigital(
 
   // Persist every web lead to the CRM (best-effort, never throws) before the
   // email. Only model/bono reach the CRM — NIF/address stay in the email.
-  await createWebhookLead(kitDigitalLead(parsed.data, utmFromFormData(formData)));
+  const saved = await createWebhookLead(
+    kitDigitalLead(
+      { ...parsed.data, consent: consentFromFormData(formData) },
+      utmFromFormData(formData),
+    ),
+  );
 
   const apiKey = process.env.RESEND_API_KEY;
   const to = process.env.CONTACT_EMAIL_TO;
@@ -103,5 +111,14 @@ export async function requestKitDigital(
     console.error("Resend error (kit-digital):", error);
     return { ok: false, error: "No se pudo enviar la solicitud. Inténtalo más tarde." };
   }
+  // Acuse de recibo al lead. Best-effort: si falla, el lead ya está
+  // guardado y el equipo avisado, así que no se le devuelve un error a
+  // quien acaba de rellenar el formulario.
+  await sendLeadAutoresponder({
+    leadId: saved.id,
+    to: parsed.data.email,
+    mail: puestoSeguroAutoresponder({ name: parsed.data.name }),
+  });
+
   return { ok: true };
 }

@@ -18,6 +18,9 @@ export function PromoEmailForm({
   onSuccess?: () => void;
   submitLabel?: string;
 }) {
+  // Dos aceptaciones separadas: cómo tratamos sus datos y si quiere recibir
+  // publicidad son decisiones distintas, y el consentimiento debe ser granular.
+  const [privacy, setPrivacy] = useState(false);
   const [consent, setConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -88,10 +91,28 @@ export function PromoEmailForm({
         name="phone"
         inputMode="tel"
         autoComplete="tel"
-        placeholder="Tu teléfono (opcional)"
-        aria-label="Tu teléfono (opcional)"
+        required
+        placeholder="Tu teléfono"
+        aria-label="Tu teléfono"
         className="h-11 rounded-lg border border-border-strong bg-bg-subtle px-4 text-sm text-fg outline-none focus:border-accent"
       />
+
+      <label className="flex items-start gap-2 text-xs leading-relaxed text-fg-muted">
+        <input
+          type="checkbox"
+          name="privacy"
+          checked={privacy}
+          onChange={(e) => setPrivacy(e.target.checked)}
+          className="mt-0.5"
+        />
+        <span>
+          He leído y acepto la{" "}
+          <Link href="/privacidad" className="font-semibold text-accent hover:underline">
+            política de privacidad
+          </Link>
+          .
+        </span>
+      </label>
 
       <label className="flex items-start gap-2 text-xs leading-relaxed text-fg-muted">
         <input
@@ -101,20 +122,14 @@ export function PromoEmailForm({
           onChange={(e) => setConsent(e.target.checked)}
           className="mt-0.5"
         />
-        <span>
-          He leído y acepto la{" "}
-          <Link href="/privacidad" className="font-semibold text-accent hover:underline">
-            política de privacidad
-          </Link>{" "}
-          y el envío de comunicaciones comerciales.
-        </span>
+        <span>Acepto recibir comunicaciones comerciales de dinkbit.</span>
       </label>
 
       {error && <p className="text-xs font-semibold text-red-500">{error}</p>}
 
       <button
         type="submit"
-        disabled={!consent || pending}
+        disabled={!privacy || !consent || pending}
         className="h-11 rounded-lg bg-accent px-5 text-sm font-semibold text-white transition-all hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
       >
         {pending ? "Enviando…" : submitLabel}

@@ -4,6 +4,9 @@ import { Resend } from "resend";
 import { z } from "zod";
 import { createWebhookLead } from "./imagina-leads";
 import { homeHeroLead, utmFromFormData } from "./web-lead-origin";
+import { consentFromFormData } from "./consent";
+import { sendLeadAutoresponder } from "./lead-autoresponder";
+import { homeHeroAutoresponder } from "./lead-emails";
 
 const leadSchema = z
   .object({
@@ -39,8 +42,13 @@ export async function sendLead(formData: FormData): Promise<LeadActionResult> {
   }
 
   // Persist every web lead to the CRM (best-effort, never throws) before the
-  // email — so the lead is never lost even if Resend is down or misconfigured.
-  await createWebhookLead(homeHeroLead(parsed.data, utmFromFormData(formData)));
+  // email, so the lead is never lost even si Resend está caído o mal configurado.
+  const saved = await createWebhookLead(
+    homeHeroLead(
+      { ...parsed.data, consent: consentFromFormData(formData) },
+      utmFromFormData(formData),
+    ),
+  );
 
   const apiKey = process.env.RESEND_API_KEY;
   const to = process.env.CONTACT_EMAIL_TO;
@@ -72,5 +80,15 @@ export async function sendLead(formData: FormData): Promise<LeadActionResult> {
     console.error("Resend error:", error);
     return { ok: false, error: "No se pudo enviar el mensaje. Inténtalo más tarde." };
   }
+
+  // Acuse de recibo al lead. Va después del aviso interno y es best-effort: si
+  // falla, el lead ya está guardado y el equipo ya está avisado, así que no se
+  // le devuelve un error a quien acaba de rellenar el formulario.
+  await sendLeadAutoresponder({
+    leadId: saved.id,
+    to: email,
+    mail: homeHeroAutoresponder({ name, service }),
+  });
+
   return { ok: true };
 }

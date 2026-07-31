@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { sendCallRequest } from "@/lib/call-request-action";
 import { track, pushUserData } from "@/lib/gtm";
 import { appendUtms } from "@/lib/utm";
+import { ConsentCheckbox } from "@/components/forms/ConsentCheckbox";
 
 interface Props {
   serviceTitle: string;
@@ -63,6 +64,9 @@ export function ServiceCtaForm({ serviceTitle }: Props) {
           required
         />
       </div>
+
+      <ConsentCheckbox className="mt-5" />
+
 
       <input
         type="text"

@@ -91,4 +91,25 @@ describe("renderBrandedEmail", () => {
     expect(html).toContain("Resumen breve del correo");
     expect(html).toContain("www.dinkbit.es");
   });
+
+  test("los marcadores **así** salen en negrita en html y limpios en texto", () => {
+    const { html, text } = renderBrandedEmail({
+      ...base,
+      subject: "s",
+      intro: "te llamamos **en menos de 24 horas** laborables.",
+    });
+    expect(html).toContain("<strong>en menos de 24 horas</strong>");
+    expect(text).toContain("en menos de 24 horas laborables.");
+    expect(text).not.toContain("**");
+  });
+
+  test("el escapado ocurre antes que la negrita: no se puede colar markup", () => {
+    const { html } = renderBrandedEmail({
+      ...base,
+      subject: "s",
+      intro: "**<script>alert(1)</script>**",
+    });
+    expect(html).not.toContain("<script>");
+    expect(html).toContain("<strong>&lt;script&gt;");
+  });
 });

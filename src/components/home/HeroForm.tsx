@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { appendUtms } from "@/lib/utm";
 import { sendLead } from "@/lib/lead-action";
 import { track, pushUserData } from "@/lib/gtm";
+import { ConsentCheckbox } from "@/components/forms/ConsentCheckbox";
 
 interface ServiceOption {
   slug: string;
@@ -104,6 +105,9 @@ export function HeroForm({ services }: Props) {
           </select>
         </label>
       </div>
+
+      <ConsentCheckbox className="mt-5" />
+
 
       <input
         type="text"

@@ -9,6 +9,7 @@ import {
   BUDGET_OPTIONS,
   type MarketingLanding,
 } from "@/lib/marketing-landings";
+import { ConsentCheckbox } from "@/components/forms/ConsentCheckbox";
 
 interface Props {
   landing: MarketingLanding;
@@ -143,6 +144,8 @@ export function MarketingLeadForm({ landing, formLocation }: Props) {
       </div>
 
       {/* Honeypot antispam — invisible para usuarios reales. */}
+      <ConsentCheckbox className="mt-5" />
+
       <input
         type="text"
         name="website"

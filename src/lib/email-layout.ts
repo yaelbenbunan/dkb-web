@@ -34,6 +34,21 @@ function esc(s: string): string {
     .replace(/'/g, "&#39;");
 }
 
+/**
+ * Escapa el texto y solo DESPUÉS convierte los marcadores `**así**` en negrita.
+ * El orden importa: si se hiciera al revés, cualquier `<` del contenido saldría
+ * vivo al HTML. Así el copy puede destacar una frase sin abrir la puerta a
+ * inyección.
+ */
+function richText(s: string): string {
+  return esc(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+}
+
+/** La versión en texto plano no tiene negritas: se quitan los marcadores. */
+function plainText(s: string): string {
+  return s.replace(/\*\*(.+?)\*\*/g, "$1");
+}
+
 /** Igual que en el render de campañas: fuera cualquier esquema que no sea web. */
 function safeUrl(raw: string): string | null {
   try {
@@ -82,7 +97,7 @@ export function renderBrandedEmail(input: BrandedEmailInput): {
   const accent = BRAND.accentHex;
   const first = firstName(input.name);
   const greeting = first ? `Hola ${esc(first)}` : "Hola";
-  const preheader = input.preheader ?? input.intro;
+  const preheader = plainText(input.preheader ?? input.intro);
   const ctaUrl = input.cta ? safeUrl(input.cta.url) : null;
   const bullets = input.bullets ?? [];
 
@@ -107,7 +122,7 @@ export function renderBrandedEmail(input: BrandedEmailInput): {
               <td valign="top" style="width:26px;">
                 <div style="width:20px;height:20px;border-radius:999px;background:${accent};color:#ffffff;font-size:12px;font-weight:900;text-align:center;line-height:20px;">✓</div>
               </td>
-              <td style="font-size:15px;line-height:1.5;color:#334155;padding-left:8px;">${esc(b)}</td>
+              <td style="font-size:15px;line-height:1.5;color:#334155;padding-left:8px;">${richText(b)}</td>
             </tr></table>
           </td></tr>`,
             )
@@ -149,7 +164,7 @@ export function renderBrandedEmail(input: BrandedEmailInput): {
 
   <tr><td style="padding:14px 36px 6px;">
     <h1 style="margin:0;font-size:30px;line-height:1.12;color:#0f172a;font-weight:900;letter-spacing:-0.5px;">${esc(input.heading)}</h1>
-    <p style="margin:16px 0 0;font-size:17px;line-height:1.55;color:#475569;">${greeting}, ${esc(input.intro)}</p>
+    <p style="margin:16px 0 0;font-size:17px;line-height:1.55;color:#475569;">${greeting}, ${richText(input.intro)}</p>
   </td></tr>
 ${bulletsHtml}${ctaHtml}
   <tr><td style="padding:20px 36px 28px;border-top:1px solid #eef2f7;">
@@ -161,11 +176,11 @@ ${bulletsHtml}${ctaHtml}
 </body></html>`;
 
   const text = [
-    `${first ? `Hola ${first}` : "Hola"}, ${input.intro}`,
+    `${first ? `Hola ${first}` : "Hola"}, ${plainText(input.intro)}`,
     "",
     input.heading,
     ...(bullets.length
-      ? ["", input.bulletsLabel ? `${input.bulletsLabel}:` : "", ...bullets.map((b) => `· ${b}`)]
+      ? ["", input.bulletsLabel ? `${input.bulletsLabel}:` : "", ...bullets.map((b) => `· ${plainText(b)}`)]
       : []),
     ...(ctaUrl ? ["", `${input.cta!.label}: ${ctaUrl}`] : []),
     "",

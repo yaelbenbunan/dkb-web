@@ -2,7 +2,7 @@
 
 import { Resend } from "resend";
 import { z } from "zod";
-import { createWebhookLead } from "./imagina-leads";
+import { createWebhookLead, setLeadEmailSent } from "./imagina-leads";
 import { promoVeranoLead, utmFromFormData } from "./web-lead-origin";
 import { addOrUpdateMember } from "./mailchimp";
 import { buildPromoEmail } from "./promo-email";
@@ -13,9 +13,13 @@ const schema = z
     // Nombre: sirve para saber por quién preguntar al contactar con el lead.
     name: z.string().trim().min(2, "Nombre inválido").max(80),
     email: z.email("Email inválido"),
-    // Teléfono opcional: vía de contacto adicional al email. Cadena vacía ⇒ sin teléfono.
-    phone: z.string().max(40).optional(),
-    // El checkbox sólo llega ("on") si el usuario lo marca; ausente ⇒ null ⇒ falla.
+    // Teléfono obligatorio: es la vía por la que se contacta al lead de la promo.
+    phone: z.string().trim().min(6, "Teléfono demasiado corto").max(40),
+    // Dos aceptaciones separadas: la política de privacidad (cómo tratamos sus
+    // datos) y el envío de comunicaciones comerciales son decisiones distintas,
+    // y el consentimiento tiene que ser granular. Ambas obligatorias aquí
+    // porque el servicio que pide el usuario ES recibir la promo por email.
+    privacy: z.literal("on", { message: "Debes aceptar la política de privacidad" }),
     consent: z.literal("on", { message: "Debes aceptar para continuar" }),
     website: z.string().max(0, "Honeypot field must be empty"),
     formLoadedAt: z.number(),
@@ -31,7 +35,8 @@ export async function subscribePromo(
   const parsed = schema.safeParse({
     name: formData.get("name") ?? "",
     email: formData.get("email"),
-    phone: formData.get("phone") ?? undefined,
+    phone: formData.get("phone") ?? "",
+    privacy: formData.get("privacy"),
     consent: formData.get("consent"),
     website: formData.get("website") ?? "",
     formLoadedAt: Number(formData.get("formLoadedAt")),
@@ -41,7 +46,7 @@ export async function subscribePromo(
   }
   const name = parsed.data.name;
   const email = parsed.data.email.trim().toLowerCase();
-  const phone = parsed.data.phone?.trim() || undefined;
+  const phone = parsed.data.phone.trim();
 
   // 1) CRÍTICO: guardar el lead antes que nada (nunca se pierde).
   const consentAt = new Date().toISOString();
@@ -62,14 +67,24 @@ export async function subscribePromo(
   if (apiKey) {
     const { subject, html, text } = buildPromoEmail({ name });
     const resend = new Resend(apiKey);
-    const { error } = await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: `${PROMO.fromName} <${PROMO.fromEmail}>`,
       to: email,
       subject,
       html,
       text,
     });
-    if (error) console.error("[promo] Resend error:", error);
+    if (error) {
+      console.error("[promo] Resend error:", error);
+    } else if (data?.id) {
+      // Sin esto el correo salía pero el CRM no se enteraba: la columna de
+      // estado del panel quedaba vacía aunque el envío hubiera ido bien.
+      try {
+        await setLeadEmailSent(lead.id, data.id);
+      } catch (err) {
+        console.error("[promo] no se pudo registrar el estado del envío:", err);
+      }
+    }
   } else {
     console.error("[promo] Missing RESEND_API_KEY — welcome email not sent");
   }

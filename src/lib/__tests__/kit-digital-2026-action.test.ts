@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 // The Kit Digital 2026 capture landing must persist every valid submission to
-// the CRM via upsert and send ONE email: the internal team notification (critical).
+// the CRM via upsert, send the internal team notification (critical) and, solo
+// cuando el lead es NUEVO, un acuse de recibo al interesado. Si el upsert
+// devuelve matched:true el lead venía de Meta y ya recibió el correo de "casi
+// está", así que no se le escribe otra vez.
 // Resend and the CRM module are mocked so no network/DB is touched.
 
 const { sendMock, upsertMock } = vi.hoisted(() => ({
@@ -54,7 +57,7 @@ describe("requestKitDigital2026", () => {
     process.env.CONTACT_EMAIL_FROM = "from@dinkbit.es";
   });
 
-  test("valid pyme lead → upsert al CRM y SOLO email interno (sin autoresponder)", async () => {
+  test("valid pyme lead → upsert al CRM, email interno y acuse al lead", async () => {
     const { fields, multi } = validPyme();
     const res = await requestKitDigital2026(formFor(fields, multi));
 
@@ -66,10 +69,22 @@ describe("requestKitDigital2026", () => {
     expect(row.sector).toContain("Hostelería/restauración");
     expect(row.notes).toContain("Web, SEO");
 
-    // Un solo email: el interno al equipo. NO se manda autoresponder al lead.
-    expect(sendMock).toHaveBeenCalledTimes(1);
-    expect(sendMock.mock.calls[0][0].to).toBe("to@example.com");
+    // Dos correos: el aviso interno al equipo y el acuse de recibo al lead.
     const recipients = sendMock.mock.calls.map((c) => c[0].to);
+    expect(recipients).toContain("to@example.com");
+    expect(recipients).toContain("nuria@example.com");
+  });
+
+  test("si el lead ya existía (vino de Meta) NO se le manda el acuse", async () => {
+    // matched:true ⇒ ya recibió el correo de "casi está" con el botón a esta
+    // landing; un segundo correo a los dos minutos sobra.
+    upsertMock.mockResolvedValue({ ok: true, id: "x", matched: true });
+    const { fields, multi } = validPyme();
+    const res = await requestKitDigital2026(formFor(fields, multi));
+
+    expect(res.ok).toBe(true);
+    const recipients = sendMock.mock.calls.map((c) => c[0].to);
+    expect(recipients).toContain("to@example.com");
     expect(recipients).not.toContain("nuria@example.com");
   });
 
