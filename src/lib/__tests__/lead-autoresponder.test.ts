@@ -13,6 +13,7 @@ vi.mock("resend", () => ({
 vi.mock("../imagina-leads", () => ({ setLeadEmailSent: setSentMock }));
 
 import { sendLeadAutoresponder } from "../lead-autoresponder";
+import { CONTACT_INFO } from "../contact-info";
 
 const mail = {
   subject: "Hemos recibido tu solicitud",
@@ -43,6 +44,13 @@ describe("sendLeadAutoresponder", () => {
     expect(arg.text).toContain("gracias por escribirnos");
 
     expect(setSentMock).toHaveBeenCalledWith("lead-1", "msg-1");
+  });
+
+  test("responder al correo llega al buzón de contacto, no al remitente", async () => {
+    // Sin replyTo, "Responder" va a la dirección `from`, que depende de qué
+    // dominio esté verificado en Resend. Fijarlo desacopla una cosa de la otra.
+    await sendLeadAutoresponder({ leadId: "lead-1", to: "a@b.com", mail });
+    expect(sendMock.mock.calls[0][0].replyTo).toBe(CONTACT_INFO.email);
   });
 
   test("sin leadId envía igual pero no intenta persistir estado", async () => {

@@ -3,6 +3,7 @@
 import { Resend } from "resend";
 import { z } from "zod";
 import { createWebhookLead, setLeadEmailSent } from "./imagina-leads";
+import { CONTACT_INFO } from "./contact-info";
 import { promoVeranoLead, utmFromFormData } from "./web-lead-origin";
 import { addOrUpdateMember } from "./mailchimp";
 import { buildPromoEmail } from "./promo-email";
@@ -70,6 +71,7 @@ export async function subscribePromo(
     const { data, error } = await resend.emails.send({
       from: `${PROMO.fromName} <${PROMO.fromEmail}>`,
       to: email,
+      replyTo: CONTACT_INFO.email,
       subject,
       html,
       text,

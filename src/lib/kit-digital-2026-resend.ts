@@ -2,6 +2,7 @@ import "server-only";
 import { Resend } from "resend";
 import { buildKitDigital2026Email } from "./kit-digital-2026-email";
 import { setLeadEmailSent } from "./imagina-leads";
+import { CONTACT_INFO } from "./contact-info";
 
 /** Manda el email de marca "casi has terminado" al lead y, si Resend devuelve un
  *  message id, lo persiste en el CRM (email_status='sent'). Best-effort en la
@@ -22,6 +23,7 @@ export async function sendKitDigital2026Email(input: {
     const { data, error } = await resend.emails.send({
       from,
       to: input.email,
+      replyTo: CONTACT_INFO.email,
       subject: mail.subject,
       html: mail.html,
       text: mail.text,

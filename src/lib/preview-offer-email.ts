@@ -1,3 +1,4 @@
+import { CONTACT_INFO } from "./contact-info";
 // Builds the user-facing "offer" email sent right after they use the preview
 // generator. Table-based + inline styles for email-client compatibility.
 
@@ -10,7 +11,7 @@ export const OFFER = {
   /** Sender — must be on the Resend-verified domain (dinkbit.es). */
   fromEmail: "hola@dinkbit.es",
   /** Where the user's replies / CTA go. */
-  contactEmail: "hola@dinkbit.com",
+  contactEmail: CONTACT_INFO.email,
   siteUrl: "https://www.dinkbit.es",
   logoUrl: "https://www.dinkbit.es/img/logo/dinkbit-email.png",
   termsUrl: "https://www.dinkbit.es/condiciones-oferta",

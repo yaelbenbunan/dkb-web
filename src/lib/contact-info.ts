@@ -1,7 +1,11 @@
 export const CONTACT_INFO = {
   phone: "+34 657 559 397",
   phoneE164: "+34657559397",
-  email: "hola@dinkbit.com",
+  // Buzón de contacto público. Va en .es a propósito: es el dominio del sitio y
+  // el que ya usan los remitentes de los correos, así que responder a cualquier
+  // envío cae donde debe. Esta constante es la ÚNICA fuente: la usan el pie del
+  // sitio, la página de contacto, los pies de los correos y el replyTo.
+  email: "hola@dinkbit.es",
   address: {
     line1: "Calle Fuerteventura 4, Piso 3 — Oficina 2",
     line2: "28703 San Sebastián de los Reyes, Madrid",

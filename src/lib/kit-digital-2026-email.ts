@@ -1,3 +1,4 @@
+import { CONTACT_INFO } from "./contact-info";
 // Builds the branded autoresponder sent to a lead after they join the Kit
 // Digital 2026 waiting list. Table-based + inline styles for email-client
 // compatibility (mirrors preview-offer-email.ts).
@@ -5,7 +6,7 @@
 export const KD_EMAIL = {
   accentHex: "187bef",
   fromEmail: "hola@dinkbit.es",
-  contactEmail: "hola@dinkbit.com",
+  contactEmail: CONTACT_INFO.email,
   siteUrl: "https://www.dinkbit.es",
   landingUrl: "https://www.dinkbit.es/kit-digital-2026",
   logoUrl: "https://www.dinkbit.es/img/logo/dinkbit-email.png",

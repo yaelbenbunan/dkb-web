@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CONTACT_INFO } from "./contact-info";
 
 const hero = z.object({ eyebrow: z.string().optional(), title: z.string(), body: z.string().optional(), accent: z.string().optional() });
 const paragraph = z.object({ text: z.string(), align: z.enum(["left","center"]).optional(), size: z.enum(["sm","md","lg"]).optional() });
@@ -34,7 +35,7 @@ export const DEFAULT_STYLE: CampaignStyle = {
   fontStack: "'Source Sans Pro','Source Sans 3',Helvetica,Arial,sans-serif",
 };
 export const DEFAULT_FOOTER_BLOCK: Block = {
-  id: "footer", type: "footer", props: { orgLine: "dinkbit · www.dinkbit.es · hola@dinkbit.com", unsubscribe: true },
+  id: "footer", type: "footer", props: { orgLine: `dinkbit · www.dinkbit.es · ${CONTACT_INFO.email}`, unsubscribe: true },
 };
 
 // id sin Date.now()/random prohibidos en workflows, pero aquí (app) sí valen.

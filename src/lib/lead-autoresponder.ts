@@ -2,6 +2,7 @@ import "server-only";
 import { Resend } from "resend";
 import { renderBrandedEmail, type BrandedEmailInput } from "./email-layout";
 import { setLeadEmailSent } from "./imagina-leads";
+import { CONTACT_INFO } from "./contact-info";
 
 /**
  * Manda el acuse de recibo al lead que acaba de rellenar un formulario y
@@ -28,6 +29,9 @@ export async function sendLeadAutoresponder(input: {
     const { data, error } = await resend.emails.send({
       from,
       to: input.to,
+      // Responder tiene que llegar al buzón de contacto pase lo que pase con el
+      // remitente, que depende de qué dominio esté verificado en Resend.
+      replyTo: CONTACT_INFO.email,
       subject: rendered.subject,
       html: rendered.html,
       text: rendered.text,
