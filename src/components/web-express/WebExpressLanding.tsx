@@ -90,21 +90,11 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
           />
         </div>
 
-        <Container size="wide" className="py-16 text-center lg:py-24">
-          {/* Píldora rellena en vez de contorno tenue: es lo primero que se ve
-              al llegar del anuncio y tiene que sostener la mirada un segundo. */}
-          <span
-            className="inline-flex items-center gap-2.5 rounded-full px-5 py-2 text-[13px] font-black uppercase tracking-[0.1em]"
-            style={{ background: ACCENT, color: "#fff", boxShadow: "0 10px 30px -12px rgba(24,123,239,.9)" }}
-          >
-            <span className="relative flex h-2 w-2" aria-hidden="true">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
-            </span>
-            {landing.eyebrow}
-          </span>
-
-          <h1 className="mx-auto mt-7 max-w-4xl text-[2.75rem] font-black leading-[1.02] tracking-[-0.03em] text-white sm:text-[4.25rem]">
+        {/* Sin etiqueta sobre el titular: en móvil se comía la altura que hace
+            falta para que el botón entre sin hacer scroll, que es lo que decide
+            si alguien que llega del anuncio convierte o se va. */}
+        <Container size="wide" className="py-10 text-center sm:py-16 lg:py-24">
+          <h1 className="mx-auto max-w-4xl text-[2.4rem] font-black leading-[1.03] tracking-[-0.03em] text-white sm:text-[4.25rem]">
             {landing.headline}{" "}
             <span className="relative inline-block">
               <span style={{ color: ACCENT_ON_DARK }}>{landing.headlineAccent}</span>
@@ -128,11 +118,11 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
             </span>
           </h1>
 
-          <p className="mx-auto mt-8 max-w-2xl text-lg leading-relaxed text-slate-300 sm:text-xl">
+          <p className="mx-auto mt-5 max-w-2xl text-[17px] leading-relaxed text-slate-300 sm:mt-8 sm:text-xl">
             {landing.subhead}
           </p>
 
-          <ul className="mt-9 flex flex-wrap items-center justify-center gap-x-7 gap-y-3">
+          <ul className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2.5 sm:mt-9 sm:gap-x-7">
             {landing.heroBullets.map((b) => (
               <li key={b} className="flex items-center gap-2.5 text-[15px] font-semibold text-white">
                 <span
@@ -146,7 +136,7 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
             ))}
           </ul>
 
-          <div className="mt-10 flex flex-col items-center gap-4">
+          <div className="mt-7 flex flex-col items-center gap-3 sm:mt-10 sm:gap-4">
             <a
               href="#formulario"
               className="inline-flex items-center justify-center rounded-2xl px-9 py-4 text-base font-black transition-transform hover:-translate-y-0.5"

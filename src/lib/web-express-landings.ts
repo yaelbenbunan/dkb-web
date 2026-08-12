@@ -62,7 +62,6 @@ export interface WebExpressLanding {
   metaTitle: string;
   metaDescription: string;
 
-  eyebrow: string;
   headline: string;
   headlineAccent: string;
   subhead: string;
@@ -111,7 +110,6 @@ export const WEB_PSICOLOGOS: WebExpressLanding = {
   metaTitle: `Web para psicólogos en una semana por ${WEB_EXPRESS_PRICE} | dinkbit`,
   metaDescription: `Diseñamos la web de tu consulta de psicología en ${WEB_EXPRESS_DAYS} días laborables por ${WEB_EXPRESS_PRICE}. Preparada para móvil, con formulario de contacto y lista para recibir pacientes.`,
 
-  eyebrow: "Especialistas en webs para psicología",
   headline: "La web de tu consulta,",
   headlineAccent: `lista en una semana por ${WEB_EXPRESS_PRICE}`,
   subhead:
