@@ -34,14 +34,28 @@ const ACCENT_DEEP = "#0F5FBD";
 const ACCENT_ON_DARK = "#7DB0F7";
 
 /**
- * Franja diagonal que separa secciones sin recurrir a otra línea recta.
+ * Corte entre secciones. Tres formas distintas para que no se lean como tres
+ * diagonales paralelas repitiéndose por la página: la repetición del mismo
+ * ángulo es justo lo que hace que una landing parezca una plantilla.
  *
  * En SVG y no con clip-path sobre un div: el borde recortado se antialiasea y
- * a ciertos zooms dejaba asomar una línea de un píxel del color de detrás. El
- * SVG con `shape-rendering` y el desbordamiento de medio píxel arriba y abajo
- * hacen que la costura no aparezca a ningún zoom.
+ * a ciertos zooms dejaba asomar una línea de un píxel del color de detrás. Las
+ * formas rebasan el lienzo por los cuatro lados y el bloque solapa 1px arriba y
+ * abajo, así que la costura no aparece a ningún zoom.
  */
-function Slant({ from, to }: { from: string; to: string }) {
+type CutShape = "right" | "left" | "wave";
+
+function Cut({
+  from,
+  to,
+  shape = "right",
+  height = 56,
+}: {
+  from: string;
+  to: string;
+  shape?: CutShape;
+  height?: number;
+}) {
   return (
     <div
       aria-hidden="true"
@@ -50,11 +64,13 @@ function Slant({ from, to }: { from: string; to: string }) {
       <svg
         viewBox="0 0 100 6"
         preserveAspectRatio="none"
-        style={{ display: "block", width: "100%", height: 56 }}
+        style={{ display: "block", width: "100%", height }}
       >
-        {/* El polígono rebasa el lienzo por los cuatro lados para que el borde
-            antialiaseado quede fuera del área visible. */}
-        <polygon points="-1,7 101,-1 101,7" fill={to} />
+        {shape === "right" && <polygon points="-1,7 101,-1 101,7" fill={to} />}
+        {shape === "left" && <polygon points="-1,-1 101,7 -1,7" fill={to} />}
+        {shape === "wave" && (
+          <path d="M-1,7 L-1,3 C20,-1 38,6 55,3 C72,0 88,4 101,2 L101,7 Z" fill={to} />
+        )}
       </svg>
     </div>
   );
@@ -93,7 +109,7 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
         {/* Sin etiqueta sobre el titular: en móvil se comía la altura que hace
             falta para que el botón entre sin hacer scroll, que es lo que decide
             si alguien que llega del anuncio convierte o se va. */}
-        <Container size="wide" className="py-10 text-center sm:py-16 lg:py-24">
+        <Container size="wide" className="py-8 text-center sm:py-16 lg:py-24">
           <h1 className="mx-auto max-w-4xl text-[2.4rem] font-black leading-[1.03] tracking-[-0.03em] text-white sm:text-[4.25rem]">
             {landing.headline}{" "}
             <span className="relative inline-block">
@@ -123,7 +139,27 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
           </p>
 
 
-          <div className="mt-8 flex flex-col items-center gap-3 sm:mt-10 sm:gap-4">
+          {/* Los tres datos clave, una sola vez y aquí. Más grandes que en la
+              primera versión: son la razón por la que alguien sigue leyendo. */}
+          <ul className="mt-7 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 sm:mt-8 sm:gap-y-3.5">
+            {landing.heroBullets.map((b) => (
+              <li
+                key={b}
+                className="flex items-center gap-3 text-[17px] font-bold text-white sm:text-lg"
+              >
+                <span
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-black"
+                  style={{ background: ACCENT, color: "#fff" }}
+                  aria-hidden="true"
+                >
+                  ✓
+                </span>
+                {b}
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-7 flex flex-col items-center gap-3 sm:mt-10 sm:gap-4">
             <a
               href="#formulario"
               className="inline-flex items-center justify-center rounded-2xl px-9 py-4 text-base font-black transition-transform hover:-translate-y-0.5"
@@ -136,51 +172,7 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
         </Container>
       </section>
 
-      {/* ── DATOS ────────────────────────────────────────────────
-          Los tres datos aparecen UNA sola vez, aquí y no en el hero. Van
-          después del titular porque a 60px se leen de un vistazo, mientras que
-          como lista de checks competían con el titular y empujaban el botón
-          fuera de la primera pantalla en móvil. */}
-      <section className="relative isolate" style={{ background: INK }}>
-        <div
-          aria-hidden="true"
-          className="absolute left-1/2 top-1/2 -z-10 h-[300px] w-[900px] max-w-[95%] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
-          style={{ background: ACCENT, opacity: 0.14 }}
-        />
-        <Container size="wide">
-          {/* Separadores con borde explícito y no con el truco de gap-px sobre
-              un fondo: aquello dejaba asomar una línea clara por el borde. */}
-          <dl
-            className="grid divide-y divide-white/10 rounded-[28px] sm:grid-cols-3 sm:divide-x sm:divide-y-0"
-            style={{
-              background: "rgba(255,255,255,.05)",
-              border: "1px solid rgba(255,255,255,.14)",
-              boxShadow: "0 30px 70px -40px rgba(0,0,0,.9)",
-            }}
-          >
-            {landing.trustPoints.map((t) => (
-              <div key={t.label} className="relative px-6 py-11 text-center sm:py-14">
-                <dt
-                  className="text-[3.25rem] font-black leading-[0.95] tracking-[-0.045em] sm:text-[4rem]"
-                  style={{ color: "#fff" }}
-                >
-                  {t.value}
-                </dt>
-                <span
-                  className="mx-auto my-4 block h-[3px] w-10 rounded-full"
-                  style={{ background: ACCENT_ON_DARK }}
-                  aria-hidden="true"
-                />
-                <dd className="mx-auto max-w-[20ch] text-[15px] font-medium leading-snug text-slate-300">
-                  {t.label}
-                </dd>
-              </div>
-            ))}
-          </dl>
-          <div className="h-16" />
-        </Container>
-      </section>
-      <Slant from={INK} to={CREAM} />
+      <Cut from={INK} to={CREAM} shape="right" height={64} />
 
       {/* ── FORMULARIO A LO ANCHO ────────────────────────────── */}
       <section id="formulario" className="scroll-mt-20 py-16" style={{ background: CREAM }}>
@@ -239,7 +231,7 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
       </section>
 
       {/* ── PROCESO ──────────────────────────────────────────── */}
-      <Slant from={CREAM} to={INK} />
+      <Cut from={CREAM} to={INK} shape="wave" height={80} />
       <section className="py-16" style={{ background: INK }}>
         <Container size="wide">
           <h2 className="text-3xl font-black tracking-tight text-white sm:text-[2.6rem]">
@@ -311,7 +303,7 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
           </div>
         </Container>
       </section>
-      <Slant from={INK} to={CREAM} />
+      <Cut from={INK} to={CREAM} shape="left" height={52} />
 
       {/* ── FAQ ──────────────────────────────────────────────── */}
       <section className="py-16" style={{ background: CREAM }}>

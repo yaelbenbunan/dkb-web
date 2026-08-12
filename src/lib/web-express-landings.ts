@@ -65,6 +65,8 @@ export interface WebExpressLanding {
   headline: string;
   headlineAccent: string;
   subhead: string;
+  /** Los tres datos clave. Van aquí y NO repetidos en una franja aparte. */
+  heroBullets: string[];
 
   /**
    * Los dolores del nicho, en sus palabras, con la respuesta debajo. Enunciar
@@ -85,9 +87,6 @@ export interface WebExpressLanding {
 
   faqsTitle: string;
   faqs: { q: string; a: string }[];
-
-  /** Señales de confianza bajo el hero. Textos cortos, se leen de un vistazo. */
-  trustPoints: { value: string; label: string }[];
 
   /** Imagen de fondo del hero. Mientras no exista, ImageSlot reserva el hueco. */
   heroImage: { src: string; alt: string; ready: boolean };
@@ -112,7 +111,13 @@ export const WEB_PSICOLOGOS: WebExpressLanding = {
   headline: "La web de tu consulta,",
   headlineAccent: `lista en una semana por ${WEB_EXPRESS_PRICE}`,
   subhead:
-    "Sin plantillas genéricas ni cuotas mensuales. Nos cuentas cómo trabajas, la diseñamos a tu medida y en cinco días laborables la tienes funcionando.",
+    "Sin plantillas genéricas ni cuotas mensuales. La diseñamos a tu medida y en cinco días laborables la tienes funcionando.",
+  heroBullets: [
+    `Entrega en ${WEB_EXPRESS_DAYS} días laborables`,
+    "Precio cerrado, sin cuotas",
+    "Adaptada a formato móvil",
+  ],
+
   painTitle: "Si te suena alguna, esto es para ti",
   painIntro: "Lo que nos cuentan la mayoría de consultas antes de empezar.",
   pains: [
@@ -209,12 +214,6 @@ export const WEB_PSICOLOGOS: WebExpressLanding = {
       q: "¿La web cumple con la protección de datos?",
       a: "Llevas aviso legal, política de privacidad y de cookies, y el formulario recoge el consentimiento como marca la normativa. Si tratas datos de salud, en la llamada te contamos qué implica en tu caso.",
     },
-  ],
-
-  trustPoints: [
-    { value: "5 días", label: "Desde que tenemos tu material" },
-    { value: "459€", label: "Precio cerrado, sin cuotas" },
-    { value: "6 secciones", label: "Tu presentación, tarifas y contacto" },
   ],
 
   heroImage: {
