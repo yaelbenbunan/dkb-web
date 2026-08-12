@@ -12,6 +12,7 @@ import {
   URGENCY,
   GOALS,
   PRACTICE_STAGE,
+  shortLabel,
   WEB_EXPRESS_PRICE,
   type WebExpressLanding,
 } from "@/lib/web-express-landings";
@@ -22,20 +23,25 @@ import {
  * blanco acababa con texto casi blanco encima.
  */
 const INK = "#0B1020";
-const CORAL = "#FF7A45";
+const ACCENT = "#187bef";
 const MUTED = "#5A6178";
 
 const inputClass =
-  "mt-1.5 block w-full rounded-xl border px-4 py-3 text-[15px] outline-none transition-colors focus:border-[#FF7A45]";
+  "mt-1.5 block w-full rounded-xl border px-4 py-3 text-[15px] outline-none transition-colors focus:border-[#187bef]";
 const inputStyle = { borderColor: "rgba(11,16,32,.16)", color: INK, background: "#fff" } as const;
 const legendClass = "text-[11px] font-black uppercase tracking-[0.12em]";
 const legendStyle = { color: MUTED } as const;
 
 /**
  * Opción tipo pastilla. La casilla real queda oculta y la etiqueta hace de
- * botón; al marcarla se rellena en coral sobre tinta, que es legible de verdad
- * (la versión anterior pintaba azul claro sobre azul aún más claro y la opción
- * elegida era la menos visible de todas).
+ * botón.
+ *
+ * Ancho de contenido, no de rejilla: en rejilla todas se estiraban al mismo
+ * ancho y cada grupo ocupaba varias filas aunque las etiquetas fueran cortas.
+ * Así la mayoría de grupos entra en una sola línea.
+ *
+ * Al marcarla, tinta oscura sobre tinte azul. La versión anterior pintaba azul
+ * claro sobre azul aún más claro y la opción elegida era la menos legible.
  */
 function Pill({
   name,
@@ -51,15 +57,13 @@ function Pill({
   return (
     <label
       className={
-        "flex cursor-pointer items-center justify-center rounded-xl border-2 border-[rgba(11,16,32,.14)] bg-white px-3 py-2.5 " +
+        "inline-flex cursor-pointer items-center justify-center rounded-full border-2 border-[rgba(11,16,32,.14)] bg-white px-4 py-2 " +
         "text-center text-[13px] font-semibold leading-tight text-[#5A6178] transition-all " +
-        // Marcada: tinte coral con la tinta oscura encima. El contraste es alto,
-        // al revés que la versión anterior (azul claro sobre azul claro).
-        "has-[:checked]:border-[#FF7A45] has-[:checked]:bg-[#FFF1EA] has-[:checked]:font-bold has-[:checked]:text-[#0B1020]"
+        "has-[:checked]:border-[#187bef] has-[:checked]:bg-[#E7F1FE] has-[:checked]:font-bold has-[:checked]:text-[#0B1020]"
       }
     >
       <input type={type} name={name} value={value} defaultChecked={checked} className="sr-only" />
-      {value}
+      {shortLabel(value)}
     </label>
   );
 }
@@ -95,10 +99,13 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
         aria-live="polite"
       >
         <div
-          className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl text-3xl"
-          style={{ background: "rgba(255,122,69,.16)" }}
+          className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl"
+          style={{ background: "rgba(24,123,239,.12)" }}
+          aria-hidden="true"
         >
-          ✅
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+            <path d="M4 12.5l5.5 5.5L20 7" stroke={ACCENT} strokeWidth="2.75" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </div>
         <p className="mt-5 text-2xl font-black" style={{ color: INK }}>
           ¡Solicitud recibida!
@@ -113,8 +120,8 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
         </p>
         <a
           href={cta.href}
-          className="mt-3 inline-flex w-full items-center justify-center rounded-2xl px-6 py-4 text-base font-black transition-transform hover:-translate-y-0.5"
-          style={{ background: CORAL, color: INK }}
+          className="mt-3 inline-flex items-center justify-center rounded-xl px-8 py-3.5 text-base font-bold transition-transform hover:-translate-y-0.5"
+          style={{ background: ACCENT, color: "#fff" }}
         >
           {cta.label}
         </a>
@@ -212,7 +219,7 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
             <legend className={legendClass} style={legendStyle}>
               ¿Cómo prefieres que te contactemos? *
             </legend>
-            <div className="mt-2 grid grid-cols-3 gap-2">
+            <div className="mt-2 flex flex-wrap gap-2">
               {CONTACT_METHODS.map((m, i) => (
                 <Pill key={m} name="contactMethod" value={m} type="radio" checked={i === 0} />
               ))}
@@ -223,7 +230,10 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
             <legend className={legendClass} style={legendStyle}>
               ¿En qué franja horaria? *
             </legend>
-            <div className="mt-2 grid grid-cols-2 gap-2">
+            <p className="mt-1 text-[11px]" style={{ color: MUTED }}>
+              Mañanas 9-14h · Mediodía 14-16h · Tardes desde las 16h
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
               {TIME_SLOTS.map((t, i) => (
                 <Pill key={t} name="timeSlot" value={t} type="radio" checked={i === 0} />
               ))}
@@ -236,7 +246,7 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
             <legend className={legendClass} style={legendStyle}>
               ¿Decides tú sobre la web? *
             </legend>
-            <div className="mt-2 grid gap-2">
+            <div className="mt-2 flex flex-wrap gap-2">
               {DECISION_MAKER.map((d, i) => (
                 <Pill key={d} name="decisionMaker" value={d} type="radio" checked={i === 0} />
               ))}
@@ -247,7 +257,7 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
             <legend className={legendClass} style={legendStyle}>
               ¿Para cuándo la necesitas? *
             </legend>
-            <div className="mt-2 grid gap-2">
+            <div className="mt-2 flex flex-wrap gap-2">
               {URGENCY.map((u, i) => (
                 <Pill key={u} name="urgency" value={u} type="radio" checked={i === 0} />
               ))}
@@ -258,7 +268,7 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
             <legend className={legendClass} style={legendStyle}>
               {landing.goalsLabel} *
             </legend>
-            <div className="mt-2 grid gap-2">
+            <div className="mt-2 flex flex-wrap gap-2">
               {GOALS.map((g, i) => (
                 <Pill key={g} name="goals" value={g} type="checkbox" checked={i === 1} />
               ))}
@@ -270,7 +280,7 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
               <legend className={legendClass} style={legendStyle}>
                 {landing.stageLabel}
               </legend>
-              <div className="mt-2 grid gap-2">
+              <div className="mt-2 flex flex-wrap gap-2">
                 {PRACTICE_STAGE.map((s) => (
                   <Pill key={s} name="stage" value={s} type="radio" />
                 ))}
@@ -300,7 +310,7 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
           name="consent"
           value="on"
           className="mt-0.5 h-4 w-4 shrink-0"
-          style={{ accentColor: CORAL }}
+          style={{ accentColor: ACCENT }}
         />
         <span>Acepto recibir comunicaciones comerciales de dinkbit.</span>
       </label>
@@ -310,8 +320,8 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
       <button
         type="submit"
         disabled={pending}
-        className="mt-6 inline-flex w-full items-center justify-center rounded-2xl px-6 py-4 text-base font-black transition-transform hover:-translate-y-0.5 disabled:opacity-60"
-        style={{ background: CORAL, color: INK, boxShadow: "0 14px 34px -16px rgba(255,122,69,.9)" }}
+        className="mt-7 inline-flex items-center justify-center rounded-xl px-10 py-3.5 text-base font-black transition-transform hover:-translate-y-0.5 disabled:opacity-60"
+        style={{ background: ACCENT, color: "#fff", boxShadow: "0 12px 28px -14px rgba(24,123,239,.9)" }}
       >
         {pending ? "Enviando…" : `Quiero mi web por ${WEB_EXPRESS_PRICE}`}
       </button>

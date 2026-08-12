@@ -80,7 +80,7 @@ export interface WebExpressLanding {
   excludes: string[];
 
   stepsTitle: string;
-  steps: { icon: string; title: string; description: string }[];
+  steps: { title: string; description: string }[];
 
   faqsTitle: string;
   faqs: { q: string; a: string }[];
@@ -88,12 +88,8 @@ export interface WebExpressLanding {
   /** Señales de confianza bajo el hero. Textos cortos, se leen de un vistazo. */
   trustPoints: { value: string; label: string }[];
 
-  /** Imágenes de la landing. Mientras no existan, ImageSlot reserva el hueco. */
+  /** Imagen de fondo del hero. Mientras no exista, ImageSlot reserva el hueco. */
   heroImage: { src: string; alt: string; ready: boolean };
-  mockupImage: { src: string; alt: string; ready: boolean };
-
-  showcaseTitle: string;
-  showcaseIntro: string;
 
   formTitle: string;
   formSubtitle: string;
@@ -156,25 +152,21 @@ export const WEB_PSICOLOGOS: WebExpressLanding = {
   stepsTitle: "Cómo funciona",
   steps: [
     {
-      icon: "📝",
       title: "Nos dejas tus datos",
       description:
         "Rellenas el formulario de abajo. Te contactamos por donde nos digas y en la franja que te venga bien.",
     },
     {
-      icon: "📞",
       title: "Hablamos 15 minutos",
       description:
         "Te contamos qué necesitamos de ti y resolvemos dudas. Sin compromiso y sin venta agresiva.",
     },
     {
-      icon: "🎨",
       title: "Rellenas el cuestionario",
       description:
         "Un formulario guiado donde nos cuentas cómo trabajas, tus colores, tus textos. Es lo único que necesitamos.",
     },
     {
-      icon: "🚀",
       title: "En 5 días la tienes",
       description:
         `El plazo empieza cuando recibimos todo el material. Revisas, pides cambios una vez y publicamos.`,
@@ -220,15 +212,6 @@ export const WEB_PSICOLOGOS: WebExpressLanding = {
     alt: "Consulta de psicología con dos butacas y luz natural",
     ready: false,
   },
-  mockupImage: {
-    src: "/img/landings/mockup-psicologos.png",
-    alt: "La web de una consulta de psicología en ordenador y en móvil",
-    ready: false,
-  },
-
-  showcaseTitle: "Así queda tu web",
-  showcaseIntro:
-    "Una sola página, ordenada y sobria, pensada para que quien llega dudando decida escribirte.",
 
   formTitle: "Cuéntanos de tu consulta",
   formSubtitle:
@@ -237,3 +220,29 @@ export const WEB_PSICOLOGOS: WebExpressLanding = {
   goalsLabel: "¿Para qué quieres la web?",
   stageLabel: "¿En qué punto estás?",
 };
+
+/**
+ * Etiqueta corta para las pastillas del formulario.
+ *
+ * Se muestra la versión breve —así cada grupo entra en una sola fila y se lee
+ * de un vistazo— pero lo que viaja al CRM sigue siendo el valor completo, que
+ * es lo que necesita quien luego coge el teléfono. Sin esto había que elegir
+ * entre un formulario legible y unas notas útiles.
+ */
+export const SHORT_LABELS: Record<string, string> = {
+  "Llamada telefónica": "Llamada",
+  "Mañanas (9:00 – 14:00)": "Mañanas",
+  "Mediodía (14:00 – 16:00)": "Mediodía",
+  "Tardes (a partir de las 16:00)": "Tardes",
+  "Trabajo en el centro, pero decide otra persona": "Decide otra persona",
+  "Lo antes posible (1-2 semanas)": "1-2 semanas",
+  "En el próximo mes": "Este mes",
+  "Solo estoy comparando precios": "Solo comparo",
+  "Tener una imagen profesional": "Imagen profesional",
+  "Captar más pacientes": "Captar pacientes",
+  "Aparecer en Google (SEO)": "Salir en Google",
+  "Estoy empezando": "Empezando",
+  "Ya tengo consulta en marcha": "En marcha",
+};
+
+export const shortLabel = (v: string): string => SHORT_LABELS[v] ?? v;
