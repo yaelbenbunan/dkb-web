@@ -63,6 +63,8 @@ export interface WebExpressLanding {
   metaDescription: string;
 
   eyebrow: string;
+  /** Aviso de a quién va dirigido. Posiciona y filtra a la vez. */
+  audienceNote: string;
   headline: string;
   headlineAccent: string;
   subhead: string;
@@ -83,6 +85,16 @@ export interface WebExpressLanding {
   faqsTitle: string;
   faqs: { q: string; a: string }[];
 
+  /** Señales de confianza bajo el hero. Textos cortos, se leen de un vistazo. */
+  trustPoints: { value: string; label: string }[];
+
+  /** Imágenes de la landing. Mientras no existan, ImageSlot reserva el hueco. */
+  heroImage: { src: string; alt: string; ready: boolean };
+  mockupImage: { src: string; alt: string; ready: boolean };
+
+  showcaseTitle: string;
+  showcaseIntro: string;
+
   formTitle: string;
   formSubtitle: string;
 
@@ -100,7 +112,9 @@ export const WEB_PSICOLOGOS: WebExpressLanding = {
   metaTitle: `Web para psicólogos en una semana por ${WEB_EXPRESS_PRICE} | dinkbit`,
   metaDescription: `Diseñamos la web de tu consulta de psicología en ${WEB_EXPRESS_DAYS} días laborables por ${WEB_EXPRESS_PRICE}. Preparada para móvil, con formulario de contacto y lista para recibir pacientes.`,
 
-  eyebrow: "Para consultas de psicología",
+  eyebrow: "Solo para psicólogos colegiados",
+  audienceNote:
+    "Trabajamos únicamente con profesionales con título oficial en Psicología y número de colegiado. Ni coaches, ni terapias sin titulación.",
   headline: "La web de tu consulta,",
   headlineAccent: `lista en una semana por ${WEB_EXPRESS_PRICE}`,
   subhead:
@@ -190,6 +204,27 @@ export const WEB_PSICOLOGOS: WebExpressLanding = {
       a: "Llevas aviso legal, política de privacidad y de cookies, y el formulario recoge el consentimiento como marca la normativa. Si tratas datos de salud, en la llamada te contamos qué implica en tu caso.",
     },
   ],
+
+  trustPoints: [
+    { value: "5 días", label: "Desde que tenemos tu material" },
+    { value: "459€", label: "Precio cerrado, sin cuotas" },
+    { value: "1 web", label: "Diseñada para tu consulta" },
+  ],
+
+  heroImage: {
+    src: "/img/landings/header-psicologos.jpg",
+    alt: "Consulta de psicología con dos butacas y luz natural",
+    ready: false,
+  },
+  mockupImage: {
+    src: "/img/landings/mockup-psicologos.png",
+    alt: "La web de una consulta de psicología en ordenador y en móvil",
+    ready: false,
+  },
+
+  showcaseTitle: "Así queda tu web",
+  showcaseIntro:
+    "Una sola página, ordenada y sobria, pensada para que quien llega dudando decida escribirte.",
 
   formTitle: "Cuéntanos de tu consulta",
   formSubtitle:
