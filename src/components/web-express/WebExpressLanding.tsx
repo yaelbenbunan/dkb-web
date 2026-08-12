@@ -122,21 +122,8 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
             {landing.subhead}
           </p>
 
-          <ul className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2.5 sm:mt-9 sm:gap-x-7">
-            {landing.heroBullets.map((b) => (
-              <li key={b} className="flex items-center gap-2.5 text-[15px] font-semibold text-white">
-                <span
-                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-black"
-                  style={{ background: ACCENT, color: "#fff" }}
-                >
-                  ✓
-                </span>
-                {b}
-              </li>
-            ))}
-          </ul>
 
-          <div className="mt-7 flex flex-col items-center gap-3 sm:mt-10 sm:gap-4">
+          <div className="mt-8 flex flex-col items-center gap-3 sm:mt-10 sm:gap-4">
             <a
               href="#formulario"
               className="inline-flex items-center justify-center rounded-2xl px-9 py-4 text-base font-black transition-transform hover:-translate-y-0.5"
@@ -149,32 +136,48 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
         </Container>
       </section>
 
-      {/* ── DATOS ────────────────────────────────────────────── */}
-      <section style={{ background: INK }}>
+      {/* ── DATOS ────────────────────────────────────────────────
+          Los tres datos aparecen UNA sola vez, aquí y no en el hero. Van
+          después del titular porque a 60px se leen de un vistazo, mientras que
+          como lista de checks competían con el titular y empujaban el botón
+          fuera de la primera pantalla en móvil. */}
+      <section className="relative isolate" style={{ background: INK }}>
+        <div
+          aria-hidden="true"
+          className="absolute left-1/2 top-1/2 -z-10 h-[300px] w-[900px] max-w-[95%] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
+          style={{ background: ACCENT, opacity: 0.14 }}
+        />
         <Container size="wide">
-          {/* Separadores con borde explícito y no con el truco de gap-px sobre un
-              fondo: aquello dejaba asomar una línea clara por el borde superior. */}
+          {/* Separadores con borde explícito y no con el truco de gap-px sobre
+              un fondo: aquello dejaba asomar una línea clara por el borde. */}
           <dl
-            className="grid divide-y divide-white/10 rounded-3xl sm:grid-cols-3 sm:divide-x sm:divide-y-0"
-            style={{ background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.09)" }}
+            className="grid divide-y divide-white/10 rounded-[28px] sm:grid-cols-3 sm:divide-x sm:divide-y-0"
+            style={{
+              background: "rgba(255,255,255,.05)",
+              border: "1px solid rgba(255,255,255,.14)",
+              boxShadow: "0 30px 70px -40px rgba(0,0,0,.9)",
+            }}
           >
             {landing.trustPoints.map((t) => (
-              <div key={t.label} className="relative px-6 py-12 text-center">
+              <div key={t.label} className="relative px-6 py-11 text-center sm:py-14">
+                <dt
+                  className="text-[3.25rem] font-black leading-[0.95] tracking-[-0.045em] sm:text-[4rem]"
+                  style={{ color: "#fff" }}
+                >
+                  {t.value}
+                </dt>
                 <span
-                  className="mx-auto mb-5 block h-1 w-12 rounded-full"
+                  className="mx-auto my-4 block h-[3px] w-10 rounded-full"
                   style={{ background: ACCENT_ON_DARK }}
                   aria-hidden="true"
                 />
-                <dt className="text-5xl font-black leading-none tracking-[-0.04em] text-white sm:text-6xl">
-                  {t.value}
-                </dt>
-                <dd className="mx-auto mt-3 max-w-[18ch] text-base font-medium text-slate-300">
+                <dd className="mx-auto max-w-[20ch] text-[15px] font-medium leading-snug text-slate-300">
                   {t.label}
                 </dd>
               </div>
             ))}
           </dl>
-          <div className="h-14" />
+          <div className="h-16" />
         </Container>
       </section>
       <Slant from={INK} to={CREAM} />

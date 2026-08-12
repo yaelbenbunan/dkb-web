@@ -65,7 +65,6 @@ export interface WebExpressLanding {
   headline: string;
   headlineAccent: string;
   subhead: string;
-  heroBullets: string[];
 
   /**
    * Los dolores del nicho, en sus palabras, con la respuesta debajo. Enunciar
@@ -114,12 +113,6 @@ export const WEB_PSICOLOGOS: WebExpressLanding = {
   headlineAccent: `lista en una semana por ${WEB_EXPRESS_PRICE}`,
   subhead:
     "Sin plantillas genéricas ni cuotas mensuales. Nos cuentas cómo trabajas, la diseñamos a tu medida y en cinco días laborables la tienes funcionando.",
-  heroBullets: [
-    `Entrega en ${WEB_EXPRESS_DAYS} días laborables`,
-    "Precio cerrado, sin sorpresas",
-    "Adaptada a formato móvil",
-  ],
-
   painTitle: "Si te suena alguna, esto es para ti",
   painIntro: "Lo que nos cuentan la mayoría de consultas antes de empezar.",
   pains: [
@@ -221,7 +214,7 @@ export const WEB_PSICOLOGOS: WebExpressLanding = {
   trustPoints: [
     { value: "5 días", label: "Desde que tenemos tu material" },
     { value: "459€", label: "Precio cerrado, sin cuotas" },
-    { value: "1 web", label: "Diseñada para tu consulta" },
+    { value: "6 secciones", label: "Tu presentación, tarifas y contacto" },
   ],
 
   heroImage: {
