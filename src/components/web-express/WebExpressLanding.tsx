@@ -1,5 +1,4 @@
 import { Container } from "@/components/ui/Container";
-import { ImageSlot } from "@/components/ui/ImageSlot";
 import { WebExpressForm } from "./WebExpressForm";
 import {
   WEB_EXPRESS_PRICE,
@@ -88,16 +87,6 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
       {/* ── HERO ─────────────────────────────────────────────── */}
       <section className="relative isolate overflow-hidden" style={{ background: INK }}>
         <div className="absolute inset-0 -z-10">
-          <ImageSlot
-            {...landing.heroImage}
-            width={1600}
-            height={933}
-            ready={landing.heroImage.ready}
-            label="Fondo del hero"
-            priority
-            sizes="100vw"
-            className="h-full w-full object-cover opacity-25"
-          />
           <div
             className="absolute inset-0"
             style={{ background: `linear-gradient(160deg, ${INK} 30%, rgba(11,16,32,.82) 100%)` }}

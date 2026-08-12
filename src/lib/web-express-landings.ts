@@ -49,11 +49,11 @@ export const GOALS = [
  *  en el bolsillo de nadie en un primer contacto. */
 export const PRACTICE_STAGE = [
   "Estoy empezando",
-  "Ya tengo consulta en marcha",
+  "Ya estoy en marcha",
 ] as const;
 
 export interface WebExpressLanding {
-  key: "psicologos";
+  key: "psicologos" | "fisioterapeutas" | "clinicas-esteticas";
   path: string;
   /** Se persiste en el CRM para saber de qué landing vino el lead. */
   origin: string;
@@ -87,9 +87,6 @@ export interface WebExpressLanding {
 
   faqsTitle: string;
   faqs: { q: string; a: string }[];
-
-  /** Imagen de fondo del hero. Mientras no exista, ImageSlot reserva el hueco. */
-  heroImage: { src: string; alt: string; ready: boolean };
 
   formTitle: string;
   formSubtitle: string;
@@ -216,12 +213,6 @@ export const WEB_PSICOLOGOS: WebExpressLanding = {
     },
   ],
 
-  heroImage: {
-    src: "/img/landings/header-psicologos.jpg",
-    alt: "Consulta de psicología con dos butacas y luz natural",
-    ready: false,
-  },
-
   formTitle: "Cuéntanos de tu consulta",
   formSubtitle: "Te contactamos en menos de 24 horas.",
 
@@ -254,3 +245,253 @@ export const SHORT_LABELS: Record<string, string> = {
 };
 
 export const shortLabel = (v: string): string => SHORT_LABELS[v] ?? v;
+
+export const WEB_FISIOTERAPEUTAS: WebExpressLanding = {
+  key: "fisioterapeutas",
+  path: "/web-para-fisioterapeutas",
+  origin: "Landing Web para fisioterapeutas",
+  campaign: "web-fisioterapeutas",
+
+  metaTitle: `Web para fisioterapeutas en una semana por ${WEB_EXPRESS_PRICE} | dinkbit`,
+  metaDescription: `Diseñamos la web de tu clínica de fisioterapia en ${WEB_EXPRESS_DAYS} días laborables por ${WEB_EXPRESS_PRICE}. Con tus tratamientos, tus tarifas y botón de WhatsApp para pedir cita.`,
+
+  headline: "La web de tu clínica,",
+  headlineAccent: `lista en una semana por ${WEB_EXPRESS_PRICE}`,
+  subhead:
+    "Sin plantillas genéricas ni cuotas mensuales. Una web con tus tratamientos, tus tarifas y el botón para que te pidan cita.",
+  heroBullets: [
+    `Entrega en ${WEB_EXPRESS_DAYS} días laborables`,
+    "Precio cerrado, sin cuotas",
+    "Adaptada a formato móvil",
+  ],
+
+  painTitle: "Si te suena alguna, esto es para ti",
+  painIntro: "Lo que nos cuentan la mayoría de clínicas antes de empezar.",
+  pains: [
+    {
+      problem: "«La gente busca “fisio cerca de mí” y yo no aparezco por ningún lado»",
+      answer:
+        "Una web con tu zona y tus tratamientos, que es lo que Google necesita para enseñarte a quien busca cerca.",
+    },
+    {
+      problem: "«Me piden cita por WhatsApp y acabo explicando lo mismo diez veces al día»",
+      answer:
+        "Tratamientos, tarifas y horarios escritos de una vez. Llegan sabiendo lo que hay y preguntando menos.",
+    },
+    {
+      problem: "«Compito con clínicas grandes que tienen web y yo solo tengo Instagram»",
+      answer:
+        "Dejas de depender de un perfil que no controlas y tienes un sitio propio al que enlazar desde todos lados.",
+    },
+    {
+      problem: "«Trabajo técnicas concretas pero no tengo dónde explicarlas»",
+      answer:
+        "Una sección para lo que te diferencia: punción seca, suelo pélvico, readaptación o lo que trabajes.",
+    },
+  ],
+
+  includesTitle: "Qué incluye",
+  includes: [
+    "Una página con hasta 6 secciones: quién eres, tratamientos, tarifas, horarios, dónde estás y contacto.",
+    "Diseño hecho a partir de tus respuestas, no una plantilla rellenada.",
+    "Se ve bien en móvil, tablet y ordenador.",
+    "Formulario de contacto que te llega a tu correo.",
+    "Botón de WhatsApp y de llamada, para que te pidan cita en un toque.",
+    "Tu ubicación en el mapa, para quien busca fisio en la zona.",
+    "Aviso legal, política de privacidad y cookies.",
+    "Una ronda de cambios incluida.",
+  ],
+  excludesTitle: "Qué no incluye",
+  excludes: [
+    "Agenda o reserva de cita online (te lo presupuestamos aparte si lo necesitas).",
+    "Integración con tu software de gestión de pacientes.",
+    "Venta de bonos o sesiones desde la web.",
+    "Blog o publicación de artículos.",
+    "Redacción de textos y sesión de fotos: los aportas tú.",
+    "Diseño de logotipo.",
+    "Dominio y alojamiento (te asesoramos y son unos 100€/año).",
+  ],
+
+  stepsTitle: "Cómo funciona",
+  steps: [
+    {
+      title: "Nos dejas tus datos",
+      description:
+        "Rellenas el formulario de abajo. Te contactamos por donde nos digas y en la franja que te venga bien.",
+    },
+    {
+      title: "Hablamos 15 minutos",
+      description:
+        "Te contamos qué necesitamos de ti y resolvemos dudas. Sin compromiso y sin venta agresiva.",
+    },
+    {
+      title: "Rellenas el cuestionario",
+      description:
+        "Un formulario guiado donde recogemos tus tratamientos, tus tarifas y los detalles de la clínica.",
+    },
+    {
+      title: "En 5 días la tienes",
+      description:
+        "El plazo empieza cuando recibimos todo el material. Revisas, pides cambios una vez y publicamos.",
+    },
+  ],
+
+  faqsTitle: "Preguntas frecuentes",
+  faqs: [
+    {
+      q: `¿${WEB_EXPRESS_PRICE} es el precio final?`,
+      a: "Sí, IVA no incluido. No hay cuotas mensuales ni cargos ocultos. Lo único aparte son el dominio y el alojamiento, que se contratan a tu nombre y rondan los 100€ al año.",
+    },
+    {
+      q: "¿Por qué tan barato si otros piden 2.000€?",
+      a: "Porque el alcance está cerrado de antemano: una página, seis secciones y una ronda de cambios. No es una web a medida sin límites, es un producto definido. Por eso podemos hacerla en una semana y a este precio.",
+    },
+    {
+      q: "¿Sirve para que me encuentren en Google?",
+      a: "La web sale con tu zona, tus tratamientos y tu ficha lista para enlazar con Google Business, que es lo que más pesa en las búsquedas de “fisio cerca de mí”. Posicionar por términos competidos es otro trabajo y va aparte.",
+    },
+    {
+      q: "¿Y si quiero que reserven cita online?",
+      a: "No entra en los 459€, pero lo hacemos. Nos lo comentas en la llamada y te pasamos presupuesto aparte.",
+    },
+    {
+      q: "¿Los 5 días desde cuándo cuentan?",
+      a: "Desde que tenemos todo tu material: textos, fotos y el cuestionario relleno. Es lo justo para los dos, porque la parte que depende de nosotros sí la controlamos.",
+    },
+    {
+      q: "No tengo textos ni fotos, ¿qué hago?",
+      a: "Te damos una guía con lo que necesita cada sección para que no partas de cero. Si prefieres que los escribamos nosotros, es un extra y te lo presupuestamos.",
+    },
+  ],
+
+  formTitle: "Cuéntanos de tu clínica",
+  formSubtitle: "Te contactamos en menos de 24 horas.",
+
+  goalsLabel: "¿Para qué quieres la web?",
+  stageLabel: "¿En qué punto estás?",
+};
+
+export const WEB_CLINICAS_ESTETICAS: WebExpressLanding = {
+  key: "clinicas-esteticas",
+  path: "/web-para-clinicas-esteticas",
+  origin: "Landing Web para clínicas estéticas",
+  campaign: "web-clinicas-esteticas",
+
+  metaTitle: `Web para clínicas estéticas en una semana por ${WEB_EXPRESS_PRICE} | dinkbit`,
+  metaDescription: `Diseñamos la web de tu clínica estética en ${WEB_EXPRESS_DAYS} días laborables por ${WEB_EXPRESS_PRICE}. Con tus tratamientos, tus precios y botón directo a WhatsApp.`,
+
+  headline: "La web de tu clínica,",
+  headlineAccent: `lista en una semana por ${WEB_EXPRESS_PRICE}`,
+  subhead:
+    "Sin plantillas genéricas ni cuotas mensuales. Una web con tus tratamientos, tus precios y el botón para que te escriban.",
+  heroBullets: [
+    `Entrega en ${WEB_EXPRESS_DAYS} días laborables`,
+    "Precio cerrado, sin cuotas",
+    "Adaptada a formato móvil",
+  ],
+
+  painTitle: "Si te suena alguna, esto es para ti",
+  painIntro: "Lo que nos cuentan la mayoría de clínicas antes de empezar.",
+  pains: [
+    {
+      problem: "«Todo mi negocio depende de Instagram y no controlo lo que pasa ahí»",
+      answer:
+        "Un sitio propio al que enlazar desde la bio, que no se cae si mañana cambia el algoritmo o pierdes la cuenta.",
+    },
+    {
+      problem: "«Me escriben preguntando precios todo el día y se me va la mañana»",
+      answer:
+        "Tratamientos y precios publicados. Quien escribe ya sabe lo que cuesta y pregunta por lo que de verdad importa.",
+    },
+    {
+      problem: "«Tengo muchos tratamientos y la gente no sabe cuál necesita»",
+      answer:
+        "Cada tratamiento explicado en su bloque: qué es, para quién y cuánto dura. Llegan a la cabina con la idea clara.",
+    },
+    {
+      problem: "«Quiero transmitir seriedad, no parecer un centro más»",
+      answer:
+        "Una web sobria y cuidada, que es lo que separa una clínica de un perfil con fotos bonitas.",
+    },
+  ],
+
+  includesTitle: "Qué incluye",
+  includes: [
+    "Una página con hasta 6 secciones: quiénes sois, tratamientos, precios, el equipo, dónde estáis y contacto.",
+    "Diseño hecho a partir de tus respuestas, no una plantilla rellenada.",
+    "Se ve bien en móvil, tablet y ordenador.",
+    "Formulario de contacto que te llega a tu correo.",
+    "Botón de WhatsApp y de llamada, para que te escriban en un toque.",
+    "Vuestra ubicación en el mapa.",
+    "Aviso legal, política de privacidad y cookies.",
+    "Una ronda de cambios incluida.",
+  ],
+  excludesTitle: "Qué no incluye",
+  excludes: [
+    "Agenda o reserva de cita online (te lo presupuestamos aparte si lo necesitas).",
+    "Venta de bonos, packs o productos desde la web.",
+    "Integración con vuestro software de gestión.",
+    "Blog o publicación de artículos.",
+    "Redacción de textos y sesión de fotos: los aportáis vosotros.",
+    "Diseño de logotipo.",
+    "Dominio y alojamiento (os asesoramos y son unos 100€/año).",
+  ],
+
+  stepsTitle: "Cómo funciona",
+  steps: [
+    {
+      title: "Nos dejas tus datos",
+      description:
+        "Rellenas el formulario de abajo. Te contactamos por donde nos digas y en la franja que te venga bien.",
+    },
+    {
+      title: "Hablamos 15 minutos",
+      description:
+        "Te contamos qué necesitamos de ti y resolvemos dudas. Sin compromiso y sin venta agresiva.",
+    },
+    {
+      title: "Rellenas el cuestionario",
+      description:
+        "Un formulario guiado donde recogemos vuestros tratamientos, precios y los detalles de la clínica.",
+    },
+    {
+      title: "En 5 días la tienes",
+      description:
+        "El plazo empieza cuando recibimos todo el material. Revisas, pides cambios una vez y publicamos.",
+    },
+  ],
+
+  faqsTitle: "Preguntas frecuentes",
+  faqs: [
+    {
+      q: `¿${WEB_EXPRESS_PRICE} es el precio final?`,
+      a: "Sí, IVA no incluido. No hay cuotas mensuales ni cargos ocultos. Lo único aparte son el dominio y el alojamiento, que se contratan a vuestro nombre y rondan los 100€ al año.",
+    },
+    {
+      q: "¿Por qué tan barato si otros piden 2.000€?",
+      a: "Porque el alcance está cerrado de antemano: una página, seis secciones y una ronda de cambios. No es una web a medida sin límites, es un producto definido. Por eso podemos hacerla en una semana y a este precio.",
+    },
+    {
+      q: "¿Puedo poner fotos de antes y después?",
+      a: "Con cuidado. La publicidad de tratamientos sanitarios está regulada en España: no se pueden prometer resultados ni usar imágenes que induzcan a error, y hacen falta el consentimiento de la persona y los datos del centro. Montamos la web para que se pueda, y en la llamada te contamos qué conviene y qué no.",
+    },
+    {
+      q: "¿Hay que publicar los precios?",
+      a: "No es obligatorio, pero es lo que más consultas ahorra: quien escribe llega sabiendo lo que cuesta. Si prefieres no publicarlos, ponemos horquillas o un “a consultar”.",
+    },
+    {
+      q: "¿Y si quiero que reserven cita online?",
+      a: "No entra en los 459€, pero lo hacemos. Nos lo comentas en la llamada y te pasamos presupuesto aparte.",
+    },
+    {
+      q: "¿Los 5 días desde cuándo cuentan?",
+      a: "Desde que tenemos todo vuestro material: textos, fotos y el cuestionario relleno. Es lo justo para los dos, porque la parte que depende de nosotros sí la controlamos.",
+    },
+  ],
+
+  formTitle: "Cuéntanos de tu clínica",
+  formSubtitle: "Te contactamos en menos de 24 horas.",
+
+  goalsLabel: "¿Para qué quieres la web?",
+  stageLabel: "¿En qué punto estás?",
+};
