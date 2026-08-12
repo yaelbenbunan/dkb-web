@@ -80,7 +80,7 @@ export interface WebExpressLanding {
   excludes: string[];
 
   stepsTitle: string;
-  steps: { title: string; description: string }[];
+  steps: { icon: string; title: string; description: string }[];
 
   faqsTitle: string;
   faqs: { q: string; a: string }[];
@@ -156,21 +156,25 @@ export const WEB_PSICOLOGOS: WebExpressLanding = {
   stepsTitle: "Cómo funciona",
   steps: [
     {
+      icon: "📝",
       title: "Nos dejas tus datos",
       description:
         "Rellenas el formulario de abajo. Te contactamos por donde nos digas y en la franja que te venga bien.",
     },
     {
+      icon: "📞",
       title: "Hablamos 15 minutos",
       description:
         "Te contamos qué necesitamos de ti y resolvemos dudas. Sin compromiso y sin venta agresiva.",
     },
     {
+      icon: "🎨",
       title: "Rellenas el cuestionario",
       description:
         "Un formulario guiado donde nos cuentas cómo trabajas, tus colores, tus textos. Es lo único que necesitamos.",
     },
     {
+      icon: "🚀",
       title: "En 5 días la tienes",
       description:
         `El plazo empieza cuando recibimos todo el material. Revisas, pides cambios una vez y publicamos.`,

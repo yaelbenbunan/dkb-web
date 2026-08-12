@@ -49,7 +49,7 @@ export function ImageSlot({
 
   return (
     <div
-      className={`flex flex-col items-center justify-center gap-1 border-2 border-dashed border-slate-300 bg-slate-100 text-center text-slate-400 ${className}`}
+      className={`flex flex-col items-center justify-center gap-1 border-2 border-dashed border-slate-400 bg-slate-100 text-center text-slate-600 ${className}`}
       style={{ aspectRatio: `${width} / ${height}` }}
       aria-hidden="true"
     >

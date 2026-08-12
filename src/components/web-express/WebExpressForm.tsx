@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { appendUtms } from "@/lib/utm";
 import { track, pushUserData } from "@/lib/gtm";
 import { requestWebExpress } from "@/lib/web-express-action";
-import { ConsentCheckbox } from "@/components/forms/ConsentCheckbox";
 import { CONTACT_INFO } from "@/lib/contact-info";
 import {
   CONTACT_METHODS,
@@ -13,14 +12,31 @@ import {
   URGENCY,
   GOALS,
   PRACTICE_STAGE,
+  WEB_EXPRESS_PRICE,
   type WebExpressLanding,
 } from "@/lib/web-express-landings";
 
-const input =
-  "mt-1.5 block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-accent";
-const legend = "text-xs font-bold uppercase tracking-wider text-accent";
+/**
+ * Colores fijos, no tokens del tema. La landing tiene su propia paleta para que
+ * no dependa del modo claro/oscuro del visitante: con tokens, este formulario
+ * blanco acababa con texto casi blanco encima.
+ */
+const INK = "#0B1020";
+const CORAL = "#FF7A45";
+const MUTED = "#5A6178";
 
-/** Opción tipo pastilla: la casilla real queda oculta y la etiqueta es el botón. */
+const inputClass =
+  "mt-1.5 block w-full rounded-xl border px-4 py-3 text-[15px] outline-none transition-colors focus:border-[#FF7A45]";
+const inputStyle = { borderColor: "rgba(11,16,32,.16)", color: INK, background: "#fff" } as const;
+const legendClass = "text-[11px] font-black uppercase tracking-[0.12em]";
+const legendStyle = { color: MUTED } as const;
+
+/**
+ * Opción tipo pastilla. La casilla real queda oculta y la etiqueta hace de
+ * botón; al marcarla se rellena en coral sobre tinta, que es legible de verdad
+ * (la versión anterior pintaba azul claro sobre azul aún más claro y la opción
+ * elegida era la menos visible de todas).
+ */
 function Pill({
   name,
   value,
@@ -33,24 +49,21 @@ function Pill({
   checked?: boolean;
 }) {
   return (
-    <label className="flex cursor-pointer items-center justify-center rounded-lg border border-slate-300 px-3 py-2.5 text-center text-[13px] font-medium leading-tight text-slate-700 transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:font-semibold has-[:checked]:text-accent-hover">
-      <input
-        type={type}
-        name={name}
-        value={value}
-        defaultChecked={checked}
-        required={type === "radio" && !checked ? undefined : undefined}
-        className="sr-only"
-      />
+    <label
+      className={
+        "flex cursor-pointer items-center justify-center rounded-xl border-2 border-[rgba(11,16,32,.14)] bg-white px-3 py-2.5 " +
+        "text-center text-[13px] font-semibold leading-tight text-[#5A6178] transition-all " +
+        // Marcada: tinte coral con la tinta oscura encima. El contraste es alto,
+        // al revés que la versión anterior (azul claro sobre azul claro).
+        "has-[:checked]:border-[#FF7A45] has-[:checked]:bg-[#FFF1EA] has-[:checked]:font-bold has-[:checked]:text-[#0B1020]"
+      }
+    >
+      <input type={type} name={name} value={value} defaultChecked={checked} className="sr-only" />
       {value}
     </label>
   );
 }
 
-/**
- * Al terminar, el botón que se ofrece es el del canal que la propia persona
- * eligió: si dijo WhatsApp le damos WhatsApp, no un teléfono que no va a usar.
- */
 function successCta(method: string): { label: string; href: string } {
   if (method === "Llamada telefónica") {
     return { label: `Llamar ahora: ${CONTACT_INFO.phone}`, href: `tel:${CONTACT_INFO.phoneE164}` };
@@ -76,24 +89,32 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
     const cta = successCta(done.method);
     return (
       <div
-        className="rounded-2xl border border-slate-200 bg-white p-7 text-center shadow-sm"
+        className="mx-auto max-w-xl rounded-3xl bg-white p-10 text-center"
+        style={{ border: "1px solid rgba(11,16,32,.09)", boxShadow: "0 20px 50px -30px rgba(11,16,32,.5)" }}
         role="status"
         aria-live="polite"
       >
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-3xl">
+        <div
+          className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl text-3xl"
+          style={{ background: "rgba(255,122,69,.16)" }}
+        >
           ✅
         </div>
-        <p className="mt-4 text-xl font-bold text-slate-900">¡Solicitud recibida!</p>
-        <p className="mt-2 text-sm leading-relaxed text-slate-600">
-          Te contactamos por <strong>{done.method.toLowerCase()}</strong> en menos de 24 horas
-          laborables. Mientras tanto, te hemos enviado un correo con los siguientes pasos.
+        <p className="mt-5 text-2xl font-black" style={{ color: INK }}>
+          ¡Solicitud recibida!
         </p>
-        <p className="mt-5 text-sm font-semibold text-slate-900">
+        <p className="mt-3 text-[15px] leading-relaxed" style={{ color: MUTED }}>
+          Te contactamos por <strong style={{ color: INK }}>{done.method.toLowerCase()}</strong> en
+          menos de 24 horas laborables. Mientras tanto, te hemos enviado un correo con los
+          siguientes pasos.
+        </p>
+        <p className="mt-6 text-sm font-bold" style={{ color: INK }}>
           ¿Prefieres no esperar?
         </p>
         <a
           href={cta.href}
-          className="mt-3 inline-flex h-12 w-full items-center justify-center rounded-lg bg-accent px-6 text-base font-semibold text-white transition-colors hover:bg-accent-hover"
+          className="mt-3 inline-flex w-full items-center justify-center rounded-2xl px-6 py-4 text-base font-black transition-transform hover:-translate-y-0.5"
+          style={{ background: CORAL, color: INK }}
         >
           {cta.label}
         </a>
@@ -124,128 +145,183 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
           setDone({ method: String(fd.get("contactMethod") ?? "WhatsApp") });
         });
       }}
-      className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7"
+      className="rounded-3xl bg-white p-7 sm:p-10"
+      style={{ border: "1px solid rgba(11,16,32,.09)", boxShadow: "0 24px 60px -40px rgba(11,16,32,.55)" }}
     >
-      <p className="text-lg font-bold text-slate-900">{landing.formTitle}</p>
-      <p className="mt-1 text-sm text-slate-600">{landing.formSubtitle}</p>
-
-      <div className="mt-6 space-y-5">
-        <label className="block">
-          <span className={legend}>Nombre y apellidos *</span>
-          <input name="name" required placeholder="Tu nombre y apellidos" className={input} />
-        </label>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block">
-            <span className={legend}>Teléfono *</span>
-            <input
-              name="phone"
-              type="tel"
-              required
-              inputMode="tel"
-              autoComplete="tel"
-              // Mismo criterio que valida el servidor: avisa antes de enviar.
-              pattern="^(?:\+34[\s.\-]?)?[6-9](?:[\s.\-]?\d){8}$"
-              title="Escribe un teléfono español de 9 dígitos"
-              placeholder="600 000 000"
-              className={input}
-            />
-          </label>
-          <label className="block">
-            <span className={legend}>Tu mejor correo *</span>
-            <input
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              placeholder="tu@correo.com"
-              className={input}
-            />
-          </label>
-        </div>
-
-        <fieldset>
-          <legend className={legend}>¿Cómo prefieres que te contactemos? *</legend>
-          <div className="mt-2 grid grid-cols-3 gap-2">
-            {CONTACT_METHODS.map((m, i) => (
-              <Pill key={m} name="contactMethod" value={m} type="radio" checked={i === 0} />
-            ))}
-          </div>
-        </fieldset>
-
-        <fieldset>
-          <legend className={legend}>¿En qué franja horaria? *</legend>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            {TIME_SLOTS.map((t, i) => (
-              <Pill key={t} name="timeSlot" value={t} type="radio" checked={i === 0} />
-            ))}
-          </div>
-        </fieldset>
-
-        <fieldset>
-          <legend className={legend}>¿Decides tú sobre la web? *</legend>
-          <div className="mt-2 grid gap-2">
-            {DECISION_MAKER.map((d, i) => (
-              <Pill key={d} name="decisionMaker" value={d} type="radio" checked={i === 0} />
-            ))}
-          </div>
-        </fieldset>
-
-        <fieldset>
-          <legend className={legend}>¿Para cuándo la necesitas? *</legend>
-          <div className="mt-2 grid gap-2">
-            {URGENCY.map((u, i) => (
-              <Pill key={u} name="urgency" value={u} type="radio" checked={i === 0} />
-            ))}
-          </div>
-        </fieldset>
-
-        <fieldset>
-          <legend className={legend}>{landing.goalsLabel} *</legend>
-          <div className="mt-2 grid gap-2">
-            {GOALS.map((g, i) => (
-              <Pill key={g} name="goals" value={g} type="checkbox" checked={i === 1} />
-            ))}
-          </div>
-        </fieldset>
-
-        <fieldset>
-          <legend className={legend}>{landing.stageLabel}</legend>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            {PRACTICE_STAGE.map((s) => (
-              <Pill key={s} name="stage" value={s} type="radio" />
-            ))}
-          </div>
-        </fieldset>
-
-        <label className="block">
-          <span className={legend}>¿Tienes web actual? (opcional)</span>
-          <input
-            name="currentWebsite"
-            placeholder="www.tuconsulta.es — déjalo vacío si no tienes"
-            className={input}
-          />
-        </label>
+      <div className="text-center">
+        <h2 className="text-3xl font-black tracking-tight sm:text-4xl" style={{ color: INK }}>
+          {landing.formTitle}
+        </h2>
+        <p className="mx-auto mt-3 max-w-lg text-[15px]" style={{ color: MUTED }}>
+          {landing.formSubtitle}
+        </p>
       </div>
 
-      <ConsentCheckbox className="mt-5" />
+      {/* Dos columnas: el formulario tiene 8 preguntas y en una sola columna
+          quedaba interminable. Repartido, entra casi entero en pantalla. */}
+      <div className="mt-9 grid gap-x-10 gap-y-6 lg:grid-cols-2">
+        <div className="flex flex-col gap-6">
+          <label className="block">
+            <span className={legendClass} style={legendStyle}>
+              Nombre y apellidos *
+            </span>
+            <input
+              name="name"
+              required
+              placeholder="Tu nombre y apellidos"
+              className={inputClass}
+              style={inputStyle}
+            />
+          </label>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className={legendClass} style={legendStyle}>
+                Teléfono *
+              </span>
+              <input
+                name="phone"
+                type="tel"
+                required
+                inputMode="tel"
+                autoComplete="tel"
+                pattern="^(?:\+34[\s.\-]?)?[6-9](?:[\s.\-]?\d){8}$"
+                title="Escribe un teléfono español de 9 dígitos"
+                placeholder="600 000 000"
+                className={inputClass}
+                style={inputStyle}
+              />
+            </label>
+            <label className="block">
+              <span className={legendClass} style={legendStyle}>
+                Tu mejor correo *
+              </span>
+              <input
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                placeholder="tu@correo.com"
+                className={inputClass}
+                style={inputStyle}
+              />
+            </label>
+          </div>
+
+          <fieldset>
+            <legend className={legendClass} style={legendStyle}>
+              ¿Cómo prefieres que te contactemos? *
+            </legend>
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              {CONTACT_METHODS.map((m, i) => (
+                <Pill key={m} name="contactMethod" value={m} type="radio" checked={i === 0} />
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend className={legendClass} style={legendStyle}>
+              ¿En qué franja horaria? *
+            </legend>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {TIME_SLOTS.map((t, i) => (
+                <Pill key={t} name="timeSlot" value={t} type="radio" checked={i === 0} />
+              ))}
+            </div>
+          </fieldset>
+        </div>
+
+        <div className="flex flex-col gap-6">
+          <fieldset>
+            <legend className={legendClass} style={legendStyle}>
+              ¿Decides tú sobre la web? *
+            </legend>
+            <div className="mt-2 grid gap-2">
+              {DECISION_MAKER.map((d, i) => (
+                <Pill key={d} name="decisionMaker" value={d} type="radio" checked={i === 0} />
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend className={legendClass} style={legendStyle}>
+              ¿Para cuándo la necesitas? *
+            </legend>
+            <div className="mt-2 grid gap-2">
+              {URGENCY.map((u, i) => (
+                <Pill key={u} name="urgency" value={u} type="radio" checked={i === 0} />
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend className={legendClass} style={legendStyle}>
+              {landing.goalsLabel} *
+            </legend>
+            <div className="mt-2 grid gap-2">
+              {GOALS.map((g, i) => (
+                <Pill key={g} name="goals" value={g} type="checkbox" checked={i === 1} />
+              ))}
+            </div>
+          </fieldset>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <fieldset>
+              <legend className={legendClass} style={legendStyle}>
+                {landing.stageLabel}
+              </legend>
+              <div className="mt-2 grid gap-2">
+                {PRACTICE_STAGE.map((s) => (
+                  <Pill key={s} name="stage" value={s} type="radio" />
+                ))}
+              </div>
+            </fieldset>
+            <label className="block">
+              <span className={legendClass} style={legendStyle}>
+                ¿Tienes web actual?
+              </span>
+              <input
+                name="currentWebsite"
+                placeholder="www.tuconsulta.es"
+                className={inputClass}
+                style={inputStyle}
+              />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <label
+        className="mt-8 flex items-start gap-2.5 text-xs leading-relaxed"
+        style={{ color: MUTED }}
+      >
+        <input
+          type="checkbox"
+          name="consent"
+          value="on"
+          className="mt-0.5 h-4 w-4 shrink-0"
+          style={{ accentColor: CORAL }}
+        />
+        <span>Acepto recibir comunicaciones comerciales de dinkbit.</span>
+      </label>
 
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" />
 
       <button
         type="submit"
         disabled={pending}
-        className="mt-6 inline-flex h-12 w-full items-center justify-center rounded-lg bg-accent px-6 text-base font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-60"
+        className="mt-6 inline-flex w-full items-center justify-center rounded-2xl px-6 py-4 text-base font-black transition-transform hover:-translate-y-0.5 disabled:opacity-60"
+        style={{ background: CORAL, color: INK, boxShadow: "0 14px 34px -16px rgba(255,122,69,.9)" }}
       >
-        {pending ? "Enviando…" : "Quiero mi web"}
+        {pending ? "Enviando…" : `Quiero mi web por ${WEB_EXPRESS_PRICE}`}
       </button>
 
       {error && (
-        <p className="mt-3 text-sm font-semibold text-red-600" role="alert">
+        <p className="mt-3 text-center text-sm font-bold text-red-600" role="alert">
           {error}
         </p>
       )}
-      <p className="mt-3 text-center text-xs text-slate-500">
+      <p className="mt-3 text-center text-xs" style={{ color: MUTED }}>
         Sin compromiso. Te contactamos solo por donde nos digas.
       </p>
     </form>
