@@ -111,7 +111,7 @@ export const WEB_PSICOLOGOS: WebExpressLanding = {
   headline: "La web de tu consulta,",
   headlineAccent: `lista en una semana por ${WEB_EXPRESS_PRICE}`,
   subhead:
-    "Sin plantillas genéricas ni cuotas mensuales. La diseñamos a tu medida y en cinco días laborables la tienes funcionando.",
+    "Sin plantillas genéricas ni cuotas mensuales. Una web pensada para tu consulta, con tus textos y tu manera de trabajar.",
   heroBullets: [
     `Entrega en ${WEB_EXPRESS_DAYS} días laborables`,
     "Precio cerrado, sin cuotas",
