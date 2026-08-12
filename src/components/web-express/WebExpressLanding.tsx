@@ -23,9 +23,15 @@ import {
 
 const INK = "#0B1020";
 const CREAM = "#FBF8F4";
-const ACCENT = "#187bef";
-/** Azul oscurecido para texto sobre fondos claros: el de marca se queda corto. */
-const ACCENT_DEEP = "#0F5FBD";
+const ACCENT = "#4F46E5";
+/** Para texto sobre fondos CLAROS: el acento a secas se queda justo. */
+const ACCENT_DEEP = "#3B32C4";
+/**
+ * Para texto sobre la tinta. El índigo es un color oscuro, así que sobre fondo
+ * oscuro se queda en 3.0 de contraste y no se lee; esta versión aclarada sube a
+ * 6.0. Es la diferencia con el coral, que al ser claro valía en ambos sitios.
+ */
+const ACCENT_ON_DARK = "#A9A2FF";
 
 /** Franja diagonal que separa secciones sin recurrir a otra línea recta. */
 function Slant({ from, to }: { from: string; to: string }) {
@@ -62,22 +68,28 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
           />
           <div
             className="absolute -left-40 top-40 h-[520px] w-[520px] rounded-full blur-3xl"
-            style={{ background: "#187bef", opacity: 0.22 }}
+            style={{ background: "#4F46E5", opacity: 0.22 }}
           />
         </div>
 
         <Container size="wide" className="py-16 text-center lg:py-24">
+          {/* Píldora rellena en vez de contorno tenue: es lo primero que se ve
+              al llegar del anuncio y tiene que sostener la mirada un segundo. */}
           <span
-            className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[13px] font-bold"
-            style={{ background: "rgba(24,123,239,.14)", color: ACCENT, border: `1px solid rgba(24,123,239,.35)` }}
+            className="inline-flex items-center gap-2.5 rounded-full px-5 py-2 text-[13px] font-black uppercase tracking-[0.1em]"
+            style={{ background: ACCENT, color: "#fff", boxShadow: "0 10px 30px -12px rgba(79,70,229,.9)" }}
           >
+            <span className="relative flex h-2 w-2" aria-hidden="true">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+            </span>
             {landing.eyebrow}
           </span>
 
           <h1 className="mx-auto mt-7 max-w-4xl text-[2.75rem] font-black leading-[1.02] tracking-[-0.03em] text-white sm:text-[4.25rem]">
             {landing.headline}{" "}
             <span className="relative inline-block">
-              <span style={{ color: ACCENT }}>{landing.headlineAccent}</span>
+              <span style={{ color: ACCENT_ON_DARK }}>{landing.headlineAccent}</span>
               {/* Subrayado a mano alzada: rompe la rigidez del bloque de texto */}
               <svg
                 className="absolute -bottom-2 left-0 w-full"
@@ -89,7 +101,7 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
               >
                 <path
                   d="M2 9C60 3 130 2 190 5c40 2 80 5 108 4"
-                  stroke={ACCENT}
+                  stroke={ACCENT_ON_DARK}
                   strokeWidth="4"
                   strokeLinecap="round"
                   opacity=".55"
@@ -120,19 +132,12 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
             <a
               href="#formulario"
               className="inline-flex items-center justify-center rounded-2xl px-9 py-4 text-base font-black transition-transform hover:-translate-y-0.5"
-              style={{ background: ACCENT, color: "#fff", boxShadow: "0 14px 34px -12px rgba(24,123,239,.8)" }}
+              style={{ background: ACCENT, color: "#fff", boxShadow: "0 14px 34px -12px rgba(79,70,229,.8)" }}
             >
               Quiero mi web por {WEB_EXPRESS_PRICE} →
             </a>
             <p className="text-sm text-slate-400">Sin compromiso · Te contactamos en 24 h</p>
           </div>
-
-          <p
-            className="mx-auto mt-12 max-w-xl rounded-2xl px-5 py-3.5 text-sm leading-relaxed text-slate-300"
-            style={{ background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.1)" }}
-          >
-            {landing.audienceNote}
-          </p>
         </Container>
       </section>
 
@@ -142,10 +147,10 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
           <dl className="grid gap-px overflow-hidden rounded-3xl sm:grid-cols-3" style={{ background: "rgba(255,255,255,.1)" }}>
             {landing.trustPoints.map((t) => (
               <div key={t.label} className="px-4 py-8 text-center" style={{ background: INK }}>
-                <dt className="text-4xl font-black tracking-tight" style={{ color: ACCENT }}>
+                <dt className="text-4xl font-black tracking-tight text-white sm:text-[2.75rem]">
                   {t.value}
                 </dt>
-                <dd className="mt-1.5 text-sm font-medium text-slate-400">{t.label}</dd>
+                <dd className="mt-1.5 text-sm font-medium text-slate-300">{t.label}</dd>
               </div>
             ))}
           </dl>
@@ -206,7 +211,7 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
               className="absolute left-0 right-0 top-7 hidden lg:block"
               style={{
                 height: 2,
-                background: `repeating-linear-gradient(90deg, rgba(24,123,239,.45) 0 10px, transparent 10px 20px)`,
+                background: `repeating-linear-gradient(90deg, rgba(169,162,255,.5) 0 10px, transparent 10px 20px)`,
               }}
             />
             {landing.steps.map((s, i) => (
@@ -215,9 +220,9 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
                   className="relative z-10 flex h-14 w-14 items-center justify-center rounded-2xl text-xl font-black transition-transform duration-200 group-hover:scale-110 group-hover:rotate-3"
                   style={{
                     background: i === landing.steps.length - 1 ? ACCENT : INK,
-                    color: i === landing.steps.length - 1 ? INK : ACCENT,
-                    border: `2px solid ${ACCENT}`,
-                    boxShadow: i === landing.steps.length - 1 ? "0 12px 30px -12px rgba(24,123,239,.9)" : "none",
+                    color: i === landing.steps.length - 1 ? "#fff" : ACCENT_ON_DARK,
+                    border: `2px solid ${ACCENT_ON_DARK}`,
+                    boxShadow: i === landing.steps.length - 1 ? "0 12px 30px -12px rgba(79,70,229,.9)" : "none",
                   }}
                 >
                   {i + 1}
@@ -234,14 +239,14 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
       <section className="pb-16" style={{ background: INK }}>
         <Container size="wide">
           <div className="grid gap-6 md:grid-cols-2">
-            <div className="rounded-3xl p-8" style={{ background: "rgba(24,123,239,.09)", border: `1px solid rgba(24,123,239,.3)` }}>
+            <div className="rounded-3xl p-8" style={{ background: "rgba(79,70,229,.09)", border: `1px solid rgba(79,70,229,.3)` }}>
               <h2 className="text-xl font-black text-white">
-                {landing.includesTitle} <span style={{ color: ACCENT }}>por {WEB_EXPRESS_PRICE}</span>
+                {landing.includesTitle} <span style={{ color: ACCENT_ON_DARK }}>por {WEB_EXPRESS_PRICE}</span>
               </h2>
               <ul className="mt-6 flex flex-col gap-4">
                 {landing.includes.map((i) => (
                   <li key={i} className="flex gap-3 text-[15px] leading-relaxed text-slate-200">
-                    <span className="mt-0.5 shrink-0 font-black" style={{ color: ACCENT }}>✓</span>
+                    <span className="mt-0.5 shrink-0 font-black" style={{ color: ACCENT_ON_DARK }}>✓</span>
                     {i}
                   </li>
                 ))}
@@ -316,7 +321,7 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
           <a
             href="#formulario"
             className="mt-9 inline-flex items-center justify-center rounded-2xl px-10 py-4 text-base font-black transition-transform hover:-translate-y-0.5"
-            style={{ background: ACCENT, color: "#fff", boxShadow: "0 14px 34px -12px rgba(24,123,239,.8)" }}
+            style={{ background: ACCENT, color: "#fff", boxShadow: "0 14px 34px -12px rgba(79,70,229,.8)" }}
           >
             Quiero mi web por {WEB_EXPRESS_PRICE} →
           </a>

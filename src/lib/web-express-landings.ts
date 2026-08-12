@@ -63,8 +63,6 @@ export interface WebExpressLanding {
   metaDescription: string;
 
   eyebrow: string;
-  /** Aviso de a quién va dirigido. Posiciona y filtra a la vez. */
-  audienceNote: string;
   headline: string;
   headlineAccent: string;
   subhead: string;
@@ -108,9 +106,7 @@ export const WEB_PSICOLOGOS: WebExpressLanding = {
   metaTitle: `Web para psicólogos en una semana por ${WEB_EXPRESS_PRICE} | dinkbit`,
   metaDescription: `Diseñamos la web de tu consulta de psicología en ${WEB_EXPRESS_DAYS} días laborables por ${WEB_EXPRESS_PRICE}. Preparada para móvil, con formulario de contacto y lista para recibir pacientes.`,
 
-  eyebrow: "Solo para psicólogos colegiados",
-  audienceNote:
-    "Trabajamos únicamente con profesionales con título oficial en Psicología y número de colegiado. Ni coaches, ni terapias sin titulación.",
+  eyebrow: "Especialistas en webs para psicología",
   headline: "La web de tu consulta,",
   headlineAccent: `lista en una semana por ${WEB_EXPRESS_PRICE}`,
   subhead:
@@ -214,8 +210,7 @@ export const WEB_PSICOLOGOS: WebExpressLanding = {
   },
 
   formTitle: "Cuéntanos de tu consulta",
-  formSubtitle:
-    "Te contactamos en menos de 24 horas laborables, por donde tú nos digas.",
+  formSubtitle: "Te contactamos en menos de 24 horas.",
 
   goalsLabel: "¿Para qué quieres la web?",
   stageLabel: "¿En qué punto estás?",

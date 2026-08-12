@@ -23,11 +23,11 @@ import {
  * blanco acababa con texto casi blanco encima.
  */
 const INK = "#0B1020";
-const ACCENT = "#187bef";
+const ACCENT = "#4F46E5";
 const MUTED = "#5A6178";
 
 const inputClass =
-  "mt-1.5 block w-full rounded-xl border px-4 py-3 text-[15px] outline-none transition-colors focus:border-[#187bef]";
+  "mt-1.5 block w-full rounded-xl border px-4 py-3 text-[15px] outline-none transition-colors focus:border-[#4F46E5]";
 const inputStyle = { borderColor: "rgba(11,16,32,.16)", color: INK, background: "#fff" } as const;
 const legendClass = "text-[11px] font-black uppercase tracking-[0.12em]";
 const legendStyle = { color: MUTED } as const;
@@ -40,8 +40,8 @@ const legendStyle = { color: MUTED } as const;
  * ancho y cada grupo ocupaba varias filas aunque las etiquetas fueran cortas.
  * Así la mayoría de grupos entra en una sola línea.
  *
- * Al marcarla, tinta oscura sobre tinte azul. La versión anterior pintaba azul
- * claro sobre azul aún más claro y la opción elegida era la menos legible.
+ * Al marcarla, tinta oscura sobre tinte del acento. Una versión anterior
+ * pintaba claro sobre claro y la opción elegida era la menos legible de todas.
  */
 function Pill({
   name,
@@ -59,7 +59,7 @@ function Pill({
       className={
         "inline-flex cursor-pointer items-center justify-center rounded-full border-2 border-[rgba(11,16,32,.14)] bg-white px-4 py-2 " +
         "text-center text-[13px] font-semibold leading-tight text-[#5A6178] transition-all " +
-        "has-[:checked]:border-[#187bef] has-[:checked]:bg-[#E7F1FE] has-[:checked]:font-bold has-[:checked]:text-[#0B1020]"
+        "has-[:checked]:border-[#4F46E5] has-[:checked]:bg-[#EEEDFC] has-[:checked]:font-bold has-[:checked]:text-[#0B1020]"
       }
     >
       <input type={type} name={name} value={value} defaultChecked={checked} className="sr-only" />
@@ -100,7 +100,7 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
       >
         <div
           className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl"
-          style={{ background: "rgba(24,123,239,.12)" }}
+          style={{ background: "rgba(79,70,229,.12)" }}
           aria-hidden="true"
         >
           <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
@@ -275,29 +275,28 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
             </div>
           </fieldset>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <fieldset>
-              <legend className={legendClass} style={legendStyle}>
-                {landing.stageLabel}
-              </legend>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {PRACTICE_STAGE.map((s) => (
-                  <Pill key={s} name="stage" value={s} type="radio" />
-                ))}
-              </div>
-            </fieldset>
-            <label className="block">
-              <span className={legendClass} style={legendStyle}>
-                ¿Tienes web actual?
-              </span>
-              <input
-                name="currentWebsite"
-                placeholder="www.tuconsulta.es"
-                className={inputClass}
-                style={inputStyle}
-              />
-            </label>
-          </div>
+          <fieldset>
+            <legend className={legendClass} style={legendStyle}>
+              {landing.stageLabel}
+            </legend>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {PRACTICE_STAGE.map((s) => (
+                <Pill key={s} name="stage" value={s} type="radio" />
+              ))}
+            </div>
+          </fieldset>
+
+          <label className="block">
+            <span className={legendClass} style={legendStyle}>
+              ¿Tienes web actual?
+            </span>
+            <input
+              name="currentWebsite"
+              placeholder="www.tuconsulta.es"
+              className={inputClass}
+              style={inputStyle}
+            />
+          </label>
         </div>
       </div>
 
@@ -321,7 +320,7 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
         type="submit"
         disabled={pending}
         className="mt-7 inline-flex items-center justify-center rounded-xl px-10 py-3.5 text-base font-black transition-transform hover:-translate-y-0.5 disabled:opacity-60"
-        style={{ background: ACCENT, color: "#fff", boxShadow: "0 12px 28px -14px rgba(24,123,239,.9)" }}
+        style={{ background: ACCENT, color: "#fff", boxShadow: "0 12px 28px -14px rgba(79,70,229,.9)" }}
       >
         {pending ? "Enviando…" : `Quiero mi web por ${WEB_EXPRESS_PRICE}`}
       </button>
