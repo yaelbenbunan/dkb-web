@@ -34,45 +34,51 @@ const ACCENT_DEEP = "#0F5FBD";
 const ACCENT_ON_DARK = "#7DB0F7";
 
 /**
- * Corte entre secciones. Tres formas distintas para que no se lean como tres
- * diagonales paralelas repitiéndose por la página: la repetición del mismo
- * ángulo es justo lo que hace que una landing parezca una plantilla.
+ * Corte curvo entre secciones. Tres curvas distintas, no tres diagonales: las
+ * rectas paralelas repetidas son justo lo que hace que una landing parezca una
+ * plantilla, y la curva da el movimiento que la recta no tiene.
  *
- * En SVG y no con clip-path sobre un div: el borde recortado se antialiasea y
- * a ciertos zooms dejaba asomar una línea de un píxel del color de detrás. Las
- * formas rebasan el lienzo por los cuatro lados y el bloque solapa 1px arriba y
- * abajo, así que la costura no aparece a ningún zoom.
+ * Va DENTRO de la sección anterior, en posición absoluta sobre su fondo, y no
+ * como bloque intermedio con fondo propio. Aquello dejaba un escalón visible
+ * cuando la sección de arriba tenía degradado o halos: el bloque los pintaba
+ * planos y se veía la línea donde acababa uno y empezaba el otro. Así solo hay
+ * un fondo, y la curva se recorta encima.
+ *
+ * Cada trazado rebasa el lienzo por los lados para que el borde antialiaseado
+ * caiga fuera del área visible y no aparezca la costura de un píxel.
  */
-type CutShape = "right" | "left" | "wave";
+type CutShape = "valley" | "wave" | "crest";
 
 function Cut({
-  from,
   to,
-  shape = "right",
-  height = 56,
+  shape = "valley",
+  height = 90,
 }: {
-  from: string;
+  /** Color de la sección que viene DESPUÉS. */
   to: string;
   shape?: CutShape;
   height?: number;
 }) {
+  // Las tres curvas rebasan el lienzo por los lados para que el borde
+  // antialiaseado quede fuera del área visible y no aparezca la costura.
+  const paths: Record<CutShape, string> = {
+    // Hundida en el centro, como una sonrisa.
+    valley: "M-1,7 L-1,1.5 Q50,7.5 101,1.5 L101,7 Z",
+    // Doble ondulación: la que más movimiento aporta, va en el centro.
+    wave: "M-1,7 L-1,3.4 C22,-0.6 40,6.2 58,2.8 C76,-0.4 89,3.4 101,1.8 L101,7 Z",
+    // Elevada en el centro, la opuesta a valley.
+    crest: "M-1,7 L-1,4.5 Q50,-1.5 101,4.5 L101,7 Z",
+  };
   return (
-    <div
+    <svg
       aria-hidden="true"
-      style={{ background: from, lineHeight: 0, marginTop: -1, marginBottom: -1 }}
+      viewBox="0 0 100 6"
+      preserveAspectRatio="none"
+      className="pointer-events-none absolute inset-x-0 bottom-0 w-full"
+      style={{ display: "block", height, marginBottom: -1 }}
     >
-      <svg
-        viewBox="0 0 100 6"
-        preserveAspectRatio="none"
-        style={{ display: "block", width: "100%", height }}
-      >
-        {shape === "right" && <polygon points="-1,7 101,-1 101,7" fill={to} />}
-        {shape === "left" && <polygon points="-1,-1 101,7 -1,7" fill={to} />}
-        {shape === "wave" && (
-          <path d="M-1,7 L-1,3 C20,-1 38,6 55,3 C72,0 88,4 101,2 L101,7 Z" fill={to} />
-        )}
-      </svg>
-    </div>
+      <path d={paths[shape]} fill={to} />
+    </svg>
   );
 }
 
@@ -109,7 +115,7 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
         {/* Sin etiqueta sobre el titular: en móvil se comía la altura que hace
             falta para que el botón entre sin hacer scroll, que es lo que decide
             si alguien que llega del anuncio convierte o se va. */}
-        <Container size="wide" className="py-8 text-center sm:py-16 lg:py-24">
+        <Container size="wide" className="relative z-10 pb-24 pt-8 text-center sm:pb-28 sm:pt-16 lg:pt-24">
           <h1 className="mx-auto max-w-4xl text-[2.4rem] font-black leading-[1.03] tracking-[-0.03em] text-white sm:text-[4.25rem]">
             {landing.headline}{" "}
             <span className="relative inline-block">
@@ -170,9 +176,8 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
             <p className="text-[15px] text-slate-400">Sin compromiso · Te contactamos en 24 h</p>
           </div>
         </Container>
+        <Cut to={CREAM} shape="valley" height={100} />
       </section>
-
-      <Cut from={INK} to={CREAM} shape="right" height={64} />
 
       {/* ── FORMULARIO A LO ANCHO ────────────────────────────── */}
       <section id="formulario" className="scroll-mt-20 py-16" style={{ background: CREAM }}>
@@ -182,7 +187,7 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
       </section>
 
       {/* ── DOLORES ──────────────────────────────────────────── */}
-      <section className="py-16" style={{ background: CREAM }}>
+      <section className="relative pb-32 pt-16" style={{ background: CREAM }}>
         <Container size="wide">
           <h2 className="max-w-2xl text-3xl font-black tracking-tight sm:text-[2.6rem]" style={{ color: INK }}>
             {landing.painTitle}
@@ -228,10 +233,10 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
             ))}
           </ul>
         </Container>
+        <Cut to={INK} shape="wave" height={110} />
       </section>
 
       {/* ── PROCESO ──────────────────────────────────────────── */}
-      <Cut from={CREAM} to={INK} shape="wave" height={80} />
       <section className="py-16" style={{ background: INK }}>
         <Container size="wide">
           <h2 className="text-3xl font-black tracking-tight text-white sm:text-[2.6rem]">
@@ -271,7 +276,7 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
       </section>
 
       {/* ── QUÉ INCLUYE / QUÉ NO ─────────────────────────────── */}
-      <section className="pb-16" style={{ background: INK }}>
+      <section className="relative pb-32" style={{ background: INK }}>
         <Container size="wide">
           <div className="grid gap-6 md:grid-cols-2">
             <div className="rounded-3xl p-8" style={{ background: "rgba(24,123,239,.09)", border: `1px solid rgba(24,123,239,.3)` }}>
@@ -302,8 +307,8 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
             </div>
           </div>
         </Container>
+        <Cut to={CREAM} shape="crest" height={90} />
       </section>
-      <Cut from={INK} to={CREAM} shape="left" height={52} />
 
       {/* ── FAQ ──────────────────────────────────────────────── */}
       <section className="py-16" style={{ background: CREAM }}>
