@@ -179,7 +179,7 @@ export const WEB_PSICOLOGOS: WebExpressLanding = {
     {
       title: "Rellenas el cuestionario",
       description:
-        "Un formulario guiado donde nos cuentas cómo trabajas, tus colores, tus textos. Es lo único que necesitamos.",
+        "Un formulario guiado donde recogemos tus textos, tus colores y los detalles de tu consulta. Es lo único que necesitamos.",
     },
     {
       title: "En 5 días la tienes",
