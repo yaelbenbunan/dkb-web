@@ -119,7 +119,7 @@ export const WEB_PSICOLOGOS: WebExpressLanding = {
   heroBullets: [
     `Entrega en ${WEB_EXPRESS_DAYS} días laborables`,
     "Precio cerrado, sin sorpresas",
-    "Se ve perfecta en el móvil",
+    "Adaptada a formato móvil",
   ],
 
   painTitle: "Si te suena alguna, esto es para ti",
