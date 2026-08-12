@@ -17,27 +17,45 @@ import {
  * fondo Y su color, así que se ve igual venga quien venga del anuncio.
  *
  * Tinta y crema en vez de blanco y gris: el azul de marca sobre crema cálido
- * encaja con el nicho mejor que el blanco clínico, y el coral da el punto de
- * energía que evita que parezca una plantilla corporativa más.
+ * encaja con el nicho mejor que el blanco clínico y da profundidad sin salirse
+ * de la paleta corporativa.
  */
 
 const INK = "#0B1020";
 const CREAM = "#FBF8F4";
-const ACCENT = "#4F46E5";
+const ACCENT = "#187bef";
 /** Para texto sobre fondos CLAROS: el acento a secas se queda justo. */
-const ACCENT_DEEP = "#3B32C4";
+const ACCENT_DEEP = "#0F5FBD";
 /**
- * Para texto sobre la tinta. El índigo es un color oscuro, así que sobre fondo
- * oscuro se queda en 3.0 de contraste y no se lee; esta versión aclarada sube a
- * 6.0. Es la diferencia con el coral, que al ser claro valía en ambos sitios.
+ * Para texto sobre la tinta. El azul de marca sobre la tinta se queda en 4.4 de
+ * contraste, justo por debajo del mínimo para texto pequeño. Esta versión
+ * aclarada sube a 7.3 y sirve para etiquetas, cifras y glifos sobre oscuro.
  */
-const ACCENT_ON_DARK = "#A9A2FF";
+const ACCENT_ON_DARK = "#7DB0F7";
 
-/** Franja diagonal que separa secciones sin recurrir a otra línea recta. */
+/**
+ * Franja diagonal que separa secciones sin recurrir a otra línea recta.
+ *
+ * En SVG y no con clip-path sobre un div: el borde recortado se antialiasea y
+ * a ciertos zooms dejaba asomar una línea de un píxel del color de detrás. El
+ * SVG con `shape-rendering` y el desbordamiento de medio píxel arriba y abajo
+ * hacen que la costura no aparezca a ningún zoom.
+ */
 function Slant({ from, to }: { from: string; to: string }) {
   return (
-    <div aria-hidden="true" style={{ background: from }}>
-      <div style={{ background: to, height: 56, clipPath: "polygon(0 100%, 100% 0, 100% 100%)" }} />
+    <div
+      aria-hidden="true"
+      style={{ background: from, lineHeight: 0, marginTop: -1, marginBottom: -1 }}
+    >
+      <svg
+        viewBox="0 0 100 6"
+        preserveAspectRatio="none"
+        style={{ display: "block", width: "100%", height: 56 }}
+      >
+        {/* El polígono rebasa el lienzo por los cuatro lados para que el borde
+            antialiaseado quede fuera del área visible. */}
+        <polygon points="-1,7 101,-1 101,7" fill={to} />
+      </svg>
     </div>
   );
 }
@@ -68,7 +86,7 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
           />
           <div
             className="absolute -left-40 top-40 h-[520px] w-[520px] rounded-full blur-3xl"
-            style={{ background: "#4F46E5", opacity: 0.22 }}
+            style={{ background: "#0EA5E9", opacity: 0.2 }}
           />
         </div>
 
@@ -77,7 +95,7 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
               al llegar del anuncio y tiene que sostener la mirada un segundo. */}
           <span
             className="inline-flex items-center gap-2.5 rounded-full px-5 py-2 text-[13px] font-black uppercase tracking-[0.1em]"
-            style={{ background: ACCENT, color: "#fff", boxShadow: "0 10px 30px -12px rgba(79,70,229,.9)" }}
+            style={{ background: ACCENT, color: "#fff", boxShadow: "0 10px 30px -12px rgba(24,123,239,.9)" }}
           >
             <span className="relative flex h-2 w-2" aria-hidden="true">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
@@ -132,11 +150,11 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
             <a
               href="#formulario"
               className="inline-flex items-center justify-center rounded-2xl px-9 py-4 text-base font-black transition-transform hover:-translate-y-0.5"
-              style={{ background: ACCENT, color: "#fff", boxShadow: "0 14px 34px -12px rgba(79,70,229,.8)" }}
+              style={{ background: ACCENT, color: "#fff", boxShadow: "0 14px 34px -12px rgba(24,123,239,.8)" }}
             >
               Quiero mi web por {WEB_EXPRESS_PRICE} →
             </a>
-            <p className="text-sm text-slate-400">Sin compromiso · Te contactamos en 24 h</p>
+            <p className="text-[15px] text-slate-400">Sin compromiso · Te contactamos en 24 h</p>
           </div>
         </Container>
       </section>
@@ -144,13 +162,25 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
       {/* ── DATOS ────────────────────────────────────────────── */}
       <section style={{ background: INK }}>
         <Container size="wide">
-          <dl className="grid gap-px overflow-hidden rounded-3xl sm:grid-cols-3" style={{ background: "rgba(255,255,255,.1)" }}>
+          {/* Separadores con borde explícito y no con el truco de gap-px sobre un
+              fondo: aquello dejaba asomar una línea clara por el borde superior. */}
+          <dl
+            className="grid divide-y divide-white/10 rounded-3xl sm:grid-cols-3 sm:divide-x sm:divide-y-0"
+            style={{ background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.09)" }}
+          >
             {landing.trustPoints.map((t) => (
-              <div key={t.label} className="px-4 py-8 text-center" style={{ background: INK }}>
-                <dt className="text-4xl font-black tracking-tight text-white sm:text-[2.75rem]">
+              <div key={t.label} className="relative px-6 py-12 text-center">
+                <span
+                  className="mx-auto mb-5 block h-1 w-12 rounded-full"
+                  style={{ background: ACCENT_ON_DARK }}
+                  aria-hidden="true"
+                />
+                <dt className="text-5xl font-black leading-none tracking-[-0.04em] text-white sm:text-6xl">
                   {t.value}
                 </dt>
-                <dd className="mt-1.5 text-sm font-medium text-slate-300">{t.label}</dd>
+                <dd className="mx-auto mt-3 max-w-[18ch] text-base font-medium text-slate-300">
+                  {t.label}
+                </dd>
               </div>
             ))}
           </dl>
@@ -172,23 +202,43 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
           <h2 className="max-w-2xl text-3xl font-black tracking-tight sm:text-[2.6rem]" style={{ color: INK }}>
             {landing.painTitle}
           </h2>
-          <ul className="mt-9 grid gap-5 md:grid-cols-2">
-            {landing.pains.map((p, i) => (
+          <p className="mt-3 text-lg" style={{ color: "#5A6178" }}>
+            {landing.painIntro}
+          </p>
+
+          {/* Problema arriba, en grande y entrecomillado como si lo dijera quien
+              lee; respuesta debajo, separada y en el acento. Reconocerse en la
+              queja es lo que engancha, pero sin la respuesta al lado la sección
+              solo describe el problema y no da motivo para seguir. */}
+          <ul className="mt-10 grid gap-5 md:grid-cols-2">
+            {landing.pains.map((p) => (
               <li
-                key={p}
-                className="rounded-3xl bg-white p-7 text-[15px] leading-relaxed"
+                key={p.problem}
+                className="flex flex-col rounded-3xl bg-white p-7 transition-transform duration-200 hover:-translate-y-1"
                 style={{
-                  color: "#3D4356",
                   border: "1px solid rgba(11,16,32,.08)",
-                  boxShadow: "0 2px 10px -4px rgba(11,16,32,.1)",
+                  boxShadow: "0 2px 14px -6px rgba(11,16,32,.14)",
                 }}
               >
-                <span
-                  className="mb-4 block h-1 w-10 rounded-full"
-                  style={{ background: ACCENT }}
-                  aria-hidden="true"
-                />
-                {p}
+                <p
+                  className="text-lg font-bold leading-snug sm:text-xl"
+                  style={{ color: INK }}
+                >
+                  {p.problem}
+                </p>
+                <div
+                  className="mt-5 flex gap-3 border-t pt-5 text-[15px] leading-relaxed"
+                  style={{ borderColor: "rgba(11,16,32,.08)", color: "#3D4356" }}
+                >
+                  <span
+                    className="mt-1 shrink-0 text-base font-black leading-none"
+                    style={{ color: ACCENT_DEEP }}
+                    aria-hidden="true"
+                  >
+                    →
+                  </span>
+                  {p.answer}
+                </div>
               </li>
             ))}
           </ul>
@@ -211,7 +261,7 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
               className="absolute left-0 right-0 top-7 hidden lg:block"
               style={{
                 height: 2,
-                background: `repeating-linear-gradient(90deg, rgba(169,162,255,.5) 0 10px, transparent 10px 20px)`,
+                background: `repeating-linear-gradient(90deg, rgba(125,176,247,.5) 0 10px, transparent 10px 20px)`,
               }}
             />
             {landing.steps.map((s, i) => (
@@ -222,13 +272,13 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
                     background: i === landing.steps.length - 1 ? ACCENT : INK,
                     color: i === landing.steps.length - 1 ? "#fff" : ACCENT_ON_DARK,
                     border: `2px solid ${ACCENT_ON_DARK}`,
-                    boxShadow: i === landing.steps.length - 1 ? "0 12px 30px -12px rgba(79,70,229,.9)" : "none",
+                    boxShadow: i === landing.steps.length - 1 ? "0 12px 30px -12px rgba(24,123,239,.9)" : "none",
                   }}
                 >
                   {i + 1}
                 </span>
                 <p className="mt-5 text-lg font-bold text-white">{s.title}</p>
-                <p className="mt-2 text-sm leading-relaxed text-slate-400">{s.description}</p>
+                <p className="mt-2 text-[15px] leading-relaxed text-slate-400">{s.description}</p>
               </li>
             ))}
           </ol>
@@ -239,7 +289,7 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
       <section className="pb-16" style={{ background: INK }}>
         <Container size="wide">
           <div className="grid gap-6 md:grid-cols-2">
-            <div className="rounded-3xl p-8" style={{ background: "rgba(79,70,229,.09)", border: `1px solid rgba(79,70,229,.3)` }}>
+            <div className="rounded-3xl p-8" style={{ background: "rgba(24,123,239,.09)", border: `1px solid rgba(24,123,239,.3)` }}>
               <h2 className="text-xl font-black text-white">
                 {landing.includesTitle} <span style={{ color: ACCENT_ON_DARK }}>por {WEB_EXPRESS_PRICE}</span>
               </h2>
@@ -321,7 +371,7 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
           <a
             href="#formulario"
             className="mt-9 inline-flex items-center justify-center rounded-2xl px-10 py-4 text-base font-black transition-transform hover:-translate-y-0.5"
-            style={{ background: ACCENT, color: "#fff", boxShadow: "0 14px 34px -12px rgba(79,70,229,.8)" }}
+            style={{ background: ACCENT, color: "#fff", boxShadow: "0 14px 34px -12px rgba(24,123,239,.8)" }}
           >
             Quiero mi web por {WEB_EXPRESS_PRICE} →
           </a>

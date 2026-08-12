@@ -68,9 +68,14 @@ export interface WebExpressLanding {
   subhead: string;
   heroBullets: string[];
 
-  /** Los dolores del nicho, en sus palabras. Es lo que hace que se identifique. */
+  /**
+   * Los dolores del nicho, en sus palabras, con la respuesta debajo. Enunciar
+   * el problema hace que se identifique; contestarlo en la misma tarjeta es lo
+   * que convierte el reconocimiento en motivo para rellenar el formulario.
+   */
   painTitle: string;
-  pains: string[];
+  painIntro: string;
+  pains: { problem: string; answer: string }[];
 
   includesTitle: string;
   includes: string[];
@@ -117,12 +122,30 @@ export const WEB_PSICOLOGOS: WebExpressLanding = {
     "Se ve perfecta en el móvil",
   ],
 
-  painTitle: "Si te suena alguna de estas, esto es para ti",
+  painTitle: "Si te suena alguna, esto es para ti",
+  painIntro: "Lo que nos cuentan la mayoría de consultas antes de empezar.",
   pains: [
-    "Te encuentran por Instagram o por el boca a boca, pero no tienes dónde mandarles para que vean cómo trabajas.",
-    "Tienes perfil en un directorio de psicólogos y pagas por aparecer, pero la ficha es igual que la de otros doscientos.",
-    "Pediste presupuesto de una web y te hablaron de 2.000€ y dos meses.",
-    "Quieres transmitir confianza antes de la primera sesión, que es cuando más dudas hay.",
+    {
+      problem:
+        "«Me encuentran por Instagram o por el boca a boca, pero no tengo dónde mandarles»",
+      answer:
+        "Una web a la que enlazar desde tu perfil, con todo lo que necesitan saber antes de escribirte.",
+    },
+    {
+      problem:
+        "«Pago por aparecer en un directorio, pero mi ficha es igual que la de otros doscientos»",
+      answer:
+        "Tu propio espacio, con tu nombre y tu forma de trabajar. Sin competir en una lista.",
+    },
+    {
+      problem: "«Pedí presupuesto y me hablaron de 2.000€ y dos meses»",
+      answer: "459€ y cinco días laborables. Precio cerrado antes de empezar.",
+    },
+    {
+      problem: "«Quiero transmitir confianza antes de la primera sesión»",
+      answer:
+        "Una web sobria y clara, pensada para que quien llega dudando dé el paso.",
+    },
   ],
 
   includesTitle: "Qué incluye",

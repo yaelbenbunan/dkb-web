@@ -23,13 +23,13 @@ import {
  * blanco acababa con texto casi blanco encima.
  */
 const INK = "#0B1020";
-const ACCENT = "#4F46E5";
+const ACCENT = "#187bef";
 const MUTED = "#5A6178";
 
 const inputClass =
-  "mt-1.5 block w-full rounded-xl border px-4 py-3 text-[15px] outline-none transition-colors focus:border-[#4F46E5]";
+  "mt-1.5 block w-full rounded-xl border px-4 py-3 text-[15px] outline-none transition-colors focus:border-[#187bef]";
 const inputStyle = { borderColor: "rgba(11,16,32,.16)", color: INK, background: "#fff" } as const;
-const legendClass = "text-[11px] font-black uppercase tracking-[0.12em]";
+const legendClass = "text-[13px] font-bold uppercase tracking-[0.08em]";
 const legendStyle = { color: MUTED } as const;
 
 /**
@@ -58,8 +58,8 @@ function Pill({
     <label
       className={
         "inline-flex cursor-pointer items-center justify-center rounded-full border-2 border-[rgba(11,16,32,.14)] bg-white px-4 py-2 " +
-        "text-center text-[13px] font-semibold leading-tight text-[#5A6178] transition-all " +
-        "has-[:checked]:border-[#4F46E5] has-[:checked]:bg-[#EEEDFC] has-[:checked]:font-bold has-[:checked]:text-[#0B1020]"
+        "text-center text-[14px] font-semibold leading-tight text-[#5A6178] transition-all " +
+        "has-[:checked]:border-[#187bef] has-[:checked]:bg-[#E7F1FE] has-[:checked]:font-bold has-[:checked]:text-[#0B1020]"
       }
     >
       <input type={type} name={name} value={value} defaultChecked={checked} className="sr-only" />
@@ -100,7 +100,7 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
       >
         <div
           className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl"
-          style={{ background: "rgba(79,70,229,.12)" }}
+          style={{ background: "rgba(24,123,239,.12)" }}
           aria-hidden="true"
         >
           <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
@@ -230,7 +230,7 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
             <legend className={legendClass} style={legendStyle}>
               ¿En qué franja horaria? *
             </legend>
-            <p className="mt-1 text-[11px]" style={{ color: MUTED }}>
+            <p className="mt-1.5 text-[13px]" style={{ color: MUTED }}>
               Mañanas 9-14h · Mediodía 14-16h · Tardes desde las 16h
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -301,7 +301,7 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
       </div>
 
       <label
-        className="mt-8 flex items-start gap-2.5 text-xs leading-relaxed"
+        className="mt-8 flex items-start gap-2.5 text-[13px] leading-relaxed"
         style={{ color: MUTED }}
       >
         <input
@@ -320,7 +320,7 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
         type="submit"
         disabled={pending}
         className="mt-7 inline-flex items-center justify-center rounded-xl px-10 py-3.5 text-base font-black transition-transform hover:-translate-y-0.5 disabled:opacity-60"
-        style={{ background: ACCENT, color: "#fff", boxShadow: "0 12px 28px -14px rgba(79,70,229,.9)" }}
+        style={{ background: ACCENT, color: "#fff", boxShadow: "0 12px 28px -14px rgba(24,123,239,.9)" }}
       >
         {pending ? "Enviando…" : `Quiero mi web por ${WEB_EXPRESS_PRICE}`}
       </button>
@@ -330,7 +330,7 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
           {error}
         </p>
       )}
-      <p className="mt-3 text-center text-xs" style={{ color: MUTED }}>
+      <p className="mt-3 text-center text-[13px]" style={{ color: MUTED }}>
         Sin compromiso. Te contactamos solo por donde nos digas.
       </p>
     </form>
