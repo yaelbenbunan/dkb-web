@@ -128,3 +128,31 @@ export function marketingLandingAutoresponder(input: {
     cta: WHATSAPP_CTA,
   };
 }
+
+/**
+ * Landing de web cerrada por nicho. Repite la franja horaria que eligió la
+ * persona: es la prueba de que se ha leído lo que puso, y baja la ansiedad de
+ * "¿me habrán hecho caso?" mientras espera la llamada.
+ */
+export function webExpressAutoresponder(input: {
+  name?: string | null;
+  timeSlot?: string | null;
+}): BrandedEmailInput {
+  return {
+    subject: "Hemos recibido tu solicitud",
+    eyebrow: "Tu web",
+    heading: "Gracias por tu interés",
+    name: input.name,
+    intro: input.timeSlot
+      ? `gracias por contar con nosotros. Te contactaremos **en menos de 24 horas** laborables, en la franja que nos has indicado (**${input.timeSlot}**).`
+      : "gracias por contar con nosotros. Te contactaremos **en menos de 24 horas** laborables.",
+    preheader: "Te contactamos en menos de 24 horas laborables.",
+    bulletsLabel: "Qué pasa ahora",
+    bullets: [
+      "Hablamos 15 minutos para entender cómo trabajas y resolver tus dudas.",
+      "Te enviamos un cuestionario guiado para recoger textos, fotos y estilo.",
+      "Desde que tenemos todo el material, tu web está lista en 5 días laborables.",
+    ],
+    cta: WHATSAPP_CTA,
+  };
+}

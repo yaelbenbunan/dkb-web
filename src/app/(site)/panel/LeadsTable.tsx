@@ -20,6 +20,7 @@ import {
 } from "./actions";
 import { LEAD_STATUSES, STATUS_COLORS, statusLabel } from "@/lib/lead-status";
 import { emailStatusLabel, EMAIL_STATUS_COLORS } from "@/lib/email-status";
+import { isLeadEmailable } from "@/lib/lead-emailable";
 import { ACCOUNT_MANAGERS, AM_COLORS } from "@/lib/account-managers";
 
 export interface LeadRowView {
@@ -97,20 +98,34 @@ const webLabel = (raw: string) =>
 export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<string>("todos");
+  const [channelFilter, setChannelFilter] = useState<string>("todos");
+  const [emailableOnly, setEmailableOnly] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [adding, setAdding] = useState(false);
   const [busy, start] = useTransition();
 
-  // Pool for the current view (active vs archived), then status filter on top.
+  // Pool for the current view (active vs archived); los filtros se acumulan
+  // sobre él, así que se pueden combinar (p. ej. enviables de Meta).
   const pool = leads.filter((l) => (showArchived ? l.archived : !l.archived));
-  const visible =
-    statusFilter === "todos"
-      ? pool
-      : pool.filter((l) => l.status === statusFilter);
+  const visible = pool.filter(
+    (l) =>
+      (statusFilter === "todos" || l.status === statusFilter) &&
+      (channelFilter === "todos" || (l.channel ?? "Sin canal") === channelFilter) &&
+      (!emailableOnly || isLeadEmailable(l)),
+  );
 
   const archivedCount = leads.filter((l) => l.archived).length;
   const statusCounts = (s: string) =>
     pool.filter((l) => l.status === s).length;
+  const emailableCount = pool.filter(isLeadEmailable).length;
+
+  // Los canales salen de los datos, no de una lista fija: cualquier UTM nueva
+  // (Bing, LinkedIn…) aparece sola sin tocar código.
+  const channels = Array.from(
+    new Set(pool.map((l) => l.channel?.trim() || "Sin canal")),
+  ).sort((a, b) => a.localeCompare(b, "es"));
+  const channelCount = (c: string) =>
+    pool.filter((l) => (l.channel?.trim() || "Sin canal") === c).length;
 
   const clearSel = () => setSelected(new Set());
   const allSelected = visible.length > 0 && visible.every((l) => selected.has(l.id));
@@ -207,6 +222,68 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
         >
           {showArchived ? "← Volver a activos" : `🗄 Archivados (${archivedCount})`}
         </button>
+      </div>
+
+      {/* Segunda fila: enviables + canal. Van aparte del estado porque son
+          criterios ortogonales y se combinan entre sí. */}
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          gap: 8,
+          marginBottom: 14,
+          paddingBottom: 14,
+          borderBottom: "1px solid #e2e8f0",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => {
+            setEmailableOnly((v) => !v);
+            clearSel();
+          }}
+          title="Con consentimiento, con email y sin rebotes ni quejas"
+          style={{
+            border: `1px solid ${emailableOnly ? "#16a34a" : "#cbd5e1"}`,
+            background: emailableOnly ? "#16a34a" : "#fff",
+            color: emailableOnly ? "#fff" : "#475569",
+            borderRadius: 999,
+            padding: "6px 14px",
+            fontSize: 13,
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          ✉ Se les puede escribir ({emailableCount})
+        </button>
+
+        <span style={{ marginLeft: 6, fontSize: 12, fontWeight: 700, color: "#64748b" }}>
+          Canal
+        </span>
+        <FilterChip
+          label="Todos"
+          count={pool.length}
+          active={channelFilter === "todos"}
+          color="#334155"
+          onClick={() => {
+            setChannelFilter("todos");
+            clearSel();
+          }}
+        />
+        {channels.map((c) => (
+          <FilterChip
+            key={c}
+            label={c}
+            count={channelCount(c)}
+            active={channelFilter === c}
+            color={CHANNEL_COLORS[c] ?? "#334155"}
+            onClick={() => {
+              setChannelFilter(c);
+              clearSel();
+            }}
+          />
+        ))}
       </div>
 
       {/* Barra de acciones en lote */}

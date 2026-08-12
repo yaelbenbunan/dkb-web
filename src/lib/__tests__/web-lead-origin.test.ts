@@ -8,6 +8,7 @@ import {
   kitDigitalLead,
   marketingLandingLead,
   promoVeranoLead,
+  webExpressLead,
 } from "../web-lead-origin";
 
 describe("attribution (UTMs → canal/campaña)", () => {
@@ -242,5 +243,47 @@ describe("promoVeranoLead", () => {
     );
     expect(row.channel).toBe("google ads");
     expect(row.campaign).toBe("promo-verano-2026");
+  });
+});
+
+describe("webExpressLead", () => {
+  const base = {
+    name: "Ana", email: "ana@example.com", phone: "600111222",
+    contactMethod: "WhatsApp", timeSlot: "Mañanas (9:00 – 14:00)",
+    decisionMaker: "Sí, decido yo", urgency: "Lo antes posible (1-2 semanas)",
+    goals: ["Captar más pacientes"],
+    origin: "Landing Web para psicólogos", campaign: "web-psicologos",
+  };
+
+  test("entra como Meta por defecto, que es de donde viene la campaña", () => {
+    const row = webExpressLead(base);
+    expect(row.channel).toBe("Meta");
+    expect(row.campaign).toBe("web-psicologos");
+  });
+
+  test("si la visita trae UTMs, mandan ellas sobre el valor por defecto", () => {
+    const row = webExpressLead(base, { utmSource: "google", utmCampaign: "search-psico" });
+    expect(row.channel).toBe("google ads");
+    expect(row.campaign).toBe("search-psico");
+  });
+
+  test("los datos de cualificación quedan en las notas, que es lo que se lee al llamar", () => {
+    const row = webExpressLead({ ...base, stage: "Estoy empezando", currentWebsite: "https://x.com" });
+    expect(row.notes).toContain("Contactar por: WhatsApp");
+    expect(row.notes).toContain("Mañanas");
+    expect(row.notes).toContain("Sí, decido yo");
+    expect(row.notes).toContain("Lo antes posible");
+    expect(row.notes).toContain("Captar más pacientes");
+    expect(row.notes).toContain("Estoy empezando");
+    expect(row.notes).toContain("https://x.com");
+  });
+
+  test("sin web actual lo dice explícitamente, para no confundirlo con un dato que falta", () => {
+    expect(webExpressLead(base).notes).toContain("Sin web actual");
+  });
+
+  test("propaga el consentimiento", () => {
+    expect(webExpressLead({ ...base, consent: true }).consent).toBe(true);
+    expect(webExpressLead(base).consent).toBeNull();
   });
 });

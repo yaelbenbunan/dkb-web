@@ -250,3 +250,51 @@ export function promoVeranoLead(
     notes: `Origen: popup Promo Verano -50% · Consentimiento comunicaciones comerciales: ${d.consentAt}`,
   };
 }
+
+/**
+ * Landing de web cerrada por nicho (psicólogos y las que vengan). Los campos de
+ * cualificación se guardan en las notas porque no hay columna para ellos y son
+ * lo primero que mira quien coge el teléfono: si decide o no, para cuándo la
+ * quiere y si hay web que rehacer.
+ */
+export function webExpressLead(
+  d: {
+    name: string;
+    email: string;
+    phone: string;
+    contactMethod: string;
+    timeSlot: string;
+    decisionMaker: string;
+    urgency: string;
+    goals: string[];
+    stage?: string | null;
+    currentWebsite?: string | null;
+    origin: string;
+    campaign: string;
+    consent?: boolean;
+  },
+  utm?: UtmInput,
+): WebhookLeadInput {
+  // Por defecto Meta: estas landings nacen para la campaña de Meta Lead Ads.
+  // Si la visita trae UTMs, mandan ellas.
+  const { channel, campaign } = attribution(utm, { channel: "Meta", campaign: d.campaign });
+  return {
+    name: d.name,
+    email: d.email,
+    phone: d.phone,
+    channel,
+    campaign,
+    consent: d.consent ?? null,
+    notes: [
+      `Origen: ${d.origin}`,
+      `Contactar por: ${d.contactMethod} · ${d.timeSlot}`,
+      `Decisión: ${d.decisionMaker}`,
+      `Plazo: ${d.urgency}`,
+      `Objetivo: ${d.goals.join(", ") || "—"}`,
+      d.stage ? `Situación: ${d.stage}` : null,
+      d.currentWebsite ? `Web actual: ${d.currentWebsite}` : "Sin web actual",
+    ]
+      .filter(Boolean)
+      .join(" · "),
+  };
+}
