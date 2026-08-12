@@ -14,6 +14,13 @@
 export const WEB_EXPRESS_PRICE = "459€";
 export const WEB_EXPRESS_DAYS = 5;
 
+/** Tarifa de los cambios que exceden la ronda incluida. */
+export const WEB_EXPRESS_REVISION_RATE = "50€/hora";
+/** Margen para que el cliente entregue el material antes de pausar el proyecto. */
+export const WEB_EXPRESS_MATERIAL_DAYS = 30;
+/** Condiciones del servicio, enlazadas desde las tres landings. */
+export const WEB_EXPRESS_TERMS_PATH = "/condiciones-web-express";
+
 /** Opciones compartidas del formulario: iguales en todos los nichos. */
 export const CONTACT_METHODS = ["WhatsApp", "Llamada telefónica", "Email"] as const;
 

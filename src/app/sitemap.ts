@@ -24,6 +24,7 @@ const STATIC_ROUTES: StaticRoute[] = [
   { path: "/web-para-psicologos", priority: 0.9, changeFrequency: "weekly" },
   { path: "/web-para-fisioterapeutas", priority: 0.9, changeFrequency: "weekly" },
   { path: "/web-para-clinicas-esteticas", priority: 0.9, changeFrequency: "weekly" },
+  { path: "/condiciones-web-express", priority: 0.3, changeFrequency: "yearly" },
   { path: "/casos-de-exito", priority: 0.9, changeFrequency: "weekly" },
   { path: "/blog", priority: 0.9, changeFrequency: "weekly" },
   { path: "/nosotros", priority: 0.8, changeFrequency: "monthly" },

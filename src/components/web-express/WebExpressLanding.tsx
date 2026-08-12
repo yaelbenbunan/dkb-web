@@ -3,6 +3,7 @@ import { WebExpressForm } from "./WebExpressForm";
 import {
   WEB_EXPRESS_PRICE,
   WEB_EXPRESS_DAYS,
+  WEB_EXPRESS_TERMS_PATH,
   type WebExpressLanding as Landing,
 } from "@/lib/web-express-landings";
 
@@ -295,6 +296,17 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
               </ul>
             </div>
           </div>
+          <p className="mt-8 text-center text-[15px] text-slate-400">
+            El alcance, los plazos y la forma de pago están detallados en las{" "}
+            <a
+              href={WEB_EXPRESS_TERMS_PATH}
+              className="font-semibold underline underline-offset-4"
+              style={{ color: ACCENT_ON_DARK }}
+            >
+              condiciones del servicio
+            </a>
+            .
+          </p>
         </Container>
         <Cut to={CREAM} shape="crest" height={90} />
       </section>
