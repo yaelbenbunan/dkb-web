@@ -300,6 +300,8 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
             El alcance, los plazos y la forma de pago están detallados en las{" "}
             <a
               href={WEB_EXPRESS_TERMS_PATH}
+              target="_blank"
+              rel="noopener noreferrer"
               className="font-semibold underline underline-offset-4"
               style={{ color: ACCENT_ON_DARK }}
             >

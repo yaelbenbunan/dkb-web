@@ -333,7 +333,12 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
       )}
       <p className="mt-3 text-center text-[13px]" style={{ color: MUTED }}>
         Sin compromiso. Te contactamos solo por donde nos digas. Consulta las{" "}
-        <a href={WEB_EXPRESS_TERMS_PATH} className="underline underline-offset-2">
+        <a
+          href={WEB_EXPRESS_TERMS_PATH}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2"
+        >
           condiciones del servicio
         </a>
         .
