@@ -7,6 +7,8 @@ import { webExpressLead, utmFromFormData } from "./web-lead-origin";
 import { consentFromFormData } from "./consent";
 import { sendLeadAutoresponder } from "./lead-autoresponder";
 import { webExpressAutoresponder } from "./lead-emails";
+import { sendMetaLead } from "./meta-capi";
+import { headers, cookies } from "next/headers";
 import {
   CONTACT_METHODS,
   TIME_SLOTS,
@@ -133,6 +135,25 @@ export async function requestWebExpress(formData: FormData): Promise<WebExpressR
     to: d.email,
     mail: webExpressAutoresponder({ name: d.name, timeSlot: d.timeSlot }),
   });
+
+  // Conversión a Meta por servidor. Va con el mismo eventId que mandó el píxel
+  // del navegador, así que si llegan los dos, Meta cuenta uno. Y si el píxel no
+  // llegó —bloqueador, iOS, cookies rechazadas— este sí.
+  const eventId = String(formData.get("eventId") ?? "");
+  if (eventId) {
+    const h = await headers();
+    const c = await cookies();
+    await sendMetaLead({
+      eventId,
+      email: d.email,
+      phone: d.phone,
+      sourceUrl: String(formData.get("sourceUrl") ?? "") || null,
+      userAgent: h.get("user-agent"),
+      clientIp: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+      fbp: c.get("_fbp")?.value ?? null,
+      fbc: c.get("_fbc")?.value ?? null,
+    });
+  }
 
   return { ok: true };
 }

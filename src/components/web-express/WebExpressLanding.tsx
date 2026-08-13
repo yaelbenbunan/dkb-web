@@ -163,7 +163,7 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
             >
               Quiero mi web por {WEB_EXPRESS_PRICE} →
             </a>
-            <p className="text-[15px] text-slate-400">Sin compromiso · Te contactamos en 24 h</p>
+            <p className="text-base text-slate-300">Sin compromiso · Te contactamos en 24 h</p>
           </div>
         </Container>
         <Cut to={CREAM} shape="valley" height={100} />
@@ -207,7 +207,7 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
                   {p.problem}
                 </p>
                 <div
-                  className="mt-5 flex gap-3 border-t pt-5 text-[15px] leading-relaxed"
+                  className="mt-5 flex gap-3 border-t pt-5 text-base leading-relaxed"
                   style={{ borderColor: "rgba(11,16,32,.08)", color: "#3D4356" }}
                 >
                   <span
@@ -258,7 +258,7 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
                   {i + 1}
                 </span>
                 <p className="mt-5 text-lg font-bold text-white">{s.title}</p>
-                <p className="mt-2 text-[15px] leading-relaxed text-slate-400">{s.description}</p>
+                <p className="mt-2 text-base leading-relaxed text-slate-300">{s.description}</p>
               </li>
             ))}
           </ol>
@@ -275,7 +275,7 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
               </h2>
               <ul className="mt-6 flex flex-col gap-4">
                 {landing.includes.map((i) => (
-                  <li key={i} className="flex gap-3 text-[15px] leading-relaxed text-slate-200">
+                  <li key={i} className="flex gap-3 text-base leading-relaxed text-slate-200">
                     <span className="mt-0.5 shrink-0 font-black" style={{ color: ACCENT_ON_DARK }}>✓</span>
                     {i}
                   </li>
@@ -288,7 +288,7 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
               <h2 className="text-xl font-black text-white">{landing.excludesTitle}</h2>
               <ul className="mt-6 flex flex-col gap-4">
                 {landing.excludes.map((e) => (
-                  <li key={e} className="flex gap-3 text-[15px] leading-relaxed text-slate-400">
+                  <li key={e} className="flex gap-3 text-base leading-relaxed text-slate-300">
                     <span className="mt-0.5 shrink-0 font-black text-slate-500">—</span>
                     {e}
                   </li>
@@ -296,7 +296,7 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
               </ul>
             </div>
           </div>
-          <p className="mt-8 text-center text-[15px] text-slate-400">
+          <p className="mt-8 text-center text-base text-slate-400">
             El alcance, los plazos y la forma de pago están detallados en las{" "}
             <a
               href={WEB_EXPRESS_TERMS_PATH}
@@ -338,7 +338,7 @@ export function WebExpressLandingPage({ landing }: { landing: Landing }) {
                   </span>
                   {f.q}
                 </summary>
-                <p className="mt-3 pl-8 text-[15px] leading-relaxed" style={{ color: "#3D4356" }}>
+                <p className="mt-3 pl-8 text-base leading-relaxed" style={{ color: "#3D4356" }}>
                   {f.a}
                 </p>
               </details>

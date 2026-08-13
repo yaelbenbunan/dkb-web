@@ -5,6 +5,7 @@ import { appendUtms } from "@/lib/utm";
 import { track, pushUserData } from "@/lib/gtm";
 import { requestWebExpress } from "@/lib/web-express-action";
 import { CONTACT_INFO } from "@/lib/contact-info";
+import { newEventId, trackMetaLead } from "@/lib/meta-pixel";
 import {
   CONTACT_METHODS,
   TIME_SLOTS,
@@ -30,7 +31,7 @@ const MUTED = "#5A6178";
 const inputClass =
   "mt-1.5 block w-full rounded-xl border px-4 py-3 text-[15px] outline-none transition-colors focus:border-[#187bef]";
 const inputStyle = { borderColor: "rgba(11,16,32,.16)", color: INK, background: "#fff" } as const;
-const legendClass = "text-[13px] font-bold uppercase tracking-[0.08em]";
+const legendClass = "text-[14px] font-bold uppercase tracking-[0.06em]";
 const legendStyle = { color: MUTED } as const;
 
 /**
@@ -137,6 +138,11 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
         fd.set("formLoadedAt", String(loadedAt.current));
         fd.set("origin", landing.origin);
         fd.set("campaign", landing.campaign);
+        // Mismo id para el píxel y para la API de Conversiones: es lo que hace
+        // que Meta reconozca ambos como el mismo evento y no cuente doble.
+        const eventId = newEventId();
+        fd.set("eventId", eventId);
+        fd.set("sourceUrl", window.location.href);
         appendUtms(fd);
         setError(null);
         startTransition(async () => {
@@ -150,6 +156,7 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
             phone: String(fd.get("phone") ?? ""),
           });
           track("generate_lead", { form_location: landing.key });
+          trackMetaLead(eventId);
           setDone({ method: String(fd.get("contactMethod") ?? "WhatsApp") });
         });
       }}
@@ -231,7 +238,7 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
             <legend className={legendClass} style={legendStyle}>
               ¿En qué franja horaria? *
             </legend>
-            <p className="mt-1.5 text-[13px]" style={{ color: MUTED }}>
+            <p className="mt-1.5 text-[14px]" style={{ color: MUTED }}>
               Mañanas 9-14h · Mediodía 14-16h · Tardes desde las 16h
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -302,7 +309,7 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
       </div>
 
       <label
-        className="mt-8 flex items-start gap-2.5 text-[13px] leading-relaxed"
+        className="mt-8 flex items-start gap-2.5 text-[14px] leading-relaxed"
         style={{ color: MUTED }}
       >
         <input
@@ -331,7 +338,7 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
           {error}
         </p>
       )}
-      <p className="mt-3 text-center text-[13px]" style={{ color: MUTED }}>
+      <p className="mt-3 text-center text-[14px]" style={{ color: MUTED }}>
         Sin compromiso. Te contactamos solo por donde nos digas. Consulta las{" "}
         <a
           href={WEB_EXPRESS_TERMS_PATH}
