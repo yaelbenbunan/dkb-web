@@ -3,6 +3,7 @@ import dynamic from "next/dynamic";
 import { Hero } from "@/components/home/Hero";
 import { PartnersMarquee } from "@/components/home/PartnersMarquee";
 import { AboutFeatures } from "@/components/home/AboutFeatures";
+import { KitDigitalSection } from "@/components/home/KitDigitalSection";
 import { ServicesCarousel } from "@/components/home/ServicesCarousel";
 import { Reveal } from "@/components/ui/Reveal";
 import { getAllServices } from "@/lib/content";
@@ -42,6 +43,9 @@ export default function Home() {
           heading="Alianzas estratégicas"
           subheading="Trabajamos con quienes hacen posible el ecosistema digital"
         />
+      </Reveal>
+      <Reveal>
+        <KitDigitalSection />
       </Reveal>
       <Reveal>
         <AboutFeatures />

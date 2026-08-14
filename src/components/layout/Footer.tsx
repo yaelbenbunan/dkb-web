@@ -71,13 +71,14 @@ export function Footer() {
                 </Link>
               </li>
             ))}
-            {/* Solo en el footer (no en el menú principal) */}
+            {/* Solo en el footer: el menú principal ya lleva la convocatoria
+                2026, y aquí sumamos el catálogo del puesto de trabajo. */}
             <li>
               <Link
                 href="/puesto-seguro"
                 className="text-base text-fg transition-colors hover:text-accent"
               >
-                Kit Digital
+                Puesto de trabajo seguro
               </Link>
             </li>
           </ul>
