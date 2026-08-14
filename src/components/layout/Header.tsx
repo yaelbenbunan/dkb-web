@@ -12,9 +12,12 @@ export function Header() {
       className="sticky top-0 z-40 border-b border-border/60 backdrop-blur-xl"
       style={{ backgroundColor: "var(--header-bg)" }}
     >
-      <Container className="flex h-20 items-center justify-between gap-8">
+      {/* El header usa un contenedor más ancho que el del contenido: con 7
+          entradas de menú, el max-w-6xl por defecto se quedaba corto y la fila
+          desbordaba por la derecha, cortando el CTA de llamada. */}
+      <Container className="flex h-20 max-w-[90rem] items-center justify-between gap-6">
         {/* Izquierda: logo + menu */}
-        <div className="flex items-center gap-12">
+        <div className="flex items-center gap-8 xl:gap-10">
           <Link href="/" className="flex items-center" aria-label="dinkbit — inicio">
             <Image
               src="/img/logo/dinkbit.svg"
@@ -25,7 +28,7 @@ export function Header() {
               className="h-9 w-[120px] shrink-0"
             />
           </Link>
-          <nav className="hidden items-center gap-8 lg:flex lg:gap-10">
+          <nav className="hidden items-center gap-6 xl:flex 2xl:gap-8">
             {NAV_ITEMS.map((item) => (
               <NavLink key={item.href} href={item.href}>
                 {item.label}
@@ -34,8 +37,9 @@ export function Header() {
           </nav>
         </div>
 
-        {/* Derecha: iconos RRSS + CTA llamada (desktop) */}
-        <div className="hidden items-center gap-3 lg:flex">
+        {/* Derecha: iconos RRSS + CTA llamada (desktop). shrink-0 para que el
+            CTA no se comprima nunca. */}
+        <div className="hidden shrink-0 items-center gap-3 xl:flex">
           <SocialIcon
             href={CONTACT_INFO.socials.instagram}
             label="Instagram"
@@ -68,7 +72,7 @@ export function Header() {
           <a
             href={`tel:${CONTACT_INFO.phoneE164}`}
             aria-label={`Llamar a ${CONTACT_INFO.phone}`}
-            className="ml-1 inline-flex h-10 items-center gap-2 rounded-full bg-accent px-4 text-sm font-semibold text-white shadow-[0_6px_18px_-6px_rgba(24,123,239,0.6)] transition-all hover:-translate-y-0.5 hover:bg-accent-hover"
+            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-accent px-4 text-sm font-semibold text-white shadow-[0_6px_18px_-6px_rgba(24,123,239,0.6)] transition-all hover:-translate-y-0.5 hover:bg-accent-hover"
           >
             <PhoneIcon />
             <span>¡Llámanos!</span>
@@ -76,7 +80,7 @@ export function Header() {
         </div>
 
         {/* Llamada (mobile) — siempre visible junto al hamburguesa */}
-        <div className="flex items-center gap-2 lg:hidden">
+        <div className="flex items-center gap-2 xl:hidden">
           <a
             href={`tel:${CONTACT_INFO.phoneE164}`}
             aria-label={`Llamar a ${CONTACT_INFO.phone}`}
@@ -120,7 +124,7 @@ function SocialIcon({
       target="_blank"
       rel="noopener noreferrer"
       aria-label={label}
-      className="flex h-10 w-10 items-center justify-center rounded-full text-fg-muted transition-all hover:bg-accent/15 hover:text-accent-hover"
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-fg-muted transition-all hover:bg-accent/15 hover:text-accent-hover"
     >
       {icon}
     </a>

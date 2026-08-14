@@ -16,7 +16,7 @@ export function MobileMenu() {
   }, [open]);
 
   return (
-    <div className="lg:hidden">
+    <div className="xl:hidden">
       <button
         aria-label={open ? "Cerrar menú" : "Abrir menú"}
         aria-expanded={open}
