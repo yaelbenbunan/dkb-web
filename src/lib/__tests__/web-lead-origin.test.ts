@@ -3,6 +3,7 @@ import {
   attribution,
   callRequestLead,
   contactLead,
+  growthLead,
   homeHeroLead,
   kitDigital2026Lead,
   kitDigitalLead,
@@ -285,5 +286,63 @@ describe("webExpressLead", () => {
   test("propaga el consentimiento", () => {
     expect(webExpressLead({ ...base, consent: true }).consent).toBe(true);
     expect(webExpressLead(base).consent).toBeNull();
+  });
+});
+
+describe("growthLead", () => {
+  const base = {
+    name: "Ana Ruiz",
+    email: "ana@clinica.com",
+    phone: "600111222",
+    inversion: 1500,
+    pacientes: 17,
+    ticket: 400,
+    costePorPaciente: 88.24,
+    rama: "A" as const,
+  };
+
+  test("sin UTMs: canal Web y campaña fija", () => {
+    const lead = growthLead(base);
+    expect(lead.channel).toBe("Web");
+    expect(lead.campaign).toBe("Growth clínicas");
+  });
+
+  test("con UTMs de Google: el canal se sobrescribe, la campaña no", () => {
+    const lead = growthLead(base, { utmSource: "google", utmCampaign: "clinicas-search" });
+    expect(lead.channel).toBe("google ads");
+    // La campaña se mantiene fija para poder filtrar todos sus leads juntos.
+    expect(lead.campaign).toBe("Growth clínicas");
+  });
+
+  test("entra como lead comercial normal, no con estado propio", () => {
+    expect(growthLead(base).status).toBe("nuevo");
+  });
+
+  test("registra el consentimiento", () => {
+    expect(growthLead(base).consent).toBe(true);
+  });
+
+  test("las notas llevan las respuestas de la calculadora", () => {
+    const notes = growthLead(base).notes ?? "";
+    expect(notes).toContain("/growth");
+    expect(notes).toContain("1500");
+    expect(notes).toContain("17");
+    expect(notes).toContain("400");
+    expect(notes).toContain("88.24");
+    expect(notes).toContain("Rama: A");
+  });
+
+  test("rama B: las notas dicen que no lo sabe, no dejan el hueco vacío", () => {
+    const notes =
+      growthLead({ ...base, pacientes: null, costePorPaciente: null, rama: "B" }).notes ?? "";
+    expect(notes).toContain("no lo sabe");
+    expect(notes).toContain("Rama: B");
+  });
+
+  test("rama C: las notas dicen que no invierte todavía", () => {
+    const notes =
+      growthLead({ ...base, inversion: null, costePorPaciente: null, rama: "C" }).notes ?? "";
+    expect(notes).toContain("no invierte todavía");
+    expect(notes).toContain("Rama: C");
   });
 });

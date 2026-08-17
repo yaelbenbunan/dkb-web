@@ -1,3 +1,4 @@
+import type { Rama } from "./growth-calc";
 import type { WebhookLeadInput } from "./imagina-leads";
 
 /**
@@ -296,5 +297,51 @@ export function webExpressLead(
     ]
       .filter(Boolean)
       .join(" · "),
+  };
+}
+
+/** Campaña fija de la landing /growth, para filtrar todos sus leads juntos en
+ *  el panel. Mismo criterio que "Kit Digital 2026". */
+const GROWTH_CAMPAIGN = "Growth clínicas";
+
+export function growthLead(
+  d: {
+    name: string;
+    email: string;
+    phone: string;
+    /** null = "no invierto todavía". */
+    inversion: number | null;
+    /** null = "no lo sé". */
+    pacientes: number | null;
+    /** null = no lo quiso decir. */
+    ticket: number | null;
+    costePorPaciente: number | null;
+    rama: Rama;
+  },
+  utm?: UtmInput,
+): WebhookLeadInput {
+  const { channel } = attribution(utm, { channel: "Web", campaign: GROWTH_CAMPAIGN });
+  return {
+    name: d.name,
+    email: d.email,
+    phone: d.phone,
+    channel,
+    campaign: GROWTH_CAMPAIGN,
+    // Lead comercial normal: recorre el pipeline existente (contactado →
+    // propuesta → ganado). No necesita estado propio como sí lo necesitaba el
+    // Kit Digital, que etiquetaba un tipo de interés y no una venta en curso.
+    status: "nuevo",
+    consent: true,
+    // Las respuestas de la calculadora van a notas porque son el guion de la
+    // llamada: quien contesta "no lo sé" necesita otra conversación que quien
+    // contesta "88 €".
+    notes: [
+      "Origen: landing /growth (calculadora de coste por paciente)",
+      `Inversión: ${d.inversion === null ? "no invierte todavía" : `${d.inversion} €/mes`}`,
+      `Pacientes/mes: ${d.pacientes === null ? "no lo sabe" : d.pacientes}`,
+      `Ticket medio: ${d.ticket === null ? "no lo dijo" : `${d.ticket} €`}`,
+      `Coste por paciente: ${d.costePorPaciente === null ? "no calculable" : `${d.costePorPaciente} €`}`,
+      `Rama: ${d.rama}`,
+    ].join(" · "),
   };
 }
