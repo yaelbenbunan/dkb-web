@@ -329,15 +329,36 @@ El caso claro es el tráfico de marca: alguien busca el nombre de la clínica en
 clic en el anuncio y lo contamos como paciente de campaña, cuando habría llegado igual
 escribiendo la dirección. Le hemos cobrado un clic por un paciente que ya era suyo.
 
-Cómo se responde:
+**Sí pujamos por su marca.** Hay tres razones buenas y ninguna es discutible:
 
-1. **No pujar por su propia marca**, salvo que haya un competidor pisándosela. Es el tráfico
-   más canibalizado que existe.
-2. Si se puja, **separar marca de no-marca en el informe**, para que ese tráfico esté a la
-   vista y no diluido dentro del ROAS global.
-3. Ante un "demuéstramelo", la única prueba real es un **test de apagado**: pausar un canal
-   durante un periodo y ver qué pasa con el total de citas. Requiere volumen, así que no
-   sirve el primer mes, pero conviene tenerlo nombrado de antemano en lugar de improvisarlo.
+- **Agregadores.** Doctoralia o Top Doctors suelen posicionar por el nombre de la clínica
+  por encima de la propia clínica y se quedan el clic. Ahí pujar no canibaliza: defiende
+  ingresos reales.
+- **Competidores** que pujen por su nombre.
+- **Coste bajo y conversión alta.** El CPC de la marca propia es baratísimo, y una clínica
+  con presupuesto pequeño necesita ver resultados el primer mes o se va en el segundo.
+
+Si lo conseguimos nosotros, cuenta. Pero **va separado en el dashboard: marca y no-marca**.
+No para restarle mérito, sino por dos motivos prácticos:
+
+1. **Matemática de retención.** El tráfico de marca es el más fácil de capturar y se agota:
+   hay tantas búsquedas del nombre de la clínica al mes y no más. El mes 1 sale
+   espectacular, el mes 4 sale normal, y el dueño concluye "las campañas han dejado de
+   funcionar" cuando lo que pasó es que el mes 1 venía prestado de su propio orgánico. Sin
+   la separación no se puede explicar esa curva, y se pierde un cliente que iba bien.
+2. **Nos lo van a decir.** Cualquier agencia que quiera la cuenta abrirá su Google Ads y
+   dirá "te están cobrando por tus propios pacientes". Si ya está en nuestro dashboard con
+   su nombre, es transparencia a nuestro favor. Si sale por primera vez en boca de un
+   competidor, es un problema.
+
+Y ante un "demuéstramelo", la única prueba real es un **test de apagado**: pausar un canal
+un periodo y ver qué pasa con el total de citas. Requiere volumen, así que no sirve el primer
+mes, pero conviene tenerlo nombrado de antemano en lugar de improvisarlo.
+
+Contexto para calibrar: eBay apagó su publicidad de marca en un experimento a gran escala y
+no midió pérdida apreciable de ventas — el resultado orgánico absorbía el clic. Una clínica no
+es eBay, pero por su nombre exacto también posiciona primera. La incrementalidad de la marca
+es baja, no nula.
 
 ### 5.5 Un solo Supabase nuevo, con `tenant_id` y RLS
 
@@ -494,7 +515,8 @@ son obligatorios desde el primer día, no recomendables. Diseñamos asumiendo qu
 | Las primeras clínicas no son rentables | Quema de caja | Asumido y presupuestado; medir el coste real por clínica desde la primera (§3) |
 | El precio ancla la percepción en "agencia barata" | Mata el posicionamiento | El precio nunca abre el mensaje; abre el problema (§11) |
 | Sin volumen de datos, los insights son ruido | El producto no enseña nada útil | Ser honestos con los umbrales; no mostrar conclusiones sin muestra suficiente |
-| "¿Ese paciente no habría venido igual?" — incrementalidad | Cuestiona el ROAS entero, y es una pregunta legítima | No pujar por su marca; separar marca de no-marca en el informe; test de apagado cuando haya volumen (§5.4) |
+| "¿Ese paciente no habría venido igual?" — incrementalidad | Cuestiona el ROAS entero, y es una pregunta legítima | Marca y no-marca separados en el dashboard; test de apagado cuando haya volumen (§5.4) |
+| El mes 1 sale espectacular por el tráfico de marca y luego se normaliza | El dueño cree que las campañas dejaron de funcionar y se va | La separación marca/no-marca permite explicar la curva en lugar de justificarse (§5.4) |
 
 ---
 
