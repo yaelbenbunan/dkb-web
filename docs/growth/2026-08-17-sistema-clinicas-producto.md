@@ -145,12 +145,31 @@ fecha. Ese gesto es el que elimina el doble proceso.
 
 ### 5.2 La agenda lee todo y escribe solo lo nuestro
 
+**No tenemos agenda propia.** El calendario de la clínica es la única verdad de
+disponibilidad, y nuestra pantalla es una *vista* sobre él más el contexto que Google no
+sabe guardar: qué lead es, de qué campaña vino, si acudió y cuánto generó.
+
 - **Lee** el Google Calendar u Outlook de la clínica y pinta **todas** sus citas, en modo
   solo lectura, para que se vean los huecos reales.
-- **Escribe** únicamente las citas que nacen de un lead de campaña.
+- **Escribe** las citas que nacen de un lead de campaña **dentro de su propio calendario**,
+  no en una agenda paralela nuestra.
 
-Cada lado es dueño de eventos distintos, así que **no hay conflictos que resolver** — y la
-resolución de conflictos es el 90% de la dificultad de una sincronización bidireccional.
+Ese segundo punto es el que evita el fallo grave: si la cita de campaña viviera solo en
+nuestra base de datos, la secretaria vería ese hueco libre en su agenda de siempre y
+agendaría encima a un paciente orgánico. Escribiendo en su calendario, dos segundos después
+de agendar el hueco ya está ocupado en las dos vistas.
+
+Cada lado es dueño de eventos distintos, así que **no hay conflictos de propiedad que
+resolver** — y eso es el 90% de la dificultad de una sincronización bidireccional.
+
+**Cómo se escribe, en concreto:** creamos un calendario propio dentro de su cuenta, del
+tipo *"Pacientes de campaña · dinkbit"*. Así solo necesitamos **lectura** de su calendario
+principal y **escritura** del nuestro, en lugar de pedir permiso para gestionar la agenda de
+la que vive la clínica — un consentimiento de OAuth que asusta con razón. En su Google
+Calendar los dos calendarios se superponen en la misma vista semanal con colores distintos,
+así que ella ve el hueco ocupado igual. Y el día que se van, borran ese calendario y
+desaparece nuestra huella, sin que hayamos tenido nunca permiso de escritura sobre sus
+citas.
 
 Esto resuelve la trampa que hunde el producto si se hace de otra forma:
 
@@ -161,11 +180,30 @@ Esto resuelve la trampa que hunde el producto si se hace de otra forma:
   de todo el producto.
 
 Con "leer todo, escribir lo nuestro" la secretaria ve la agenda completa en una pantalla,
-con huecos reales, y agenda desde el CRM sin salir. Ni doble proceso ni migración. Si con
-el tiempo prefieren nuestra agenda, ya estamos dentro sin haberlo forzado.
+con huecos reales, y agenda desde el CRM sin salir. Ni doble proceso ni migración.
+
+**Y no la obliga a adoptar nuestra pantalla.** Las dos vistas están completas, así que puede
+seguir trabajando con la suya. Lo que pasará de forma natural es que use la nuestra para los
+leads de campaña, porque ahí tiene el teléfono, el anuncio de origen y el botón de
+asistencia. Pero es una preferencia, no un requisito — y ésa es exactamente la diferencia
+con "migra tu operativa a nuestro sistema".
 
 La cita que viene de campaña sale **destacada**, y es la única en la que se pide `asistió`
 e `importe`.
+
+#### Revalidación y conflictos
+
+Pintar la semana desde una caché es necesario para que la pantalla vaya rápida, pero abre
+una carrera: si hace dos minutos metieron un paciente orgánico a mano y nuestra caché aún no
+lo sabe, la secretaria puede agendar encima desde nuestro lado. Tres reglas lo cierran:
+
+1. **Al confirmar una cita se revalida la disponibilidad contra el calendario en vivo**,
+   nunca contra la caché. Si el hueco ya no está, se avisa antes de crear nada. La caché
+   pinta; la verdad se consulta en el momento de escribir.
+2. **Releemos también nuestros propios eventos.** Si mueven nuestra cita de hora o la borran
+   dentro de Google, hay que detectarlo y actualizar el registro.
+3. **En conflicto de horario gana el calendario externo.** Si no, nuestra hora queda
+   obsoleta y el dato de asistencia se corrompe justo en la métrica que sostiene el producto.
 
 ### 5.3 La facturación se captura en cascada
 
@@ -299,6 +337,9 @@ inversion           clinica_id, canal, campaña, fecha, gasto
 Notas de diseño:
 
 - `citas.lead_id` es nullable: las citas que leemos de su calendario externo no tienen lead.
+- `citas.calendario_externo_id` es el evento correspondiente en su Google u Outlook. Toda
+  cita de campaña tiene uno, porque se escribe allí y no en una agenda paralela (§5.2). Es
+  también la clave para detectar que la han movido o borrado desde fuera.
 - `citas.importe` nullable a propósito: si es nulo, el cálculo usa
   `clinicas.ticket_medio_defecto` y la cifra se marca como estimada.
 - `citas.asistencia` tiene **tres** valores explícitos, no un booleano. "Sin confirmar" no
@@ -539,7 +580,10 @@ Del negocio:
 4. **Si el dato de "paciente de clínica" es dato de salud** (§9). Diseñamos asumiendo que
    sí; hay que confirmarlo.
 5. **Qué proveedor de calendario primero**, Google u Outlook. Google es más sencillo y más
-   habitual en clínicas pequeñas.
+   habitual en clínicas pequeñas. Y a validar en la primera integración: que el calendario
+   propio dentro de su cuenta (§5.2) se superpone en su vista por defecto, sin que tengan que
+   activarlo a mano. Si no fuera así, el refinamiento de permisos pierde su ventaja y habría
+   que escribir en su calendario principal.
 6. **Cómo se cobra la suscripción.** Fuera de la versión 1, pero hay que decidir con qué se
    cobra desde la primera clínica.
 7. **Umbral de datos mínimo** para mostrar conclusiones en el dashboard sin que sean ruido.
