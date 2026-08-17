@@ -34,6 +34,11 @@ export interface CalcResult {
  * exactamente tres dígitos, es separador de miles; si no, es decimal. Eso
  * resuelve bien "1.500" (1500) y "1500.50" (1500,5). El caso "1.234" se
  * interpreta como 1234, que es lo correcto para importes en euros.
+ *
+ * Nota: No soporta el formato inglés con coma de miles (12,345.50) porque
+ * sería indistinguible del español (coma decimal). La audiencia son clínicas
+ * españolas escribiendo formato español, así que la ambigüedad produciría
+ * errores peores que la incompletitud.
  */
 export function parseImporte(raw: string): number | null {
   const limpio = (raw ?? "").replace(/[^\d.,-]/g, "");
@@ -101,8 +106,12 @@ export function calcular(input: CalcInput): CalcResult {
   };
 }
 
-/** Euros en español: 88.24 → "88,24 €". Vive aquí y no en cada consumidor
- *  porque lo usan tanto el email de seguimiento como el wizard. */
+/** Euros en español con separador de miles: 4000 → "4.000,00 €".
+ *  A mano y no con toLocaleString porque este repo no depende del ICU del
+ *  servidor (mismo motivo que el eur() de puesto-seguro). Vive aquí y no en
+ *  cada consumidor porque lo usan tanto el email de seguimiento como el wizard. */
 export function formatEur(n: number): string {
-  return `${n.toFixed(2).replace(".", ",")} €`;
+  const [entera, decimales] = n.toFixed(2).split(".");
+  const conMiles = entera.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `${conMiles},${decimales} €`;
 }

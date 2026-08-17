@@ -114,4 +114,10 @@ describe("formatEur", () => {
     expect(formatEur(100)).toBe("100,00 €");
     expect(formatEur(0)).toBe("0,00 €");
   });
+
+  test("pone separador de miles", () => {
+    expect(formatEur(4000)).toBe("4.000,00 €");
+    expect(formatEur(6800)).toBe("6.800,00 €");
+    expect(formatEur(1500000)).toBe("1.500.000,00 €");
+  });
 });
