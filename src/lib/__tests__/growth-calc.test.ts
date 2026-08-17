@@ -38,3 +38,80 @@ describe("parseImporte", () => {
     expect(parseImporte("-300")).toBeNull();
   });
 });
+
+import { calcular } from "../growth-calc";
+
+describe("calcular", () => {
+  test("rama A: sabe inversión y pacientes", () => {
+    const r = calcular({ inversion: 1500, pacientes: 17, ticket: null });
+    expect(r.rama).toBe("A");
+    expect(r.costePorPaciente).toBe(88.24);
+    expect(r.generado).toBeNull();
+    expect(r.retorno).toBeNull();
+    expect(r.sinPacientes).toBe(false);
+  });
+
+  test("rama A con ticket medio: generado y retorno", () => {
+    const r = calcular({ inversion: 1000, pacientes: 10, ticket: 400 });
+    expect(r.rama).toBe("A");
+    expect(r.costePorPaciente).toBe(100);
+    expect(r.generado).toBe(4000);
+    expect(r.retorno).toBe(4);
+  });
+
+  test("rama B: no sabe cuántos pacientes le llegan", () => {
+    const r = calcular({ inversion: 1500, pacientes: null, ticket: 400 });
+    expect(r.rama).toBe("B");
+    expect(r.costePorPaciente).toBeNull();
+    // Sin número de pacientes no se puede estimar lo generado.
+    expect(r.generado).toBeNull();
+    expect(r.retorno).toBeNull();
+    expect(r.sinPacientes).toBe(false);
+  });
+
+  test("rama B con cero pacientes: invierte y no llega nadie", () => {
+    const r = calcular({ inversion: 1500, pacientes: 0, ticket: null });
+    expect(r.rama).toBe("B");
+    expect(r.sinPacientes).toBe(true);
+    // Lo que nunca debe pasar: Infinity o NaN en pantalla.
+    expect(r.costePorPaciente).toBeNull();
+  });
+
+  test("rama C: no invierte todavía", () => {
+    const r = calcular({ inversion: null, pacientes: 5, ticket: 400 });
+    expect(r.rama).toBe("C");
+    expect(r.costePorPaciente).toBeNull();
+    // Esos pacientes existen y son orgánicos: se puede decir cuánto valen.
+    expect(r.generado).toBe(2000);
+    // Pero sin inversión no hay retorno que calcular.
+    expect(r.retorno).toBeNull();
+  });
+
+  test("inversión cero se trata igual que no invertir", () => {
+    expect(calcular({ inversion: 0, pacientes: 5, ticket: null }).rama).toBe("C");
+  });
+
+  test("números absurdos no rompen ni devuelven NaN", () => {
+    const r = calcular({ inversion: 9_999_999, pacientes: 5000, ticket: 1 });
+    expect(Number.isFinite(r.costePorPaciente as number)).toBe(true);
+    expect(Number.isFinite(r.generado as number)).toBe(true);
+  });
+
+  test("todo desconocido: rama C, sin cifras", () => {
+    const r = calcular({ inversion: null, pacientes: null, ticket: null });
+    expect(r.rama).toBe("C");
+    expect(r.costePorPaciente).toBeNull();
+    expect(r.generado).toBeNull();
+    expect(r.retorno).toBeNull();
+  });
+});
+
+import { formatEur } from "../growth-calc";
+
+describe("formatEur", () => {
+  test("formatea con coma decimal y símbolo", () => {
+    expect(formatEur(88.24)).toBe("88,24 €");
+    expect(formatEur(100)).toBe("100,00 €");
+    expect(formatEur(0)).toBe("0,00 €");
+  });
+});

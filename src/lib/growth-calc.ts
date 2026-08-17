@@ -57,3 +57,52 @@ export function parseImporte(raw: string): number | null {
   if (negativo || n < 0) return null;
   return n;
 }
+
+/** Redondeo a dos decimales, para que los tests sean deterministas y no salga
+ *  "88.23529411764706" en pantalla. */
+function redondear(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+/**
+ * Decide la rama del resultado y calcula lo que se pueda con lo que hay.
+ *
+ * Las tres ramas son discursos distintos, no grados del mismo:
+ *   A: sabe sus números → se le da su coste por paciente.
+ *   B: no sabe cuántos pacientes le llegan → "no se puede calcular, y eso es
+ *      el hallazgo". Por volumen será la mayoritaria.
+ *   C: no invierte todavía → crear demanda, no arreglar medición.
+ */
+export function calcular(input: CalcInput): CalcResult {
+  const { inversion, pacientes, ticket } = input;
+  const invierte = inversion !== null && inversion > 0;
+  const sabePacientes = pacientes !== null;
+  const sinPacientes = invierte && pacientes === 0;
+
+  const generado =
+    sabePacientes && pacientes > 0 && ticket !== null && ticket > 0
+      ? redondear(pacientes * ticket)
+      : null;
+
+  if (!invierte) {
+    return { rama: "C", costePorPaciente: null, generado, retorno: null, sinPacientes: false };
+  }
+
+  if (!sabePacientes || pacientes === 0) {
+    return { rama: "B", costePorPaciente: null, generado: null, retorno: null, sinPacientes };
+  }
+
+  return {
+    rama: "A",
+    costePorPaciente: redondear((inversion as number) / pacientes),
+    generado,
+    retorno: generado !== null ? redondear(generado / (inversion as number)) : null,
+    sinPacientes: false,
+  };
+}
+
+/** Euros en español: 88.24 → "88,24 €". Vive aquí y no en cada consumidor
+ *  porque lo usan tanto el email de seguimiento como el wizard. */
+export function formatEur(n: number): string {
+  return `${n.toFixed(2).replace(".", ",")} €`;
+}
