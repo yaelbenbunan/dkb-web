@@ -1,6 +1,7 @@
 import type { BrandedEmailInput } from "./email-layout";
 import { BRAND } from "./email-layout";
 import { CONTACT_INFO } from "./contact-info";
+import { formatEur, type Rama } from "./growth-calc";
 
 /**
  * Textos de los acuses de recibo que se mandan al lead tras rellenar cada
@@ -152,6 +153,39 @@ export function webExpressAutoresponder(input: {
       "Hablamos 15 minutos para entender cómo trabajas y resolver tus dudas.",
       "Te enviamos un cuestionario guiado para recoger textos, fotos y estilo.",
       "Desde que tenemos todo el material, tu web está lista en 5 días laborables.",
+    ],
+    cta: WHATSAPP_CTA,
+  };
+}
+
+/**
+ * Calculadora de /growth. Le deja su resultado por escrito y abre hilo: es lo
+ * que convierte, más que un "hemos recibido tus datos".
+ */
+export function growthAutoresponder(input: {
+  name?: string | null;
+  rama: Rama;
+  costePorPaciente: number | null;
+}): BrandedEmailInput {
+  const intro =
+    input.rama === "A" && input.costePorPaciente !== null
+      ? `según los datos que nos has dado, cada paciente nuevo te está costando alrededor de **${formatEur(input.costePorPaciente)}**. Es un cálculo con tus medias: lo que todavía no sabes es **qué campaña** te trae los pacientes que de verdad se quedan.`
+      : input.rama === "B"
+        ? "con los datos que tienes hoy, tu coste por paciente **no se puede calcular** — y eso es justo el hallazgo. No es un problema de tu publicidad, es que nadie está midiendo qué pasa entre el anuncio y la caja."
+        : "todavía no inviertes en publicidad, así que no hay un coste por paciente que medir. Lo que sí se puede ver es cuántos pacientes estás dejando de captar.";
+
+  return {
+    subject: "Tu coste por paciente",
+    eyebrow: "Diagnóstico",
+    heading: "Esto es lo que sale",
+    name: input.name,
+    intro,
+    preheader: "Te contamos qué hemos visto y qué haríamos.",
+    bulletsLabel: "Lo que medimos contigo",
+    bullets: [
+      "Cuánto inviertes y cuántos leads entran, por canal",
+      "Cuántos acaban con cita y cuántos acuden de verdad",
+      "Cuánto dinero generan, y el retorno de cada campaña",
     ],
     cta: WHATSAPP_CTA,
   };
