@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { requestGrowth } from "@/lib/growth-action";
+import { CONTACT_INFO } from "@/lib/contact-info";
 import { formatEur, type CalcResult } from "@/lib/growth-calc";
 import { track, pushUserData } from "@/lib/gtm";
 import { newEventId, trackMetaLead } from "@/lib/meta-pixel";
@@ -57,7 +59,12 @@ export function CalculadoraWizard() {
 
   return (
     <div className="surface-elevated mx-auto max-w-xl rounded-2xl p-6 sm:p-8">
-      <p className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
+      {/* surface-elevated es un panel claro en los dos temas (decisión de
+          diseño en globals.css), así que el texto de dentro va con los
+          colores oscuros del patrón del repo (MarketingLeadForm, ContactForm,
+          etc.) y no con los tokens text-fg/text-fg-muted, que en tema oscuro
+          —el que sirve el SSR— son casi blancos e ilegibles sobre este fondo. */}
+      <p className="text-xs font-semibold uppercase tracking-wider text-slate-700">
         Paso {paso + 1} de {total} · Al terminar verás tu resultado
       </p>
 
@@ -79,10 +86,13 @@ export function CalculadoraWizard() {
 
       {actual ? (
         <div className="mt-6">
-          <label htmlFor={actual.clave} className="block text-xl font-bold leading-tight text-fg">
+          <label
+            htmlFor={actual.clave}
+            className="block text-xl font-bold leading-tight text-[#0c1c40]"
+          >
             {actual.etiqueta}
           </label>
-          <p className="mt-2 text-sm text-fg-muted">{actual.ayuda}</p>
+          <p className="mt-2 text-sm text-slate-700">{actual.ayuda}</p>
           <input
             id={actual.clave}
             name={actual.clave}
@@ -94,11 +104,12 @@ export function CalculadoraWizard() {
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <button
               type="button"
+              disabled={valores[actual.clave].trim() === ""}
               onClick={() => {
                 track("growth_calc_step", { step: actual.clave, skipped: false });
                 setPaso((p) => p + 1);
               }}
-              className="inline-flex h-11 items-center justify-center rounded-lg bg-accent px-6 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
+              className="inline-flex h-11 items-center justify-center rounded-lg bg-accent px-6 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-accent"
             >
               Siguiente
             </button>
@@ -106,12 +117,15 @@ export function CalculadoraWizard() {
               type="button"
               onClick={() => {
                 // La opción "no lo sé" deja el valor vacío, que el servidor
-                // interpreta como null. No es un error de validación.
+                // interpreta como null. No es un error de validación: que
+                // "Siguiente" quede deshabilitado con el campo vacío no toca
+                // esta vía, que sigue siendo la respuesta de primera clase que
+                // pide el spec, no un caso a evitar.
                 setValores((v) => ({ ...v, [actual.clave]: "" }));
                 track("growth_calc_step", { step: actual.clave, skipped: true });
                 setPaso((p) => p + 1);
               }}
-              className="text-sm font-semibold text-fg-muted underline underline-offset-2 hover:text-fg"
+              className="text-sm font-semibold text-slate-700 underline underline-offset-2 hover:text-[#0c1c40]"
             >
               {actual.omitir}
             </button>
@@ -147,7 +161,7 @@ export function CalculadoraWizard() {
             });
           }}
         >
-          <p className="text-xl font-bold leading-tight text-fg">
+          <p className="text-xl font-bold leading-tight text-[#0c1c40]">
             Últimos datos para ver tu resultado
           </p>
 
@@ -169,7 +183,7 @@ export function CalculadoraWizard() {
 
             <label
               htmlFor="consent"
-              className="flex items-start gap-2.5 text-xs leading-relaxed text-fg-muted"
+              className="flex items-start gap-2.5 text-xs leading-relaxed text-slate-700"
             >
               <input
                 id="consent"
@@ -179,7 +193,17 @@ export function CalculadoraWizard() {
                 required
                 className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
               />
-              <span>Acepto que dinkbit me contacte sobre esta consulta</span>
+              <span>
+                Acepto que dinkbit me contacte sobre esta consulta y me envíe
+                comunicaciones comerciales, según la{" "}
+                <Link
+                  href="/privacidad"
+                  className="font-semibold text-accent hover:underline"
+                >
+                  política de privacidad
+                </Link>
+                .
+              </span>
             </label>
           </div>
 
@@ -205,22 +229,28 @@ function Resultado({ resultado }: { resultado: CalcResult }) {
   if (resultado.rama === "A" && resultado.costePorPaciente !== null) {
     return (
       <div className="surface-elevated mx-auto max-w-xl rounded-2xl p-6 text-center sm:p-8">
-        <p className="text-sm font-semibold text-fg-muted">
+        <p className="text-sm font-semibold text-slate-700">
           Cada paciente nuevo te está costando
         </p>
-        <strong className="mt-2 block text-4xl font-black text-fg">
+        <strong className="mt-2 block text-4xl font-black text-[#0c1c40]">
           {formatEur(resultado.costePorPaciente)}
         </strong>
-        {resultado.retorno !== null && (
-          <p className="mt-4 text-base text-fg-muted">
-            Por cada euro invertido recuperas{" "}
-            <strong className="text-fg">{resultado.retorno.toFixed(2).replace(".", ",")} €</strong>.
+        {resultado.retorno !== null && resultado.generado !== null && (
+          <p className="mt-4 text-base text-slate-700">
+            Y esos pacientes te generan en total{" "}
+            <strong className="text-[#0c1c40]">{formatEur(resultado.generado)}</strong>, así
+            que por cada euro invertido recuperas{" "}
+            <strong className="text-[#0c1c40]">
+              {resultado.retorno.toFixed(2).replace(".", ",")} €
+            </strong>
+            .
           </p>
         )}
-        <p className="mt-6 text-sm leading-relaxed text-fg-muted">
+        <p className="mt-6 text-sm leading-relaxed text-slate-700">
           Es un cálculo con tus medias. Lo que no sabes es qué campaña te trae los
           pacientes buenos.
         </p>
+        <DiagnosticoCta />
       </div>
     );
   }
@@ -228,23 +258,62 @@ function Resultado({ resultado }: { resultado: CalcResult }) {
   if (resultado.rama === "B") {
     return (
       <div className="surface-elevated mx-auto max-w-xl rounded-2xl p-6 text-center sm:p-8">
-        <strong className="block text-2xl font-black text-fg">No se puede calcular</strong>
-        <p className="mt-4 text-base leading-relaxed text-fg-muted">
+        <strong className="block text-2xl font-black text-[#0c1c40]">
+          No se puede calcular
+        </strong>
+        <p className="mt-4 text-base leading-relaxed text-slate-700">
           {resultado.sinPacientes
             ? "Inviertes y no te está llegando nadie. Eso es lo primero que hay que mirar."
             : "Y eso es justo el hallazgo: nadie está midiendo qué pasa entre el anuncio y la caja."}
         </p>
+        <DiagnosticoCta />
       </div>
     );
   }
 
   return (
     <div className="surface-elevated mx-auto max-w-xl rounded-2xl p-6 text-center sm:p-8">
-      <strong className="block text-2xl font-black text-fg">
+      <strong className="block text-2xl font-black text-[#0c1c40]">
         Todavía no hay coste que medir
       </strong>
-      <p className="mt-4 text-base leading-relaxed text-fg-muted">
+      <p className="mt-4 text-base leading-relaxed text-slate-700">
         Pero sí hay pacientes que no están llegando. Esto es lo que verías si midieras.
+      </p>
+      {resultado.generado !== null && (
+        <p className="mt-4 text-base text-slate-700">
+          Y los que ya te llegan por recomendación te están generando{" "}
+          <strong className="text-[#0c1c40]">{formatEur(resultado.generado)}</strong> al mes,
+          sin gastar nada en publicidad todavía.
+        </p>
+      )}
+      <DiagnosticoCta />
+    </div>
+  );
+}
+
+/**
+ * Único CTA de cierre de las tres ramas del resultado (spec §4.3): pide el
+ * diagnóstico comentado, nunca "contratar". Reutiliza el mismo número y
+ * patrón de WhatsApp que ya usa el resto del sitio (WhatsAppBubble,
+ * WHATSAPP_CTA de lead-emails.ts), con mensaje prerrellenado como hace
+ * promo-email.ts.
+ */
+function DiagnosticoCta() {
+  const mensaje = encodeURIComponent(
+    "Hola, acabo de usar la calculadora de coste por paciente y quiero el diagnóstico comentado.",
+  );
+  return (
+    <div className="mt-6">
+      <a
+        href={`${CONTACT_INFO.socials.whatsapp}?text=${mensaje}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex h-12 w-full items-center justify-center rounded-lg bg-accent px-6 text-base font-semibold text-white transition-colors hover:bg-accent-hover"
+      >
+        Pídenos el diagnóstico comentado
+      </a>
+      <p className="mt-2 text-xs text-slate-700">
+        Media hora, sin compromiso. Te contamos qué haríamos con tus números.
       </p>
     </div>
   );

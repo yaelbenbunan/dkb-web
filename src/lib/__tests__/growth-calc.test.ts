@@ -37,6 +37,17 @@ describe("parseImporte", () => {
     // coste por paciente negativo en pantalla.
     expect(parseImporte("-300")).toBeNull();
   });
+
+  test("rangos escritos a mano: se queda con el primer número", () => {
+    // Respuestas humanas naturalísimas en un campo libre. Sin el corte del
+    // rango, "20-25" pierde el guion y concatena a 2025, y "3 o 4" a 34: un
+    // error de varios órdenes de magnitud presentado como si fuera el dato
+    // del usuario.
+    expect(parseImporte("20-25")).toBe(20);
+    expect(parseImporte("3 o 4")).toBe(3);
+    expect(parseImporte("5 a 10")).toBe(5);
+    expect(parseImporte("1.500-2.000")).toBe(1500);
+  });
 });
 
 import { calcular } from "../growth-calc";

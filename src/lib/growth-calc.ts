@@ -27,6 +27,25 @@ export interface CalcResult {
 }
 
 /**
+ * Se queda con la primera cifra cuando el texto es un rango escrito a mano
+ * ("20-25", "3 o 4", "5 a 10", "1.500-2.000"). Son respuestas humanas
+ * naturalísimas en un campo libre, y sin este corte la limpieza de abajo
+ * borraría el guion o las palabras y concatenaría los dos números
+ * ("20-25" → 2025, "3 o 4" → 34): un error de varios órdenes de magnitud que
+ * el usuario vería presentado como si fuera su propio dato.
+ *
+ * Corta solo por guion (que no sea el signo negativo inicial: "-300" no debe
+ * tocarse) y por las palabras sueltas o/a/y entre espacios. No corta por
+ * espacios sueltos a propósito: " 1 500 € " es un solo número con espacio
+ * como separador de miles, y distinguir ese caso de un rango sin más marcas
+ * sería ambiguo.
+ */
+function primerNumeroDeRango(s: string): string {
+  const m = s.match(/^(.*?\d(?:[.,]\d+)?)\s*(?:-\s*\d|\s+(?:o|a|y)\s+\d)/i);
+  return m ? m[1] : s;
+}
+
+/**
  * Normaliza un importe escrito a mano. Acepta formato español ("1.500,50"),
  * inglés ("1500.50"), con símbolos y con espacios.
  *
@@ -41,7 +60,7 @@ export interface CalcResult {
  * errores peores que la incompletitud.
  */
 export function parseImporte(raw: string): number | null {
-  const limpio = (raw ?? "").replace(/[^\d.,-]/g, "");
+  const limpio = primerNumeroDeRango(raw ?? "").replace(/[^\d.,-]/g, "");
   if (!limpio || !/\d/.test(limpio)) return null;
   const negativo = limpio.trimStart().startsWith("-");
   let s = limpio.replace(/-/g, "");

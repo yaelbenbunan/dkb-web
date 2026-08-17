@@ -11,13 +11,15 @@ describe("growthAutoresponder", () => {
 
   test("rama B: no inventa una cifra", () => {
     const mail = growthAutoresponder({ name: "Ana", rama: "B", costePorPaciente: null });
-    expect(mail.intro).not.toMatch(/\d+,\d+\s*€/);
+    // Cualquier dígito, no solo con coma decimal: "4000 €" también sería
+    // inventarse una cifra y el regex anterior no lo habría detectado.
+    expect(mail.intro).not.toMatch(/\d/);
     expect(mail.intro.toLowerCase()).toContain("no se puede calcular");
   });
 
   test("rama C: habla de empezar a medir, no de un coste", () => {
     const mail = growthAutoresponder({ name: "Ana", rama: "C", costePorPaciente: null });
-    expect(mail.intro).not.toMatch(/\d+,\d+\s*€/);
+    expect(mail.intro).not.toMatch(/\d/);
   });
 
   test("sin nombre no rompe", () => {

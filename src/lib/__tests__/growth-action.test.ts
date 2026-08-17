@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+const { sendMock } = vi.hoisted(() => ({ sendMock: vi.fn() }));
+
 // El action toca Supabase, Resend, Meta y las cabeceras de Next: se sustituyen
 // todos para poder testear solo la validación y el encadenado.
 vi.mock("../imagina-leads", () => ({
@@ -12,6 +14,11 @@ vi.mock("../meta-capi", () => ({ sendMetaLead: vi.fn(async () => ({ ok: true }))
 vi.mock("next/headers", () => ({
   headers: async () => new Map<string, string>(),
   cookies: async () => ({ get: () => undefined }),
+}));
+vi.mock("resend", () => ({
+  Resend: class {
+    emails = { send: sendMock };
+  },
 }));
 
 import { requestGrowth } from "../growth-action";
@@ -39,7 +46,13 @@ function fd(over: Record<string, string> = {}): FormData {
 }
 
 describe("requestGrowth", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sendMock.mockResolvedValue({ error: null });
+    process.env.RESEND_API_KEY = "test-key";
+    process.env.CONTACT_EMAIL_TO = "equipo@dinkbit.es";
+    process.env.CONTACT_EMAIL_FROM = "hola@dinkbit.es";
+  });
 
   test("datos válidos: guarda el lead y devuelve el resultado", async () => {
     const res = await requestGrowth(fd());
@@ -104,5 +117,47 @@ describe("requestGrowth", () => {
   test("sin eventId no se manda conversión: una sin deduplicar es peor que ninguna", async () => {
     await requestGrowth(fd());
     expect(sendMetaLead).not.toHaveBeenCalled();
+  });
+
+  test("sin formLoadedAt en el FormData se rechaza: no salta el anti-spam", async () => {
+    // Number(null) da 0, y sin el mínimo positive() del schema eso pasaría el
+    // control de tiempo (Date.now() - 0 siempre es mayor que 2000).
+    const f = fd();
+    f.delete("formLoadedAt");
+    const res = await requestGrowth(f);
+    expect(res.ok).toBe(false);
+    expect(createWebhookLead).not.toHaveBeenCalled();
+  });
+
+  test("manda un aviso interno con los datos del lead y si el CRM guardó", async () => {
+    await requestGrowth(fd());
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    const enviado = sendMock.mock.calls[0][0];
+    expect(enviado.to).toBe("equipo@dinkbit.es");
+    expect(enviado.text).toContain("Ana Ruiz");
+    expect(enviado.text).toContain("ana@clinica.com");
+    expect(enviado.text).toContain("CRM: guardado correctamente.");
+  });
+
+  test("si el CRM no guarda, el aviso interno lo dice", async () => {
+    vi.mocked(createWebhookLead).mockResolvedValueOnce({ ok: false, error: "boom" });
+    await requestGrowth(fd());
+    const enviado = sendMock.mock.calls[0][0];
+    expect(enviado.text).toContain("NO SE GUARDÓ");
+    expect(enviado.text).toContain("boom");
+  });
+
+  test("el aviso interno es best-effort: si Resend falla, el resultado no se pierde", async () => {
+    sendMock.mockResolvedValueOnce({ error: { message: "boom" } });
+    const res = await requestGrowth(fd());
+    expect(res.ok).toBe(true);
+    expect(res.resultado?.rama).toBe("A");
+  });
+
+  test("sin RESEND_API_KEY configurada, el resultado se sigue viendo igual", async () => {
+    delete process.env.RESEND_API_KEY;
+    const res = await requestGrowth(fd());
+    expect(res.ok).toBe(true);
+    expect(sendMock).not.toHaveBeenCalled();
   });
 });

@@ -12,9 +12,13 @@ const requestGrowth = vi.fn(async (_fd: FormData) => ({
     sinPacientes: false,
   },
 }));
+const trackMetaLead = vi.fn();
 vi.mock("@/lib/growth-action", () => ({ requestGrowth: (fd: FormData) => requestGrowth(fd) }));
 vi.mock("@/lib/gtm", () => ({ track: vi.fn(), pushUserData: vi.fn() }));
-vi.mock("@/lib/meta-pixel", () => ({ newEventId: () => "evt-1", trackMetaLead: vi.fn() }));
+vi.mock("@/lib/meta-pixel", () => ({
+  newEventId: () => "evt-1",
+  trackMetaLead: (eventId: string) => trackMetaLead(eventId),
+}));
 vi.mock("@/lib/utm", () => ({ appendUtms: vi.fn() }));
 
 import { CalculadoraWizard } from "../CalculadoraWizard";
@@ -67,6 +71,33 @@ describe("CalculadoraWizard", () => {
 
     expect(requestGrowth).toHaveBeenCalledTimes(1);
     expect(await screen.findByText(/88,24/)).toBeInTheDocument();
+
+    // El eventId se genera una sola vez y el mismo valor va al FormData que
+    // recibe el servidor y a la conversión que se manda al píxel de Meta.
+    const enviado = requestGrowth.mock.calls[0][0] as FormData;
+    expect(enviado.get("eventId")).toBe("evt-1");
+    expect(trackMetaLead).toHaveBeenCalledWith("evt-1");
+  });
+
+  test("«Siguiente» está deshabilitado con el campo vacío; omitir funciona igual", async () => {
+    const user = userEvent.setup();
+    render(<CalculadoraWizard />);
+
+    const siguiente = screen.getByRole("button", { name: /siguiente/i });
+    expect(siguiente).toBeDisabled();
+
+    await user.type(screen.getByLabelText(/inviertes al mes/i), "1500");
+    expect(siguiente).toBeEnabled();
+
+    // Escribir y borrar deja el campo vacío otra vez: sin validación se
+    // registraría como "no invierto todavía" al pulsar Siguiente, que es
+    // justo lo que el hallazgo 5 impide.
+    await user.clear(screen.getByLabelText(/inviertes al mes/i));
+    expect(siguiente).toBeDisabled();
+
+    // La vía de "no lo sé" sigue funcionando igual, campo vacío incluido.
+    await user.click(screen.getByRole("button", { name: /no invierto todav/i }));
+    expect(screen.getByLabelText(/pacientes nuevos/i)).toBeInTheDocument();
   });
 
   test("el honeypot existe y está oculto", () => {
