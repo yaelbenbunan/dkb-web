@@ -152,22 +152,25 @@ export function CalculadoraWizard() {
           </p>
 
           <div className="mt-4 space-y-4">
-            <label className="block">
+            <label htmlFor="name" className="block">
               <span className={legendClass}>Nombre</span>
               <input id="name" name="name" required className={inputClass} />
             </label>
 
-            <label className="block">
+            <label htmlFor="email" className="block">
               <span className={legendClass}>Email</span>
               <input id="email" name="email" type="email" required className={inputClass} />
             </label>
 
-            <label className="block">
+            <label htmlFor="phone" className="block">
               <span className={legendClass}>Teléfono</span>
               <input id="phone" name="phone" type="tel" required className={inputClass} />
             </label>
 
-            <label className="flex items-start gap-2.5 text-xs leading-relaxed text-fg-muted">
+            <label
+              htmlFor="consent"
+              className="flex items-start gap-2.5 text-xs leading-relaxed text-fg-muted"
+            >
               <input
                 id="consent"
                 name="consent"

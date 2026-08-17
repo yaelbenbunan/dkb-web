@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -74,5 +74,31 @@ describe("CalculadoraWizard", () => {
     const honeypot = container.querySelector('input[name="website"]');
     expect(honeypot).not.toBeNull();
     expect(honeypot).not.toBeVisible();
+  });
+
+  test("el valor del honeypot llega a la server action", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<CalculadoraWizard />);
+    const honeypot = container.querySelector('input[name="website"]') as HTMLInputElement;
+
+    // Simula el bot que rellena el campo oculto. Lo que importa aquí no es que
+    // el servidor lo rechace (eso lo cubre growth-action.test.ts), sino que el
+    // valor le llegue: es lo único que la copia manual al FormData garantiza.
+    fireEvent.change(honeypot, { target: { value: "http://spam.example" } });
+
+    await user.type(screen.getByLabelText(/inviertes al mes/i), "1500");
+    await user.click(screen.getByRole("button", { name: /siguiente/i }));
+    await user.type(screen.getByLabelText(/pacientes nuevos/i), "17");
+    await user.click(screen.getByRole("button", { name: /siguiente/i }));
+    await user.click(screen.getByRole("button", { name: /prefiero no decirlo/i }));
+
+    await user.type(screen.getByLabelText(/nombre/i), "Ana Ruiz");
+    await user.type(screen.getByLabelText(/email/i), "ana@clinica.com");
+    await user.type(screen.getByLabelText(/tel/i), "600111222");
+    await user.click(screen.getByLabelText(/acepto/i));
+    await user.click(screen.getByRole("button", { name: /ver mi resultado/i }));
+
+    const enviado = requestGrowth.mock.calls[0][0];
+    expect(enviado.get("website")).toBe("http://spam.example");
   });
 });
