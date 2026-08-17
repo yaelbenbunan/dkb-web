@@ -87,6 +87,35 @@ existe.** Anunciar "desde 199 €/mes" y soltar el pago inicial en la llamada es
 secuencia posible — mata la confianza justo en el momento de cerrar, y la confianza es el
 producto. La landing dice que hay cuota de alta y que depende de la inversión.
 
+### Dos modalidades: web nueva o landing paralela
+
+**No integramos nunca con la web que ya tiene la clínica.** Si quiere conservarla, adelante:
+le montamos una **landing paralela** en un subdominio suyo (`citas.suclinica.com`) y ahí
+dirigimos todo el tráfico de campañas.
+
+Los motivos, por orden de importancia:
+
+1. **Nos haría responsables de un número que no podemos mover.** Vendemos resultados
+   medibles. Si su web convierte mal y no podemos tocarla, cargamos con la mala cifra sin
+   capacidad de arreglarla.
+2. **No es una integración, son N.** Cada clínica tiene un stack distinto — WordPress con
+   Elementor, Wix, Squarespace, algo a medida de hace diez años. Entrar en código ajeno con
+   un equipo que no es de desarrollo puro es alcance sin fondo.
+3. **Fragilidad operativa.** Una actualización de un plugin deja de mandarnos leads, y la
+   culpa es nuestra aunque no lo sea.
+
+Y la landing paralela no es el premio de consolación, es **técnicamente mejor**: a esa
+página solo llega tráfico de campañas, así que la atribución sale más limpia que mezclada
+con el orgánico de su web. Control total de la conversión y posibilidad de test A/B. Además
+el grupo `(landing)` de `dkb-web` existe exactamente para esto.
+
+**Ventaja comercial:** elimina la objeción "ya tengo web", que iba a salir constantemente, y
+baja mucho la barrera de entrada. La cuota de alta de esta modalidad es menor, porque una
+landing es mucho menos trabajo que una web completa — encaja con que el alta ya sea variable.
+
+**Y el límite que hay que decir en voz alta:** los pacientes que entren por su web de
+siempre **no estarán en el CRM**. Ver §5.4.
+
 ### La economía mejora con cada cliente
 
 El coste de atender a la clínica número diez es una fracción del de la primera, porque la
@@ -276,6 +305,18 @@ Sin tecnicismos. El destinatario es el dueño de la clínica, no un analista.
 clasifique cada cita, y si ese dato no llega tendríamos una sección vacía en el producto
 que vende transparencia. Entra cuando el nivel 2 de facturación esté consolidado.
 
+#### Qué mide el dashboard, y qué no
+
+**Mide el embudo de las campañas, no la facturación total de la clínica.** Un paciente que
+llega por recomendación, por su web de siempre (§3) o porque pasaba por la puerta no está en
+el CRM y no cuenta.
+
+Esto hay que decirlo en la primera reunión y dejarlo escrito en el propio dashboard. Si no,
+el dueño mirará la cifra de "generado", no le cuadrará con su caja, y perderemos credibilidad
+justo en lo único que vendemos. Bien explicado no es una limitación: es la respuesta a
+*"¿cuánto me devuelve lo que invierto?"*, que es una pregunta más útil que *"¿cuánto factura
+mi clínica?"* — ésa ya la sabe.
+
 ### 5.5 Un solo Supabase nuevo, con `tenant_id` y RLS
 
 **No un proyecto por clínica.** Diez clínicas serían diez juegos de migraciones que
@@ -388,7 +429,7 @@ Notas de diseño:
 | 1. Captación | **`dkb-web`** | La landing y la calculadora *son* nuestra web de marketing: mismo dominio, mismo tracking, mismo CRM, mismo despliegue |
 | 2. CRM + agenda | **repo nuevo** | Otros usuarios, otra autenticación, otra base de datos, otro ritmo de despliegue, y un cliente que paga |
 | 3. Insights | el repo de la fase 2 | Es la misma aplicación |
-| 4. Web de clínica | **un repo por cliente** | Patrón que ya seguimos con `padel-marina`, `instituto-fich`… clonando plantilla |
+| 4. Web de clínica **o landing paralela** | **un repo por cliente** | Patrón que ya seguimos con `padel-marina`, `instituto-fich`… clonando plantilla. Las dos modalidades de §3 salen de la misma plantilla; la landing es un subconjunto |
 
 **El disparador para abrir carpeta nueva es empezar la fase 2.** Antes de eso no hay nada
 que poner en ella. Cuando se abra, la parte de producto de este documento se muda allí y
@@ -431,6 +472,7 @@ son obligatorios desde el primer día, no recomendables. Diseñamos asumiendo qu
 | Las primeras clínicas no son rentables | Quema de caja | Asumido y presupuestado; medir el coste real por clínica desde la primera (§3) |
 | El precio ancla la percepción en "agencia barata" | Mata el posicionamiento | El precio nunca abre el mensaje; abre el problema (§11) |
 | Sin volumen de datos, los insights son ruido | El producto no enseña nada útil | Ser honestos con los umbrales; no mostrar conclusiones sin muestra suficiente |
+| El dueño compara el dashboard con su caja y no cuadra | Pierde la confianza en lo único que vendemos | Decir en la primera reunión y en el propio dashboard que mide campañas, no facturación total (§5.4) |
 
 ---
 
