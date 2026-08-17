@@ -311,11 +311,33 @@ que vende transparencia. Entra cuando el nivel 2 de facturación esté consolida
 llega por recomendación, por su web de siempre (§3) o porque pasaba por la puerta no está en
 el CRM y no cuenta.
 
-Esto hay que decirlo en la primera reunión y dejarlo escrito en el propio dashboard. Si no,
-el dueño mirará la cifra de "generado", no le cuadrará con su caja, y perderemos credibilidad
-justo en lo único que vendemos. Bien explicado no es una limitación: es la respuesta a
-*"¿cuánto me devuelve lo que invierto?"*, que es una pregunta más útil que *"¿cuánto factura
-mi clínica?"* — ésa ya la sabe.
+Se dice en la primera reunión y se deja escrito en el propio dashboard. Bien enmarcado no es
+una limitación: responde a *"¿cuánto me devuelve lo que invierto?"*, que es más útil que
+*"¿cuánto factura mi clínica?"* — ésa ya la sabe.
+
+Un matiz operativo que conviene no sobrevender: de las citas que leemos de su calendario
+externo **vemos el evento, no al paciente**. Nos sirven para calcular disponibilidad, pero
+no tienen `lead_id`, ni canal, ni importe. No sabemos quién es ni de dónde vino.
+
+#### La pregunta difícil: incrementalidad
+
+Antes o después el dueño preguntará **"¿ese paciente no habría venido igual?"**. Es una
+pregunta legítima, no una objeción de mala fe, y no se resuelve explicando el alcance del
+dashboard.
+
+El caso claro es el tráfico de marca: alguien busca el nombre de la clínica en Google, hace
+clic en el anuncio y lo contamos como paciente de campaña, cuando habría llegado igual
+escribiendo la dirección. Le hemos cobrado un clic por un paciente que ya era suyo.
+
+Cómo se responde:
+
+1. **No pujar por su propia marca**, salvo que haya un competidor pisándosela. Es el tráfico
+   más canibalizado que existe.
+2. Si se puja, **separar marca de no-marca en el informe**, para que ese tráfico esté a la
+   vista y no diluido dentro del ROAS global.
+3. Ante un "demuéstramelo", la única prueba real es un **test de apagado**: pausar un canal
+   durante un periodo y ver qué pasa con el total de citas. Requiere volumen, así que no
+   sirve el primer mes, pero conviene tenerlo nombrado de antemano en lugar de improvisarlo.
 
 ### 5.5 Un solo Supabase nuevo, con `tenant_id` y RLS
 
@@ -472,7 +494,7 @@ son obligatorios desde el primer día, no recomendables. Diseñamos asumiendo qu
 | Las primeras clínicas no son rentables | Quema de caja | Asumido y presupuestado; medir el coste real por clínica desde la primera (§3) |
 | El precio ancla la percepción en "agencia barata" | Mata el posicionamiento | El precio nunca abre el mensaje; abre el problema (§11) |
 | Sin volumen de datos, los insights son ruido | El producto no enseña nada útil | Ser honestos con los umbrales; no mostrar conclusiones sin muestra suficiente |
-| El dueño compara el dashboard con su caja y no cuadra | Pierde la confianza en lo único que vendemos | Decir en la primera reunión y en el propio dashboard que mide campañas, no facturación total (§5.4) |
+| "¿Ese paciente no habría venido igual?" — incrementalidad | Cuestiona el ROAS entero, y es una pregunta legítima | No pujar por su marca; separar marca de no-marca en el informe; test de apagado cuando haya volumen (§5.4) |
 
 ---
 
