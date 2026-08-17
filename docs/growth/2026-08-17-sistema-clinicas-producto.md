@@ -65,7 +65,7 @@ producto y medir cuánto trabajo real cuesta atender a una clínica.
 
 | Concepto | Quién paga | Nota |
 |---|---|---|
-| Cuota de alta | la clínica, primer mes | Cubre desarrollo de la web y configuración inicial |
+| Cuota de alta | la clínica, primer mes | Variable según inversión y número de canales |
 | Suscripción mensual | la clínica | Punto de partida 199 €, sin permanencia |
 | Inversión publicitaria | la clínica, siempre | Va directa a Google y Meta, nunca pasa por nosotros |
 
@@ -76,6 +76,16 @@ La mensualidad incluye web, CRM, agenda, dashboard y gestión de campañas. Fuer
 La cuota de alta existe porque el trabajo inicial es real y concentrado: web, configuración
 de campañas, alta en el sistema. Sin ella, una clínica que se va al segundo mes nos deja
 en pérdidas.
+
+**La cuota de alta es variable, no una cifra fija**, porque el trabajo inicial no es el
+mismo: una clínica con 200 € de presupuesto y un solo canal no da el mismo trabajo de
+configuración que una con 2.000 € en Google y Meta. Se calcula sobre inversión prevista y
+número de canales.
+
+Consecuencia para la landing: **no podemos publicar un importe de alta, pero sí decir que
+existe.** Anunciar "desde 199 €/mes" y soltar el pago inicial en la llamada es la peor
+secuencia posible — mata la confianza justo en el momento de cerrar, y la confianza es el
+producto. La landing dice que hay cuota de alta y que depende de la inversión.
 
 ### La economía mejora con cada cliente
 
@@ -99,9 +109,29 @@ de entrada sea imbatible, y se mitiga reciclando el desarrollo.
 pacientes son suyos**. La clínica es responsable del tratamiento y nosotros encargados. Hay
 que poder exportarles sus datos cuando lo pidan, con o sin suscripción activa. Ver §9.
 
-**Decisión pendiente:** de quién es el dominio. Si es de la clínica no podemos apagar la
-web más que dejando de servirla; si es nuestro, es un punto de conflicto el día que se van.
-Hay que fijarlo en el contrato antes de la primera clínica.
+**El dominio es de la clínica.** Nosotros alojamos y servimos; ellos son dueños del dominio.
+Al causar baja se rompe la conexión y el dominio se queda apuntando a nada hasta que lo
+redirijan. Esto evita el conflicto de retenerle a alguien su propia marca, y no debilita el
+modelo: lo que se apaga es el sistema, que es lo que tiene el valor.
+
+### "Me quiero quedar la web pero no seguir pagando"
+
+Esta objeción va a salir en **todas** las llamadas, así que conviene tener la respuesta
+preparada en lugar de improvisarla: **se la vendemos.** Un precio de compra de la web,
+puntual, y se la queda.
+
+Tres cosas a tener en cuenta al fijar ese precio:
+
+1. **Que no sea la vía de escape barata.** Si comprar la web sale más a cuenta que seguir
+   suscrito, acabamos siendo un estudio de diseño con pasos extra. El precio de compra debe
+   ser el coste real del desarrollo, no una fracción.
+2. **Compran la web, no el sistema.** Se van sin CRM, sin agenda y sin dashboard, es decir,
+   sin saber qué campaña les trae pacientes. Eso no es un castigo: es la propuesta de valor
+   dicha en voz alta, y es el mejor argumento de retención que hay.
+3. **Técnicamente es viable por una decisión ya tomada.** Al ser cada web un despliegue
+   propio a partir de plantilla (§8) y no un multi-tenant, entregarla es traspasar un repo y
+   un despliegue. Si la web fuera multi-tenant, extraer una sola clínica sería un proyecto.
+   Esta objeción comercial es la segunda razón para mantener esa decisión.
 
 ---
 
@@ -437,9 +467,35 @@ Vídeo como pieza central, y visualización del circuito completo de anuncio a p
 El CTA principal **no** es "contrata". Es **"descubre cuánto te cuesta conseguir un
 paciente"**.
 
-Cuatro o cinco preguntas: inversión mensual, leads al mes, pacientes nuevos, ticket medio.
-Devuelve su coste de adquisición aproximado y abre la conversación. El cálculo es idéntico
-en cualquier sector, así que una sola calculadora sirve para todos los nichos.
+El cálculo tiene que ser **simple de verdad**, no un cuestionario de auditoría:
+
+```
+inversión mensual en publicidad ÷ pacientes nuevos al mes = coste por paciente
+```
+
+Y una pregunta opcional de **ticket medio**, que permite añadir cuánto generan esos
+pacientes y por tanto el retorno. Nada más. El cálculo es idéntico en cualquier sector, así
+que una sola calculadora sirve para todos los nichos.
+
+**"No lo sé" es una respuesta de primera clase, no un error de validación.** Quien no sabe
+cuántos pacientes le llegan es *más* cliente ideal que quien lo sabe, porque es exactamente
+el problema que vendemos. Así que la calculadora tiene dos salidas:
+
+- **Sabe sus números** → "cada paciente te está costando 87 €". Y si dio ticket medio,
+  el retorno.
+- **No los sabe** → *"no puedes calcularlo, y eso es justo el hallazgo"*. Se le enseña el
+  ejemplo de lo que vería si lo midiera, con cifras de muestra. Es un cierre **más** potente
+  que un número, porque el mensaje deja de ser "tu coste es alto" y pasa a ser "estás
+  volando a ciegas".
+
+Diseñar esa rama con cariño, no como caso residual: por volumen, va a ser la mayoritaria.
+
+**El resultado se muestra después de dejar el contacto**, no antes. Email y teléfono, y
+entonces el resultado en pantalla. Si se enseña primero, no hay razón para dejar los datos y
+perdemos el lead — que es el objetivo entero de la pieza. Dos condiciones para que esto no
+se sienta a cambiazo: decirle desde el principio que al terminar ve su resultado, y que sean
+pocas preguntas. Y el resultado se enseña **en pantalla al momento**, no "te lo mandamos por
+email", que se lee como excusa para no dárselo.
 
 Da leads muchísimo más cualificados que "déjanos tus datos y te llamamos", y ya sabemos
 construir este tipo de embudo: hay tres wizards en producción.
@@ -574,9 +630,16 @@ Del negocio:
 
 ## 14. Decisiones abiertas
 
-1. **Nombre comercial.** Bloquea la landing y el dominio. Es la primera.
-2. **Importe de la cuota de alta.**
-3. **Propiedad del dominio** de la clínica.
+Ordenadas por lo que bloquean. Las tres primeras son de fase 1; el resto no impide construir.
+
+1. **Nombre comercial.** Bloquea *lanzar anuncios*, no construir: en la landing vive como
+   una constante en un solo fichero, y la ruta arranca como `/growth` con redirección
+   posterior. Sigue siendo la primera que hay que cerrar.
+2. **Los tramos de la cuota de alta.** Que existe y que es variable según inversión y
+   canales ya está decidido (§3); falta la tabla de importes. La landing no publica cifra,
+   así que no bloquea el desarrollo, sí la primera llamada de venta.
+3. **Precio de compra de la web** para quien quiera quedársela y dejar la suscripción (§3).
+   Sale en todas las llamadas; conviene tenerlo antes de la primera.
 4. **Si el dato de "paciente de clínica" es dato de salud** (§9). Diseñamos asumiendo que
    sí; hay que confirmarlo.
 5. **Qué proveedor de calendario primero**, Google u Outlook. Google es más sencillo y más
