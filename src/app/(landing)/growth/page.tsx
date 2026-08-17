@@ -5,15 +5,18 @@ import { Reveal } from "@/components/ui/Reveal";
 import { GROWTH } from "@/lib/growth-config";
 import { CalculadoraWizard } from "./_components/CalculadoraWizard";
 
+// El layout raíz ya añade " — dinkbit" vía su title template
+// (src/app/layout.tsx), así que aquí NO se repite el sufijo. El openGraph.title
+// sí necesita la marca explícita: esa plantilla no le aplica.
 export const metadata: Metadata = {
-  title: "¿Sabes cuánto te cuesta conseguir un paciente? — dinkbit",
+  title: "¿Sabes cuánto te cuesta conseguir un paciente?",
   description:
     "Conecta tus campañas, tu web y tu CRM y descubre qué canales te traen pacientes y cuáles solo leads. Desde 199 €/mes, sin permanencia.",
   alternates: { canonical: GROWTH.path },
   openGraph: {
     type: "website",
     url: GROWTH.path,
-    title: "¿Sabes cuánto te cuesta conseguir un paciente?",
+    title: "¿Sabes cuánto te cuesta conseguir un paciente? — dinkbit",
     description:
       "El sistema que mide de la campaña al paciente. Desde 199 €/mes, sin permanencia.",
     siteName: "dinkbit",
@@ -317,12 +320,25 @@ function FunnelArrow({ warning }: { warning?: boolean }) {
 
 function FunnelNode({ label, gap }: { label: string; gap?: boolean }) {
   if (gap) {
+    // "???" no dice nada a un lector de pantalla; se agrupa el nodo entero
+    // bajo un único aria-label que explica el hueco, y se oculta el resto
+    // (que es solo refuerzo visual) para no duplicar el anuncio.
     return (
-      <div className="flex flex-col items-center gap-2">
-        <div className="flex h-16 w-24 animate-pulse items-center justify-center rounded-xl border-2 border-dashed border-red-400/70 bg-red-500/10 text-xl font-black text-red-400">
+      <div
+        role="img"
+        aria-label="Aquí no hay medición: nadie sabe qué pasa entre el formulario y el paciente"
+        className="flex flex-col items-center gap-2"
+      >
+        <div
+          aria-hidden
+          className="flex h-16 w-24 animate-pulse items-center justify-center rounded-xl border-2 border-dashed border-red-400/70 bg-red-500/10 text-xl font-black text-red-400"
+        >
           {label}
         </div>
-        <span className="text-[11px] font-bold uppercase tracking-wide text-red-400/90">
+        <span
+          aria-hidden
+          className="text-[11px] font-bold uppercase tracking-wide text-red-400/90"
+        >
           Nadie mira aquí
         </span>
       </div>
