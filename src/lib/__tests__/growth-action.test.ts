@@ -16,6 +16,7 @@ vi.mock("next/headers", () => ({
 
 import { requestGrowth } from "../growth-action";
 import { createWebhookLead } from "../imagina-leads";
+import { sendMetaLead } from "../meta-capi";
 
 /** FormData válido; cada test cambia lo que necesita. */
 function fd(over: Record<string, string> = {}): FormData {
@@ -84,5 +85,24 @@ describe("requestGrowth", () => {
     // El cálculo es suyo y ya lo ha "pagado" con sus datos: se le enseña igual.
     expect(res.ok).toBe(true);
     expect(res.resultado?.rama).toBe("A");
+  });
+
+  test("manda la conversión a Meta con el mismo eventId que vino del formulario", async () => {
+    // El píxel del navegador manda este mismo id. Si el servidor generara uno
+    // propio, Meta contaría dos conversiones por lead.
+    await requestGrowth(
+      fd({ eventId: "evt-cliente-123", sourceUrl: "https://dinkbit.es/growth" }),
+    );
+    expect(sendMetaLead).toHaveBeenCalledTimes(1);
+    const evento = vi.mocked(sendMetaLead).mock.calls[0][0];
+    expect(evento.eventId).toBe("evt-cliente-123");
+    expect(evento.email).toBe("ana@clinica.com");
+    expect(evento.phone).toBe("600111222");
+    expect(evento.sourceUrl).toBe("https://dinkbit.es/growth");
+  });
+
+  test("sin eventId no se manda conversión: una sin deduplicar es peor que ninguna", async () => {
+    await requestGrowth(fd());
+    expect(sendMetaLead).not.toHaveBeenCalled();
   });
 });
