@@ -117,7 +117,7 @@ describe("calcular", () => {
   });
 });
 
-import { formatEur } from "../growth-calc";
+import { formatEur, formatEurCompacto } from "../growth-calc";
 
 describe("formatEur", () => {
   test("formatea con coma decimal y símbolo", () => {
@@ -130,6 +130,27 @@ describe("formatEur", () => {
     expect(formatEur(4000)).toBe("4.000,00 €");
     expect(formatEur(6800)).toBe("6.800,00 €");
     expect(formatEur(1500000)).toBe("1.500.000,00 €");
+  });
+});
+
+describe("formatEurCompacto", () => {
+  test("a partir de mil, sin céntimos", () => {
+    // Los céntimos de una facturación mensual no le importan a nadie y son
+    // los que parten la celda en dos líneas en un móvil estrecho.
+    expect(formatEurCompacto(11250)).toBe("11.250 €");
+    expect(formatEurCompacto(1500)).toBe("1.500 €");
+    expect(formatEurCompacto(1500000)).toBe("1.500.000 €");
+  });
+
+  test("por debajo de mil conserva los céntimos", () => {
+    // Aquí sí se nota: 33,33 € de coste por paciente no es 33 €.
+    expect(formatEurCompacto(33.33)).toBe("33,33 €");
+    expect(formatEurCompacto(216.67)).toBe("216,67 €");
+    expect(formatEurCompacto(0)).toBe("0,00 €");
+  });
+
+  test("redondea al entero más cercano, no trunca", () => {
+    expect(formatEurCompacto(1500.6)).toBe("1.501 €");
   });
 });
 

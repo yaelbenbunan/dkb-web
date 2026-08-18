@@ -7,7 +7,6 @@ import { CONTACT_INFO } from "@/lib/contact-info";
 import {
   formatEur,
   proyectar,
-  rentabilidad,
   type CalcResult,
 } from "@/lib/growth-calc";
 import { GROWTH_THEME as T } from "@/lib/growth-config";
@@ -308,53 +307,7 @@ export function CalculadoraWizard({
   );
 }
 
-/** Dos cifras grandes una al lado de la otra. */
-function ParCifras({
-  items,
-}: {
-  items: { etiqueta: string; valor: string; nota?: string }[];
-}) {
-  return (
-    <div className="mt-6 grid gap-4 sm:grid-cols-2">
-      {items.map((i) => (
-        <div
-          key={i.etiqueta}
-          className="rounded-2xl p-5"
-          style={{ background: T.ink, border: `1px solid ${T.line}` }}
-        >
-          <p
-            className="text-[0.65rem] font-bold uppercase tracking-[0.2em]"
-            style={{ color: T.muted }}
-          >
-            {i.etiqueta}
-          </p>
-          <p
-            className="mt-1.5 font-black leading-none tabular-nums"
-            style={{ fontSize: "clamp(1.75rem, 6vw, 2.5rem)", color: T.fg }}
-          >
-            {i.valor}
-          </p>
-          {i.nota && (
-            <p className="mt-2 text-xs leading-relaxed" style={{ color: T.muted }}>
-              {i.nota}
-            </p>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/**
- * Lo que se está dejando encima de la mesa.
- *
- * Es la pieza que mueve a llamar: hasta aquí solo le hemos contado lo que ya
- * sabía. El titular es el dinero de más, y debajo va SIEMPRE el supuesto del
- * que sale — una proyección sin sus condiciones a la vista es publicidad, y
- * este producto se vende justo por lo contrario.
- */
 function Resultado({ resultado }: { resultado: CalcResult }) {
-  const rent = rentabilidad(resultado);
   const proy = proyectar(resultado);
 
   if (resultado.rama === "A" && resultado.costePorPaciente !== null) {
@@ -371,65 +324,39 @@ function Resultado({ resultado }: { resultado: CalcResult }) {
     return (
       <div className="rounded-3xl p-6 sm:p-8" style={tarjetaStyle}>
         <p
-          className="text-center text-[0.7rem] font-bold uppercase tracking-[0.24em]"
+          className="text-[0.7rem] font-bold uppercase tracking-[0.24em]"
           style={{ color: T.muted }}
         >
-          Cada paciente nuevo te cuesta
+          Tu situación hoy
         </p>
-        <strong
-          className="mt-2 block text-center font-black leading-none tabular-nums"
-          style={{ fontSize: "clamp(3rem, 13vw, 5rem)", color: T.fg }}
+        <p
+          className="mt-2 font-black leading-tight text-balance"
+          style={{ fontSize: "clamp(1.5rem, 5vw, 2.25rem)", color: T.fg }}
         >
-          {formatEur(resultado.costePorPaciente)}
-        </strong>
+          Y la que tendrías{" "}
+          <span style={{ color: T.lime }}>con nosotros</span>.
+        </p>
 
-        {/* Lo que le queda de verdad, por paciente y al mes. Es lo que un
-            dentista quiere saber y lo que ninguna agencia le dice. */}
-        {rent && (
-          <ParCifras
-            items={[
-              {
-                etiqueta: "Te queda por paciente",
-                valor: formatEur(rent.dejaPorPaciente),
-                nota: "Tu ticket medio menos lo que cuesta traerlo. No descuenta material ni personal.",
-              },
-              {
-                etiqueta: "Te queda al mes",
-                valor: formatEur(rent.dejaAlMes),
-                nota: `La captación se lleva el ${Math.round(rent.pesoCaptacion * 100)} % de cada factura.`,
-              },
-            ]}
-          />
-        )}
-
-        {/* El retorno, que es la cifra que de verdad importa. */}
-        {resultado.retorno !== null && (
-          <div className="mt-6 rounded-2xl p-6 text-center" style={{ background: T.lime }}>
-            <p
-              className="text-[0.7rem] font-bold uppercase tracking-[0.24em]"
-              style={{ color: T.ink, opacity: 0.7 }}
-            >
-              Por cada euro invertido recuperas
-            </p>
-            <p
-              className="mt-1 font-black leading-none tabular-nums"
-              style={{ fontSize: "clamp(3.25rem, 15vw, 5.5rem)", color: T.ink }}
-            >
-              {resultado.retorno.toFixed(2).replace(".", ",")} €
-            </p>
-          </div>
-        )}
-
+        {/* Todas las cifras viven en el mismo esquema comparativo: sueltas en
+            tarjetas obligaban a recomponer la comparación de cabeza. */}
         {proy && resultado.entrada.ticket !== null && (
           <SimuladorInversion
-            inversionActual={inversion}
-            costeActual={resultado.costePorPaciente}
+            actual={
+              inversion !== null && pacientes !== null && resultado.generado !== null
+                ? {
+                    inversion,
+                    pacientes,
+                    costePorPaciente: resultado.costePorPaciente,
+                    generado: resultado.generado,
+                  }
+                : null
+            }
             costeConNosotros={proy.costeSinEscalar}
             ticket={resultado.entrada.ticket}
           />
         )}
 
-        <p className="mt-6 text-center text-sm leading-relaxed" style={{ color: T.muted }}>
+        <p className="mt-6 text-sm leading-relaxed" style={{ color: T.muted }}>
           Es un cálculo con tus medias. Lo que no sabes es qué campaña te trae los pacientes
           buenos — y ahí es donde está el dinero.
         </p>
@@ -479,8 +406,7 @@ function Resultado({ resultado }: { resultado: CalcResult }) {
           que analizar, solo lo que se está dejando de ganar. */}
       {proy && resultado.entrada.ticket !== null && (
         <SimuladorInversion
-          inversionActual={null}
-          costeActual={null}
+          actual={null}
           costeConNosotros={proy.costeSinEscalar}
           ticket={resultado.entrada.ticket}
         />

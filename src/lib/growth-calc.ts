@@ -384,3 +384,19 @@ export function formatEur(n: number): string {
   const conMiles = entera.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   return `${conMiles},${decimales} €`;
 }
+
+/**
+ * Euros para tablas estrechas: sin céntimos a partir de mil.
+ *
+ * "11.250,00 €" son once caracteres que en un móvil de 390 px parten la celda
+ * en dos líneas, y los céntimos de una facturación mensual no le importan a
+ * nadie. Por debajo de mil sí se conservan, porque ahí dos decimales son la
+ * diferencia entre 33,33 € y 33 € de coste por paciente, que sí se nota.
+ */
+export function formatEurCompacto(n: number): string {
+  if (Math.abs(n) >= 1000) {
+    const entera = Math.round(n).toString();
+    return `${entera.replace(/\B(?=(\d{3})+(?!\d))/g, ".")} €`;
+  }
+  return formatEur(n);
+}
