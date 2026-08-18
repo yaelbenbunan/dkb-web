@@ -6,14 +6,14 @@ import { LineaDeTiempo } from "./_components/LineaDeTiempo";
 export const metadata: Metadata = {
   title: "Llenar tu agenda es fácil. Ganar más, no",
   description:
-    "Puedes tener la agenda llena y estar perdiendo dinero. Llevamos tus campañas con un único objetivo: que tu clínica gane más. Desde 199 €/mes, sin permanencia.",
+    "Un sistema integral que se ocupa de todo, del anuncio al paciente, para que cada euro que inviertas te devuelva más. Desde 199 €/mes, sin permanencia.",
   alternates: { canonical: GROWTH.path },
   openGraph: {
     type: "website",
     url: GROWTH.path,
     title: "Llenar tu agenda es fácil. Ganar más, no — dinkbit",
     description:
-      "Puedes tener la agenda llena y estar perdiendo dinero. Te decimos qué pacientes te salen a cuenta.",
+      "Nos ocupamos de todo, del anuncio al paciente, para que cada euro invertido te devuelva más.",
     siteName: "dinkbit",
   },
 };
@@ -73,17 +73,23 @@ const COMPARATIVA = [
   },
 ];
 
-/** Los cuatro pasos del sistema, en orden cronológico real. */
+/**
+ * Los cuatro pasos del sistema, en orden cronológico real.
+ *
+ * Hacen doble trabajo: explican el proceso y son, a la vez, el inventario de
+ * lo que entra en la cuota. Por eso el precio va justo detrás — "todo esto,
+ * por 199 €" solo se entiende si acabas de leer qué es "todo esto".
+ */
 const PASOS = [
   {
     n: "01",
-    t: "Traemos pacientes",
-    d: "Campañas en Google y Meta. Esto lo hace cualquiera, y es la parte fácil.",
+    t: "Traemos los pacientes",
+    d: "Estrategia, campañas en Google y Meta, y tu web hecha para convertir. Lo montamos y lo llevamos nosotros.",
   },
   {
     n: "02",
-    t: "Nada se pierde por el camino",
-    d: "Cada lead entra en un sistema ordenado, con su ficha y su origen. Ni uno se queda en un WhatsApp sin contestar.",
+    t: "No se pierde ni uno",
+    d: "Cada lead entra en un sistema ordenado, con su ficha y su origen. Nada se queda en un WhatsApp sin contestar.",
   },
   {
     n: "03",
@@ -92,21 +98,24 @@ const PASOS = [
   },
   {
     n: "04",
-    t: "Decidimos con datos, y tú lo ves",
-    d: "Nosotros llevamos las campañas: qué subir, qué apagar y dónde poner el dinero. Tú entras al panel cuando quieras.",
+    t: "Optimizamos para que rinda más",
+    d: "Con esos datos ajustamos mes a mes: qué sube, qué se apaga, dónde va el dinero. Tú lo ves todo en el panel.",
   },
 ];
 
-/** Lo que entra en la cuota. Se enseña ANTES del precio: 199 € sueltos no
- *  dicen nada, y detrás de esta lista dicen mucho. */
-const INCLUIDO = [
-  "Campañas en Google",
-  "Campañas en Meta",
-  "Tu web",
-  "CRM de leads",
-  "Agenda",
-  "Panel de resultados",
-  "Nosotros llevándolo",
+const GARANTIAS = [
+  {
+    t: "Sin desembolsos grandes",
+    d: "Pagas mes a mes. Ni inversiones iniciales de miles de euros ni contratos a un año.",
+  },
+  {
+    t: "Una cuota de alta, dicha por delante",
+    d: "Montarlo todo lleva trabajo, así que hay un pago inicial. Lo sabrás antes de empezar, nunca en la última llamada.",
+  },
+  {
+    t: "Sin comisión sobre tu inversión",
+    d: "Muchas agencias se llevan un porcentaje de lo que gastas en anuncios. Aquí la cuota es la cuota.",
+  },
 ];
 
 function FilaEmbudo({
@@ -148,59 +157,6 @@ function FilaEmbudo({
           {nota}
         </p>
       )}
-    </div>
-  );
-}
-
-/** El panel de resultados, que acompaña a los pasos en pegajoso: lo que esos
- *  cuatro pasos producen, a la vista mientras se leen. */
-function PanelEmbudo() {
-  return (
-    <div
-      className="rounded-3xl p-6 md:p-7"
-      style={{ background: T.surface, border: `1px solid ${T.line}` }}
-    >
-      <div className="flex items-center justify-between">
-        <span
-          className="rounded-full px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.2em]"
-          style={{ background: T.line, color: T.muted }}
-        >
-          Ejemplo, no tus datos
-        </span>
-        <span className="text-xs" style={{ color: T.muted }}>
-          Marzo
-        </span>
-      </div>
-
-      <div className="mt-5">
-        <FilaEmbudo etiqueta="Inviertes" valor="1.200 €" ancho={100} />
-        <FilaEmbudo etiqueta="Leads" valor="34" ancho={100} />
-        <FilaEmbudo etiqueta="Piden cita" valor="18" ancho={53} />
-        <FilaEmbudo
-          etiqueta="Acuden de verdad"
-          valor="11"
-          ancho={32}
-          nota="Aquí se cae todo el mundo, y aquí es donde nadie mira."
-        />
-      </div>
-
-      <div className="mt-6 rounded-2xl p-5" style={{ background: T.lime }}>
-        <p
-          className="text-[0.65rem] font-bold uppercase tracking-[0.24em]"
-          style={{ color: T.ink, opacity: 0.7 }}
-        >
-          Te han facturado
-        </p>
-        <p
-          className="mt-1 font-black leading-none tabular-nums"
-          style={{ fontSize: "clamp(2.25rem, 6vw, 3.25rem)", color: T.ink }}
-        >
-          5.400 €
-        </p>
-        <p className="mt-2 text-sm font-bold" style={{ color: T.ink }}>
-          Por cada euro invertido, has recuperado 4,50 €.
-        </p>
-      </div>
     </div>
   );
 }
@@ -343,55 +299,92 @@ export default function GrowthPage() {
         </Wrap>
       </section>
 
-      {/* ───────── 4. Cómo funciona: los pasos y lo que producen ───────── */}
-      <section className="py-20 md:py-28" style={{ background: T.surface }}>
-        <Wrap>
-          <Eyebrow>Cómo funciona</Eyebrow>
+      {/* ───────── 4. La solución: qué es, qué cuesta y qué te llevas ─────────
+          Va todo junto a propósito. Separar "cómo funciona" de "lo que cuesta"
+          debilitaba las dos partes: el proceso quedaba en teoría y el precio
+          aparecía sin contexto. Leídos seguidos, los cuatro pasos son a la vez
+          la explicación y el inventario de lo que compras. */}
+      <section
+        className="relative overflow-hidden py-20 md:py-28"
+        style={{ background: T.surface }}
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-32 right-0 h-[32rem] w-[32rem] rounded-full blur-[130px]"
+          style={{ background: T.lime, opacity: 0.09 }}
+        />
+        <Wrap className="relative">
+          <Eyebrow>La solución</Eyebrow>
 
           <h2
-            className="mt-8 max-w-3xl font-black leading-[1.05] tracking-[-0.02em] text-balance"
-            style={{ fontSize: "clamp(2rem, 5.5vw, 3.5rem)" }}
+            className="mt-8 max-w-4xl font-black leading-[1.02] tracking-[-0.03em] text-balance"
+            style={{ fontSize: "clamp(2.25rem, 6.5vw, 4.75rem)" }}
           >
-            Seguimos al paciente desde el anuncio{" "}
-            <span style={{ color: T.lime }}>hasta la caja</span>.
+            Un sistema integral.
+            <br />
+            <span style={{ color: T.lime }}>De principio a fin.</span>
           </h2>
 
-          {/* Los pasos a la izquierda y lo que producen a la derecha, en
-              pegajoso: mientras se leen los cuatro pasos, el panel que sale de
-              ellos permanece a la vista. Eso conecta proceso y resultado sin
-              tener que explicarlo con un párrafo. */}
-          <div className="mt-6 grid gap-10 lg:grid-cols-2 lg:gap-16">
-            <LineaDeTiempo pasos={PASOS} />
-
-            <div className="lg:sticky lg:top-12 lg:self-start lg:pt-14">
-              <PanelEmbudo />
-              <p className="mt-4 text-sm leading-relaxed" style={{ color: T.muted }}>
-                Y desglosado por campaña, para saber cuál sube y cuál se apaga.
-              </p>
-            </div>
-          </div>
-
-          <div
-            className="mt-16 rounded-3xl p-8 md:p-10"
-            style={{ background: T.ink, border: `1px solid ${T.line}` }}
+          <p
+            className="mt-8 max-w-3xl leading-relaxed"
+            style={{ fontSize: "clamp(1.125rem, 2.2vw, 1.5rem)", color: T.muted }}
           >
+            No contratas piezas sueltas ni te dejamos un programa para que te apañes.{" "}
+            <strong style={{ color: T.fg, fontWeight: 700 }}>
+              Nos ocupamos de todo el proceso
+            </strong>
+            , desde que alguien ve tu anuncio hasta que sabes cuánto te dejó, con un único
+            objetivo:{" "}
+            <strong style={{ color: T.lime, fontWeight: 700 }}>
+              que cada euro que inviertas te devuelva más
+            </strong>
+            .
+          </p>
+
+          {/* Los cuatro pasos, a todo lo ancho para que tengan presencia. El
+              hilo se rellena con el scroll: eso es lo que hace que se lean como
+              una cadena y no como cuatro servicios en una lista. */}
+          <LineaDeTiempo pasos={PASOS} />
+
+          {/* Y aquí el precio, sobre la espalda de lo que acaba de leer. */}
+          <div className="mt-16 pt-14" style={{ borderTop: `1px solid ${T.line}` }}>
+            <p className="text-xl font-bold" style={{ color: T.muted }}>
+              Todo esto, de principio a fin, por
+            </p>
             <p
-              className="font-black leading-snug text-balance"
-              style={{ fontSize: "clamp(1.25rem, 3vw, 1.875rem)" }}
+              className="mt-2 flex flex-wrap items-baseline gap-x-4 font-black leading-[0.85] tracking-[-0.04em]"
+              style={{ fontSize: "clamp(4.5rem, 19vw, 11rem)", color: T.lime }}
             >
-              Somos tu agencia, no un programa que te dejamos y te apañas.
+              <span className="tabular-nums">199 €</span>
+              <span
+                className="font-black tracking-[-0.02em]"
+                style={{ fontSize: "clamp(1.5rem, 4vw, 2.5rem)", color: T.fg }}
+              >
+                al mes
+              </span>
             </p>
-            <p className="mt-4 max-w-2xl leading-relaxed" style={{ color: T.muted }}>
-              Montamos la web, llevamos las campañas y tomamos las decisiones, con un único
-              objetivo:{" "}
-              <strong style={{ color: T.lime, fontWeight: 700 }}>que tu clínica gane más</strong>
-              . Lo que te damos a ti es la transparencia para comprobarlo cuando quieras.
+            <p
+              className="mt-4 font-black leading-none"
+              style={{ fontSize: "clamp(1.5rem, 4vw, 2.5rem)" }}
+            >
+              Sin permanencia.
             </p>
+
+            <div className="mt-12 grid gap-6 md:grid-cols-3">
+              {GARANTIAS.map((g) => (
+                <div key={g.t}>
+                  <p className="font-bold">{g.t}</p>
+                  <p className="mt-2 text-sm leading-relaxed" style={{ color: T.muted }}>
+                    {g.d}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         </Wrap>
       </section>
 
-      {/* ───────── 5. La calculadora ───────── */}
+      {/* ───────── 5. La calculadora, y lo que verás después ───────── */}
       <section id="calculadora" className="scroll-mt-8 py-20 md:py-28">
         <Wrap narrow>
           <Eyebrow>Empieza por aquí</Eyebrow>
@@ -411,91 +404,89 @@ export default function GrowthPage() {
           <div className="mt-10">
             <CalculadoraWizard />
           </div>
+
+          {/* El embudo vive aquí, después de la calculadora: deja de competir
+              con la explicación del sistema y pasa a responder "¿y qué me
+              llevo?" justo cuando el usuario se lo pregunta. */}
+          <div className="mt-20">
+            <p
+              className="font-black leading-tight text-balance"
+              style={{ fontSize: "clamp(1.5rem, 4vw, 2.25rem)" }}
+            >
+              Y a partir del primer mes, esto es lo que ves.
+            </p>
+
+            <div
+              className="mt-8 rounded-3xl p-6 md:p-8"
+              style={{ background: T.surface, border: `1px solid ${T.line}` }}
+            >
+              <div className="flex items-center justify-between">
+                <span
+                  className="rounded-full px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.2em]"
+                  style={{ background: T.line, color: T.muted }}
+                >
+                  Ejemplo, no tus datos
+                </span>
+                <span className="text-xs" style={{ color: T.muted }}>
+                  Marzo
+                </span>
+              </div>
+
+              <div className="mt-5">
+                <FilaEmbudo etiqueta="Inviertes" valor="1.200 €" ancho={100} />
+                <FilaEmbudo etiqueta="Leads" valor="34" ancho={100} />
+                <FilaEmbudo etiqueta="Piden cita" valor="18" ancho={53} />
+                <FilaEmbudo
+                  etiqueta="Acuden de verdad"
+                  valor="11"
+                  ancho={32}
+                  nota="Aquí se cae todo el mundo, y aquí es donde nadie mira."
+                />
+              </div>
+
+              <div className="mt-6 rounded-2xl p-5 md:p-6" style={{ background: T.lime }}>
+                <p
+                  className="text-[0.65rem] font-bold uppercase tracking-[0.24em]"
+                  style={{ color: T.ink, opacity: 0.7 }}
+                >
+                  Te han facturado
+                </p>
+                <p
+                  className="mt-1 font-black leading-none tabular-nums"
+                  style={{ fontSize: "clamp(2.5rem, 8vw, 3.75rem)", color: T.ink }}
+                >
+                  5.400 €
+                </p>
+                <p className="mt-2 text-sm font-bold" style={{ color: T.ink }}>
+                  Por cada euro invertido, has recuperado 4,50 €.
+                </p>
+              </div>
+
+              <p className="mt-5 text-sm leading-relaxed" style={{ color: T.muted }}>
+                Y desglosado por campaña, para saber cuál sube y cuál se apaga.
+              </p>
+            </div>
+          </div>
         </Wrap>
       </section>
 
-      {/* ───────── 6. Oferta y cierre ───────── */}
+      {/* ───────── 6. Cierre ───────── */}
       <section className="py-20 md:py-28" style={{ background: T.surface }}>
         <Wrap>
-          <Eyebrow>Lo que cuesta</Eyebrow>
-
-          {/* El precio se entiende cuando llega DESPUÉS de ver todo lo que
-              incluye. Al revés es un número suelto que no dice nada. */}
-          <div className="mt-10 flex flex-wrap gap-2.5">
-            {INCLUIDO.map((i) => (
-              <span
-                key={i}
-                className="rounded-full px-4 py-2 text-sm font-bold"
-                style={{ background: T.ink, border: `1px solid ${T.line}`, color: T.fg }}
-              >
-                {i}
-              </span>
-            ))}
-          </div>
-
-          <p className="mt-12 text-xl font-bold" style={{ color: T.muted }}>
-            Todo esto, por
-          </p>
           <p
-            className="mt-2 flex flex-wrap items-baseline gap-x-4 font-black leading-[0.85] tracking-[-0.04em]"
-            style={{ fontSize: "clamp(4.5rem, 19vw, 11rem)", color: T.lime }}
+            className="max-w-4xl font-black leading-[1.05] tracking-[-0.02em] text-balance"
+            style={{ fontSize: "clamp(1.875rem, 5.5vw, 3.75rem)" }}
           >
-            <span className="tabular-nums">199 €</span>
-            <span
-              className="font-black tracking-[-0.02em]"
-              style={{ fontSize: "clamp(1.5rem, 4vw, 2.5rem)", color: T.fg }}
-            >
-              al mes
-            </span>
+            Vas a querer quedarte{" "}
+            <span style={{ color: T.lime }}>por los resultados</span>, no porque te obliguemos.
           </p>
-          <p
-            className="mt-4 font-black leading-none"
-            style={{ fontSize: "clamp(1.5rem, 4vw, 2.5rem)" }}
+          <a
+            href="#calculadora"
+            className="mt-12 inline-flex h-14 items-center justify-center rounded-full px-9 text-base font-bold transition-transform hover:-translate-y-0.5"
+            style={{ background: T.lime, color: T.ink }}
           >
-            Sin permanencia.
-          </p>
-
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
-            <div>
-              <p className="font-bold">Sin desembolsos grandes</p>
-              <p className="mt-2 text-sm leading-relaxed" style={{ color: T.muted }}>
-                Pagas mes a mes. Ni inversiones iniciales de miles de euros ni contratos a un
-                año.
-              </p>
-            </div>
-            <div>
-              <p className="font-bold">Una cuota de alta, dicha por delante</p>
-              <p className="mt-2 text-sm leading-relaxed" style={{ color: T.muted }}>
-                Montarlo todo lleva trabajo, así que hay un pago inicial. Lo sabrás antes de
-                empezar, nunca en la última llamada.
-              </p>
-            </div>
-            <div>
-              <p className="font-bold">Sin comisión sobre tu inversión</p>
-              <p className="mt-2 text-sm leading-relaxed" style={{ color: T.muted }}>
-                Muchas agencias se llevan un porcentaje de lo que gastas en anuncios. Aquí la
-                cuota es la cuota, y cada euro invertido lo ves en el panel.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-16" style={{ borderTop: `1px solid ${T.line}` }}>
-            <p
-              className="mt-16 max-w-4xl font-black leading-[1.05] tracking-[-0.02em] text-balance"
-              style={{ fontSize: "clamp(1.875rem, 5.5vw, 3.75rem)" }}
-            >
-              Vas a querer quedarte{" "}
-              <span style={{ color: T.lime }}>por los resultados</span>, no porque te
-              obliguemos.
-            </p>
-            <a
-              href="#calculadora"
-              className="mt-12 inline-flex h-14 items-center justify-center rounded-full px-9 text-base font-bold transition-transform hover:-translate-y-0.5"
-              style={{ background: T.lime, color: T.ink }}
-            >
-              Calcula qué te cuesta un paciente
-            </a>
-          </div>
+            Calcula qué te cuesta un paciente
+          </a>
         </Wrap>
       </section>
     </>
