@@ -69,10 +69,22 @@ const PASOS: PasoNumerico[] = [
   },
 ];
 
-export function CalculadoraWizard() {
+export function CalculadoraWizard({
+  /**
+   * Resultado ya calculado con el que arrancar, saltándose el cuestionario.
+   *
+   * Solo lo usa la ruta de demostración, y lo calcula el SERVIDOR: aquí no se
+   * importa `calcular` a propósito, porque poder calcular en cliente es
+   * justo lo que permitiría enseñar el resultado sin pedir el contacto. En
+   * el embudo real este prop no se pasa nunca.
+   */
+  resultadoInicial,
+}: {
+  resultadoInicial?: CalcResult;
+} = {}) {
   const [paso, setPaso] = useState(0);
   const [valores, setValores] = useState({ inversion: "", pacientes: "", ticket: "" });
-  const [resultado, setResultado] = useState<CalcResult | null>(null);
+  const [resultado, setResultado] = useState<CalcResult | null>(resultadoInicial ?? null);
   const [error, setError] = useState<string | null>(null);
   const [pendiente, startTransition] = useTransition();
   const cargadoEn = useRef(Date.now());
