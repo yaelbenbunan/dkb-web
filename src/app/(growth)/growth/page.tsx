@@ -209,7 +209,9 @@ export default function GrowthPage() {
   return (
     <>
       {/* ───────── 1. Hero ───────── */}
-      <header className="relative overflow-hidden pb-20 pt-24 md:pb-28 md:pt-32">
+      {/* Alturas contenidas a propósito: todo el hero, botón incluido, tiene
+          que caber sin scroll nada más entrar, también en portátiles bajos. */}
+      <header className="relative flex min-h-[100svh] items-center overflow-hidden py-12 md:py-16">
         <div
           aria-hidden
           className="pointer-events-none absolute -top-40 left-1/2 h-[38rem] w-[38rem] -translate-x-1/2 rounded-full blur-[120px]"
@@ -219,8 +221,8 @@ export default function GrowthPage() {
           <Eyebrow>Para clínicas que ya invierten en publicidad</Eyebrow>
 
           <h1
-            className="mt-8 font-black leading-[0.92] tracking-[-0.03em]"
-            style={{ fontSize: "clamp(2.75rem, 8.5vw, 6.5rem)" }}
+            className="mt-6 font-black leading-[0.92] tracking-[-0.03em]"
+            style={{ fontSize: "clamp(2.5rem, 7.5vw, 5.75rem)" }}
           >
             Llenar tu agenda
             <br />
@@ -230,8 +232,8 @@ export default function GrowthPage() {
           </h1>
 
           <p
-            className="mt-10 max-w-2xl leading-relaxed"
-            style={{ fontSize: "clamp(1.125rem, 2.2vw, 1.5rem)", color: T.muted }}
+            className="mt-7 max-w-2xl leading-relaxed"
+            style={{ fontSize: "clamp(1.0625rem, 1.9vw, 1.375rem)", color: T.muted }}
           >
             Cualquiera te trae pacientes. Nosotros te decimos{" "}
             <strong style={{ color: T.fg, fontWeight: 700 }}>
@@ -240,7 +242,7 @@ export default function GrowthPage() {
             , para que tomes mejores decisiones.
           </p>
 
-          <div className="mt-12 flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="mt-9 flex flex-col gap-4 sm:flex-row sm:items-center">
             <a
               href="#calculadora"
               className="inline-flex h-14 items-center justify-center rounded-full px-9 text-base font-bold transition-transform hover:-translate-y-0.5"
@@ -435,16 +437,22 @@ export default function GrowthPage() {
             Todo esto, por
           </p>
           <p
-            className="mt-2 font-black leading-[0.85] tracking-[-0.04em] tabular-nums"
+            className="mt-2 flex flex-wrap items-baseline gap-x-4 font-black leading-[0.85] tracking-[-0.04em]"
             style={{ fontSize: "clamp(4.5rem, 19vw, 11rem)", color: T.lime }}
           >
-            199 €
+            <span className="tabular-nums">199 €</span>
+            <span
+              className="font-black tracking-[-0.02em]"
+              style={{ fontSize: "clamp(1.5rem, 4vw, 2.5rem)", color: T.fg }}
+            >
+              al mes
+            </span>
           </p>
           <p
-            className="mt-1 font-black leading-none"
+            className="mt-4 font-black leading-none"
             style={{ fontSize: "clamp(1.5rem, 4vw, 2.5rem)" }}
           >
-            al mes. Sin permanencia.
+            Sin permanencia.
           </p>
 
           <div className="mt-12 grid gap-6 md:grid-cols-3">
@@ -463,10 +471,10 @@ export default function GrowthPage() {
               </p>
             </div>
             <div>
-              <p className="font-bold">Tu publicidad es tuya</p>
+              <p className="font-bold">Sin comisión sobre tu inversión</p>
               <p className="mt-2 text-sm leading-relaxed" style={{ color: T.muted }}>
-                Lo que inviertas en Google y Meta lo pagas tú directamente. No pasa por
-                nosotros.
+                Muchas agencias se llevan un porcentaje de lo que gastas en anuncios. Aquí la
+                cuota es la cuota, y cada euro invertido lo ves en el panel.
               </p>
             </div>
           </div>
@@ -476,10 +484,9 @@ export default function GrowthPage() {
               className="mt-16 max-w-4xl font-black leading-[1.05] tracking-[-0.02em] text-balance"
               style={{ fontSize: "clamp(1.875rem, 5.5vw, 3.75rem)" }}
             >
-              No te vamos a retener por obligación.{" "}
-              <span style={{ color: T.lime }}>
-                Te vas a quedar porque los resultados te convencen.
-              </span>
+              Vas a querer quedarte{" "}
+              <span style={{ color: T.lime }}>por los resultados</span>, no porque te
+              obliguemos.
             </p>
             <a
               href="#calculadora"
