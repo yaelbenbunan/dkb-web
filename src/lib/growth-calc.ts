@@ -214,6 +214,13 @@ export interface Proyeccion {
   generadoExtra: number;
   /** Si en este escenario también se afina el coste, para poder decirlo. */
   mejoraCoste: boolean;
+  /**
+   * El coste ya mejorado por nuestro trabajo pero ANTES de aplicarle el
+   * encarecimiento por escalar. Es el que hay que darle al simulador como
+   * base: si se le pasara `costePorPaciente`, que ya lleva el escalado
+   * dentro, volvería a encarecerlo y las dos cifras dejarían de cuadrar.
+   */
+  costeSinEscalar: number;
 }
 
 /**
@@ -253,6 +260,7 @@ export function proyectar(r: CalcResult): Proyeccion | null {
       pacientesExtra: pacientes,
       generadoExtra: generado,
       mejoraCoste: false,
+      costeSinEscalar: coste,
     };
   }
 
@@ -274,11 +282,24 @@ export function proyectar(r: CalcResult): Proyeccion | null {
 
   const inversionProyectada =
     escenario === "bajar-coste" ? inversion : redondear(inversion * (1 + SUBIDA_INVERSION));
-  const costeProyectado = redondear(r.costePorPaciente * (1 - recorte));
+  const costeMejorado = redondear(r.costePorPaciente * (1 - recorte));
 
-  // A la baja siempre: es mejor quedarse corto en la promesa que pasarse.
-  const pacientes = Math.floor(inversionProyectada / costeProyectado);
-  const generado = redondear(pacientes * ticket);
+  // La proyección pasa por el MISMO simulador que usa el deslizador, en vez
+  // de calcular por su cuenta. Si no, las dos cifras se separan en cuanto el
+  // escenario sube la inversión —una aplicaría el encarecimiento al escalar y
+  // la otra no— y el usuario vería dos números distintos para el mismo
+  // presupuesto. En una pieza que se vende por decir la verdad con los
+  // números, esa contradicción se la carga entera.
+  const s = simular({
+    inversion: inversionProyectada,
+    costeBase: costeMejorado,
+    inversionBase: inversion,
+    ticket,
+  });
+
+  const pacientes = s.pacientes;
+  const generado = s.generado;
+  const costeProyectado = s.costePorPaciente;
   const pacientesExtra = pacientes - r.entrada.pacientes;
   const generadoExtra = redondear(generado - r.generado);
 
@@ -296,6 +317,61 @@ export function proyectar(r: CalcResult): Proyeccion | null {
     pacientesExtra,
     generadoExtra,
     mejoraCoste: recorte > 0,
+    costeSinEscalar: costeMejorado,
+  };
+}
+
+/**
+ * Cuánto encarece la captación cada vez que se dobla la inversión.
+ *
+ * Escalar publicidad NUNCA sale gratis: al subir el presupuesto se compra
+ * tráfico progresivamente peor, y el coste por paciente sube. Un simulador
+ * que mantuviera el coste plano prometería que invertir diez veces más trae
+ * diez veces más pacientes, que es sencillamente falso — y en un producto
+ * que se vende por decir la verdad con los números, sería el peor sitio
+ * posible para mentir.
+ */
+const ENCARECIMIENTO_POR_DOBLE = 0.1;
+
+export interface Simulacion {
+  inversion: number;
+  costePorPaciente: number;
+  pacientes: number;
+  generado: number;
+  /** Lo generado menos lo invertido. Otra vez: no es beneficio. */
+  deja: number;
+}
+
+/**
+ * Simula un nivel de inversión distinto, para que el usuario pueda jugar.
+ *
+ * Por debajo de su inversión de partida el coste se deja como está: prometer
+ * que gastando menos además saldría más barato es especular.
+ */
+export function simular(input: {
+  inversion: number;
+  costeBase: number;
+  inversionBase: number;
+  ticket: number;
+}): Simulacion {
+  const { inversion, costeBase, inversionBase, ticket } = input;
+
+  const costePorPaciente =
+    inversion > inversionBase && inversionBase > 0
+      ? redondear(
+          costeBase * (1 + ENCARECIMIENTO_POR_DOBLE * Math.log2(inversion / inversionBase)),
+        )
+      : costeBase;
+
+  const pacientes = costePorPaciente > 0 ? Math.floor(inversion / costePorPaciente) : 0;
+  const generado = redondear(pacientes * ticket);
+
+  return {
+    inversion,
+    costePorPaciente,
+    pacientes,
+    generado,
+    deja: redondear(generado - inversion),
   };
 }
 

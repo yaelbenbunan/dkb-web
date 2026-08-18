@@ -12,6 +12,7 @@ import {
   type Proyeccion,
 } from "@/lib/growth-calc";
 import { GROWTH_THEME as T } from "@/lib/growth-config";
+import { SimuladorInversion } from "./SimuladorInversion";
 import { track, pushUserData } from "@/lib/gtm";
 import { newEventId, trackMetaLead } from "@/lib/meta-pixel";
 import { appendUtms } from "@/lib/utm";
@@ -443,10 +444,13 @@ function FilaComparativa({
 function BloqueProyeccion({
   p,
   hoy,
+  ticket,
 }: {
   p: Proyeccion;
   /** Su situación actual, para poder poner las dos columnas una al lado de otra. */
   hoy: { inversion: number; pacientes: number; generado: number } | null;
+  /** Necesario para el simulador: sin él no se puede calcular facturación. */
+  ticket: number | null;
 }) {
   const palanca =
     p.escenario === "bajar-coste"
@@ -524,6 +528,15 @@ function BloqueProyeccion({
         Simulación hecha con tus propias cifras, {palanca}. Es conservadora y no es una promesa:
         redondeamos siempre a la baja.
       </p>
+
+      {ticket !== null && (
+        <SimuladorInversion
+          inversionInicial={p.inversion}
+          inversionBase={hoy ? hoy.inversion : p.inversion}
+          costeBase={p.costeSinEscalar}
+          ticket={ticket}
+        />
+      )}
     </div>
   );
 }
@@ -633,6 +646,7 @@ function Resultado({ resultado }: { resultado: CalcResult }) {
                 ? { inversion, pacientes, generado: resultado.generado }
                 : null
             }
+            ticket={resultado.entrada.ticket}
           />
         )}
 
@@ -684,7 +698,7 @@ function Resultado({ resultado }: { resultado: CalcResult }) {
       )}
       {/* Aquí la proyección es el argumento entero: sin inversión no hay nada
           que analizar, solo lo que se está dejando de ganar. */}
-      {proy && <BloqueProyeccion p={proy} hoy={null} />}
+      {proy && <BloqueProyeccion p={proy} hoy={null} ticket={resultado.entrada.ticket} />}
       <DiagnosticoCta />
     </div>
   );

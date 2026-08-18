@@ -133,7 +133,7 @@ describe("formatEur", () => {
   });
 });
 
-import { rentabilidad, proyectar } from "../growth-calc";
+import { rentabilidad, proyectar, simular } from "../growth-calc";
 
 describe("rentabilidad", () => {
   test("lo que deja cada paciente y lo que deja al mes", () => {
@@ -182,24 +182,45 @@ describe("proyectar", () => {
     expect(p?.escenario).toBe("subir-inversion");
     expect(p?.inversion).toBe(2250);
     expect(p?.inversionExtra).toBe(750);
-    // El coste baja un 10 %: 33,33 → 30.
-    expect(p?.costePorPaciente).toBe(30);
-    // 2.250 / 30 = 75.
-    expect(p?.pacientes).toBe(75);
-    expect(p?.pacientesExtra).toBe(30);
-    expect(p?.generado).toBe(18750);
-    expect(p?.generadoExtra).toBe(7500);
+    // Nuestro trabajo baja el coste un 10 % (33,33 → 30), pero escalar a 1,5x
+    // lo encarece un 5,85 %: queda en 31,75. Sigue siendo mejor que hoy, y es
+    // la cifra honesta.
+    expect(p?.costePorPaciente).toBe(31.75);
+    // 2.250 / 31,75 = 70,8 → 70.
+    expect(p?.pacientes).toBe(70);
+    expect(p?.pacientesExtra).toBe(25);
+    expect(p?.generado).toBe(17500);
+    expect(p?.generadoExtra).toBe(6250);
   });
 
-  test("coste ya afinado: solo sube la inversión, sin tocarlo", () => {
+  test("la proyección y el simulador coinciden en el mismo presupuesto", () => {
+    // Van por el mismo modelo a propósito: dos cifras distintas para el mismo
+    // dinero destruirían la credibilidad de toda la pieza.
+    const base = calcular({ inversion: 1500, pacientes: 45, ticket: 250 });
+    const p = proyectar(base)!;
+    // Con `costeSinEscalar`, que es justo lo que la pantalla le pasa al
+    // deslizador: usar `costePorPaciente` encarecería dos veces.
+    const s = simular({
+      inversion: p.inversion,
+      costeBase: p.costeSinEscalar,
+      inversionBase: 1500,
+      ticket: 250,
+    });
+    expect(s.pacientes).toBe(p.pacientes);
+    expect(s.generado).toBe(p.generado);
+    expect(s.costePorPaciente).toBe(p.costePorPaciente);
+  });
+
+  test("coste ya afinado: solo sube la inversión, sin recortarlo", () => {
     // 10 € de captación sobre un ticket de 500 € = 2 %. Prometer bajarlo
-    // todavía más sería vender humo.
+    // todavía más sería vender humo, así que solo se escala.
     const p = proyectar(calcular({ inversion: 1000, pacientes: 100, ticket: 500 }));
     expect(p?.escenario).toBe("subir-inversion");
-    expect(p?.costePorPaciente).toBe(10);
     expect(p?.inversion).toBe(1500);
-    expect(p?.pacientes).toBe(150);
-    expect(p?.pacientesExtra).toBe(50);
+    // Sin recorte, pero con el encarecimiento de escalar a 1,5x.
+    expect(p?.costePorPaciente).toBe(10.58);
+    expect(p?.pacientes).toBe(141);
+    expect(p?.pacientesExtra).toBe(41);
   });
 
   test("no invierte nada: simula un arranque con su propio ticket", () => {
@@ -217,6 +238,41 @@ describe("proyectar", () => {
     // cifra de facturación sería inventarla.
     expect(proyectar(calcular({ inversion: 1500, pacientes: 45, ticket: null }))).toBeNull();
     expect(proyectar(calcular({ inversion: null, pacientes: null, ticket: null }))).toBeNull();
+  });
+
+  test("simular: por debajo o igual a la base, el coste no se toca", () => {
+    const s = simular({ inversion: 1500, costeBase: 30, inversionBase: 1500, ticket: 250 });
+    expect(s.costePorPaciente).toBe(30);
+    expect(s.pacientes).toBe(50);
+    expect(s.generado).toBe(12500);
+    // 12.500 generados menos 1.500 invertidos.
+    expect(s.deja).toBe(11000);
+
+    // Invirtiendo menos tampoco se promete un coste mejor.
+    expect(simular({ inversion: 750, costeBase: 30, inversionBase: 1500, ticket: 250 }).costePorPaciente).toBe(30);
+  });
+
+  test("simular: al escalar, el coste por paciente sube", () => {
+    // El doble de inversión encarece la captación un 10 %.
+    const doble = simular({ inversion: 3000, costeBase: 30, inversionBase: 1500, ticket: 250 });
+    expect(doble.costePorPaciente).toBe(33);
+    expect(doble.pacientes).toBe(90);
+
+    // El cuádruple, un 20 %.
+    const cuadruple = simular({ inversion: 6000, costeBase: 30, inversionBase: 1500, ticket: 250 });
+    expect(cuadruple.costePorPaciente).toBe(36);
+  });
+
+  test("simular: nunca devuelve pacientes a medias ni cifras infinitas", () => {
+    const s = simular({ inversion: 1000, costeBase: 33.33, inversionBase: 1000, ticket: 250 });
+    // 1.000 / 33,33 = 30,003 → 30, a la baja.
+    expect(s.pacientes).toBe(30);
+    expect(Number.isFinite(s.generado)).toBe(true);
+
+    // Un coste base absurdo no puede producir una división por cero.
+    const cero = simular({ inversion: 1000, costeBase: 0, inversionBase: 1000, ticket: 250 });
+    expect(cero.pacientes).toBe(0);
+    expect(cero.generado).toBe(0);
   });
 
   test("nunca proyecta una mejora que no lo sea", () => {
