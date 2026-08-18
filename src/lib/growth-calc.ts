@@ -150,6 +150,135 @@ export function calcular(input: CalcInput): CalcResult {
   };
 }
 
+/**
+ * Lo que le queda a la clínica por cada paciente y al mes.
+ *
+ * OJO CON EL NOMBRE: esto NO es beneficio. Descuenta lo que cuesta traer al
+ * paciente, pero no el material, ni el personal, ni el sillón. Llamarlo
+ * beneficio sería mentir, y un dentista lo detecta a la primera. De ahí
+ * "deja", que es literal: lo que queda después de publicidad.
+ */
+export interface Rentabilidad {
+  /** Ticket medio menos lo que cuesta traer a ese paciente. */
+  dejaPorPaciente: number;
+  /** Lo mismo, al mes: generado menos invertido. */
+  dejaAlMes: number;
+  /** Qué parte del ticket se va en captación. 0,13 = 13 %. */
+  pesoCaptacion: number;
+}
+
+export function rentabilidad(r: CalcResult): Rentabilidad | null {
+  const { ticket, inversion } = r.entrada;
+  if (ticket === null || ticket <= 0) return null;
+  if (r.costePorPaciente === null || r.generado === null || inversion === null) return null;
+
+  return {
+    dejaPorPaciente: redondear(ticket - r.costePorPaciente),
+    dejaAlMes: redondear(r.generado - inversion),
+    pesoCaptacion: redondear(r.costePorPaciente / ticket),
+  };
+}
+
+/** Por encima de esto, la captación se está comiendo el ticket. */
+const PESO_CAPTACION_ALTO = 0.3;
+/** Recorte de coste que damos por alcanzable sin prometer milagros. */
+const MEJORA_COSTE = 0.2;
+/** Subida de inversión que proponemos a quien ya le sale a cuenta. */
+const SUBIDA_INVERSION = 0.5;
+/** Inversión de arranque para quien todavía no invierte nada. */
+const INVERSION_ARRANQUE = 800;
+/** Captación sana como parte del ticket, para simular un arranque. */
+const CAPTACION_SANA = 0.2;
+
+export interface Proyeccion {
+  /**
+   * Qué palanca se mueve, que es distinta según de dónde parta la clínica:
+   * quien paga de más por cada paciente tiene que abaratar antes de escalar,
+   * y quien ya paga poco lo que tiene es margen para invertir más.
+   */
+  escenario: "bajar-coste" | "subir-inversion" | "empezar";
+  inversion: number;
+  costePorPaciente: number;
+  pacientes: number;
+  generado: number;
+  /** Contra su situación de hoy. En el arranque, contra cero. */
+  pacientesExtra: number;
+  generadoExtra: number;
+}
+
+/**
+ * Qué podría conseguir siendo más eficiente, en plan conservador.
+ *
+ * Tres reglas, según de dónde parta:
+ *
+ *   - Captación por encima del 30 % del ticket → está pagando de más por cada
+ *     paciente. Se proyecta abaratarlo un 20 % SIN tocar la inversión: el
+ *     mismo dinero trae más gente.
+ *   - Captación por debajo del 30 % → le sale a cuenta y se está quedando
+ *     corto. Se proyecta subir la inversión un 50 % manteniendo el coste.
+ *   - No invierte → se simula un arranque con una captación sana sobre su
+ *     propio ticket.
+ *
+ * Devuelve null cuando no hay ticket medio: sin saber lo que vale un paciente,
+ * cualquier cifra de facturación proyectada sería inventada, y este producto
+ * se vende justo por lo contrario.
+ */
+export function proyectar(r: CalcResult): Proyeccion | null {
+  const { ticket, inversion } = r.entrada;
+  if (ticket === null || ticket <= 0) return null;
+
+  // Todavía no invierte: se le enseña qué pasaría si empezara.
+  if (inversion === null || inversion <= 0) {
+    const coste = redondear(ticket * CAPTACION_SANA);
+    const pacientes = Math.floor(INVERSION_ARRANQUE / coste);
+    if (pacientes <= 0) return null;
+    const generado = redondear(pacientes * ticket);
+    return {
+      escenario: "empezar",
+      inversion: INVERSION_ARRANQUE,
+      costePorPaciente: coste,
+      pacientes,
+      generado,
+      pacientesExtra: pacientes,
+      generadoExtra: generado,
+    };
+  }
+
+  if (r.costePorPaciente === null || r.generado === null || r.entrada.pacientes === null) {
+    return null;
+  }
+
+  const pesoCaptacion = r.costePorPaciente / ticket;
+  const escenario = pesoCaptacion > PESO_CAPTACION_ALTO ? "bajar-coste" : "subir-inversion";
+
+  const inversionProyectada =
+    escenario === "bajar-coste" ? inversion : redondear(inversion * (1 + SUBIDA_INVERSION));
+  const costeProyectado =
+    escenario === "bajar-coste"
+      ? redondear(r.costePorPaciente * (1 - MEJORA_COSTE))
+      : r.costePorPaciente;
+
+  // A la baja siempre: es mejor quedarse corto en la promesa que pasarse.
+  const pacientes = Math.floor(inversionProyectada / costeProyectado);
+  const generado = redondear(pacientes * ticket);
+  const pacientesExtra = pacientes - r.entrada.pacientes;
+  const generadoExtra = redondear(generado - r.generado);
+
+  // Si la proyección no mejora lo que ya tiene, no se enseña. Prometer lo
+  // mismo o menos no es prudencia, es ruido.
+  if (pacientesExtra <= 0 || generadoExtra <= 0) return null;
+
+  return {
+    escenario,
+    inversion: inversionProyectada,
+    costePorPaciente: costeProyectado,
+    pacientes,
+    generado,
+    pacientesExtra,
+    generadoExtra,
+  };
+}
+
 /** Euros en español con separador de miles: 4000 → "4.000,00 €".
  *  A mano y no con toLocaleString porque este repo no depende del ICU del
  *  servidor (mismo motivo que el eur() de puesto-seguro). Vive aquí y no en

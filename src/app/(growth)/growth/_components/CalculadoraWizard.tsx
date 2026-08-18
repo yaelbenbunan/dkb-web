@@ -4,7 +4,13 @@ import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { requestGrowth } from "@/lib/growth-action";
 import { CONTACT_INFO } from "@/lib/contact-info";
-import { formatEur, type CalcResult } from "@/lib/growth-calc";
+import {
+  formatEur,
+  proyectar,
+  rentabilidad,
+  type CalcResult,
+  type Proyeccion,
+} from "@/lib/growth-calc";
 import { GROWTH_THEME as T } from "@/lib/growth-config";
 import { track, pushUserData } from "@/lib/gtm";
 import { newEventId, trackMetaLead } from "@/lib/meta-pixel";
@@ -338,7 +344,98 @@ function FilaResultado({
   );
 }
 
+/** Dos cifras grandes una al lado de la otra. */
+function ParCifras({
+  items,
+}: {
+  items: { etiqueta: string; valor: string; nota?: string }[];
+}) {
+  return (
+    <div className="mt-6 grid gap-4 sm:grid-cols-2">
+      {items.map((i) => (
+        <div
+          key={i.etiqueta}
+          className="rounded-2xl p-5"
+          style={{ background: T.ink, border: `1px solid ${T.line}` }}
+        >
+          <p
+            className="text-[0.65rem] font-bold uppercase tracking-[0.2em]"
+            style={{ color: T.muted }}
+          >
+            {i.etiqueta}
+          </p>
+          <p
+            className="mt-1.5 font-black leading-none tabular-nums"
+            style={{ fontSize: "clamp(1.75rem, 6vw, 2.5rem)", color: T.fg }}
+          >
+            {i.valor}
+          </p>
+          {i.nota && (
+            <p className="mt-2 text-xs leading-relaxed" style={{ color: T.muted }}>
+              {i.nota}
+            </p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Lo que se está dejando encima de la mesa.
+ *
+ * Es la pieza que mueve a llamar: hasta aquí solo le hemos contado lo que ya
+ * sabía. El titular es el dinero de más, y debajo va SIEMPRE el supuesto del
+ * que sale — una proyección sin sus condiciones a la vista es publicidad, y
+ * este producto se vende justo por lo contrario.
+ */
+function BloqueProyeccion({ p }: { p: Proyeccion }) {
+  const explicacion =
+    p.escenario === "bajar-coste"
+      ? `Manteniendo tus ${formatEur(p.inversion)} de inversión y bajando un 20 % lo que cuesta traer a cada paciente, hasta ${formatEur(p.costePorPaciente)}.`
+      : p.escenario === "subir-inversion"
+        ? `Subiendo tu inversión a ${formatEur(p.inversion)} al mes y manteniendo el coste por paciente que ya tienes.`
+        : `Empezando con ${formatEur(p.inversion)} al mes y una captación sana para tu ticket, de ${formatEur(p.costePorPaciente)} por paciente.`;
+
+  return (
+    <div className="mt-8 rounded-2xl p-6 sm:p-7" style={{ background: T.ink, border: `1px solid ${T.lime}55` }}>
+      <p
+        className="text-[0.7rem] font-bold uppercase tracking-[0.24em]"
+        style={{ color: T.lime }}
+      >
+        {p.escenario === "empezar" ? "Lo que podrías estar generando" : "Lo que te estás dejando"}
+      </p>
+
+      <p
+        className="mt-2 font-black leading-none tabular-nums"
+        style={{ fontSize: "clamp(2.5rem, 11vw, 4rem)", color: T.lime }}
+      >
+        +{formatEur(p.generadoExtra)}
+      </p>
+      <p className="mt-1 text-base font-bold">al mes</p>
+
+      <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm" style={{ color: T.muted }}>
+        <span>
+          <strong style={{ color: T.fg }}>+{p.pacientesExtra}</strong> pacientes al mes
+        </span>
+        <span>
+          Total: <strong style={{ color: T.fg }}>{p.pacientes}</strong> pacientes ·{" "}
+          <strong style={{ color: T.fg }}>{formatEur(p.generado)}</strong>
+        </span>
+      </div>
+
+      <p className="mt-5 text-xs leading-relaxed" style={{ color: T.muted }}>
+        {explicacion} Es una estimación conservadora hecha con tus propias cifras, no una
+        promesa: lo redondeamos siempre a la baja.
+      </p>
+    </div>
+  );
+}
+
 function Resultado({ resultado }: { resultado: CalcResult }) {
+  const rent = rentabilidad(resultado);
+  const proy = proyectar(resultado);
+
   if (resultado.rama === "A" && resultado.costePorPaciente !== null) {
     // Con respaldo a propósito: durante un despliegue puede convivir un
     // cliente nuevo con una respuesta antigua sin `entrada`, y quedarse sin
@@ -395,9 +492,28 @@ function Resultado({ resultado }: { resultado: CalcResult }) {
           )}
         </div>
 
+        {/* Lo que le queda de verdad, por paciente y al mes. Es lo que un
+            dentista quiere saber y lo que ninguna agencia le dice. */}
+        {rent && (
+          <ParCifras
+            items={[
+              {
+                etiqueta: "Te queda por paciente",
+                valor: formatEur(rent.dejaPorPaciente),
+                nota: "Tu ticket medio menos lo que cuesta traerlo. No descuenta material ni personal.",
+              },
+              {
+                etiqueta: "Te queda al mes",
+                valor: formatEur(rent.dejaAlMes),
+                nota: `La captación se lleva el ${Math.round(rent.pesoCaptacion * 100)} % de cada factura.`,
+              },
+            ]}
+          />
+        )}
+
         {/* El retorno, que es la cifra que de verdad importa. */}
         {resultado.retorno !== null && (
-          <div className="mt-7 rounded-2xl p-6 text-center" style={{ background: T.lime }}>
+          <div className="mt-6 rounded-2xl p-6 text-center" style={{ background: T.lime }}>
             <p
               className="text-[0.7rem] font-bold uppercase tracking-[0.24em]"
               style={{ color: T.ink, opacity: 0.7 }}
@@ -412,6 +528,8 @@ function Resultado({ resultado }: { resultado: CalcResult }) {
             </p>
           </div>
         )}
+
+        {proy && <BloqueProyeccion p={proy} />}
 
         <p className="mt-6 text-center text-sm leading-relaxed" style={{ color: T.muted }}>
           Es un cálculo con tus medias. Lo que no sabes es qué campaña te trae los pacientes
@@ -458,6 +576,13 @@ function Resultado({ resultado }: { resultado: CalcResult }) {
           <strong style={{ color: T.fg }}>{formatEur(resultado.generado)}</strong> al mes, sin
           gastar nada en publicidad todavía.
         </p>
+      )}
+      {/* Aquí la proyección es el argumento entero: sin inversión no hay nada
+          que analizar, solo lo que se está dejando de ganar. */}
+      {proy && (
+        <div className="text-left">
+          <BloqueProyeccion p={proy} />
+        </div>
       )}
       <DiagnosticoCta />
     </div>
