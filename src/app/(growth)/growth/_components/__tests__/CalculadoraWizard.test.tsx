@@ -10,6 +10,9 @@ const requestGrowth = vi.fn(async (_fd: FormData) => ({
     generado: 6800,
     retorno: 4.53,
     sinPacientes: false,
+    // El servidor devuelve los datos de entrada ya normalizados: la pantalla
+    // de resultado dibuja con ellos el embudo del propio usuario.
+    entrada: { inversion: 1500, pacientes: 17, ticket: 400 },
   },
 }));
 const trackMetaLead = vi.fn();

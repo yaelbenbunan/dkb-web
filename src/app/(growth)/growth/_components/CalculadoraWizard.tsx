@@ -290,31 +290,130 @@ export function CalculadoraWizard() {
   );
 }
 
+/**
+ * Una fila del embudo del resultado.
+ *
+ * La barra es opcional a propósito: solo la llevan las filas de dinero, que
+ * son las que se comparan entre sí. Ponérsela también al número de pacientes
+ * sugeriría una proporción que no existe y ensuciaría el único mensaje que
+ * tiene que dar el gráfico — lo poco que entra al lado de lo mucho que sale.
+ */
+function FilaResultado({
+  etiqueta,
+  valor,
+  ancho,
+  color = T.fg,
+}: {
+  etiqueta: string;
+  valor: string;
+  ancho?: number;
+  color?: string;
+}) {
+  return (
+    <div className="py-3" style={{ borderBottom: `1px solid ${T.line}` }}>
+      <div className="flex items-baseline justify-between gap-4">
+        <span
+          className="text-[0.7rem] font-bold uppercase tracking-[0.18em]"
+          style={{ color: T.muted }}
+        >
+          {etiqueta}
+        </span>
+        <span className="text-xl font-black tabular-nums" style={{ color }}>
+          {valor}
+        </span>
+      </div>
+      {ancho !== undefined && (
+        <div
+          className="mt-2 h-1.5 w-full overflow-hidden rounded-full"
+          style={{ background: T.line }}
+          aria-hidden
+        >
+          <div
+            className="h-full rounded-full"
+            style={{ width: `${ancho}%`, background: color, opacity: 0.5 }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Resultado({ resultado }: { resultado: CalcResult }) {
   if (resultado.rama === "A" && resultado.costePorPaciente !== null) {
+    // Con respaldo a propósito: durante un despliegue puede convivir un
+    // cliente nuevo con una respuesta antigua sin `entrada`, y quedarse sin
+    // resultado por eso rompería la única promesa que le hemos hecho al
+    // usuario a cambio de sus datos. Sin el detalle del embudo, pero con su
+    // cifra.
+    const { inversion, pacientes } = resultado.entrada ?? {
+      inversion: null,
+      pacientes: null,
+      ticket: null,
+    };
+    // La barra de la inversión se mide contra lo generado, así que la
+    // diferencia entre las dos ES el retorno, visto de un vistazo.
+    const anchoInversion =
+      resultado.generado !== null && inversion !== null && resultado.generado > 0
+        ? Math.max(6, (inversion / resultado.generado) * 100)
+        : 100;
+
     return (
-      <div className="rounded-3xl p-7 text-center sm:p-9" style={tarjetaStyle}>
-        <p className="text-xs font-bold uppercase tracking-[0.24em]" style={{ color: T.muted }}>
-          Cada paciente nuevo te está costando
+      <div className="rounded-3xl p-6 sm:p-8" style={tarjetaStyle}>
+        <p
+          className="text-center text-[0.7rem] font-bold uppercase tracking-[0.24em]"
+          style={{ color: T.muted }}
+        >
+          Cada paciente nuevo te cuesta
         </p>
         <strong
-          className="mt-3 block font-black leading-none tabular-nums"
-          style={{ fontSize: "clamp(3rem, 12vw, 5rem)", color: T.lime }}
+          className="mt-2 block text-center font-black leading-none tabular-nums"
+          style={{ fontSize: "clamp(3rem, 13vw, 5rem)", color: T.fg }}
         >
           {formatEur(resultado.costePorPaciente)}
         </strong>
-        {resultado.retorno !== null && resultado.generado !== null && (
-          <p className="mt-6 text-base leading-relaxed" style={{ color: T.muted }}>
-            Y esos pacientes te generan en total{" "}
-            <strong style={{ color: T.fg }}>{formatEur(resultado.generado)}</strong>, así que por
-            cada euro invertido recuperas{" "}
-            <strong style={{ color: T.fg }}>
+
+        {/* Su propio embudo, con las cifras que acaba de dar. */}
+        <div className="mt-8">
+          {inversion !== null && (
+            <FilaResultado
+              etiqueta="Inviertes al mes"
+              valor={formatEur(inversion)}
+              ancho={anchoInversion}
+              color={T.red}
+            />
+          )}
+          {pacientes !== null && (
+            <FilaResultado etiqueta="Pacientes nuevos" valor={String(pacientes)} color={T.fg} />
+          )}
+          {resultado.generado !== null && (
+            <FilaResultado
+              etiqueta="Te generan"
+              valor={formatEur(resultado.generado)}
+              ancho={100}
+              color={T.lime}
+            />
+          )}
+        </div>
+
+        {/* El retorno, que es la cifra que de verdad importa. */}
+        {resultado.retorno !== null && (
+          <div className="mt-7 rounded-2xl p-6 text-center" style={{ background: T.lime }}>
+            <p
+              className="text-[0.7rem] font-bold uppercase tracking-[0.24em]"
+              style={{ color: T.ink, opacity: 0.7 }}
+            >
+              Por cada euro invertido recuperas
+            </p>
+            <p
+              className="mt-1 font-black leading-none tabular-nums"
+              style={{ fontSize: "clamp(3.25rem, 15vw, 5.5rem)", color: T.ink }}
+            >
               {resultado.retorno.toFixed(2).replace(".", ",")} €
-            </strong>
-            .
-          </p>
+            </p>
+          </div>
         )}
-        <p className="mt-6 text-sm leading-relaxed" style={{ color: T.muted }}>
+
+        <p className="mt-6 text-center text-sm leading-relaxed" style={{ color: T.muted }}>
           Es un cálculo con tus medias. Lo que no sabes es qué campaña te trae los pacientes
           buenos — y ahí es donde está el dinero.
         </p>

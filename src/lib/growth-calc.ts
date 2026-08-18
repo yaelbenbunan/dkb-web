@@ -24,6 +24,16 @@ export interface CalcResult {
   retorno: number | null;
   /** Invierte pero no le llega ningún paciente: mensaje propio dentro de la rama B. */
   sinPacientes: boolean;
+  /**
+   * Los datos de entrada, ya normalizados, devueltos tal cual.
+   *
+   * La pantalla de resultado pinta el embudo del usuario con sus propias
+   * cifras, y necesita las de partida además de las calculadas. Se devuelven
+   * desde aquí en vez de re-parsearlas en el cliente para que lo que se
+   * enseña sea exactamente lo que se ha calculado, sin margen a que las dos
+   * versiones se separen.
+   */
+  entrada: CalcInput;
 }
 
 /**
@@ -109,11 +119,25 @@ export function calcular(input: CalcInput): CalcResult {
       : null;
 
   if (!invierte) {
-    return { rama: "C", costePorPaciente: null, generado, retorno: null, sinPacientes: false };
+    return {
+      rama: "C",
+      costePorPaciente: null,
+      generado,
+      retorno: null,
+      sinPacientes: false,
+      entrada: input,
+    };
   }
 
   if (!sabePacientes || pacientes === 0) {
-    return { rama: "B", costePorPaciente: null, generado: null, retorno: null, sinPacientes };
+    return {
+      rama: "B",
+      costePorPaciente: null,
+      generado: null,
+      retorno: null,
+      sinPacientes,
+      entrada: input,
+    };
   }
 
   return {
@@ -122,6 +146,7 @@ export function calcular(input: CalcInput): CalcResult {
     generado,
     retorno: generado !== null ? redondear(generado / (inversion as number)) : null,
     sinPacientes: false,
+    entrada: input,
   };
 }
 
