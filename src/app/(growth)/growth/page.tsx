@@ -97,6 +97,18 @@ const PASOS = [
   },
 ];
 
+/** Lo que entra en la cuota. Se enseña ANTES del precio: 199 € sueltos no
+ *  dicen nada, y detrás de esta lista dicen mucho. */
+const INCLUIDO = [
+  "Campañas en Google",
+  "Campañas en Meta",
+  "Tu web",
+  "CRM de leads",
+  "Agenda",
+  "Panel de resultados",
+  "Nosotros llevándolo",
+];
+
 function FilaEmbudo({
   etiqueta,
   valor,
@@ -402,46 +414,76 @@ export default function GrowthPage() {
 
       {/* ───────── 6. Oferta y cierre ───────── */}
       <section className="py-20 md:py-28" style={{ background: T.surface }}>
-        <Wrap narrow>
+        <Wrap>
           <Eyebrow>Lo que cuesta</Eyebrow>
 
+          {/* El precio se entiende cuando llega DESPUÉS de ver todo lo que
+              incluye. Al revés es un número suelto que no dice nada. */}
+          <div className="mt-10 flex flex-wrap gap-2.5">
+            {INCLUIDO.map((i) => (
+              <span
+                key={i}
+                className="rounded-full px-4 py-2 text-sm font-bold"
+                style={{ background: T.ink, border: `1px solid ${T.line}`, color: T.fg }}
+              >
+                {i}
+              </span>
+            ))}
+          </div>
+
+          <p className="mt-12 text-xl font-bold" style={{ color: T.muted }}>
+            Todo esto, por
+          </p>
           <p
-            className="mt-8 font-black leading-none tabular-nums"
-            style={{ fontSize: "clamp(3.5rem, 13vw, 7rem)", color: T.lime }}
+            className="mt-2 font-black leading-[0.85] tracking-[-0.04em] tabular-nums"
+            style={{ fontSize: "clamp(4.5rem, 19vw, 11rem)", color: T.lime }}
           >
-            199 €<span style={{ fontSize: "0.3em", color: T.fg }}>/mes</span>
+            199 €
+          </p>
+          <p
+            className="mt-1 font-black leading-none"
+            style={{ fontSize: "clamp(1.5rem, 4vw, 2.5rem)" }}
+          >
+            al mes. Sin permanencia.
           </p>
 
-          <p className="mt-6 text-xl font-bold leading-snug">
-            Campañas, web, CRM, agenda y el panel. Todo dentro.
-          </p>
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            <div>
+              <p className="font-bold">Sin desembolsos grandes</p>
+              <p className="mt-2 text-sm leading-relaxed" style={{ color: T.muted }}>
+                Pagas mes a mes. Ni inversiones iniciales de miles de euros ni contratos a un
+                año.
+              </p>
+            </div>
+            <div>
+              <p className="font-bold">Una cuota de alta, dicha por delante</p>
+              <p className="mt-2 text-sm leading-relaxed" style={{ color: T.muted }}>
+                Montarlo todo lleva trabajo, así que hay un pago inicial. Lo sabrás antes de
+                empezar, nunca en la última llamada.
+              </p>
+            </div>
+            <div>
+              <p className="font-bold">Tu publicidad es tuya</p>
+              <p className="mt-2 text-sm leading-relaxed" style={{ color: T.muted }}>
+                Lo que inviertas en Google y Meta lo pagas tú directamente. No pasa por
+                nosotros.
+              </p>
+            </div>
+          </div>
 
-          <ul className="mt-8 space-y-3 text-lg" style={{ color: T.muted }}>
-            <li>
-              <strong style={{ color: T.fg }}>Sin permanencia.</strong> Te quedas porque
-              funciona, no porque te obliguemos.
-            </li>
-            <li>
-              <strong style={{ color: T.fg }}>Hay una cuota de alta</strong>, porque montar
-              todo esto lleva trabajo. Depende de lo que inviertas y de cuántos canales lleves.
-            </li>
-            <li>
-              <strong style={{ color: T.fg }}>La inversión en publicidad</strong> la pagas tú
-              directamente a Google y Meta. Nunca pasa por nosotros.
-            </li>
-          </ul>
-
-          <div className="mt-14" style={{ borderTop: `1px solid ${T.line}` }}>
+          <div className="mt-16" style={{ borderTop: `1px solid ${T.line}` }}>
             <p
-              className="mt-14 font-black leading-tight tracking-[-0.02em] text-balance"
-              style={{ fontSize: "clamp(1.75rem, 4.5vw, 3rem)" }}
+              className="mt-16 max-w-4xl font-black leading-[1.05] tracking-[-0.02em] text-balance"
+              style={{ fontSize: "clamp(1.875rem, 5.5vw, 3.75rem)" }}
             >
-              Empieza por saber{" "}
-              <span style={{ color: T.lime }}>cuánto te cuesta hoy</span> un paciente.
+              No te vamos a retener por obligación.{" "}
+              <span style={{ color: T.lime }}>
+                Te vas a quedar porque los resultados te convencen.
+              </span>
             </p>
             <a
               href="#calculadora"
-              className="mt-10 inline-flex h-14 items-center justify-center rounded-full px-9 text-base font-bold transition-transform hover:-translate-y-0.5"
+              className="mt-12 inline-flex h-14 items-center justify-center rounded-full px-9 text-base font-bold transition-transform hover:-translate-y-0.5"
               style={{ background: T.lime, color: T.ink }}
             >
               Calcula qué te cuesta un paciente
