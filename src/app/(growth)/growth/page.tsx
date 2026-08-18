@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { GROWTH, GROWTH_THEME as T } from "@/lib/growth-config";
 import { CalculadoraWizard } from "./_components/CalculadoraWizard";
+import { LineaDeTiempo } from "./_components/LineaDeTiempo";
 
 export const metadata: Metadata = {
   title: "Llenar tu agenda es fácil. Ganar más, no",
   description:
-    "Puedes tener la agenda llena y estar perdiendo dinero. Te decimos qué pacientes te salen a cuenta para que tomes mejores decisiones. Desde 199 €/mes, sin permanencia.",
+    "Puedes tener la agenda llena y estar perdiendo dinero. Llevamos tus campañas con un único objetivo: que tu clínica gane más. Desde 199 €/mes, sin permanencia.",
   alternates: { canonical: GROWTH.path },
   openGraph: {
     type: "website",
@@ -81,18 +82,18 @@ const PASOS = [
   },
   {
     n: "02",
-    t: "No se pierde ninguno",
-    d: "Web hecha para convertir y un CRM de tres columnas que tu recepción sí usa, porque no tiene nada que rellenar.",
+    t: "Nada se pierde por el camino",
+    d: "Cada lead entra en un sistema ordenado, con su ficha y su origen. Ni uno se queda en un WhatsApp sin contestar.",
   },
   {
     n: "03",
-    t: "Sabemos quién vino",
-    d: "La cita entra en vuestra agenda de siempre. Al terminar se marca si acudió y cuánto facturó. Dos toques.",
+    t: "Sabemos quién vino de verdad",
+    d: "Cuando el paciente pasa por consulta se marcan dos cosas: si vino y cuánto facturó. Dos toques y ya está.",
   },
   {
     n: "04",
-    t: "Decides con datos",
-    d: "Qué campaña te trae pacientes rentables y cuál solo te llena huecos. Subes una, apagas la otra.",
+    t: "Decidimos con datos, y tú lo ves",
+    d: "Nosotros llevamos las campañas: qué subir, qué apagar y dónde poner el dinero. Tú entras al panel cuando quieras.",
   },
 ];
 
@@ -108,7 +109,7 @@ function FilaEmbudo({
   nota?: string;
 }) {
   return (
-    <div className="py-4" style={{ borderBottom: `1px solid ${T.line}` }}>
+    <div className="py-3.5" style={{ borderBottom: `1px solid ${T.line}` }}>
       <div className="flex items-baseline justify-between gap-4">
         <span
           className="text-xs font-bold uppercase tracking-[0.2em]"
@@ -116,15 +117,12 @@ function FilaEmbudo({
         >
           {etiqueta}
         </span>
-        <span
-          className="font-black tabular-nums"
-          style={{ fontSize: "clamp(1.5rem, 4vw, 2.25rem)", color: T.fg }}
-        >
+        <span className="text-2xl font-black tabular-nums" style={{ color: T.fg }}>
           {valor}
         </span>
       </div>
       <div
-        className="mt-3 h-2 w-full overflow-hidden rounded-full"
+        className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full"
         style={{ background: T.line }}
         aria-hidden
       >
@@ -134,10 +132,63 @@ function FilaEmbudo({
         />
       </div>
       {nota && (
-        <p className="mt-2 text-sm" style={{ color: T.muted }}>
+        <p className="mt-2 text-xs" style={{ color: T.muted }}>
           {nota}
         </p>
       )}
+    </div>
+  );
+}
+
+/** El panel de resultados, que acompaña a los pasos en pegajoso: lo que esos
+ *  cuatro pasos producen, a la vista mientras se leen. */
+function PanelEmbudo() {
+  return (
+    <div
+      className="rounded-3xl p-6 md:p-7"
+      style={{ background: T.surface, border: `1px solid ${T.line}` }}
+    >
+      <div className="flex items-center justify-between">
+        <span
+          className="rounded-full px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.2em]"
+          style={{ background: T.line, color: T.muted }}
+        >
+          Ejemplo, no tus datos
+        </span>
+        <span className="text-xs" style={{ color: T.muted }}>
+          Marzo
+        </span>
+      </div>
+
+      <div className="mt-5">
+        <FilaEmbudo etiqueta="Inviertes" valor="1.200 €" ancho={100} />
+        <FilaEmbudo etiqueta="Leads" valor="34" ancho={100} />
+        <FilaEmbudo etiqueta="Piden cita" valor="18" ancho={53} />
+        <FilaEmbudo
+          etiqueta="Acuden de verdad"
+          valor="11"
+          ancho={32}
+          nota="Aquí se cae todo el mundo, y aquí es donde nadie mira."
+        />
+      </div>
+
+      <div className="mt-6 rounded-2xl p-5" style={{ background: T.lime }}>
+        <p
+          className="text-[0.65rem] font-bold uppercase tracking-[0.24em]"
+          style={{ color: T.ink, opacity: 0.7 }}
+        >
+          Te han facturado
+        </p>
+        <p
+          className="mt-1 font-black leading-none tabular-nums"
+          style={{ fontSize: "clamp(2.25rem, 6vw, 3.25rem)", color: T.ink }}
+        >
+          5.400 €
+        </p>
+        <p className="mt-2 text-sm font-bold" style={{ color: T.ink }}>
+          Por cada euro invertido, has recuperado 4,50 €.
+        </p>
+      </div>
     </div>
   );
 }
@@ -209,7 +260,6 @@ export default function GrowthPage() {
             Dos clínicas del mismo tamaño, el mismo mes:
           </p>
 
-          {/* La comparativa: el argumento entero en dos tarjetas de cifras. */}
           <div className="mt-10 grid gap-5 md:grid-cols-2">
             {COMPARATIVA.map((c) => (
               <div
@@ -260,172 +310,68 @@ export default function GrowthPage() {
               </div>
             ))}
           </div>
+        </Wrap>
+      </section>
 
-          {/* Por qué nadie lo ve: la desconexión, en una tira compacta. */}
-          <div
-            className="mt-12 flex flex-col items-center gap-4 rounded-3xl p-7 text-center md:flex-row md:justify-between md:gap-6 md:p-8 md:text-left"
-            style={{ background: T.ink, border: `1px solid ${T.line}` }}
-          >
-            <div>
-              <p className="text-sm font-bold">Tu agencia te enseña clics.</p>
-              <p className="mt-1 text-sm" style={{ color: T.muted }}>
-                Que no aparecen en tu banco.
-              </p>
-            </div>
-
-            <span
-              aria-hidden
-              className="text-4xl font-black leading-none"
-              style={{ color: T.red }}
-            >
-              ✕
-            </span>
-
-            <div>
-              <p className="text-sm font-bold">Tu gestor te enseña facturación.</p>
-              <p className="mt-1 text-sm" style={{ color: T.muted }}>
-                Sin decirte de dónde vino.
-              </p>
-            </div>
-
-            <div
-              className="rounded-2xl px-5 py-3"
-              style={{ background: `${T.red}1f`, border: `1px solid ${T.red}55` }}
-            >
-              <p className="text-sm font-bold" style={{ color: T.red }}>
-                Nadie une las dos
-              </p>
-            </div>
-          </div>
-
+      {/* ───────── 3. La bisagra: la frase, a pantalla completa ───────── */}
+      <section className="flex min-h-[100svh] items-center py-24">
+        <Wrap>
           <p
-            className="mt-14 max-w-3xl font-black leading-snug text-balance"
-            style={{ fontSize: "clamp(1.375rem, 3.2vw, 2.25rem)" }}
+            className="font-black leading-[0.95] tracking-[-0.03em] text-balance"
+            style={{ fontSize: "clamp(2.5rem, 9vw, 7rem)" }}
           >
-            No se trata de tener más citas. Se trata de tener{" "}
-            <span style={{ color: T.lime }}>las que salen a cuenta</span>.
+            El objetivo no es
+            <br />
+            llenarte la agenda.
+            <br />
+            <span style={{ color: T.lime }}>Es que ganes más.</span>
           </p>
         </Wrap>
       </section>
 
-      {/* ───────── 3. La solución, como proceso cronológico ───────── */}
-      <section className="py-20 md:py-28">
+      {/* ───────── 4. Cómo funciona: los pasos y lo que producen ───────── */}
+      <section className="py-20 md:py-28" style={{ background: T.surface }}>
         <Wrap>
           <Eyebrow>Cómo funciona</Eyebrow>
 
           <h2
-            className="mt-8 max-w-4xl font-black leading-[1.05] tracking-[-0.02em] text-balance"
-            style={{ fontSize: "clamp(2rem, 5.5vw, 4rem)" }}
+            className="mt-8 max-w-3xl font-black leading-[1.05] tracking-[-0.02em] text-balance"
+            style={{ fontSize: "clamp(2rem, 5.5vw, 3.5rem)" }}
           >
             Seguimos al paciente desde el anuncio{" "}
             <span style={{ color: T.lime }}>hasta la caja</span>.
           </h2>
 
-          <p className="mt-6 max-w-2xl text-lg leading-relaxed" style={{ color: T.muted }}>
-            Cuatro pasos, en este orden. Por separado no valen nada; encadenados te dan la
-            única cifra que importa.
-          </p>
+          {/* Los pasos a la izquierda y lo que producen a la derecha, en
+              pegajoso: mientras se leen los cuatro pasos, el panel que sale de
+              ellos permanece a la vista. Eso conecta proceso y resultado sin
+              tener que explicarlo con un párrafo. */}
+          <div className="mt-6 grid gap-10 lg:grid-cols-2 lg:gap-16">
+            <LineaDeTiempo pasos={PASOS} />
 
-          {/* Línea de tiempo vertical: el hilo continuo es lo que comunica que
-              esto es una secuencia y no cuatro servicios sueltos. */}
-          <ol className="relative mt-14">
-            <div
-              aria-hidden
-              className="absolute bottom-6 left-[1.4375rem] top-6 w-px md:left-[1.6875rem]"
-              style={{ background: `linear-gradient(${T.lime}, ${T.line})` }}
-            />
-
-            {PASOS.map((p, i) => (
-              <li key={p.n} className="relative flex gap-6 pb-12 last:pb-0 md:gap-8">
-                <span
-                  className="relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-black tabular-nums md:h-14 md:w-14 md:text-base"
-                  style={{
-                    background: i === 0 ? T.lime : T.surface,
-                    color: i === 0 ? T.ink : T.lime,
-                    border: `1px solid ${i === 0 ? T.lime : T.line}`,
-                  }}
-                >
-                  {p.n}
-                </span>
-
-                <div className="pt-1.5 md:pt-3">
-                  <p
-                    className="font-black leading-tight"
-                    style={{ fontSize: "clamp(1.25rem, 3vw, 1.75rem)" }}
-                  >
-                    {p.t}
-                  </p>
-                  <p className="mt-2 max-w-xl leading-relaxed" style={{ color: T.muted }}>
-                    {p.d}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </Wrap>
-      </section>
-
-      {/* ───────── 4. El embudo con datos de ejemplo ───────── */}
-      <section className="py-20 md:py-28" style={{ background: T.surface }}>
-        <Wrap narrow>
-          <Eyebrow>Lo que ves cada mes</Eyebrow>
-
-          <h2
-            className="mt-8 font-black leading-[1.05] tracking-[-0.02em] text-balance"
-            style={{ fontSize: "clamp(2rem, 5.5vw, 3.5rem)" }}
-          >
-            Tu embudo entero, en una pantalla.
-          </h2>
+            <div className="lg:sticky lg:top-12 lg:self-start lg:pt-14">
+              <PanelEmbudo />
+              <p className="mt-4 text-sm leading-relaxed" style={{ color: T.muted }}>
+                Y desglosado por campaña, para saber cuál sube y cuál se apaga.
+              </p>
+            </div>
+          </div>
 
           <div
-            className="mt-12 rounded-3xl p-7 md:p-10"
+            className="mt-16 rounded-3xl p-8 md:p-10"
             style={{ background: T.ink, border: `1px solid ${T.line}` }}
           >
-            <div className="flex items-center justify-between">
-              <span
-                className="rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.2em]"
-                style={{ background: T.line, color: T.muted }}
-              >
-                Ejemplo, no tus datos
-              </span>
-              <span className="text-sm" style={{ color: T.muted }}>
-                Marzo
-              </span>
-            </div>
-
-            <div className="mt-6">
-              <FilaEmbudo etiqueta="Inviertes" valor="1.200 €" ancho={100} />
-              <FilaEmbudo etiqueta="Leads" valor="34" ancho={100} />
-              <FilaEmbudo etiqueta="Piden cita" valor="18" ancho={53} />
-              <FilaEmbudo
-                etiqueta="Acuden de verdad"
-                valor="11"
-                ancho={32}
-                nota="Aquí se cae todo el mundo, y aquí es donde nadie mira."
-              />
-            </div>
-
-            <div className="mt-8 rounded-2xl p-6 md:p-8" style={{ background: T.lime }}>
-              <p
-                className="text-xs font-bold uppercase tracking-[0.24em]"
-                style={{ color: T.ink, opacity: 0.7 }}
-              >
-                Te han facturado
-              </p>
-              <p
-                className="mt-1 font-black leading-none tabular-nums"
-                style={{ fontSize: "clamp(2.75rem, 9vw, 4.5rem)", color: T.ink }}
-              >
-                5.400 €
-              </p>
-              <p className="mt-3 font-bold" style={{ color: T.ink }}>
-                Por cada euro invertido, has recuperado 4,50 €.
-              </p>
-            </div>
-
-            <p className="mt-6 text-sm leading-relaxed" style={{ color: T.muted }}>
-              Y desglosado por campaña, para saber cuál subir y cuál apagar. Ahí es donde se
-              gana: no trayendo más pacientes, sino trayendo los que salen a cuenta.
+            <p
+              className="font-black leading-snug text-balance"
+              style={{ fontSize: "clamp(1.25rem, 3vw, 1.875rem)" }}
+            >
+              Somos tu agencia, no un programa que te dejamos y te apañas.
+            </p>
+            <p className="mt-4 max-w-2xl leading-relaxed" style={{ color: T.muted }}>
+              Montamos la web, llevamos las campañas y tomamos las decisiones, con un único
+              objetivo:{" "}
+              <strong style={{ color: T.lime, fontWeight: 700 }}>que tu clínica gane más</strong>
+              . Lo que te damos a ti es la transparencia para comprobarlo cuando quieras.
             </p>
           </div>
         </Wrap>
@@ -490,9 +436,8 @@ export default function GrowthPage() {
               className="mt-14 font-black leading-tight tracking-[-0.02em] text-balance"
               style={{ fontSize: "clamp(1.75rem, 4.5vw, 3rem)" }}
             >
-              El objetivo no es llenarte la agenda.
-              <br />
-              <span style={{ color: T.lime }}>Es que ganes más.</span>
+              Empieza por saber{" "}
+              <span style={{ color: T.lime }}>cuánto te cuesta hoy</span> un paciente.
             </p>
             <a
               href="#calculadora"
