@@ -6,14 +6,14 @@ import { LineaDeTiempo } from "./_components/LineaDeTiempo";
 export const metadata: Metadata = {
   title: "Llenar tu agenda es fácil. Ganar más, no",
   description:
-    "Un sistema integral que se ocupa de todo, del anuncio al paciente, para que cada euro que inviertas te devuelva más. Desde 199 €/mes, sin permanencia.",
+    "Un sistema integral que se ocupa de todo el proceso, con un único objetivo: que cada euro invertido genere más. Desde 199 €/mes, sin permanencia.",
   alternates: { canonical: GROWTH.path },
   openGraph: {
     type: "website",
     url: GROWTH.path,
     title: "Llenar tu agenda es fácil. Ganar más, no — dinkbit",
     description:
-      "Nos ocupamos de todo, del anuncio al paciente, para que cada euro invertido te devuelva más.",
+      "Nos ocupamos de todo el proceso con un único objetivo: que cada euro invertido genere más.",
     siteName: "dinkbit",
   },
 };
@@ -84,12 +84,12 @@ const PASOS = [
   {
     n: "01",
     t: "Traemos los pacientes",
-    d: "Estrategia, campañas en Google y Meta, y tu web hecha para convertir. Lo montamos y lo llevamos nosotros.",
+    d: "Nos encargamos de todo: tu web, la estrategia y las campañas en Google y Meta. No tienes que contratar nada por separado.",
   },
   {
     n: "02",
     t: "No se pierde ni uno",
-    d: "Cada lead entra en un sistema ordenado, con su ficha y su origen. Nada se queda en un WhatsApp sin contestar.",
+    d: "Todos los leads entran en nuestro sistema para ser atendidos, con su ficha y su origen. Ninguno se queda sin respuesta.",
   },
   {
     n: "03",
@@ -99,7 +99,7 @@ const PASOS = [
   {
     n: "04",
     t: "Optimizamos para que rinda más",
-    d: "Con esos datos ajustamos mes a mes: qué sube, qué se apaga, dónde va el dinero. Tú lo ves todo en el panel.",
+    d: "Hacemos los ajustes necesarios en las campañas para que tu inversión rinda cada vez más. Tú lo ves todo en el panel.",
   },
 ];
 
@@ -117,49 +117,6 @@ const GARANTIAS = [
     d: "Muchas agencias se llevan un porcentaje de lo que gastas en anuncios. Aquí la cuota es la cuota.",
   },
 ];
-
-function FilaEmbudo({
-  etiqueta,
-  valor,
-  ancho,
-  nota,
-}: {
-  etiqueta: string;
-  valor: string;
-  ancho: number;
-  nota?: string;
-}) {
-  return (
-    <div className="py-3.5" style={{ borderBottom: `1px solid ${T.line}` }}>
-      <div className="flex items-baseline justify-between gap-4">
-        <span
-          className="text-xs font-bold uppercase tracking-[0.2em]"
-          style={{ color: T.muted }}
-        >
-          {etiqueta}
-        </span>
-        <span className="text-2xl font-black tabular-nums" style={{ color: T.fg }}>
-          {valor}
-        </span>
-      </div>
-      <div
-        className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full"
-        style={{ background: T.line }}
-        aria-hidden
-      >
-        <div
-          className="h-full rounded-full"
-          style={{ width: `${ancho}%`, background: T.lime, opacity: 0.55 }}
-        />
-      </div>
-      {nota && (
-        <p className="mt-2 text-xs" style={{ color: T.muted }}>
-          {nota}
-        </p>
-      )}
-    </div>
-  );
-}
 
 export default function GrowthPage() {
   return (
@@ -334,11 +291,10 @@ export default function GrowthPage() {
             No contratas piezas sueltas ni te dejamos un programa para que te apañes.{" "}
             <strong style={{ color: T.fg, fontWeight: 700 }}>
               Nos ocupamos de todo el proceso
-            </strong>
-            , desde que alguien ve tu anuncio hasta que sabes cuánto te dejó, con un único
-            objetivo:{" "}
+            </strong>{" "}
+            con un único objetivo:{" "}
             <strong style={{ color: T.lime, fontWeight: 700 }}>
-              que cada euro que inviertas te devuelva más
+              que cada euro invertido genere más
             </strong>
             .
           </p>
@@ -386,8 +342,32 @@ export default function GrowthPage() {
         </Wrap>
       </section>
 
-      {/* ───────── 5. La calculadora, y lo que verás después ───────── */}
-      <section id="calculadora" className="scroll-mt-8 py-20 md:py-28">
+      {/* ───────── 5. El compromiso, a pantalla completa ─────────
+          Va justo después del precio y las garantías: es la respuesta a la
+          desconfianza que deja cualquier tarifa, y por eso necesita toda la
+          pantalla para ella sola. */}
+      <section className="flex min-h-[100svh] items-center py-24">
+        <Wrap>
+          <p
+            className="font-black leading-[0.95] tracking-[-0.03em] text-balance"
+            style={{ fontSize: "clamp(2.5rem, 8vw, 6.5rem)" }}
+          >
+            Vas a querer quedarte{" "}
+            <span style={{ color: T.lime }}>por los resultados</span>, no porque te obliguemos.
+          </p>
+
+          <a
+            href="#calculadora"
+            className="mt-14 inline-flex h-14 items-center justify-center rounded-full px-9 text-base font-bold transition-transform hover:-translate-y-0.5"
+            style={{ background: T.lime, color: T.ink }}
+          >
+            Calcula qué te cuesta un paciente
+          </a>
+        </Wrap>
+      </section>
+
+      {/* ───────── 6. La calculadora ───────── */}
+      <section id="calculadora" className="scroll-mt-8 pb-24 pt-8 md:pb-32">
         <Wrap narrow>
           <Eyebrow>Empieza por aquí</Eyebrow>
 
@@ -406,89 +386,6 @@ export default function GrowthPage() {
           <div className="mt-10">
             <CalculadoraWizard />
           </div>
-
-          {/* El embudo vive aquí, después de la calculadora: deja de competir
-              con la explicación del sistema y pasa a responder "¿y qué me
-              llevo?" justo cuando el usuario se lo pregunta. */}
-          <div className="mt-20">
-            <p
-              className="font-black leading-tight text-balance"
-              style={{ fontSize: "clamp(1.5rem, 4vw, 2.25rem)" }}
-            >
-              Y a partir del primer mes, esto es lo que ves.
-            </p>
-
-            <div
-              className="mt-8 rounded-3xl p-6 md:p-8"
-              style={{ background: T.surface, border: `1px solid ${T.line}` }}
-            >
-              <div className="flex items-center justify-between">
-                <span
-                  className="rounded-full px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.2em]"
-                  style={{ background: T.line, color: T.muted }}
-                >
-                  Ejemplo, no tus datos
-                </span>
-                <span className="text-xs" style={{ color: T.muted }}>
-                  Marzo
-                </span>
-              </div>
-
-              <div className="mt-5">
-                <FilaEmbudo etiqueta="Inviertes" valor="1.200 €" ancho={100} />
-                <FilaEmbudo etiqueta="Leads" valor="34" ancho={100} />
-                <FilaEmbudo etiqueta="Piden cita" valor="18" ancho={53} />
-                <FilaEmbudo
-                  etiqueta="Acuden de verdad"
-                  valor="11"
-                  ancho={32}
-                  nota="Aquí se cae todo el mundo, y aquí es donde nadie mira."
-                />
-              </div>
-
-              <div className="mt-6 rounded-2xl p-5 md:p-6" style={{ background: T.lime }}>
-                <p
-                  className="text-[0.65rem] font-bold uppercase tracking-[0.24em]"
-                  style={{ color: T.ink, opacity: 0.7 }}
-                >
-                  Te han facturado
-                </p>
-                <p
-                  className="mt-1 font-black leading-none tabular-nums"
-                  style={{ fontSize: "clamp(2.5rem, 8vw, 3.75rem)", color: T.ink }}
-                >
-                  5.400 €
-                </p>
-                <p className="mt-2 text-sm font-bold" style={{ color: T.ink }}>
-                  Por cada euro invertido, has recuperado 4,50 €.
-                </p>
-              </div>
-
-              <p className="mt-5 text-sm leading-relaxed" style={{ color: T.muted }}>
-                Y desglosado por campaña, para saber cuál sube y cuál se apaga.
-              </p>
-            </div>
-          </div>
-        </Wrap>
-      </section>
-
-      {/* ───────── 6. Cierre ───────── */}
-      <section className="py-20 md:py-28" style={{ background: T.surface }}>
-        <Wrap>
-          <p
-            className="max-w-4xl font-black leading-[1.05] tracking-[-0.02em] text-balance"
-            style={{ fontSize: "clamp(1.875rem, 5.5vw, 3.75rem)" }}
-          >
-            Vas a querer quedarte{" "}
-            <span style={{ color: T.lime }}>por los resultados</span>, no porque te obliguemos.
-          </p>
-          <a
-            href="#calculadora"
-            className="mt-12 inline-flex h-14 items-center justify-center rounded-full px-9 text-base font-bold transition-transform hover:-translate-y-0.5"
-            style={{ background: T.lime, color: T.ink }}
-          >
-            Calcula qué te cuesta un paciente
-          </a>
         </Wrap>
       </section>
     </>
