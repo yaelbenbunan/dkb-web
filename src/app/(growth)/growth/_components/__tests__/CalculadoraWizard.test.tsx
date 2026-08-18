@@ -73,7 +73,11 @@ describe("CalculadoraWizard", () => {
     await user.click(screen.getByRole("button", { name: /ver mi resultado/i }));
 
     expect(requestGrowth).toHaveBeenCalledTimes(1);
-    expect(await screen.findByText(/88,24/)).toBeInTheDocument();
+    // La cifra sale más de una vez en la pantalla de resultado —el titular y
+    // la columna "hoy" del simulador—, así que se ancla en el titular, que es
+    // lo que de verdad prueba que el resultado se está mostrando.
+    expect(await screen.findByText(/Cada paciente nuevo te cuesta/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/88,24/).length).toBeGreaterThan(0);
 
     // El eventId se genera una sola vez y el mismo valor va al FormData que
     // recibe el servidor y a la conversión que se manda al píxel de Meta.

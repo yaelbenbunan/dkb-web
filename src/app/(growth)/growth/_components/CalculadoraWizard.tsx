@@ -9,7 +9,6 @@ import {
   proyectar,
   rentabilidad,
   type CalcResult,
-  type Proyeccion,
 } from "@/lib/growth-calc";
 import { GROWTH_THEME as T } from "@/lib/growth-config";
 import { SimuladorInversion } from "./SimuladorInversion";
@@ -297,54 +296,6 @@ export function CalculadoraWizard() {
   );
 }
 
-/**
- * Una fila del embudo del resultado.
- *
- * La barra es opcional a propósito: solo la llevan las filas de dinero, que
- * son las que se comparan entre sí. Ponérsela también al número de pacientes
- * sugeriría una proporción que no existe y ensuciaría el único mensaje que
- * tiene que dar el gráfico — lo poco que entra al lado de lo mucho que sale.
- */
-function FilaResultado({
-  etiqueta,
-  valor,
-  ancho,
-  color = T.fg,
-}: {
-  etiqueta: string;
-  valor: string;
-  ancho?: number;
-  color?: string;
-}) {
-  return (
-    <div className="py-3" style={{ borderBottom: `1px solid ${T.line}` }}>
-      <div className="flex items-baseline justify-between gap-4">
-        <span
-          className="text-[0.7rem] font-bold uppercase tracking-[0.18em]"
-          style={{ color: T.muted }}
-        >
-          {etiqueta}
-        </span>
-        <span className="text-xl font-black tabular-nums" style={{ color }}>
-          {valor}
-        </span>
-      </div>
-      {ancho !== undefined && (
-        <div
-          className="mt-2 h-1.5 w-full overflow-hidden rounded-full"
-          style={{ background: T.line }}
-          aria-hidden
-        >
-          <div
-            className="h-full rounded-full"
-            style={{ width: `${ancho}%`, background: color, opacity: 0.5 }}
-          />
-        </div>
-      )}
-    </div>
-  );
-}
-
 /** Dos cifras grandes una al lado de la otra. */
 function ParCifras({
   items,
@@ -390,157 +341,6 @@ function ParCifras({
  * que sale — una proyección sin sus condiciones a la vista es publicidad, y
  * este producto se vende justo por lo contrario.
  */
-/** Una fila de la comparativa hoy → simulado, con su incremento. */
-function FilaComparativa({
-  etiqueta,
-  hoy,
-  simulado,
-  incremento,
-  destacar = false,
-}: {
-  etiqueta: string;
-  hoy: string;
-  simulado: string;
-  incremento: string | null;
-  destacar?: boolean;
-}) {
-  return (
-    <div
-      className="grid grid-cols-[1fr_auto_auto] items-baseline gap-x-3 py-3 sm:gap-x-6"
-      style={{ borderTop: `1px solid ${T.line}` }}
-    >
-      <span
-        className="text-[0.65rem] font-bold uppercase tracking-[0.16em]"
-        style={{ color: T.muted }}
-      >
-        {etiqueta}
-      </span>
-      <span
-        className="text-right text-sm tabular-nums sm:text-base"
-        style={{ color: T.muted }}
-      >
-        {hoy}
-      </span>
-      <span className="text-right">
-        <span
-          className="block font-black tabular-nums"
-          style={{
-            fontSize: destacar ? "clamp(1.25rem, 5vw, 1.75rem)" : "1.125rem",
-            color: destacar ? T.lime : T.fg,
-          }}
-        >
-          {simulado}
-        </span>
-        {incremento && (
-          <span className="block text-xs font-bold tabular-nums" style={{ color: T.lime }}>
-            {incremento}
-          </span>
-        )}
-      </span>
-    </div>
-  );
-}
-
-function BloqueProyeccion({
-  p,
-  hoy,
-  ticket,
-}: {
-  p: Proyeccion;
-  /** Su situación actual, para poder poner las dos columnas una al lado de otra. */
-  hoy: { inversion: number; pacientes: number; generado: number } | null;
-  /** Necesario para el simulador: sin él no se puede calcular facturación. */
-  ticket: number | null;
-}) {
-  const palanca =
-    p.escenario === "bajar-coste"
-      ? `manteniendo tu inversión y bajando un 20 % lo que cuesta traer a cada paciente, hasta ${formatEur(p.costePorPaciente)}`
-      : p.escenario === "empezar"
-        ? `empezando con ${formatEur(p.inversion)} al mes y una captación sana para tu ticket, de ${formatEur(p.costePorPaciente)} por paciente`
-        : p.mejoraCoste
-          ? `subiendo tu inversión un 50 % y afinando el coste por paciente hasta ${formatEur(p.costePorPaciente)}`
-          : `subiendo tu inversión un 50 %, con el coste por paciente que ya tienes`;
-
-  return (
-    <div
-      className="mt-8 rounded-2xl p-6 text-left sm:p-7"
-      style={{ background: T.ink, border: `1px solid ${T.lime}55` }}
-    >
-      <p className="text-[0.7rem] font-bold uppercase tracking-[0.24em]" style={{ color: T.lime }}>
-        Caso simulado con nuestro sistema
-      </p>
-
-      <div className="mt-5">
-        <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 pb-1 sm:gap-x-6">
-          <span />
-          <span
-            className="text-right text-[0.6rem] font-bold uppercase tracking-[0.16em]"
-            style={{ color: T.muted }}
-          >
-            Hoy
-          </span>
-          <span
-            className="text-right text-[0.6rem] font-bold uppercase tracking-[0.16em]"
-            style={{ color: T.lime }}
-          >
-            Con nosotros
-          </span>
-        </div>
-
-        <FilaComparativa
-          etiqueta="Inversión"
-          hoy={hoy ? formatEur(hoy.inversion) : "0,00 €"}
-          simulado={formatEur(p.inversion)}
-          incremento={p.inversionExtra > 0 ? `+${formatEur(p.inversionExtra)}` : "igual"}
-        />
-        <FilaComparativa
-          etiqueta="Pacientes nuevos"
-          hoy={hoy ? String(hoy.pacientes) : "0"}
-          simulado={String(p.pacientes)}
-          incremento={`+${p.pacientesExtra}`}
-        />
-        <FilaComparativa
-          etiqueta="Facturación"
-          hoy={hoy ? formatEur(hoy.generado) : "0,00 €"}
-          simulado={formatEur(p.generado)}
-          incremento={`+${formatEur(p.generadoExtra)}`}
-          destacar
-        />
-      </div>
-
-      <div className="mt-6 rounded-xl p-5" style={{ background: `${T.lime}14` }}>
-        <p
-          className="text-[0.65rem] font-bold uppercase tracking-[0.2em]"
-          style={{ color: T.lime }}
-        >
-          {p.escenario === "empezar" ? "Podrías estar generando" : "Te estás dejando"}
-        </p>
-        <p
-          className="mt-1 font-black leading-none tabular-nums"
-          style={{ fontSize: "clamp(2.25rem, 10vw, 3.5rem)", color: T.lime }}
-        >
-          +{formatEur(p.generadoExtra)}
-        </p>
-        <p className="mt-1 text-sm font-bold">más al mes</p>
-      </div>
-
-      <p className="mt-5 text-xs leading-relaxed" style={{ color: T.muted }}>
-        Simulación hecha con tus propias cifras, {palanca}. Es conservadora y no es una promesa:
-        redondeamos siempre a la baja.
-      </p>
-
-      {ticket !== null && (
-        <SimuladorInversion
-          inversionInicial={p.inversion}
-          inversionBase={hoy ? hoy.inversion : p.inversion}
-          costeBase={p.costeSinEscalar}
-          ticket={ticket}
-        />
-      )}
-    </div>
-  );
-}
-
 function Resultado({ resultado }: { resultado: CalcResult }) {
   const rent = rentabilidad(resultado);
   const proy = proyectar(resultado);
@@ -556,13 +356,6 @@ function Resultado({ resultado }: { resultado: CalcResult }) {
       pacientes: null,
       ticket: null,
     };
-    // La barra de la inversión se mide contra lo generado, así que la
-    // diferencia entre las dos ES el retorno, visto de un vistazo.
-    const anchoInversion =
-      resultado.generado !== null && inversion !== null && resultado.generado > 0
-        ? Math.max(6, (inversion / resultado.generado) * 100)
-        : 100;
-
     return (
       <div className="rounded-3xl p-6 sm:p-8" style={tarjetaStyle}>
         <p
@@ -577,29 +370,6 @@ function Resultado({ resultado }: { resultado: CalcResult }) {
         >
           {formatEur(resultado.costePorPaciente)}
         </strong>
-
-        {/* Su propio embudo, con las cifras que acaba de dar. */}
-        <div className="mt-8">
-          {inversion !== null && (
-            <FilaResultado
-              etiqueta="Inviertes al mes"
-              valor={formatEur(inversion)}
-              ancho={anchoInversion}
-              color={T.red}
-            />
-          )}
-          {pacientes !== null && (
-            <FilaResultado etiqueta="Pacientes nuevos" valor={String(pacientes)} color={T.fg} />
-          )}
-          {resultado.generado !== null && (
-            <FilaResultado
-              etiqueta="Te generan"
-              valor={formatEur(resultado.generado)}
-              ancho={100}
-              color={T.lime}
-            />
-          )}
-        </div>
 
         {/* Lo que le queda de verdad, por paciente y al mes. Es lo que un
             dentista quiere saber y lo que ninguna agencia le dice. */}
@@ -638,14 +408,11 @@ function Resultado({ resultado }: { resultado: CalcResult }) {
           </div>
         )}
 
-        {proy && (
-          <BloqueProyeccion
-            p={proy}
-            hoy={
-              inversion !== null && pacientes !== null && resultado.generado !== null
-                ? { inversion, pacientes, generado: resultado.generado }
-                : null
-            }
+        {proy && resultado.entrada.ticket !== null && (
+          <SimuladorInversion
+            inversionActual={inversion}
+            costeActual={resultado.costePorPaciente}
+            costeConNosotros={proy.costeSinEscalar}
             ticket={resultado.entrada.ticket}
           />
         )}
@@ -698,7 +465,14 @@ function Resultado({ resultado }: { resultado: CalcResult }) {
       )}
       {/* Aquí la proyección es el argumento entero: sin inversión no hay nada
           que analizar, solo lo que se está dejando de ganar. */}
-      {proy && <BloqueProyeccion p={proy} hoy={null} ticket={resultado.entrada.ticket} />}
+      {proy && resultado.entrada.ticket !== null && (
+        <SimuladorInversion
+          inversionActual={null}
+          costeActual={null}
+          costeConNosotros={proy.costeSinEscalar}
+          ticket={resultado.entrada.ticket}
+        />
+      )}
       <DiagnosticoCta />
     </div>
   );
