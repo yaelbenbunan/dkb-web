@@ -94,7 +94,7 @@ const PASOS = [
   {
     n: "03",
     t: "Sabemos quién vino de verdad",
-    d: "Cuando el paciente pasa por consulta se marcan dos cosas: si vino y cuánto facturó. Dos toques y ya está.",
+    d: "Cuando el paciente pasa por consulta se registran dos datos: si acudió y cuánto facturó. Dos toques y ya está.",
   },
   {
     n: "04",
@@ -293,7 +293,11 @@ export default function GrowthPage() {
               Nos ocupamos de todo el proceso
             </strong>{" "}
             con un único objetivo:{" "}
-            <strong style={{ color: T.lime, fontWeight: 700 }}>
+            {/* En una sola línea: partida a la mitad pierde toda la fuerza. */}
+            <strong
+              className="inline-block whitespace-nowrap"
+              style={{ color: T.lime, fontWeight: 700 }}
+            >
               que cada euro invertido genere más
             </strong>
             .
