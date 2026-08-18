@@ -174,10 +174,12 @@ export default function GrowthPage() {
           style={{ background: T.lime, opacity: 0.1 }}
         />
         <Wrap className="relative">
-          <Eyebrow>Para clínicas que ya invierten en publicidad</Eyebrow>
-
+          {/* Sin etiqueta de audiencia por encima: daba por hecho que la
+              clínica ya invierte en publicidad, y muchas de las que interesan
+              todavía no lo hacen. La palabra "pacientes" del subtítulo ya
+              señala a quién va dirigido. */}
           <h1
-            className="mt-6 font-black leading-[0.92] tracking-[-0.03em]"
+            className="font-black leading-[0.92] tracking-[-0.03em]"
             style={{ fontSize: "clamp(2.5rem, 7.5vw, 5.75rem)" }}
           >
             Llenar tu agenda
