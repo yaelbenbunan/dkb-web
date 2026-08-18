@@ -181,8 +181,15 @@ export function rentabilidad(r: CalcResult): Rentabilidad | null {
 
 /** Por encima de esto, la captación se está comiendo el ticket. */
 const PESO_CAPTACION_ALTO = 0.3;
-/** Recorte de coste que damos por alcanzable sin prometer milagros. */
-const MEJORA_COSTE = 0.2;
+/**
+ * Por debajo de esto el coste ya está tan afinado que prometer bajarlo más
+ * sería vender humo. Se sube la inversión y se deja el coste en paz.
+ */
+const PESO_CAPTACION_AFINADO = 0.1;
+/** Recorte alcanzable cuando el coste está disparado: hay mucho que barrer. */
+const MEJORA_COSTE_ALTO = 0.2;
+/** Recorte alcanzable cuando el coste es razonable pero mejorable. */
+const MEJORA_COSTE_MARGEN = 0.1;
 /** Subida de inversión que proponemos a quien ya le sale a cuenta. */
 const SUBIDA_INVERSION = 0.5;
 /** Inversión de arranque para quien todavía no invierte nada. */
@@ -202,8 +209,11 @@ export interface Proyeccion {
   pacientes: number;
   generado: number;
   /** Contra su situación de hoy. En el arranque, contra cero. */
+  inversionExtra: number;
   pacientesExtra: number;
   generadoExtra: number;
+  /** Si en este escenario también se afina el coste, para poder decirlo. */
+  mejoraCoste: boolean;
 }
 
 /**
@@ -239,8 +249,10 @@ export function proyectar(r: CalcResult): Proyeccion | null {
       costePorPaciente: coste,
       pacientes,
       generado,
+      inversionExtra: INVERSION_ARRANQUE,
       pacientesExtra: pacientes,
       generadoExtra: generado,
+      mejoraCoste: false,
     };
   }
 
@@ -251,12 +263,18 @@ export function proyectar(r: CalcResult): Proyeccion | null {
   const pesoCaptacion = r.costePorPaciente / ticket;
   const escenario = pesoCaptacion > PESO_CAPTACION_ALTO ? "bajar-coste" : "subir-inversion";
 
+  // El coste se afina siempre que quede margen. Solo se deja intacto cuando
+  // ya está tan bajo que prometer bajarlo más sería vender humo.
+  const recorte =
+    pesoCaptacion > PESO_CAPTACION_ALTO
+      ? MEJORA_COSTE_ALTO
+      : pesoCaptacion > PESO_CAPTACION_AFINADO
+        ? MEJORA_COSTE_MARGEN
+        : 0;
+
   const inversionProyectada =
     escenario === "bajar-coste" ? inversion : redondear(inversion * (1 + SUBIDA_INVERSION));
-  const costeProyectado =
-    escenario === "bajar-coste"
-      ? redondear(r.costePorPaciente * (1 - MEJORA_COSTE))
-      : r.costePorPaciente;
+  const costeProyectado = redondear(r.costePorPaciente * (1 - recorte));
 
   // A la baja siempre: es mejor quedarse corto en la promesa que pasarse.
   const pacientes = Math.floor(inversionProyectada / costeProyectado);
@@ -274,8 +292,10 @@ export function proyectar(r: CalcResult): Proyeccion | null {
     costePorPaciente: costeProyectado,
     pacientes,
     generado,
+    inversionExtra: redondear(inversionProyectada - inversion),
     pacientesExtra,
     generadoExtra,
+    mejoraCoste: recorte > 0,
   };
 }
 

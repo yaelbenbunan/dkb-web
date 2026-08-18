@@ -166,6 +166,7 @@ describe("proyectar", () => {
     const p = proyectar(calcular({ inversion: 2000, pacientes: 10, ticket: 400 }));
     expect(p?.escenario).toBe("bajar-coste");
     expect(p?.inversion).toBe(2000);
+    expect(p?.inversionExtra).toBe(0);
     // El coste baja un 20 %: de 200 a 160.
     expect(p?.costePorPaciente).toBe(160);
     // Con el mismo dinero entran 12 en vez de 10.
@@ -174,16 +175,31 @@ describe("proyectar", () => {
     expect(p?.generadoExtra).toBe(800);
   });
 
-  test("le funciona pero se queda corto: sube la inversión un 50 %", () => {
-    // 33,33 sobre 250 = 13 %, muy por debajo del 30 %.
+  test("hay margen: sube la inversión y además afina el coste", () => {
+    // 33,33 sobre 250 = 13 %: por debajo del 30 %, pero por encima del 10 %,
+    // así que todavía queda recorrido en el coste.
     const p = proyectar(calcular({ inversion: 1500, pacientes: 45, ticket: 250 }));
     expect(p?.escenario).toBe("subir-inversion");
     expect(p?.inversion).toBe(2250);
-    expect(p?.costePorPaciente).toBe(33.33);
-    // 2.250 / 33,33 = 67,5 → 67, a la baja por prudencia.
-    expect(p?.pacientes).toBe(67);
-    expect(p?.pacientesExtra).toBe(22);
-    expect(p?.generadoExtra).toBe(5500);
+    expect(p?.inversionExtra).toBe(750);
+    // El coste baja un 10 %: 33,33 → 30.
+    expect(p?.costePorPaciente).toBe(30);
+    // 2.250 / 30 = 75.
+    expect(p?.pacientes).toBe(75);
+    expect(p?.pacientesExtra).toBe(30);
+    expect(p?.generado).toBe(18750);
+    expect(p?.generadoExtra).toBe(7500);
+  });
+
+  test("coste ya afinado: solo sube la inversión, sin tocarlo", () => {
+    // 10 € de captación sobre un ticket de 500 € = 2 %. Prometer bajarlo
+    // todavía más sería vender humo.
+    const p = proyectar(calcular({ inversion: 1000, pacientes: 100, ticket: 500 }));
+    expect(p?.escenario).toBe("subir-inversion");
+    expect(p?.costePorPaciente).toBe(10);
+    expect(p?.inversion).toBe(1500);
+    expect(p?.pacientes).toBe(150);
+    expect(p?.pacientesExtra).toBe(50);
   });
 
   test("no invierte nada: simula un arranque con su propio ticket", () => {

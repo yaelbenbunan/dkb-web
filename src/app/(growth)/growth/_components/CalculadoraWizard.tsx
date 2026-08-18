@@ -389,44 +389,140 @@ function ParCifras({
  * que sale — una proyección sin sus condiciones a la vista es publicidad, y
  * este producto se vende justo por lo contrario.
  */
-function BloqueProyeccion({ p }: { p: Proyeccion }) {
-  const explicacion =
+/** Una fila de la comparativa hoy → simulado, con su incremento. */
+function FilaComparativa({
+  etiqueta,
+  hoy,
+  simulado,
+  incremento,
+  destacar = false,
+}: {
+  etiqueta: string;
+  hoy: string;
+  simulado: string;
+  incremento: string | null;
+  destacar?: boolean;
+}) {
+  return (
+    <div
+      className="grid grid-cols-[1fr_auto_auto] items-baseline gap-x-3 py-3 sm:gap-x-6"
+      style={{ borderTop: `1px solid ${T.line}` }}
+    >
+      <span
+        className="text-[0.65rem] font-bold uppercase tracking-[0.16em]"
+        style={{ color: T.muted }}
+      >
+        {etiqueta}
+      </span>
+      <span
+        className="text-right text-sm tabular-nums sm:text-base"
+        style={{ color: T.muted }}
+      >
+        {hoy}
+      </span>
+      <span className="text-right">
+        <span
+          className="block font-black tabular-nums"
+          style={{
+            fontSize: destacar ? "clamp(1.25rem, 5vw, 1.75rem)" : "1.125rem",
+            color: destacar ? T.lime : T.fg,
+          }}
+        >
+          {simulado}
+        </span>
+        {incremento && (
+          <span className="block text-xs font-bold tabular-nums" style={{ color: T.lime }}>
+            {incremento}
+          </span>
+        )}
+      </span>
+    </div>
+  );
+}
+
+function BloqueProyeccion({
+  p,
+  hoy,
+}: {
+  p: Proyeccion;
+  /** Su situación actual, para poder poner las dos columnas una al lado de otra. */
+  hoy: { inversion: number; pacientes: number; generado: number } | null;
+}) {
+  const palanca =
     p.escenario === "bajar-coste"
-      ? `Manteniendo tus ${formatEur(p.inversion)} de inversión y bajando un 20 % lo que cuesta traer a cada paciente, hasta ${formatEur(p.costePorPaciente)}.`
-      : p.escenario === "subir-inversion"
-        ? `Subiendo tu inversión a ${formatEur(p.inversion)} al mes y manteniendo el coste por paciente que ya tienes.`
-        : `Empezando con ${formatEur(p.inversion)} al mes y una captación sana para tu ticket, de ${formatEur(p.costePorPaciente)} por paciente.`;
+      ? `manteniendo tu inversión y bajando un 20 % lo que cuesta traer a cada paciente, hasta ${formatEur(p.costePorPaciente)}`
+      : p.escenario === "empezar"
+        ? `empezando con ${formatEur(p.inversion)} al mes y una captación sana para tu ticket, de ${formatEur(p.costePorPaciente)} por paciente`
+        : p.mejoraCoste
+          ? `subiendo tu inversión un 50 % y afinando el coste por paciente hasta ${formatEur(p.costePorPaciente)}`
+          : `subiendo tu inversión un 50 %, con el coste por paciente que ya tienes`;
 
   return (
-    <div className="mt-8 rounded-2xl p-6 sm:p-7" style={{ background: T.ink, border: `1px solid ${T.lime}55` }}>
-      <p
-        className="text-[0.7rem] font-bold uppercase tracking-[0.24em]"
-        style={{ color: T.lime }}
-      >
-        {p.escenario === "empezar" ? "Lo que podrías estar generando" : "Lo que te estás dejando"}
+    <div
+      className="mt-8 rounded-2xl p-6 text-left sm:p-7"
+      style={{ background: T.ink, border: `1px solid ${T.lime}55` }}
+    >
+      <p className="text-[0.7rem] font-bold uppercase tracking-[0.24em]" style={{ color: T.lime }}>
+        Caso simulado con nuestro sistema
       </p>
 
-      <p
-        className="mt-2 font-black leading-none tabular-nums"
-        style={{ fontSize: "clamp(2.5rem, 11vw, 4rem)", color: T.lime }}
-      >
-        +{formatEur(p.generadoExtra)}
-      </p>
-      <p className="mt-1 text-base font-bold">al mes</p>
+      <div className="mt-5">
+        <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 pb-1 sm:gap-x-6">
+          <span />
+          <span
+            className="text-right text-[0.6rem] font-bold uppercase tracking-[0.16em]"
+            style={{ color: T.muted }}
+          >
+            Hoy
+          </span>
+          <span
+            className="text-right text-[0.6rem] font-bold uppercase tracking-[0.16em]"
+            style={{ color: T.lime }}
+          >
+            Con nosotros
+          </span>
+        </div>
 
-      <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm" style={{ color: T.muted }}>
-        <span>
-          <strong style={{ color: T.fg }}>+{p.pacientesExtra}</strong> pacientes al mes
-        </span>
-        <span>
-          Total: <strong style={{ color: T.fg }}>{p.pacientes}</strong> pacientes ·{" "}
-          <strong style={{ color: T.fg }}>{formatEur(p.generado)}</strong>
-        </span>
+        <FilaComparativa
+          etiqueta="Inversión"
+          hoy={hoy ? formatEur(hoy.inversion) : "0,00 €"}
+          simulado={formatEur(p.inversion)}
+          incremento={p.inversionExtra > 0 ? `+${formatEur(p.inversionExtra)}` : "igual"}
+        />
+        <FilaComparativa
+          etiqueta="Pacientes nuevos"
+          hoy={hoy ? String(hoy.pacientes) : "0"}
+          simulado={String(p.pacientes)}
+          incremento={`+${p.pacientesExtra}`}
+        />
+        <FilaComparativa
+          etiqueta="Facturación"
+          hoy={hoy ? formatEur(hoy.generado) : "0,00 €"}
+          simulado={formatEur(p.generado)}
+          incremento={`+${formatEur(p.generadoExtra)}`}
+          destacar
+        />
+      </div>
+
+      <div className="mt-6 rounded-xl p-5" style={{ background: `${T.lime}14` }}>
+        <p
+          className="text-[0.65rem] font-bold uppercase tracking-[0.2em]"
+          style={{ color: T.lime }}
+        >
+          {p.escenario === "empezar" ? "Podrías estar generando" : "Te estás dejando"}
+        </p>
+        <p
+          className="mt-1 font-black leading-none tabular-nums"
+          style={{ fontSize: "clamp(2.25rem, 10vw, 3.5rem)", color: T.lime }}
+        >
+          +{formatEur(p.generadoExtra)}
+        </p>
+        <p className="mt-1 text-sm font-bold">más al mes</p>
       </div>
 
       <p className="mt-5 text-xs leading-relaxed" style={{ color: T.muted }}>
-        {explicacion} Es una estimación conservadora hecha con tus propias cifras, no una
-        promesa: lo redondeamos siempre a la baja.
+        Simulación hecha con tus propias cifras, {palanca}. Es conservadora y no es una promesa:
+        redondeamos siempre a la baja.
       </p>
     </div>
   );
@@ -529,7 +625,16 @@ function Resultado({ resultado }: { resultado: CalcResult }) {
           </div>
         )}
 
-        {proy && <BloqueProyeccion p={proy} />}
+        {proy && (
+          <BloqueProyeccion
+            p={proy}
+            hoy={
+              inversion !== null && pacientes !== null && resultado.generado !== null
+                ? { inversion, pacientes, generado: resultado.generado }
+                : null
+            }
+          />
+        )}
 
         <p className="mt-6 text-center text-sm leading-relaxed" style={{ color: T.muted }}>
           Es un cálculo con tus medias. Lo que no sabes es qué campaña te trae los pacientes
@@ -579,11 +684,7 @@ function Resultado({ resultado }: { resultado: CalcResult }) {
       )}
       {/* Aquí la proyección es el argumento entero: sin inversión no hay nada
           que analizar, solo lo que se está dejando de ganar. */}
-      {proy && (
-        <div className="text-left">
-          <BloqueProyeccion p={proy} />
-        </div>
-      )}
+      {proy && <BloqueProyeccion p={proy} hoy={null} />}
       <DiagnosticoCta />
     </div>
   );
