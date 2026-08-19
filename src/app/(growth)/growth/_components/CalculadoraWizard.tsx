@@ -5,8 +5,11 @@ import { useRef, useState, useTransition } from "react";
 import { requestGrowth } from "@/lib/growth-action";
 import { CONTACT_INFO } from "@/lib/contact-info";
 import {
+  CAPTACION_SANA,
+  costeConSistema,
   formatEur,
-  proyectar,
+  formatEurCompacto,
+  rentabilidad,
   type CalcResult,
 } from "@/lib/growth-calc";
 import { GROWTH_THEME as T } from "@/lib/growth-config";
@@ -39,6 +42,27 @@ const inputClass =
 const legendClass = "text-xs font-bold uppercase tracking-[0.18em]";
 const botonPrincipalClass =
   "inline-flex h-13 items-center justify-center rounded-full px-7 text-base font-bold transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0";
+
+/**
+ * Vuelta al paso anterior.
+ *
+ * Discreto y separado de los botones de avance a propósito: es una salida de
+ * emergencia para quien se ha equivocado en una cifra, no una opción que
+ * compita con seguir adelante. Los valores ya escritos se conservan porque
+ * viven en el estado del wizard y no en el paso.
+ */
+function Volver({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mt-6 inline-flex items-center gap-1.5 text-xs font-bold underline underline-offset-4"
+      style={{ color: T.muted }}
+    >
+      <span aria-hidden>←</span> Volver al paso anterior
+    </button>
+  );
+}
 
 interface PasoNumerico {
   clave: "inversion" | "pacientes" | "ticket";
@@ -186,6 +210,8 @@ export function CalculadoraWizard({
               {actual.omitir}
             </button>
           </div>
+
+          {paso > 0 && <Volver onClick={() => setPaso((p) => p - 1)} />}
         </div>
       ) : (
         <form
@@ -301,59 +327,149 @@ export function CalculadoraWizard({
               {error}
             </p>
           )}
+
+          <Volver onClick={() => setPaso((p) => p - 1)} />
         </form>
       )}
     </div>
   );
 }
 
-function Resultado({ resultado }: { resultado: CalcResult }) {
-  const proy = proyectar(resultado);
+/** Una cifra del bloque de "tus números", con su explicación debajo. */
+function Dato({
+  etiqueta,
+  valor,
+  nota,
+  destacar = false,
+}: {
+  etiqueta: string;
+  valor: string;
+  nota?: string;
+  destacar?: boolean;
+}) {
+  return (
+    <div className="py-3" style={{ borderTop: `1px solid ${T.line}` }}>
+      <div className="flex items-baseline justify-between gap-4">
+        <span className="text-sm font-bold" style={{ color: T.fg }}>
+          {etiqueta}
+        </span>
+        <span
+          className="whitespace-nowrap font-black tabular-nums"
+          style={{
+            fontSize: destacar ? "clamp(1.5rem, 5vw, 2rem)" : "clamp(1.125rem, 4vw, 1.375rem)",
+            color: destacar ? T.lime : T.fg,
+          }}
+        >
+          {valor}
+        </span>
+      </div>
+      {nota && (
+        <p className="mt-1 text-xs leading-relaxed" style={{ color: T.muted }}>
+          {nota}
+        </p>
+      )}
+    </div>
+  );
+}
 
+function Resultado({ resultado }: { resultado: CalcResult }) {
   if (resultado.rama === "A" && resultado.costePorPaciente !== null) {
     // Con respaldo a propósito: durante un despliegue puede convivir un
     // cliente nuevo con una respuesta antigua sin `entrada`, y quedarse sin
     // resultado por eso rompería la única promesa que le hemos hecho al
-    // usuario a cambio de sus datos. Sin el detalle del embudo, pero con su
-    // cifra.
-    const { inversion, pacientes } = resultado.entrada ?? {
+    // usuario a cambio de sus datos.
+    const { inversion, pacientes, ticket } = resultado.entrada ?? {
       inversion: null,
       pacientes: null,
       ticket: null,
     };
+    const rent = rentabilidad(resultado);
+
     return (
       <div className="rounded-3xl p-6 sm:p-8" style={tarjetaStyle}>
+        {/* 1. Lo que nos ha contado, para que reconozca sus propias cifras
+               antes de que le enseñemos ninguna conclusión. */}
         <p
           className="text-[0.7rem] font-bold uppercase tracking-[0.24em]"
           style={{ color: T.muted }}
         >
-          Tu situación hoy
+          Con tus datos
         </p>
-        <p
-          className="mt-2 font-black leading-tight text-balance"
-          style={{ fontSize: "clamp(1.5rem, 5vw, 2.25rem)", color: T.fg }}
-        >
-          Y la que tendrías{" "}
-          <span style={{ color: T.lime }}>con nosotros</span>.
-        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {[
+            inversion !== null ? `${formatEurCompacto(inversion)} al mes` : null,
+            pacientes !== null ? `${pacientes} pacientes` : null,
+            ticket !== null ? `${formatEurCompacto(ticket)} de ticket` : null,
+          ]
+            .filter(Boolean)
+            .map((t) => (
+              <span
+                key={t as string}
+                className="rounded-full px-3 py-1.5 text-xs font-bold"
+                style={{ background: T.ink, border: `1px solid ${T.line}`, color: T.fg }}
+              >
+                {t}
+              </span>
+            ))}
+        </div>
 
-        {/* Todas las cifras viven en el mismo esquema comparativo: sueltas en
-            tarjetas obligaban a recomponer la comparación de cabeza. */}
-        {proy && resultado.entrada.ticket !== null && (
-          <SimuladorInversion
-            actual={
-              inversion !== null && pacientes !== null && resultado.generado !== null
-                ? {
-                    inversion,
-                    pacientes,
-                    costePorPaciente: resultado.costePorPaciente,
-                    generado: resultado.generado,
-                  }
-                : null
-            }
-            costeConNosotros={proy.costeSinEscalar}
-            ticket={resultado.entrada.ticket}
+        {/* 2. Qué significan esas cifras hoy. */}
+        <p
+          className="mt-8 font-black leading-tight"
+          style={{ fontSize: "clamp(1.375rem, 4.5vw, 1.875rem)" }}
+        >
+          Esto es lo que te sale hoy
+        </p>
+        <div className="mt-4">
+          <Dato
+            etiqueta="Te cuesta cada paciente"
+            valor={formatEurCompacto(resultado.costePorPaciente)}
+            nota="Lo que inviertes dividido entre los pacientes que te llegan."
           />
+          {rent && (
+            <Dato
+              etiqueta="Te deja cada paciente"
+              valor={formatEurCompacto(rent.dejaPorPaciente)}
+              nota="Tu ticket medio menos lo que cuesta traerlo. No descuenta material ni personal."
+            />
+          )}
+          {resultado.generado !== null && (
+            <Dato
+              etiqueta="Facturas al mes"
+              valor={formatEurCompacto(resultado.generado)}
+              nota="Tus pacientes nuevos por tu ticket medio."
+            />
+          )}
+          {resultado.retorno !== null && rent && (
+            <Dato
+              etiqueta="Te queda al mes"
+              valor={formatEurCompacto(rent.dejaAlMes)}
+              nota={`Por cada euro invertido recuperas ${resultado.retorno
+                .toFixed(1)
+                .replace(".", ",")} €, un ${Math.round(resultado.retorno * 100)} %.`}
+              destacar
+            />
+          )}
+        </div>
+
+        {/* 3. Y lo que saldría con nosotros. Una sola proyección. */}
+        {ticket !== null && (
+          <div className="mt-8">
+            <SimuladorInversion
+              actual={
+                inversion !== null && pacientes !== null && resultado.generado !== null
+                  ? {
+                      inversion,
+                      pacientes,
+                      costePorPaciente: resultado.costePorPaciente,
+                      generado: resultado.generado,
+                    }
+                  : null
+              }
+              costeConNosotros={costeConSistema(resultado.costePorPaciente)}
+              ticket={ticket}
+            />
+          </div>
         )}
 
         <p className="mt-6 text-sm leading-relaxed" style={{ color: T.muted }}>
@@ -404,12 +520,14 @@ function Resultado({ resultado }: { resultado: CalcResult }) {
       )}
       {/* Aquí la proyección es el argumento entero: sin inversión no hay nada
           que analizar, solo lo que se está dejando de ganar. */}
-      {proy && resultado.entrada.ticket !== null && (
-        <SimuladorInversion
-          actual={null}
-          costeConNosotros={proy.costeSinEscalar}
-          ticket={resultado.entrada.ticket}
-        />
+      {resultado.entrada.ticket !== null && (
+        <div className="mt-8 text-left">
+          <SimuladorInversion
+            actual={null}
+            costeConNosotros={Math.round(resultado.entrada.ticket * CAPTACION_SANA * 100) / 100}
+            ticket={resultado.entrada.ticket}
+          />
+        </div>
       )}
       <DiagnosticoCta />
     </div>

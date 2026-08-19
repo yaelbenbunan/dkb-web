@@ -54,22 +54,26 @@ function Eyebrow({ children, color = T.lime }: { children: React.ReactNode; colo
  * se lleva un tercio. Va en cifras grandes y no en prosa porque el dueño de una
  * clínica reconoce su propia situación en un número antes que en un párrafo.
  */
+const TICKET_COMPARATIVA = "250 €";
+
 const COMPARATIVA = [
   {
     titulo: "La que llena la agenda",
     color: T.red,
     pacientes: "40",
-    gasto: "4.000 €",
-    queda: "1.100 €",
+    gasto: "8.000 €",
+    factura: "10.000 €",
+    queda: "2.000 €",
     remate: "Trabaja a tope. Y cobra por trabajar, no por ganar.",
   },
   {
     titulo: "La que mira los números",
     color: T.lime,
-    pacientes: "22",
-    gasto: "900 €",
-    queda: "3.400 €",
-    remate: "La mitad de pacientes. El triple de beneficio.",
+    pacientes: "20",
+    gasto: "1.000 €",
+    factura: "5.000 €",
+    queda: "4.000 €",
+    remate: "La mitad de pacientes. El doble de beneficio.",
   },
 ];
 
@@ -139,9 +143,7 @@ export default function GrowthPage() {
             className="font-black leading-[0.92] tracking-[-0.03em]"
             style={{ fontSize: "clamp(2.5rem, 7.5vw, 5.75rem)" }}
           >
-            Llenar tu agenda
-            <br />
-            es fácil.
+            Llenar tu agenda es fácil.
             <br />
             <span style={{ color: T.lime }}>Ganar más, no.</span>
           </h1>
@@ -150,7 +152,7 @@ export default function GrowthPage() {
             className="mt-7 max-w-2xl leading-relaxed"
             style={{ fontSize: "clamp(1.0625rem, 1.9vw, 1.375rem)", color: T.muted }}
           >
-            Cualquiera te trae pacientes. Nosotros te decimos{" "}
+            Cualquiera te trae pacientes. Nosotros, además, te decimos{" "}
             <strong style={{ color: T.fg, fontWeight: 700 }}>
               cuáles te dejan dinero y cuáles te lo quitan
             </strong>
@@ -186,7 +188,7 @@ export default function GrowthPage() {
           </h2>
 
           <p className="mt-6 max-w-2xl text-lg leading-relaxed" style={{ color: T.muted }}>
-            Dos clínicas del mismo tamaño, el mismo mes:
+            Dos clínicas del mismo tamaño, el mismo mes y el mismo ticket medio:
           </p>
 
           <div className="mt-10 grid gap-5 md:grid-cols-2">
@@ -203,32 +205,30 @@ export default function GrowthPage() {
                   {c.titulo}
                 </p>
 
-                <div className="mt-7 space-y-5">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="text-sm" style={{ color: T.muted }}>
-                      Pacientes nuevos
-                    </span>
-                    <span className="text-3xl font-black tabular-nums">{c.pacientes}</span>
-                  </div>
+                <div className="mt-7 space-y-4">
+                  {[
+                    { k: "Ticket medio", v: TICKET_COMPARATIVA },
+                    { k: "Pacientes nuevos", v: c.pacientes },
+                    { k: "Se gasta en traerlos", v: c.gasto },
+                    { k: "Factura", v: c.factura },
+                  ].map((f) => (
+                    <div key={f.k} className="flex items-baseline justify-between gap-3">
+                      <span className="text-sm" style={{ color: T.muted }}>
+                        {f.k}
+                      </span>
+                      <span className="text-2xl font-black tabular-nums">{f.v}</span>
+                    </div>
+                  ))}
                   <div
                     className="flex items-baseline justify-between gap-3"
-                    style={{ borderTop: `1px solid ${T.line}`, paddingTop: "1.25rem" }}
-                  >
-                    <span className="text-sm" style={{ color: T.muted }}>
-                      Se gasta en traerlos
-                    </span>
-                    <span className="text-3xl font-black tabular-nums">{c.gasto}</span>
-                  </div>
-                  <div
-                    className="flex items-baseline justify-between gap-3"
-                    style={{ borderTop: `1px solid ${T.line}`, paddingTop: "1.25rem" }}
+                    style={{ borderTop: `1px solid ${T.line}`, paddingTop: "1rem" }}
                   >
                     <span className="text-sm font-bold" style={{ color: T.fg }}>
                       Le queda
                     </span>
                     <span
                       className="font-black leading-none tabular-nums"
-                      style={{ fontSize: "clamp(2.25rem, 7vw, 3.25rem)", color: c.color }}
+                      style={{ fontSize: "clamp(2rem, 6.5vw, 3rem)", color: c.color }}
                     >
                       {c.queda}
                     </span>

@@ -179,147 +179,26 @@ export function rentabilidad(r: CalcResult): Rentabilidad | null {
   };
 }
 
-/** Por encima de esto, la captación se está comiendo el ticket. */
-const PESO_CAPTACION_ALTO = 0.3;
 /**
- * Por debajo de esto el coste ya está tan afinado que prometer bajarlo más
- * sería vender humo. Se sube la inversión y se deja el coste en paz.
+ * Cuánto abarata nuestro sistema el coste de traer un paciente.
+ *
+ * Una sola regla y no una tabla de escenarios: un 20 % menos del que tenga
+ * hoy. Es la mejora que se consigue con lo de siempre —dejar de pagar por
+ * búsquedas que no convierten, cortar lo que no trae pacientes y quedarse con
+ * lo que sí—, y es conservadora: en cuentas mal llevadas el margen real suele
+ * ser mayor, pero prometer más de lo que se cumple en la mayoría de los casos
+ * destruiría la credibilidad que sostiene todo el producto.
  */
-const PESO_CAPTACION_AFINADO = 0.1;
-/** Recorte alcanzable cuando el coste está disparado: hay mucho que barrer. */
-const MEJORA_COSTE_ALTO = 0.2;
-/** Recorte alcanzable cuando el coste es razonable pero mejorable. */
-const MEJORA_COSTE_MARGEN = 0.1;
-/** Subida de inversión que proponemos a quien ya le sale a cuenta. */
-const SUBIDA_INVERSION = 0.5;
-/** Inversión de arranque para quien todavía no invierte nada. */
-const INVERSION_ARRANQUE = 800;
-/** Captación sana como parte del ticket, para simular un arranque. */
-const CAPTACION_SANA = 0.2;
+export const MEJORA_COSTE_SISTEMA = 0.2;
 
-export interface Proyeccion {
-  /**
-   * Qué palanca se mueve, que es distinta según de dónde parta la clínica:
-   * quien paga de más por cada paciente tiene que abaratar antes de escalar,
-   * y quien ya paga poco lo que tiene es margen para invertir más.
-   */
-  escenario: "bajar-coste" | "subir-inversion" | "empezar";
-  inversion: number;
-  costePorPaciente: number;
-  pacientes: number;
-  generado: number;
-  /** Contra su situación de hoy. En el arranque, contra cero. */
-  inversionExtra: number;
-  pacientesExtra: number;
-  generadoExtra: number;
-  /** Si en este escenario también se afina el coste, para poder decirlo. */
-  mejoraCoste: boolean;
-  /**
-   * El coste ya mejorado por nuestro trabajo pero ANTES de aplicarle el
-   * encarecimiento por escalar. Es el que hay que darle al simulador como
-   * base: si se le pasara `costePorPaciente`, que ya lleva el escalado
-   * dentro, volvería a encarecerlo y las dos cifras dejarían de cuadrar.
-   */
-  costeSinEscalar: number;
+/** El coste por paciente al que dejaríamos su captación, antes de aplicarle
+ *  el encarecimiento por escalar el presupuesto. */
+export function costeConSistema(costeActual: number): number {
+  return redondear(costeActual * (1 - MEJORA_COSTE_SISTEMA));
 }
 
-/**
- * Qué podría conseguir siendo más eficiente, en plan conservador.
- *
- * Tres reglas, según de dónde parta:
- *
- *   - Captación por encima del 30 % del ticket → está pagando de más por cada
- *     paciente. Se proyecta abaratarlo un 20 % SIN tocar la inversión: el
- *     mismo dinero trae más gente.
- *   - Captación por debajo del 30 % → le sale a cuenta y se está quedando
- *     corto. Se proyecta subir la inversión un 50 % manteniendo el coste.
- *   - No invierte → se simula un arranque con una captación sana sobre su
- *     propio ticket.
- *
- * Devuelve null cuando no hay ticket medio: sin saber lo que vale un paciente,
- * cualquier cifra de facturación proyectada sería inventada, y este producto
- * se vende justo por lo contrario.
- */
-export function proyectar(r: CalcResult): Proyeccion | null {
-  const { ticket, inversion } = r.entrada;
-  if (ticket === null || ticket <= 0) return null;
-
-  // Todavía no invierte: se le enseña qué pasaría si empezara.
-  if (inversion === null || inversion <= 0) {
-    const coste = redondear(ticket * CAPTACION_SANA);
-    const pacientes = Math.floor(INVERSION_ARRANQUE / coste);
-    if (pacientes <= 0) return null;
-    const generado = redondear(pacientes * ticket);
-    return {
-      escenario: "empezar",
-      inversion: INVERSION_ARRANQUE,
-      costePorPaciente: coste,
-      pacientes,
-      generado,
-      inversionExtra: INVERSION_ARRANQUE,
-      pacientesExtra: pacientes,
-      generadoExtra: generado,
-      mejoraCoste: false,
-      costeSinEscalar: coste,
-    };
-  }
-
-  if (r.costePorPaciente === null || r.generado === null || r.entrada.pacientes === null) {
-    return null;
-  }
-
-  const pesoCaptacion = r.costePorPaciente / ticket;
-  const escenario = pesoCaptacion > PESO_CAPTACION_ALTO ? "bajar-coste" : "subir-inversion";
-
-  // El coste se afina siempre que quede margen. Solo se deja intacto cuando
-  // ya está tan bajo que prometer bajarlo más sería vender humo.
-  const recorte =
-    pesoCaptacion > PESO_CAPTACION_ALTO
-      ? MEJORA_COSTE_ALTO
-      : pesoCaptacion > PESO_CAPTACION_AFINADO
-        ? MEJORA_COSTE_MARGEN
-        : 0;
-
-  const inversionProyectada =
-    escenario === "bajar-coste" ? inversion : redondear(inversion * (1 + SUBIDA_INVERSION));
-  const costeMejorado = redondear(r.costePorPaciente * (1 - recorte));
-
-  // La proyección pasa por el MISMO simulador que usa el deslizador, en vez
-  // de calcular por su cuenta. Si no, las dos cifras se separan en cuanto el
-  // escenario sube la inversión —una aplicaría el encarecimiento al escalar y
-  // la otra no— y el usuario vería dos números distintos para el mismo
-  // presupuesto. En una pieza que se vende por decir la verdad con los
-  // números, esa contradicción se la carga entera.
-  const s = simular({
-    inversion: inversionProyectada,
-    costeBase: costeMejorado,
-    inversionBase: inversion,
-    ticket,
-  });
-
-  const pacientes = s.pacientes;
-  const generado = s.generado;
-  const costeProyectado = s.costePorPaciente;
-  const pacientesExtra = pacientes - r.entrada.pacientes;
-  const generadoExtra = redondear(generado - r.generado);
-
-  // Si la proyección no mejora lo que ya tiene, no se enseña. Prometer lo
-  // mismo o menos no es prudencia, es ruido.
-  if (pacientesExtra <= 0 || generadoExtra <= 0) return null;
-
-  return {
-    escenario,
-    inversion: inversionProyectada,
-    costePorPaciente: costeProyectado,
-    pacientes,
-    generado,
-    inversionExtra: redondear(inversionProyectada - inversion),
-    pacientesExtra,
-    generadoExtra,
-    mejoraCoste: recorte > 0,
-    costeSinEscalar: costeMejorado,
-  };
-}
+/** Captación sana como parte del ticket, para simular a quien no invierte. */
+export const CAPTACION_SANA = 0.2;
 
 /**
  * Cuánto encarece la captación cada vez que se dobla la inversión.

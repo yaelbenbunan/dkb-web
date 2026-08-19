@@ -76,7 +76,7 @@ describe("CalculadoraWizard", () => {
     // Se ancla en el encabezado de la pantalla de resultado y, aparte, en que
     // la cifra calculada aparezca: juntos prueban que se está mostrando el
     // resultado y no cualquier otra pantalla.
-    expect(await screen.findByText(/Tu situación hoy/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Esto es lo que te sale hoy/i)).toBeInTheDocument();
     expect(screen.getAllByText(/88,24/).length).toBeGreaterThan(0);
 
     // El eventId se genera una sola vez y el mismo valor va al FormData que

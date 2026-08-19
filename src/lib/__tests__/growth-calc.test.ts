@@ -154,7 +154,7 @@ describe("formatEurCompacto", () => {
   });
 });
 
-import { rentabilidad, proyectar, simular } from "../growth-calc";
+import { rentabilidad, costeConSistema, simular } from "../growth-calc";
 
 describe("rentabilidad", () => {
   test("lo que deja cada paciente y lo que deja al mes", () => {
@@ -181,86 +181,23 @@ describe("rentabilidad", () => {
   });
 });
 
-describe("proyectar", () => {
-  test("coste disparado: baja el coste y mantiene la inversión", () => {
-    // 200 € de captación sobre un ticket de 400 € = 50%, muy por encima del 30 %.
-    const p = proyectar(calcular({ inversion: 2000, pacientes: 10, ticket: 400 }));
-    expect(p?.escenario).toBe("bajar-coste");
-    expect(p?.inversion).toBe(2000);
-    expect(p?.inversionExtra).toBe(0);
-    // El coste baja un 20 %: de 200 a 160.
-    expect(p?.costePorPaciente).toBe(160);
-    // Con el mismo dinero entran 12 en vez de 10.
-    expect(p?.pacientes).toBe(12);
-    expect(p?.pacientesExtra).toBe(2);
-    expect(p?.generadoExtra).toBe(800);
+describe("costeConSistema", () => {
+  test("deja el coste un 20 % por debajo del actual", () => {
+    expect(costeConSistema(33.33)).toBe(26.66);
+    expect(costeConSistema(200)).toBe(160);
+    expect(costeConSistema(10)).toBe(8);
   });
 
-  test("hay margen: sube la inversión y además afina el coste", () => {
-    // 33,33 sobre 250 = 13 %: por debajo del 30 %, pero por encima del 10 %,
-    // así que todavía queda recorrido en el coste.
-    const p = proyectar(calcular({ inversion: 1500, pacientes: 45, ticket: 250 }));
-    expect(p?.escenario).toBe("subir-inversion");
-    expect(p?.inversion).toBe(2250);
-    expect(p?.inversionExtra).toBe(750);
-    // Nuestro trabajo baja el coste un 10 % (33,33 → 30), pero escalar a 1,5x
-    // lo encarece un 5,85 %: queda en 31,75. Sigue siendo mejor que hoy, y es
-    // la cifra honesta.
-    expect(p?.costePorPaciente).toBe(31.75);
-    // 2.250 / 31,75 = 70,8 → 70.
-    expect(p?.pacientes).toBe(70);
-    expect(p?.pacientesExtra).toBe(25);
-    expect(p?.generado).toBe(17500);
-    expect(p?.generadoExtra).toBe(6250);
+  test("siempre mejora, nunca empeora", () => {
+    // La promesa del sistema es abaratar la captación: una regla que en algún
+    // tramo devolviera un coste mayor que el actual sería absurda.
+    for (const coste of [5, 12.5, 33.33, 87.4, 200, 1000]) {
+      expect(costeConSistema(coste)).toBeLessThan(coste);
+    }
   });
+});
 
-  test("la proyección y el simulador coinciden en el mismo presupuesto", () => {
-    // Van por el mismo modelo a propósito: dos cifras distintas para el mismo
-    // dinero destruirían la credibilidad de toda la pieza.
-    const base = calcular({ inversion: 1500, pacientes: 45, ticket: 250 });
-    const p = proyectar(base)!;
-    // Con `costeSinEscalar`, que es justo lo que la pantalla le pasa al
-    // deslizador: usar `costePorPaciente` encarecería dos veces.
-    const s = simular({
-      inversion: p.inversion,
-      costeBase: p.costeSinEscalar,
-      inversionBase: 1500,
-      ticket: 250,
-    });
-    expect(s.pacientes).toBe(p.pacientes);
-    expect(s.generado).toBe(p.generado);
-    expect(s.costePorPaciente).toBe(p.costePorPaciente);
-  });
-
-  test("coste ya afinado: solo sube la inversión, sin recortarlo", () => {
-    // 10 € de captación sobre un ticket de 500 € = 2 %. Prometer bajarlo
-    // todavía más sería vender humo, así que solo se escala.
-    const p = proyectar(calcular({ inversion: 1000, pacientes: 100, ticket: 500 }));
-    expect(p?.escenario).toBe("subir-inversion");
-    expect(p?.inversion).toBe(1500);
-    // Sin recorte, pero con el encarecimiento de escalar a 1,5x.
-    expect(p?.costePorPaciente).toBe(10.58);
-    expect(p?.pacientes).toBe(141);
-    expect(p?.pacientesExtra).toBe(41);
-  });
-
-  test("no invierte nada: simula un arranque con su propio ticket", () => {
-    const p = proyectar(calcular({ inversion: null, pacientes: null, ticket: 300 }));
-    expect(p?.escenario).toBe("empezar");
-    expect(p?.inversion).toBe(800);
-    // Captación al 20 % de un ticket de 300 €.
-    expect(p?.costePorPaciente).toBe(60);
-    expect(p?.pacientes).toBe(13);
-    expect(p?.generado).toBe(3900);
-  });
-
-  test("sin ticket no se proyecta nada", () => {
-    // Sabemos lo que cuesta un paciente pero no lo que vale: prometer una
-    // cifra de facturación sería inventarla.
-    expect(proyectar(calcular({ inversion: 1500, pacientes: 45, ticket: null }))).toBeNull();
-    expect(proyectar(calcular({ inversion: null, pacientes: null, ticket: null }))).toBeNull();
-  });
-
+describe("simular", () => {
   test("simular: por debajo o igual a la base, el coste no se toca", () => {
     const s = simular({ inversion: 1500, costeBase: 30, inversionBase: 1500, ticket: 250 });
     expect(s.costePorPaciente).toBe(30);
@@ -296,11 +233,4 @@ describe("proyectar", () => {
     expect(cero.generado).toBe(0);
   });
 
-  test("nunca proyecta una mejora que no lo sea", () => {
-    // Si por redondeos la proyección no superase la situación actual, no se
-    // enseña: prometer lo mismo o menos no es ser conservador, es absurdo.
-    const p = proyectar(calcular({ inversion: 1500, pacientes: 45, ticket: 250 }));
-    expect(p?.pacientesExtra).toBeGreaterThan(0);
-    expect(p?.generadoExtra).toBeGreaterThan(0);
-  });
 });

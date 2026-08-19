@@ -19,22 +19,27 @@ export interface SituacionActual {
   generado: number;
 }
 
-/** Una fila de la comparativa: concepto, hoy y con nosotros. */
+/** Una fila de la comparativa: concepto, ahora y con nosotros. */
 function Fila({
   concepto,
-  hoy,
-  nosotros,
+  ahora,
+  conNosotros,
+  crecimiento,
   destacar = false,
 }: {
   concepto: string;
-  hoy: string;
-  nosotros: string;
+  ahora: string;
+  conNosotros: string;
+  /** Anotación bajo la cifra nuestra, del tipo "+11 %". */
+  crecimiento?: string;
   destacar?: boolean;
 }) {
-  const tamano = destacar ? "clamp(1.125rem, 4.5vw, 1.5rem)" : "clamp(0.9375rem, 3.4vw, 1.125rem)";
+  const tamano = destacar
+    ? "clamp(1.125rem, 4.5vw, 1.5rem)"
+    : "clamp(0.9375rem, 3.4vw, 1.125rem)";
   return (
     <div
-      className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-baseline gap-x-3 py-2.5 sm:gap-x-5"
+      className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-baseline gap-x-3 py-3 sm:gap-x-5"
       style={{ borderTop: `1px solid ${T.line}` }}
     >
       <span
@@ -47,32 +52,40 @@ function Fila({
         className="w-[4.75rem] whitespace-nowrap text-right font-bold tabular-nums sm:w-24"
         style={{ fontSize: tamano, color: T.muted }}
       >
-        {hoy}
+        {ahora}
       </span>
-      <span
-        className="w-[5.25rem] whitespace-nowrap text-right font-black tabular-nums sm:w-28"
-        style={{ fontSize: tamano, color: T.lime }}
-      >
-        {nosotros}
+      <span className="w-[5.25rem] text-right sm:w-28">
+        <span
+          className="block whitespace-nowrap font-black tabular-nums"
+          style={{ fontSize: tamano, color: T.lime }}
+        >
+          {conNosotros}
+        </span>
+        {crecimiento && (
+          <span
+            className="block whitespace-nowrap text-[0.7rem] font-bold tabular-nums"
+            style={{ color: T.lime }}
+          >
+            {crecimiento}
+          </span>
+        )}
       </span>
     </div>
   );
 }
 
 /**
- * La comparativa completa: dónde está hoy y dónde estaría con nosotros.
+ * La proyección con nuestro sistema, comparada contra su situación real.
  *
  * Dos decisiones que la gobiernan:
  *
- * - La columna de HOY está congelada en sus cifras reales. Es un hecho, no
+ * - La columna de AHORA está congelada en sus cifras reales. Es un hecho, no
  *   una hipótesis, y moverla con el deslizador la convertiría en otra
- *   simulación más — con lo que ya no habría contra qué comparar.
- * - El deslizador arranca en SU misma inversión. Así lo primero que ve es
- *   qué cambiaría con el mismo dinero, que es un argumento más difícil de
- *   rebatir que pedirle presupuesto. Subirlo es decisión suya.
- *
- * Todas las cifras viven en el mismo esquema a propósito: repartidas en
- * tarjetas sueltas obligan a recomponer mentalmente la comparación.
+ *   simulación más, con lo que ya no habría contra qué comparar.
+ * - El deslizador arranca en SU misma inversión y va DEBAJO de la tabla.
+ *   Primero se entiende la comparación con el dinero que ya se gasta, que es
+ *   más difícil de rebatir que pedirle presupuesto, y solo después se le
+ *   invita a jugar.
  */
 export function SimuladorInversion({
   actual,
@@ -81,7 +94,7 @@ export function SimuladorInversion({
 }: {
   /** Su situación de hoy. null = todavía no invierte. */
   actual: SituacionActual | null;
-  /** El coste al que lo dejaríamos, antes del encarecimiento por escalar. */
+  /** El coste al que dejaríamos su captación, antes de escalar. */
   costeConNosotros: number;
   ticket: number;
 }) {
@@ -95,65 +108,35 @@ export function SimuladorInversion({
 
   const nos = simular({ inversion, costeBase: costeConNosotros, inversionBase: base, ticket });
 
-  const roasHoy = actual && actual.inversion > 0 ? actual.generado / actual.inversion : 0;
-  const roasNos = inversion > 0 ? nos.generado / inversion : 0;
-  const dejaHoy = actual ? actual.generado - actual.inversion : 0;
-  const masAlMes = Math.round((nos.deja - dejaHoy) * 100) / 100;
-
-  const nUm = (n: number) => n.toFixed(1).replace(".", ",");
-  const pct = (n: number) => `${Math.round(n * 100)} %`;
-  const guion = "—";
+  const dejaAhora = actual ? actual.generado - actual.inversion : 0;
+  const masAlMes = Math.round((nos.deja - dejaAhora) * 100) / 100;
+  const crecePacientes =
+    actual && actual.pacientes > 0
+      ? Math.round(((nos.pacientes - actual.pacientes) / actual.pacientes) * 100)
+      : null;
 
   return (
     <div
-      className="mt-8 rounded-2xl p-5 text-left sm:p-7"
+      className="rounded-2xl p-5 sm:p-7"
       style={{ background: T.ink, border: `1px solid ${T.lime}55` }}
     >
-      {/* El deslizador mueve solo nuestra columna. */}
-      <label
-        htmlFor={id}
-        className="text-[0.7rem] font-bold uppercase tracking-[0.2em]"
-        style={{ color: T.lime }}
-      >
-        Ajusta la inversión de nuestro escenario
-      </label>
-      <div className="mt-2 flex flex-wrap items-baseline gap-x-3">
-        <span
-          className="font-black leading-none tabular-nums"
-          style={{ fontSize: "clamp(2rem, 8vw, 2.75rem)", color: T.lime }}
-        >
-          {formatEur(inversion)}
-        </span>
-        <span className="text-sm font-bold" style={{ color: T.muted }}>
-          al mes
-        </span>
-      </div>
-      <input
-        id={id}
-        type="range"
-        min={min}
-        max={max}
-        step={PASO}
-        value={inversion}
-        onChange={(e) => setInversion(Number(e.target.value))}
-        className="mt-4 h-2 w-full cursor-pointer appearance-none rounded-full"
-        style={{
-          background: `linear-gradient(to right, ${T.lime} 0%, ${T.lime} ${progreso}%, ${T.line} ${progreso}%, ${T.line} 100%)`,
-        }}
-        aria-valuetext={`${formatEur(inversion)} al mes`}
-      />
+      <p className="text-[0.7rem] font-bold uppercase tracking-[0.2em]" style={{ color: T.lime }}>
+        Con nuestro sistema
+      </p>
+      <p className="mt-2 text-sm leading-relaxed" style={{ color: T.muted }}>
+        Bajamos un 20 % lo que cuesta traer cada paciente. Con el mismo dinero, entran más.
+      </p>
 
-      {/* Cabecera de las dos columnas. */}
-      <div className="mt-7 grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-3 pb-1 sm:gap-x-5">
+      <div className="mt-6 grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-3 pb-1 sm:gap-x-5">
         <span />
         <span
-          className="w-[4.75rem] text-right text-[0.6rem] font-bold uppercase tracking-[0.14em] sm:w-24"
+          className="w-[4.75rem] text-right text-[0.6rem] font-bold uppercase tracking-[0.12em] sm:w-24"
           style={{ color: T.muted }}
         >
-          Hoy
+          Ahora
         </span>
         <span
-          className="w-[5.25rem] text-right text-[0.6rem] font-bold uppercase tracking-[0.14em] sm:w-28"
+          className="w-[5.25rem] text-right text-[0.6rem] font-bold uppercase tracking-[0.12em] sm:w-28"
           style={{ color: T.lime }}
         >
           Con nosotros
@@ -161,69 +144,91 @@ export function SimuladorInversion({
       </div>
 
       <Fila
-        concepto="Inversión"
-        hoy={actual ? eur(actual.inversion) : eur(0)}
-        nosotros={eur(inversion)}
+        concepto="Inversión al mes"
+        ahora={actual ? eur(actual.inversion) : eur(0)}
+        conNosotros={eur(inversion)}
       />
       <Fila
-        concepto="Pacientes"
-        hoy={actual ? String(actual.pacientes) : "0"}
-        nosotros={String(nos.pacientes)}
+        concepto="Coste por paciente"
+        ahora={actual ? eur(actual.costePorPaciente) : "—"}
+        conNosotros={eur(nos.costePorPaciente)}
       />
       <Fila
-        concepto="Coste / paciente"
-        hoy={actual ? eur(actual.costePorPaciente) : guion}
-        nosotros={eur(nos.costePorPaciente)}
+        concepto="Pacientes nuevos"
+        ahora={actual ? String(actual.pacientes) : "0"}
+        conNosotros={String(nos.pacientes)}
+        crecimiento={
+          crecePacientes !== null && crecePacientes > 0 ? `+${crecePacientes} %` : undefined
+        }
       />
       <Fila
         concepto="Facturación"
-        hoy={actual ? eur(actual.generado) : eur(0)}
-        nosotros={eur(nos.generado)}
-      />
-      <Fila
-        concepto="Te queda / paciente"
-        hoy={actual ? eur(ticket - actual.costePorPaciente) : guion}
-        nosotros={eur(ticket - nos.costePorPaciente)}
-      />
-      <Fila
-        concepto="Retorno / €"
-        hoy={actual ? `${nUm(roasHoy)} €` : guion}
-        nosotros={`${nUm(roasNos)} €`}
-      />
-      <Fila
-        concepto="Retorno %"
-        hoy={actual ? pct(roasHoy) : guion}
-        nosotros={pct(roasNos)}
+        ahora={actual ? eur(actual.generado) : eur(0)}
+        conNosotros={eur(nos.generado)}
       />
       <Fila
         concepto="Te queda al mes"
-        hoy={actual ? eur(dejaHoy) : eur(0)}
-        nosotros={eur(nos.deja)}
+        ahora={actual ? eur(dejaAhora) : eur(0)}
+        conNosotros={eur(nos.deja)}
         destacar
       />
 
+      <div className="mt-7 rounded-xl p-4" style={{ background: T.surface }}>
+        <label
+          htmlFor={id}
+          className="text-[0.65rem] font-bold uppercase tracking-[0.16em]"
+          style={{ color: T.muted }}
+        >
+          ¿Y si invirtieras…?
+        </label>
+        <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2">
+          <span
+            className="font-black leading-none tabular-nums"
+            style={{ fontSize: "clamp(1.5rem, 6vw, 2rem)", color: T.fg }}
+          >
+            {formatEur(inversion)}
+          </span>
+          <span className="text-xs font-bold" style={{ color: T.muted }}>
+            al mes
+          </span>
+        </div>
+        <input
+          id={id}
+          type="range"
+          min={min}
+          max={max}
+          step={PASO}
+          value={inversion}
+          onChange={(e) => setInversion(Number(e.target.value))}
+          className="mt-3 h-2 w-full cursor-pointer appearance-none rounded-full"
+          style={{
+            background: `linear-gradient(to right, ${T.lime} 0%, ${T.lime} ${progreso}%, ${T.line} ${progreso}%, ${T.line} 100%)`,
+          }}
+          aria-valuetext={`${formatEur(inversion)} al mes`}
+        />
+      </div>
+
       {masAlMes > 0 && (
         <div className="mt-6 rounded-xl p-5" style={{ background: `${T.lime}14` }}>
-          <p
-            className="text-[0.65rem] font-bold uppercase tracking-[0.2em]"
-            style={{ color: T.lime }}
-          >
-            Diferencia
+          <p className="text-sm font-bold leading-snug">
+            {actual
+              ? "Con nuestro sistema estarías generando"
+              : "Empezando a invertir estarías generando"}
           </p>
           <p
             className="mt-1 font-black leading-none tabular-nums"
-            style={{ fontSize: "clamp(2rem, 9vw, 3.25rem)", color: T.lime }}
+            style={{ fontSize: "clamp(2.25rem, 10vw, 3.5rem)", color: T.lime }}
           >
-            +{formatEur(masAlMes)}
+            +{eur(masAlMes)}
           </p>
-          <p className="mt-1 text-sm font-bold">más al mes en tu bolsillo</p>
+          <p className="mt-1 text-sm font-bold">más al mes que ahora</p>
         </div>
       )}
 
       <p className="mt-5 text-xs leading-relaxed" style={{ color: T.muted }}>
         Estimación conservadora con tus propias cifras, redondeada a la baja. Al subir el
-        presupuesto el coste por paciente sube un poco: se compra tráfico cada vez menos fino,
-        y eso pasaría con nosotros o sin nosotros.
+        presupuesto el coste por paciente sube un poco: se compra tráfico cada vez menos fino, y
+        eso pasaría con nosotros o sin nosotros.
       </p>
     </div>
   );
