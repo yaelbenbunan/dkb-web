@@ -157,10 +157,13 @@ Tres cosas a tener en cuenta al fijar ese precio:
 2. **Compran la web, no el sistema.** Se van sin CRM, sin agenda y sin dashboard, es decir,
    sin saber qué campaña les trae pacientes. Eso no es un castigo: es la propuesta de valor
    dicha en voz alta, y es el mejor argumento de retención que hay.
-3. **Técnicamente es viable por una decisión ya tomada.** Al ser cada web un despliegue
-   propio a partir de plantilla (§8) y no un multi-tenant, entregarla es traspasar un repo y
-   un despliegue. Si la web fuera multi-tenant, extraer una sola clínica sería un proyecto.
-   Esta objeción comercial es la segunda razón para mantener esa decisión.
+3. **Es viable, pero cuesta un día de trabajo.** Al diseñar la fase 4 se cambió la
+   arquitectura de las webs: pasan a ser **un solo repo con un despliegue por clínica**, y no
+   un repo clonado por cliente, porque mantener diez repos en paralelo no se sostiene. Con eso,
+   entregarle la web a quien se va deja de ser un traspaso de repo y pasa a ser extraer su
+   contenido y los componentes a un repo propio. Sigue siendo un trabajo puntual y acotado, y
+   hay que tenerlo en cuenta al fijar el precio de compra. Ver el diseño de la fase 4 para el
+   razonamiento completo.
 
 ---
 
@@ -472,7 +475,7 @@ Notas de diseño:
 | 1. Captación | **`dkb-web`** | La landing y la calculadora *son* nuestra web de marketing: mismo dominio, mismo tracking, mismo CRM, mismo despliegue |
 | 2. CRM + agenda | **repo nuevo** | Otros usuarios, otra autenticación, otra base de datos, otro ritmo de despliegue, y un cliente que paga |
 | 3. Insights | el repo de la fase 2 | Es la misma aplicación |
-| 4. Web de clínica **o landing paralela** | **un repo por cliente** | Patrón que ya seguimos con `padel-marina`, `instituto-fich`… clonando plantilla. Las dos modalidades de §3 salen de la misma plantilla; la landing es un subconjunto |
+| 4. Web de clínica **o landing paralela** | **repo único `dkb-clinicas`, un despliegue de Vercel por clínica** | Corregido al diseñar la fase 4: con un repo clonado por cliente, cada arreglo hay que aplicarlo N veces y con diez clínicas deja de hacerse. Un fichero de contenido y una carpeta de imágenes por clínica; las dos modalidades de §3 salen de la misma plantilla y la landing es un subconjunto |
 
 **El disparador para abrir carpeta nueva es empezar la fase 2.** Antes de eso no hay nada
 que poner en ella. Cuando se abra, la parte de producto de este documento se muda allí y
@@ -681,14 +684,18 @@ comercial consiste precisamente en demostrar que sabemos medir eso.
 **Salida:** la clínica entra sola y entiende su retorno sin que se lo expliquemos.
 **Dependencias:** fase 2.
 
-### Fase 4 — Web de clínica reciclable · un repo por cliente
+### Fase 4 — Web de clínica reciclable · repo único `dkb-clinicas`
 
-1. Plantilla orientada a conversión, con formularios que escriben en el producto.
+1. Plantilla orientada a conversión: un fichero de contenido tipado y una carpeta de
+   imágenes por clínica, y un despliegue de Vercel por cada una.
 2. Proceso de personalización documentado: logo, colores, contenido.
 3. Primera instancia = la clínica ficticia de la demo.
 
-**Salida:** una clínica nueva se pone en marcha en días, no semanas.
-**Dependencias:** el formulario necesita la fase 2. La maqueta se puede empezar antes.
+**Salida:** una clínica nueva se pone en marcha en una tarde, no en una semana.
+**Dependencias:** el formulario se construye entero, pero su destino espera a la fase 2.
+Mientras tanto la demo comercial de §11 solo se puede enseñar hasta el primer paso.
+
+Diseño completo: [fase 4](./2026-08-19-fase-4-plantilla-web-clinicas-design.md).
 
 ### Orden
 
