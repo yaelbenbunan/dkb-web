@@ -47,3 +47,6 @@ next-env.d.ts
 # But keep app/public images
 !src/**/*.png
 !public/**/*.png
+
+# Scratch de subagent-driven-development
+.superpowers/
