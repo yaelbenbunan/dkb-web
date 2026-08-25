@@ -29,8 +29,15 @@ function toNegativePath(src: string): string {
  *
  * enfocalife: su morado de marca es #3b1147, que contra el fondo dark (#0e1015)
  * da 1.2:1 de contraste — ilegible.
+ * conpakser: el isotipo es azul, pero el logotipo va en #1e1e1e, así que al
+ * hacer swap sobre oscuro desaparecería la mitad del logo (la que dice el
+ * nombre).
  */
-const MONOCHROME_LOGOS = ["/img/casos/hydrup/", "/img/casos/enfocalife/"];
+const MONOCHROME_LOGOS = [
+  "/img/casos/hydrup/",
+  "/img/casos/enfocalife/",
+  "/img/casos/conpakser/",
+];
 
 function isMonochrome(src: string): boolean {
   return MONOCHROME_LOGOS.some((prefix) => src.startsWith(prefix));
