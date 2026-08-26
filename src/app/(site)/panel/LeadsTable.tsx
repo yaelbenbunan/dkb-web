@@ -6,6 +6,7 @@ import {
   setLeadAccountManager,
   setLeadNotes,
   setLeadFollowup,
+  setLeadFollowupDate,
   setLeadChannel,
   setLeadCampaign,
   setLeadName,
@@ -22,6 +23,18 @@ import { LEAD_STATUSES, STATUS_COLORS, statusLabel } from "@/lib/lead-status";
 import { emailStatusLabel, EMAIL_STATUS_COLORS } from "@/lib/email-status";
 import { isLeadEmailable } from "@/lib/lead-emailable";
 import { ACCOUNT_MANAGERS, AM_COLORS } from "@/lib/account-managers";
+import {
+  addDays,
+  dueCount,
+  isFollowupDate,
+  FOLLOWUP_MIN_DATE,
+  FOLLOWUP_MAX_DATE,
+  nextMonthLabel,
+  nextWeekday,
+  startOfNextMonth,
+  todayInMadrid,
+} from "@/lib/followup-agenda";
+import { Agenda } from "./Agenda";
 
 export interface LeadRowView {
   id: string;
@@ -34,6 +47,8 @@ export interface LeadRowView {
   website: string | null;
   notes: string | null;
   followup: string | null;
+  /** Fecha (YYYY-MM-DD) de la próxima llamada. null = no está en la agenda. */
+  followup_at: string | null;
   account_manager: string | null;
   status: string;
   email_status: string | null;
@@ -92,6 +107,32 @@ function webHref(raw: string | null): string | null {
   return null;
 }
 
+// Columnas de la tabla. `min` es el ancho mínimo que necesita cada una para
+// leerse sin cortes: la suma de las visibles fija el ancho de la tabla, así que
+// ocultar columnas recupera espacio de verdad en vez de dejar hueco muerto.
+const COLUMNS = [
+  { key: "fecha", label: "Fecha", min: 120 },
+  { key: "nombre", label: "Nombre", min: 170 },
+  { key: "telefono", label: "Teléfono", min: 200 },
+  { key: "email", label: "Email", min: 210 },
+  { key: "email_status", label: "Estado email", min: 150 },
+  { key: "consent", label: "Consent", min: 120 },
+  { key: "web", label: "Web", min: 150 },
+  { key: "canal", label: "Canal", min: 130 },
+  { key: "campana", label: "Campaña", min: 150 },
+  { key: "notas", label: "Notas adicionales", min: 390 },
+  { key: "am", label: "Account manager", min: 160 },
+  { key: "estado", label: "Estado", min: 160 },
+  { key: "llamar", label: "Llamar el", min: 185 },
+  { key: "seguimiento", label: "Seguimiento", min: 350 },
+] as const;
+
+type ColKey = (typeof COLUMNS)[number]["key"];
+
+/** Columnas ocultas, recordadas entre visitas (es una preferencia de trabajo,
+ *  no un filtro: si escondes "Consent" no quieres volver a esconderla mañana). */
+const COLS_STORAGE_KEY = "dkb-panel-hidden-cols";
+
 const webLabel = (raw: string) =>
   raw.replace(/^https?:\/\//i, "").replace(/\/$/, "");
 
@@ -103,6 +144,42 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
   const [showArchived, setShowArchived] = useState(false);
   const [adding, setAdding] = useState(false);
   const [busy, start] = useTransition();
+  const [view, setView] = useState<"tabla" | "agenda">("tabla");
+  const [hiddenCols, setHiddenCols] = useState<Set<ColKey>>(new Set());
+  const [colsOpen, setColsOpen] = useState(false);
+
+  // Se lee tras montar (no en el useState inicial) para que el HTML del
+  // servidor y el del cliente coincidan y no haya error de hidratación.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(COLS_STORAGE_KEY);
+      if (raw) setHiddenCols(new Set(JSON.parse(raw) as ColKey[]));
+    } catch {
+      /* localStorage puede fallar (modo privado); se ven todas las columnas */
+    }
+  }, []);
+
+  const persistCols = (next: Set<ColKey>) => {
+    setHiddenCols(next);
+    try {
+      localStorage.setItem(COLS_STORAGE_KEY, JSON.stringify([...next]));
+    } catch {
+      /* no poder recordarlo no debe romper la vista */
+    }
+  };
+  const toggleCol = (key: ColKey) => {
+    const next = new Set(hiddenCols);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    persistCols(next);
+  };
+
+  const cols = COLUMNS.filter((c) => !hiddenCols.has(c.key));
+  const show = (key: ColKey) => !hiddenCols.has(key);
+  const tableMinWidth = 36 + cols.reduce((n, c) => n + c.min, 0);
+
+  const today = todayInMadrid();
+  const pendingCalls = dueCount(leads, today);
 
   // Pool for the current view (active vs archived); los filtros se acumulan
   // sobre él, así que se pueden combinar (p. ej. enviables de Meta).
@@ -166,8 +243,21 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
     runBulk(deleteLeadsAction);
   };
 
+  // La agenda es una vista aparte, no un filtro más: sale con todos los hooks ya
+  // ejecutados, así que el orden de hooks no cambia entre vistas.
+  if (view === "agenda") {
+    return (
+      <>
+        <ViewTabs view={view} onChange={setView} pending={pendingCalls} />
+        <Agenda leads={leads} />
+      </>
+    );
+  }
+
   return (
     <>
+      <ViewTabs view={view} onChange={setView} pending={pendingCalls} />
+
       {/* Toolbar: filtro por estado + archivados */}
       <div
         style={{
@@ -330,6 +420,19 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
           </>
         )}
         <div style={{ flex: 1 }} />
+        <button
+          type="button"
+          onClick={() => setColsOpen((v) => !v)}
+          title="Mostrar u ocultar columnas"
+          style={btnStyle(
+            colsOpen ? "#e2e8f0" : "#fff",
+            "#334155",
+            false,
+            "#cbd5e1",
+          )}
+        >
+          ⚙ Columnas{hiddenCols.size > 0 ? ` (${hiddenCols.size} ocultas)` : ""}
+        </button>
         {!showArchived && selected.size === 0 && (
           <button
             type="button"
@@ -340,6 +443,14 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
           </button>
         )}
       </div>
+
+      {colsOpen && (
+        <ColumnsPanel
+          hidden={hiddenCols}
+          onToggle={toggleCol}
+          onShowAll={() => persistCols(new Set())}
+        />
+      )}
 
       {adding && !showArchived && (
         <AddLeadPanel onDone={() => setAdding(false)} />
@@ -358,7 +469,7 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
             borderCollapse: "collapse",
             width: "100%",
             fontSize: 14,
-            minWidth: 1200,
+            minWidth: tableMinWidth,
           }}
         >
           <thead>
@@ -372,23 +483,9 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
                   style={{ cursor: "pointer", width: 16, height: 16 }}
                 />
               </th>
-              {[
-                "Fecha",
-                "Nombre",
-                "Teléfono",
-                "Email",
-                "Estado email",
-                "Consent",
-                "Web",
-                "Canal",
-                "Campaña",
-                "Notas adicionales",
-                "Account manager",
-                "Estado",
-                "Seguimiento",
-              ].map((h) => (
-                <th key={h} style={th}>
-                  {h}
+              {cols.map((c) => (
+                <th key={c.key} style={{ ...th, minWidth: c.min }}>
+                  {c.label}
                 </th>
               ))}
             </tr>
@@ -397,7 +494,7 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
             {visible.length === 0 && (
               <tr>
                 <td
-                  colSpan={14}
+                  colSpan={cols.length + 1}
                   style={{
                     ...td,
                     textAlign: "center",
@@ -429,100 +526,143 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
                       style={{ cursor: "pointer", width: 16, height: 16 }}
                     />
                   </td>
-                  <td style={{ ...td, color: "#64748b", fontSize: 13 }}>
-                    {fmtDate(l.created_at)}
-                  </td>
-                  <td style={{ ...td, fontWeight: 600, minWidth: 160 }}>
-                    <InlineText
-                      id={l.id}
-                      field="name"
-                      action={setLeadName}
-                      value={l.name ?? ""}
-                      placeholder="—"
-                    />
-                  </td>
-                  <td style={{ ...td, minWidth: 150 }}>
-                    <InlineText
-                      id={l.id}
-                      field="phone"
-                      action={setLeadPhone}
-                      value={l.phone ?? ""}
-                      placeholder="—"
-                    />
-                  </td>
-                  <td style={{ ...td, minWidth: 190 }}>
-                    <InlineText
-                      id={l.id}
-                      field="email"
-                      action={setLeadEmail}
-                      value={l.email ?? ""}
-                      placeholder="—"
-                    />
-                  </td>
-                  <td style={td}>
-                    <EmailStatusCell
-                      id={l.id}
-                      status={l.email_status}
-                      campaign={l.campaign}
-                      hasEmail={!!(l.email ?? "").trim()}
-                    />
-                  </td>
-                  <td style={td}>
-                    <ConsentSelect id={l.id} value={l.consent} />
-                  </td>
-                  <td style={td}>
-                    {href ? (
-                      <a
-                        href={href}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        style={{ color: "#187bef" }}
-                      >
-                        {webLabel(l.website ?? "")} ↗
-                      </a>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td style={td}>
-                    <ChannelSelect id={l.id} value={l.channel ?? ""} />
-                  </td>
-                  <td style={td}>
-                    <InlineText
-                      id={l.id}
-                      field="campaign"
-                      action={setLeadCampaign}
-                      value={l.campaign ?? ""}
-                      placeholder="—"
-                    />
-                  </td>
-                  <td style={{ ...td, whiteSpace: "normal", minWidth: 240 }}>
-                    <EditableCell
-                      id={l.id}
-                      field="notes"
-                      action={setLeadNotes}
-                      value={l.notes ?? ""}
-                      placeholder="Añadir notas…"
-                    />
-                  </td>
-                  <td style={td}>
-                    <AccountManagerSelect
-                      id={l.id}
-                      value={l.account_manager ?? ""}
-                    />
-                  </td>
-                  <td style={td}>
-                    <StatusSelect id={l.id} value={l.status} />
-                  </td>
-                  <td style={{ ...td, whiteSpace: "normal", minWidth: 220 }}>
-                    <EditableCell
-                      id={l.id}
-                      field="followup"
-                      action={setLeadFollowup}
-                      value={l.followup ?? ""}
-                      placeholder="Ej: llamado, no contesta…"
-                    />
-                  </td>
+                  {show("fecha") && (
+                    <td style={{ ...td, color: "#64748b", fontSize: 13 }}>
+                      {fmtDate(l.created_at)}
+                    </td>
+                  )}
+                  {show("nombre") && (
+                    <td style={{ ...td, fontWeight: 600, minWidth: 160 }}>
+                      <InlineText
+                        id={l.id}
+                        field="name"
+                        action={setLeadName}
+                        value={l.name ?? ""}
+                        placeholder="—"
+                      />
+                    </td>
+                  )}
+                  {show("telefono") && (
+                    <td style={{ ...td, minWidth: 190 }}>
+                      <InlineText
+                        id={l.id}
+                        field="phone"
+                        minWidth={180}
+                        action={setLeadPhone}
+                        value={l.phone ?? ""}
+                        placeholder="—"
+                      />
+                    </td>
+                  )}
+                  {show("email") && (
+                    <td style={{ ...td, minWidth: 190 }}>
+                      <InlineText
+                        id={l.id}
+                        field="email"
+                        action={setLeadEmail}
+                        value={l.email ?? ""}
+                        placeholder="—"
+                      />
+                    </td>
+                  )}
+                  {show("email_status") && (
+                    <td style={td}>
+                      <EmailStatusCell
+                        id={l.id}
+                        status={l.email_status}
+                        campaign={l.campaign}
+                        hasEmail={!!(l.email ?? "").trim()}
+                      />
+                    </td>
+                  )}
+                  {show("consent") && (
+                    <td style={td}>
+                      <ConsentSelect id={l.id} value={l.consent} />
+                    </td>
+                  )}
+                  {show("web") && (
+                    <td style={td}>
+                      {href ? (
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          style={{ color: "#187bef" }}
+                        >
+                          {webLabel(l.website ?? "")} ↗
+                        </a>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                  )}
+                  {show("canal") && (
+                    <td style={td}>
+                      <ChannelSelect id={l.id} value={l.channel ?? ""} />
+                    </td>
+                  )}
+                  {show("campana") && (
+                    <td style={td}>
+                      <InlineText
+                        id={l.id}
+                        field="campaign"
+                        action={setLeadCampaign}
+                        value={l.campaign ?? ""}
+                        placeholder="—"
+                      />
+                    </td>
+                  )}
+                  {show("notas") && (
+                    <td style={{ ...td, whiteSpace: "normal", minWidth: 380 }}>
+                      <EditableCell
+                        id={l.id}
+                        field="notes"
+                        action={setLeadNotes}
+                        value={l.notes ?? ""}
+                        placeholder="Añadir notas…"
+                        rows={5}
+                        minWidth={360}
+                        autoGrow
+                      />
+                    </td>
+                  )}
+                  {show("am") && (
+                    <td style={td}>
+                      <AccountManagerSelect
+                        id={l.id}
+                        value={l.account_manager ?? ""}
+                      />
+                    </td>
+                  )}
+                  {show("estado") && (
+                    <td style={td}>
+                      <StatusSelect id={l.id} value={l.status} />
+                    </td>
+                  )}
+                  {show("llamar") && (
+                    <td style={td}>
+                      <FollowupDateCell
+                        id={l.id}
+                        value={l.followup_at}
+                        today={today}
+                        needsDate={l.status === "seguimiento" && !l.followup_at}
+                      />
+                    </td>
+                  )}
+                  {show("seguimiento") && (
+                    <td style={{ ...td, whiteSpace: "normal", minWidth: 340 }}>
+                      <EditableCell
+                        id={l.id}
+                        field="followup"
+                        action={setLeadFollowup}
+                        value={l.followup ?? ""}
+                        placeholder="Ej: llamado, no contesta…"
+                        rows={6}
+                        minWidth={330}
+                        autoGrow
+                      />
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -905,12 +1045,16 @@ function InlineText({
   action,
   value,
   placeholder,
+  minWidth = 110,
 }: {
   id: string;
   field: string;
   action: (formData: FormData) => void | Promise<void>;
   value: string;
   placeholder: string;
+  /** Ancho mínimo de la caja. Súbelo en campos que no deben cortarse nunca
+   *  (teléfonos con prefijo internacional, por ejemplo). */
+  minWidth?: number;
 }) {
   const [val, setVal] = useState(value);
   const [pending, start] = useTransition();
@@ -935,7 +1079,7 @@ function InlineText({
       }}
       style={{
         width: "100%",
-        minWidth: 110,
+        minWidth,
         border: "1px solid #e2e8f0",
         borderRadius: 8,
         padding: "6px 8px",
@@ -955,26 +1099,50 @@ function EditableCell({
   action,
   value,
   placeholder,
+  rows = 2,
+  minWidth = 200,
+  autoGrow = false,
+  maxHeight = 320,
 }: {
   id: string;
   field: "notes" | "followup";
   action: (formData: FormData) => void | Promise<void>;
   value: string;
   placeholder: string;
+  rows?: number;
+  minWidth?: number;
+  /** Crece con el contenido hasta `maxHeight`, para no leer notas largas por una rendija. */
+  autoGrow?: boolean;
+  maxHeight?: number;
 }) {
   const [val, setVal] = useState(value);
   const [pending, start] = useTransition();
   const lastSaved = useRef(value);
+  const ref = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     setVal(value);
     lastSaved.current = value;
   }, [value]);
 
+  // Alto mínimo en píxeles equivalente a `rows` líneas (13px · 1.5 + padding).
+  // Sin esto, autoGrow encoge la caja a la altura del contenido e ignora `rows`.
+  const minHeight = rows * 20 + 18;
+
+  // Ajusta el alto al contenido, nunca por debajo del mínimo. Se recalcula al
+  // escribir, no solo al montar.
+  useEffect(() => {
+    const el = ref.current;
+    if (!autoGrow || !el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(Math.max(el.scrollHeight, minHeight), maxHeight)}px`;
+  }, [autoGrow, maxHeight, minHeight, val]);
+
   return (
     <textarea
+      ref={ref}
       value={val}
       placeholder={placeholder}
-      rows={2}
+      rows={rows}
       disabled={pending}
       onChange={(e) => setVal(e.target.value)}
       onBlur={() => {
@@ -987,12 +1155,14 @@ function EditableCell({
       }}
       style={{
         width: "100%",
-        minWidth: 200,
-        resize: "vertical",
+        minWidth,
+        minHeight,
+        resize: "both",
         border: "1px solid #e2e8f0",
         borderRadius: 8,
-        padding: "6px 8px",
+        padding: "8px 10px",
         fontSize: 13,
+        lineHeight: 1.5,
         fontFamily: "inherit",
         color: "#0f172a",
         background: pending ? "#f8fafc" : "#fff",
@@ -1090,6 +1260,312 @@ function btnStyle(
     cursor: disabled ? "wait" : "pointer",
     opacity: disabled ? 0.6 : 1,
   };
+}
+
+/** Conmutador Tabla ↔ Agenda. El contador rojo son las llamadas vencidas o de
+ *  hoy: es el número que no debe quedarse sin mirar. */
+function ViewTabs({
+  view,
+  onChange,
+  pending,
+}: {
+  view: "tabla" | "agenda";
+  onChange: (v: "tabla" | "agenda") => void;
+  pending: number;
+}) {
+  const tab = (active: boolean): React.CSSProperties => ({
+    border: `1px solid ${active ? "#0b1220" : "#cbd5e1"}`,
+    background: active ? "#0b1220" : "#fff",
+    color: active ? "#fff" : "#475569",
+    borderRadius: 999,
+    padding: "7px 16px",
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: "pointer",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+  });
+  return (
+    <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+      <button type="button" onClick={() => onChange("tabla")} style={tab(view === "tabla")}>
+        📋 Tabla
+      </button>
+      <button type="button" onClick={() => onChange("agenda")} style={tab(view === "agenda")}>
+        📅 Agenda
+        {pending > 0 && (
+          <span
+            style={{
+              background: "#dc2626",
+              color: "#fff",
+              borderRadius: 999,
+              padding: "1px 8px",
+              fontSize: 12,
+              fontWeight: 800,
+            }}
+          >
+            {pending}
+          </span>
+        )}
+      </button>
+    </div>
+  );
+}
+
+/** Casillas para esconder columnas que ahora mismo estorban. */
+function ColumnsPanel({
+  hidden,
+  onToggle,
+  onShowAll,
+}: {
+  hidden: Set<ColKey>;
+  onToggle: (key: ColKey) => void;
+  onShowAll: () => void;
+}) {
+  return (
+    <div
+      style={{
+        background: "#fff",
+        border: "1px solid #e2e8f0",
+        borderRadius: 12,
+        padding: "14px 16px",
+        marginBottom: 12,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 10,
+        }}
+      >
+        <strong style={{ fontSize: 13, color: "#334155" }}>Columnas visibles</strong>
+        <button
+          type="button"
+          onClick={onShowAll}
+          disabled={hidden.size === 0}
+          style={{
+            border: "1px solid #cbd5e1",
+            background: "#fff",
+            color: hidden.size === 0 ? "#cbd5e1" : "#475569",
+            borderRadius: 8,
+            padding: "4px 10px",
+            fontSize: 12,
+            fontWeight: 700,
+            cursor: hidden.size === 0 ? "default" : "pointer",
+          }}
+        >
+          Mostrar todas
+        </button>
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 18px" }}>
+        {COLUMNS.map((c) => (
+          <label
+            key={c.key}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 13,
+              color: hidden.has(c.key) ? "#94a3b8" : "#0f172a",
+              cursor: "pointer",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={!hidden.has(c.key)}
+              onChange={() => onToggle(c.key)}
+              style={{ cursor: "pointer", width: 15, height: 15 }}
+            />
+            {c.label}
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Fecha de la próxima llamada.
+ *
+ *  El calendario se abre al pinchar en cualquier punto del campo, no solo en el
+ *  iconito: `showPicker()` es lo que hace que se comporte como uno espera.
+ *  Debajo van los atajos de lo que más se dice por teléfono ("el lunes que
+ *  viene", "a partir de septiembre"), que evitan tener que navegar el
+ *  calendario para la mitad de los casos. */
+function FollowupDateCell({
+  id,
+  value,
+  today,
+  needsDate,
+}: {
+  id: string;
+  value: string | null;
+  today: string;
+  /** El lead está en "Volver a llamar" pero nadie ha dicho cuándo. */
+  needsDate: boolean;
+}) {
+  const [pending, start] = useTransition();
+  const ref = useRef<HTMLInputElement>(null);
+  const valid = isFollowupDate(value);
+  const overdue = valid && value! < today;
+  const isToday = valid && value === today;
+
+  // Lo que se ve mientras se escribe. El campo de fecha emite un valor por cada
+  // pulsación ("0020-09-01" camino de "2026-09-01"), así que el borrador vive
+  // aquí y solo se guarda cuando la fecha ya tiene sentido. Sin esto, guardar a
+  // media escritura recargaba la tabla y el campo saltaba hacia atrás — que es
+  // lo que hacía imposible corregir una fecha ya puesta.
+  const [draft, setDraft] = useState(valid ? value! : "");
+  useEffect(() => {
+    setDraft(isFollowupDate(value) ? value! : "");
+  }, [value]);
+
+  const save = (next: string) => {
+    setDraft(next);
+    const fd = new FormData();
+    fd.set("id", id);
+    fd.set("followup_at", next);
+    start(() => setLeadFollowupDate(fd));
+  };
+
+  /** Cambio en el campo: se acepta el borrador siempre, pero solo se guarda
+   *  cuando es una fecha completa y plausible (o cuando se ha vaciado). */
+  const onDraftChange = (next: string) => {
+    setDraft(next);
+    if (next === "" || isFollowupDate(next)) save(next);
+  };
+
+  /** Abre el calendario nativo. No todos los navegadores traen showPicker,
+   *  y si falta, el campo sigue funcionando a mano. */
+  const openPicker = () => {
+    const el = ref.current;
+    if (!el) return;
+    try {
+      el.showPicker?.();
+    } catch {
+      /* Firefox lo lanza si no viene de un gesto del usuario: se ignora */
+    }
+  };
+
+  const border = overdue
+    ? "#dc2626"
+    : isToday || needsDate
+      ? "#d97706"
+      : "#e2e8f0";
+
+  const shortcuts: { label: string; date: string; title: string }[] = [
+    { label: "Mañana", date: addDays(today, 1), title: "Llamar mañana" },
+    { label: "Lunes", date: nextWeekday(today, 1), title: "El lunes que viene" },
+    { label: "+1 sem", date: addDays(today, 7), title: "Dentro de una semana" },
+    {
+      label: nextMonthLabel(today),
+      date: startOfNextMonth(today),
+      title: `A partir del 1 de ${nextMonthLabel(today)}`,
+    },
+  ];
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 5, minWidth: 150 }}>
+      <div style={{ position: "relative" }}>
+        <input
+          ref={ref}
+          type="date"
+          value={draft}
+          min={FOLLOWUP_MIN_DATE}
+          max={FOLLOWUP_MAX_DATE}
+          disabled={pending}
+          onChange={(e) => onDraftChange(e.target.value)}
+          // Si se sale del campo con algo a medias, se recupera lo guardado en
+          // vez de dejar a la vista una fecha que no existe en la base.
+          onBlur={() => setDraft(isFollowupDate(value) ? value! : "")}
+          onClick={openPicker}
+          onFocus={openPicker}
+          aria-label="Fecha de la próxima llamada"
+          style={{
+            width: "100%",
+            minWidth: 148,
+            border: `1px solid ${border}`,
+            borderRadius: 8,
+            padding: "6px 8px",
+            fontSize: 13,
+            fontFamily: "inherit",
+            color: overdue ? "#dc2626" : draft ? "#0f172a" : "#94a3b8",
+            fontWeight: overdue || isToday ? 700 : 400,
+            background: pending ? "#f8fafc" : needsDate ? "#fffbeb" : "#fff",
+            cursor: "pointer",
+          }}
+        />
+      </div>
+
+      {needsDate && (
+        <span style={{ fontSize: 11, color: "#b45309", fontWeight: 700 }}>
+          ¿A partir de cuándo?
+        </span>
+      )}
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+        {shortcuts.map((s) => (
+          <button
+            key={s.label}
+            type="button"
+            onClick={() => save(s.date)}
+            disabled={pending}
+            title={s.title}
+            style={{
+              border: `1px solid ${value === s.date ? "#187bef" : "#e2e8f0"}`,
+              background: value === s.date ? "#eff6ff" : "#fff",
+              color: value === s.date ? "#187bef" : "#64748b",
+              borderRadius: 6,
+              padding: "2px 6px",
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: pending ? "default" : "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {s.label}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={openPicker}
+          disabled={pending}
+          title="Elegir otra fecha en el calendario"
+          style={{
+            border: "1px solid #e2e8f0",
+            background: "#fff",
+            color: "#64748b",
+            borderRadius: 6,
+            padding: "2px 6px",
+            fontSize: 11,
+            cursor: pending ? "default" : "pointer",
+          }}
+        >
+          📅
+        </button>
+      </div>
+
+      {valid && (
+        <button
+          type="button"
+          onClick={() => save("")}
+          disabled={pending}
+          style={{
+            border: "none",
+            background: "none",
+            color: "#94a3b8",
+            fontSize: 11,
+            padding: 0,
+            textAlign: "left",
+            cursor: "pointer",
+          }}
+        >
+          Quitar de la agenda
+        </button>
+      )}
+    </div>
+  );
 }
 
 const th: React.CSSProperties = {

@@ -22,7 +22,6 @@ export interface Service {
 export type MockupKind =
   | "desktop"
   | "mobile"
-  | "mobile-tilt"
   | "brand"
   | "post"
   | "none";

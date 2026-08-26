@@ -25,6 +25,7 @@ export default async function PanelPage() {
     website: l.current_website,
     notes: l.notes,
     followup: l.followup,
+    followup_at: l.followup_at,
     account_manager: l.account_manager,
     status: String(l.status),
     email_status: l.email_status,

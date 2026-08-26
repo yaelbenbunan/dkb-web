@@ -1,13 +1,23 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { editAction, saveAsTemplateAction } from "../actions";
-import { newBlock, type Block, type BlockType } from "@/lib/campaign-blocks";
+import { editAction, saveAsTemplateAction, uploadCampaignImageAction } from "../actions";
+import {
+  newBlock,
+  ALIGNMENTS,
+  type Block,
+  type BlockType,
+  type BlockAlign,
+  type ImageWidth,
+} from "@/lib/campaign-blocks";
+import { plainToRichText, richTextToPlain } from "@/lib/rich-text";
+import { RichTextField } from "./RichTextField";
 
 const TYPE_LABELS: Record<BlockType, string> = {
   hero: "Hero",
   paragraph: "Párrafo",
+  textbox: "Caja de texto",
   checklist: "Checklist",
   button: "Botón",
   image: "Imagen",
@@ -15,7 +25,33 @@ const TYPE_LABELS: Record<BlockType, string> = {
   footer: "Pie",
 };
 
-const ADDABLE_TYPES: BlockType[] = ["hero", "paragraph", "checklist", "button", "image", "divider"];
+const ADDABLE_TYPES: BlockType[] = [
+  "hero",
+  "paragraph",
+  "textbox",
+  "checklist",
+  "button",
+  "image",
+  "divider",
+];
+
+/** Bloques con contenido que se puede alinear. El separador no tiene texto y el
+ *  pie va siempre igual, así que se quedan fuera. */
+const ALIGNABLE = new Set<BlockType>([
+  "hero",
+  "paragraph",
+  "textbox",
+  "checklist",
+  "button",
+  "image",
+]);
+
+const ALIGN_LABELS: Record<BlockAlign, string> = {
+  left: "Izquierda",
+  center: "Centro",
+  right: "Derecha",
+  justify: "Justificado",
+};
 
 const labelStyle: React.CSSProperties = {
   display: "block",
@@ -172,7 +208,13 @@ export function StepDesign({
               >
                 {TYPE_LABELS[block.type]}
               </span>
-              <div style={{ display: "flex", gap: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                {ALIGNABLE.has(block.type) && (
+                  <AlignSelect
+                    value={"align" in block.props ? block.props.align : undefined}
+                    onChange={(align) => updateProps(idx, { align })}
+                  />
+                )}
                 <button
                   type="button"
                   onClick={() => moveBlock(idx, -1)}
@@ -212,7 +254,11 @@ export function StepDesign({
               </div>
             </div>
 
-            <BlockFields block={block} onChange={(patch) => updateProps(idx, patch)} />
+            <BlockFields
+              block={block}
+              campaignId={campaignId}
+              onChange={(patch) => updateProps(idx, patch)}
+            />
           </div>
         ))}
       </div>
@@ -393,9 +439,11 @@ export function StepDesign({
 
 function BlockFields({
   block,
+  campaignId,
   onChange,
 }: {
   block: Block;
+  campaignId: string;
   onChange: (patch: Record<string, unknown>) => void;
 }) {
   switch (block.type) {
@@ -420,11 +468,11 @@ function BlockFields({
           </div>
           <div>
             <label style={labelStyle}>Texto</label>
-            <textarea
-              style={textareaStyle}
+            <RichTextField
+              value={block.props.bodyHtml ?? plainToRichText(block.props.body)}
+              onChange={(html) => onChange({ bodyHtml: html, body: richTextToPlain(html) })}
+              placeholder="Texto de apoyo del titular…"
               rows={3}
-              value={block.props.body ?? ""}
-              onChange={(e) => onChange({ body: e.target.value })}
             />
           </div>
           <AccentField value={block.props.accent} onChange={(v) => onChange({ accent: v })} />
@@ -435,24 +483,40 @@ function BlockFields({
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <div>
             <label style={labelStyle}>Texto</label>
-            <textarea
-              style={textareaStyle}
+            <RichTextField
+              value={block.props.html ?? plainToRichText(block.props.text)}
+              onChange={(html) => onChange({ html, text: richTextToPlain(html) })}
+              placeholder="Escribe el párrafo…"
               rows={3}
-              value={block.props.text}
-              onChange={(e) => onChange({ text: e.target.value })}
             />
           </div>
+          <SizeField value={block.props.size} onChange={(size) => onChange({ size })} />
+        </div>
+      );
+    case "textbox":
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <div>
-            <label style={labelStyle}>Tamaño</label>
-            <select
-              style={inputStyle}
-              value={block.props.size ?? "md"}
-              onChange={(e) => onChange({ size: e.target.value })}
-            >
-              <option value="sm">Pequeño</option>
-              <option value="md">Medio</option>
-              <option value="lg">Grande</option>
-            </select>
+            <label style={labelStyle}>Texto de la caja</label>
+            <RichTextField
+              value={block.props.html}
+              onChange={(html) => onChange({ html })}
+              placeholder="Un aviso, una nota destacada…"
+              rows={3}
+            />
+          </div>
+          <SizeField value={block.props.size} onChange={(size) => onChange({ size })} />
+          <div style={{ display: "flex", gap: 16 }}>
+            <ColorField
+              label="Fondo"
+              value={block.props.background ?? "#f8fafc"}
+              onChange={(v) => onChange({ background: v })}
+            />
+            <ColorField
+              label="Borde"
+              value={block.props.borderColor ?? "#e2e8f0"}
+              onChange={(v) => onChange({ borderColor: v })}
+            />
           </div>
         </div>
       );
@@ -496,24 +560,13 @@ function BlockFields({
       );
     case "image":
       return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <div>
-            <label style={labelStyle}>URL de la imagen</label>
-            <input
-              style={inputStyle}
-              value={block.props.src}
-              onChange={(e) => onChange({ src: e.target.value })}
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>Texto alternativo</label>
-            <input
-              style={inputStyle}
-              value={block.props.alt ?? ""}
-              onChange={(e) => onChange({ alt: e.target.value })}
-            />
-          </div>
-        </div>
+        <ImageFields
+          src={block.props.src}
+          alt={block.props.alt}
+          width={block.props.width}
+          campaignId={campaignId}
+          onChange={onChange}
+        />
       );
     case "divider":
       return (
@@ -535,6 +588,259 @@ function BlockFields({
     default:
       return null;
   }
+}
+
+/** Alineación del bloque. Va en la cabecera, junto a mover y borrar, porque es
+ *  una propiedad de la caja entera y no del texto que hay dentro. */
+function AlignSelect({
+  value,
+  onChange,
+}: {
+  value?: BlockAlign;
+  onChange: (v: BlockAlign) => void;
+}) {
+  return (
+    <select
+      value={value ?? ""}
+      onChange={(e) => onChange(e.target.value as BlockAlign)}
+      aria-label="Alineación del bloque"
+      title="Alineación del bloque"
+      style={{
+        border: "1px solid #e2e8f0",
+        borderRadius: 6,
+        padding: "4px 6px",
+        fontSize: 12,
+        color: "#475569",
+        background: "#fff",
+        cursor: "pointer",
+        fontFamily: "inherit",
+      }}
+    >
+      <option value="">Alineación…</option>
+      {ALIGNMENTS.map((a) => (
+        <option key={a} value={a}>
+          {ALIGN_LABELS[a]}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function SizeField({
+  value,
+  onChange,
+}: {
+  value?: "sm" | "md" | "lg";
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <label style={labelStyle}>Tamaño</label>
+      <select
+        style={inputStyle}
+        value={value ?? "md"}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        <option value="sm">Pequeño</option>
+        <option value="md">Medio</option>
+        <option value="lg">Grande</option>
+      </select>
+    </div>
+  );
+}
+
+function ColorField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <label style={labelStyle}>{label}</label>
+      <input
+        type="color"
+        value={normalizeHex(value)}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          width: 48,
+          height: 32,
+          border: "1px solid #e2e8f0",
+          borderRadius: 6,
+          padding: 2,
+          cursor: "pointer",
+        }}
+      />
+    </div>
+  );
+}
+
+/** Imagen propia: se puede subir un fichero o pegar una URL, y se le da tamaño
+ *  en porcentaje del ancho del email o en píxeles. */
+function ImageFields({
+  src,
+  alt,
+  width,
+  campaignId,
+  onChange,
+}: {
+  src: string;
+  alt?: string;
+  width?: ImageWidth;
+  campaignId: string;
+  onChange: (patch: Record<string, unknown>) => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const upload = async (file: File) => {
+    setError(null);
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.set("campaignId", campaignId);
+      fd.set("file", file);
+      const res = await uploadCampaignImageAction(fd);
+      if (!res.ok || !res.url) {
+        setError(res.error ?? "No se pudo subir la imagen.");
+        return;
+      }
+      onChange({ src: res.url });
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const unit = width?.unit ?? "";
+  const value = width?.value ?? (width?.unit === "px" ? 300 : 100);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div>
+        <label style={labelStyle}>Imagen</label>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void upload(file);
+            }}
+            style={{ display: "none" }}
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            style={{
+              border: "1px solid #cbd5e1",
+              background: "#fff",
+              color: "#334155",
+              borderRadius: 8,
+              padding: "7px 14px",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: uploading ? "wait" : "pointer",
+            }}
+          >
+            {uploading ? "Subiendo…" : "⬆ Subir imagen"}
+          </button>
+          <span style={{ fontSize: 12, color: "#94a3b8" }}>
+            PNG, JPG, GIF o WEBP · máx. 5 MB
+          </span>
+        </div>
+        {error && (
+          <p style={{ color: "#b91c1c", fontSize: 12, margin: "6px 0 0" }}>{error}</p>
+        )}
+      </div>
+
+      {src && (
+        <img
+          src={src}
+          alt=""
+          style={{
+            maxWidth: 200,
+            maxHeight: 110,
+            objectFit: "contain",
+            border: "1px solid #e2e8f0",
+            borderRadius: 8,
+            padding: 4,
+            background: "#f8fafc",
+          }}
+        />
+      )}
+
+      <div>
+        <label style={labelStyle}>…o pega la URL de la imagen</label>
+        <input
+          style={inputStyle}
+          value={src}
+          onChange={(e) => onChange({ src: e.target.value })}
+          placeholder="https://…"
+        />
+      </div>
+
+      <div>
+        <label style={labelStyle}>Tamaño</label>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <select
+            style={{ ...inputStyle, width: 150 }}
+            value={unit}
+            onChange={(e) => {
+              const u = e.target.value;
+              if (!u) onChange({ width: undefined });
+              else onChange({ width: { unit: u, value: u === "pct" ? 100 : 300 } });
+            }}
+          >
+            <option value="">Ancho completo</option>
+            <option value="pct">Porcentaje</option>
+            <option value="px">Píxeles</option>
+          </select>
+          {unit && (
+            <>
+              <input
+                type="number"
+                min={unit === "pct" ? 5 : 20}
+                max={unit === "pct" ? 100 : 600}
+                value={value}
+                onChange={(e) => {
+                  const n = Number(e.target.value);
+                  if (Number.isFinite(n)) {
+                    onChange({ width: { unit, value: Math.round(n) } });
+                  }
+                }}
+                style={{ ...inputStyle, width: 100 }}
+              />
+              <span style={{ fontSize: 13, color: "#64748b" }}>
+                {unit === "pct" ? "%" : "px"}
+              </span>
+            </>
+          )}
+        </div>
+        {unit === "px" && (
+          <p style={{ fontSize: 12, color: "#94a3b8", margin: "4px 0 0" }}>
+            El email mide 528 px de ancho útil; por encima de eso se recorta al máximo.
+          </p>
+        )}
+      </div>
+
+      <div>
+        <label style={labelStyle}>Texto alternativo</label>
+        <input
+          style={inputStyle}
+          value={alt ?? ""}
+          onChange={(e) => onChange({ alt: e.target.value })}
+          placeholder="Lo que se lee si la imagen no carga"
+        />
+      </div>
+    </div>
+  );
 }
 
 function AccentField({

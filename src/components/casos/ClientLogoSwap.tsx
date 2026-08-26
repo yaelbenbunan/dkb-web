@@ -19,15 +19,25 @@ function toNegativePath(src: string): string {
 }
 
 /**
- * Marcas monocromas: su "positivo" es tinta negra sobre transparente porque no
- * existe una versión en color. Hacer el swap sobre fondo oscuro las haría
- * desaparecer (negro sobre negro), así que se quedan siempre en negativo:
- * blanco en dark, invertido a negro en light por `.client-logo-bw` (globals.css).
+ * Marcas de tinta oscura: su "positivo" es negro o un color casi negro sobre
+ * transparente. Hacer el swap sobre fondo oscuro las haría desaparecer, así que
+ * se quedan siempre en negativo: blanco en dark, invertido a negro en light por
+ * `.client-logo-bw` (globals.css).
  *
  * Se listan por prefijo de ruta para que aplique en las cuatro superficies que
  * usan este componente (grid de casos, cabecera, relacionados y marquee).
+ *
+ * enfocalife: su morado de marca es #3b1147, que contra el fondo dark (#0e1015)
+ * da 1.2:1 de contraste — ilegible.
+ * conpakser: el isotipo es azul, pero el logotipo va en #1e1e1e, así que al
+ * hacer swap sobre oscuro desaparecería la mitad del logo (la que dice el
+ * nombre).
  */
-const MONOCHROME_LOGOS = ["/img/casos/hydrup/"];
+const MONOCHROME_LOGOS = [
+  "/img/casos/hydrup/",
+  "/img/casos/enfocalife/",
+  "/img/casos/conpakser/",
+];
 
 function isMonochrome(src: string): boolean {
   return MONOCHROME_LOGOS.some((prefix) => src.startsWith(prefix));

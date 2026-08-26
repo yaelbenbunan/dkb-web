@@ -8,9 +8,9 @@
 
 **Tech Stack:** Next.js 16 App Router, React 19, TypeScript, Tailwind, zod, Vitest + jsdom + Testing Library, Supabase (existente), Resend, GTM/GA4, Meta CAPI.
 
-**Spec:** [docs/growth/2026-08-17-fase-1-landing-calculadora-spec.md](../../growth/2026-08-17-fase-1-landing-calculadora-spec.md)
+**Spec:** [growth/docs/2026-08-17-fase-1-landing-calculadora-spec.md](../../../../growth/docs/2026-08-17-fase-1-landing-calculadora-spec.md)
 
-**Documento de producto:** [docs/growth/2026-08-17-sistema-clinicas-producto.md](../../growth/2026-08-17-sistema-clinicas-producto.md)
+**Documento de producto:** [growth/docs/2026-08-17-sistema-clinicas-producto.md](../../../../growth/docs/2026-08-17-sistema-clinicas-producto.md)
 
 ## Global Constraints
 

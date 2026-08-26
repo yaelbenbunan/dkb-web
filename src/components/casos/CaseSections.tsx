@@ -203,38 +203,6 @@ function MockupFrame({
     );
   }
 
-  if (kind === "mobile-tilt") {
-    return (
-      <div className="mx-auto py-8" style={{ perspective: "1400px" }}>
-        <div
-          className="group mx-auto w-full max-w-[260px] rounded-[2rem] p-2 ring-1"
-          style={{
-            backgroundColor: "var(--mockup-body)",
-            boxShadow: "var(--mockup-shadow-tilt)",
-            ["--tw-ring-color" as string]: "var(--mockup-ring)",
-            transform: "rotateY(-18deg) rotateX(6deg) rotateZ(-3deg)",
-            transformStyle: "preserve-3d",
-          }}
-        >
-          <div
-            className="relative overflow-hidden rounded-[1.6rem]"
-            style={{ backgroundColor: "var(--mockup-screen-bg)" }}
-          >
-            <span className="absolute left-1/2 top-2 z-10 h-1.5 w-16 -translate-x-1/2 rounded-full bg-black/80" />
-            <Image
-              src={src}
-              alt={alt}
-              width={400}
-              height={800}
-              priority={priority}
-              className="h-auto w-full object-cover"
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (kind === "brand") {
     return (
       <div

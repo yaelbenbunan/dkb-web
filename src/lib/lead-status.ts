@@ -7,6 +7,7 @@
 export const LEAD_STATUSES = [
   "nuevo",
   "contactado",
+  "seguimiento",
   "kit-digital",
   "ilocalizable",
   "propuesta",
@@ -21,6 +22,7 @@ export type LeadStatus = (typeof LEAD_STATUSES)[number];
 export const STATUS_LABELS: Record<string, string> = {
   nuevo: "Nuevo",
   contactado: "Contactado",
+  seguimiento: "Volver a llamar",
   "kit-digital": "Interés en Kit Digital",
   ilocalizable: "Ilocalizable",
   propuesta: "Propuesta",
@@ -37,6 +39,7 @@ export function statusLabel(status: string): string {
 export const STATUS_COLORS: Record<string, string> = {
   nuevo: "#2563eb", // azul
   contactado: "#0891b2", // cian
+  seguimiento: "#db2777", // rosa
   "kit-digital": "#7c3aed", // violeta
   ilocalizable: "#64748b", // gris pizarra
   propuesta: "#d97706", // ámbar

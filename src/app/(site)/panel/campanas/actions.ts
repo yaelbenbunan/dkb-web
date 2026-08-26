@@ -15,7 +15,8 @@ import {
   type BlocksFailureReason,
 } from "@/lib/campaign-ai";
 import { sendCampaign, sendCampaignTest } from "@/lib/campaign-send";
-import { blocksSchema, type Block } from "@/lib/campaign-blocks";
+import { blocksSchema, sanitizeBlocks, type Block } from "@/lib/campaign-blocks";
+import { uploadCampaignImage } from "@/lib/campaign-images";
 
 const AI_FAILURE_MESSAGE: Record<BlocksFailureReason, string> = {
   "missing-api-key":
@@ -64,7 +65,7 @@ export async function generateAction(
   });
   if (!res.ok) return { ok: false, error: AI_FAILURE_MESSAGE[res.reason] };
 
-  await updateCampaign(campaignId, { blocks: res.blocks, concept: trimmedConcept });
+  await updateCampaign(campaignId, { blocks: sanitizeBlocks(res.blocks), concept: trimmedConcept });
   revalidatePath("/panel/campanas");
   return { ok: true };
 }
@@ -88,7 +89,7 @@ export async function editAction(
   const res = await editCampaignBlocks(parsed.data, trimmedInstruction);
   if (!res.ok) return { ok: false, error: AI_FAILURE_MESSAGE[res.reason] };
 
-  await updateCampaign(campaignId, { blocks: res.blocks });
+  await updateCampaign(campaignId, { blocks: sanitizeBlocks(res.blocks) });
   revalidatePath("/panel/campanas");
   return { ok: true };
 }
@@ -109,7 +110,7 @@ export async function saveBlocksAction(
   const parsed = blocksSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Los bloques no son válidos." };
 
-  await updateCampaign(campaignId, { blocks: parsed.data });
+  await updateCampaign(campaignId, { blocks: sanitizeBlocks(parsed.data) });
   revalidatePath("/panel/campanas");
   return { ok: true };
 }
@@ -199,4 +200,19 @@ export async function sendCampaignAction(
   revalidatePath("/panel/campanas");
   if (!res.ok) return { ok: false, error: res.error ?? "No se pudo enviar la campaña." };
   return { ok: true, sent: res.sent, skipped: res.skipped };
+}
+
+/** Sube una imagen propia y devuelve su URL pública, lista para pegarla en un
+ *  bloque de imagen. El fichero viaja en un FormData porque las Server Actions
+ *  no serializan `File` de otra forma. */
+export async function uploadCampaignImageAction(
+  formData: FormData,
+): Promise<{ ok: boolean; url?: string; error?: string }> {
+  const campaignId = String(formData.get("campaignId") ?? "");
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, error: "No llegó ninguna imagen." };
+  }
+  const res = await uploadCampaignImage(campaignId, file);
+  return res.ok ? { ok: true, url: res.url } : { ok: false, error: res.error };
 }
