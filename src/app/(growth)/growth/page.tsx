@@ -127,8 +127,15 @@ export default function GrowthPage() {
     <>
       {/* ───────── 1. Hero ───────── */}
       {/* Alturas contenidas a propósito: todo el hero, botón incluido, tiene
-          que caber sin scroll nada más entrar, también en portátiles bajos. */}
-      <header className="relative flex min-h-[100svh] items-center overflow-hidden py-12 md:py-16">
+          que caber sin scroll nada más entrar, también en portátiles bajos.
+
+          La pantalla completa se condiciona a `lg:landscape` y no a un ancho a
+          secas: el problema no es la anchura sino la proporción. En cualquier
+          viewport vertical —móvil o tableta— el contenido ocupa un tercio de la
+          altura, así que centrarlo dentro de 100svh dejaba entre 500 y 750 px
+          muertos. Fuera de apaisado manda un suelo en píxeles, que no crece con
+          la altura de la pantalla y por tanto no puede volver a abrir el hueco. */}
+      <header className="relative flex min-h-[32rem] items-center overflow-hidden py-16 lg:landscape:min-h-[100svh]">
         <div
           aria-hidden
           className="pointer-events-none absolute -top-40 left-1/2 h-[38rem] w-[38rem] -translate-x-1/2 rounded-full blur-[120px]"
@@ -242,8 +249,10 @@ export default function GrowthPage() {
         </Wrap>
       </section>
 
-      {/* ───────── 3. La bisagra: la frase, a pantalla completa ───────── */}
-      <section className="flex min-h-[100svh] items-center py-24">
+      {/* ───────── 3. La bisagra: la frase, a pantalla completa en apaisado ─────────
+          En vertical la frase se queda en 114 px de texto: reservarle la pantalla
+          entera eran 730 px de negro alrededor. Ahí manda el relleno. */}
+      <section className="flex items-center py-24 lg:landscape:min-h-[100svh]">
         <Wrap>
           <p
             className="font-black leading-[0.95] tracking-[-0.03em] text-balance"
@@ -346,11 +355,11 @@ export default function GrowthPage() {
         </Wrap>
       </section>
 
-      {/* ───────── 5. El compromiso, a pantalla completa ─────────
+      {/* ───────── 5. El compromiso ─────────
           Va justo después del precio y las garantías: es la respuesta a la
-          desconfianza que deja cualquier tarifa, y por eso necesita toda la
-          pantalla para ella sola. */}
-      <section className="flex min-h-[100svh] items-center py-24">
+          desconfianza que deja cualquier tarifa, y por eso se lleva la pantalla
+          entera para ella sola —en apaisado, por lo mismo que la bisagra. */}
+      <section className="flex items-center py-24 lg:landscape:min-h-[100svh]">
         <Wrap>
           <p
             className="font-black leading-[0.95] tracking-[-0.03em] text-balance"
