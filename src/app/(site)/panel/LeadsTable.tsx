@@ -358,7 +358,7 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
             borderCollapse: "collapse",
             width: "100%",
             fontSize: 14,
-            minWidth: 1200,
+            minWidth: 1360,
           }}
         >
           <thead>
@@ -496,13 +496,16 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
                       placeholder="—"
                     />
                   </td>
-                  <td style={{ ...td, whiteSpace: "normal", minWidth: 240 }}>
+                  <td style={{ ...td, whiteSpace: "normal", minWidth: 380 }}>
                     <EditableCell
                       id={l.id}
                       field="notes"
                       action={setLeadNotes}
                       value={l.notes ?? ""}
                       placeholder="Añadir notas…"
+                      rows={5}
+                      minWidth={360}
+                      autoGrow
                     />
                   </td>
                   <td style={td}>
@@ -955,26 +958,45 @@ function EditableCell({
   action,
   value,
   placeholder,
+  rows = 2,
+  minWidth = 200,
+  autoGrow = false,
+  maxHeight = 320,
 }: {
   id: string;
   field: "notes" | "followup";
   action: (formData: FormData) => void | Promise<void>;
   value: string;
   placeholder: string;
+  rows?: number;
+  minWidth?: number;
+  /** Crece con el contenido hasta `maxHeight`, para no leer notas largas por una rendija. */
+  autoGrow?: boolean;
+  maxHeight?: number;
 }) {
   const [val, setVal] = useState(value);
   const [pending, start] = useTransition();
   const lastSaved = useRef(value);
+  const ref = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     setVal(value);
     lastSaved.current = value;
   }, [value]);
 
+  // Ajusta el alto al contenido. Se recalcula al escribir, no solo al montar.
+  useEffect(() => {
+    const el = ref.current;
+    if (!autoGrow || !el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`;
+  }, [autoGrow, maxHeight, val]);
+
   return (
     <textarea
+      ref={ref}
       value={val}
       placeholder={placeholder}
-      rows={2}
+      rows={rows}
       disabled={pending}
       onChange={(e) => setVal(e.target.value)}
       onBlur={() => {
@@ -987,12 +1009,13 @@ function EditableCell({
       }}
       style={{
         width: "100%",
-        minWidth: 200,
-        resize: "vertical",
+        minWidth,
+        resize: "both",
         border: "1px solid #e2e8f0",
         borderRadius: 8,
-        padding: "6px 8px",
+        padding: "8px 10px",
         fontSize: 13,
+        lineHeight: 1.5,
         fontFamily: "inherit",
         color: "#0f172a",
         background: pending ? "#f8fafc" : "#fff",
