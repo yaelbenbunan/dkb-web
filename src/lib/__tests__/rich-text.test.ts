@@ -197,3 +197,67 @@ describe("plainToRichText", () => {
     expect(plainToRichText(null)).toBe("");
   });
 });
+
+// Chrome (y Safari) generan el formato como estilos en un <span>, no como
+// etiquetas. Si el saneador solo mira el color, la negrita, la cursiva y el
+// subrayado desaparecen al guardar — que es exactamente lo que pasaba.
+describe("formato que llega como estilo en un span", () => {
+  test("font-weight se convierte en negrita", () => {
+    expect(sanitizeRichText('<span style="font-weight: bold;">hola</span>')).toBe("<b>hola</b>");
+    expect(sanitizeRichText('<span style="font-weight: 700;">hola</span>')).toBe("<b>hola</b>");
+    expect(sanitizeRichText('<span style="font-weight: 600">hola</span>')).toBe("<b>hola</b>");
+  });
+
+  test("font-weight normal no pone negrita", () => {
+    expect(sanitizeRichText('<span style="font-weight: normal;">hola</span>')).toBe("hola");
+    expect(sanitizeRichText('<span style="font-weight: 400;">hola</span>')).toBe("hola");
+  });
+
+  test("font-style se convierte en cursiva", () => {
+    expect(sanitizeRichText('<span style="font-style: italic;">hola</span>')).toBe("<i>hola</i>");
+  });
+
+  test("text-decoration se convierte en subrayado", () => {
+    expect(sanitizeRichText('<span style="text-decoration: underline;">hola</span>')).toBe("<u>hola</u>");
+    expect(sanitizeRichText('<span style="text-decoration-line: underline;">hola</span>')).toBe("<u>hola</u>");
+  });
+
+  test("color y negrita a la vez se conservan LOS DOS", () => {
+    expect(
+      sanitizeRichText('<span style="color: rgb(255, 0, 0); font-weight: bold;">hola</span>'),
+    ).toBe('<span style="color:#ff0000"><b>hola</b></span>');
+  });
+
+  test("los tres formatos juntos sobre el mismo texto", () => {
+    expect(
+      sanitizeRichText(
+        '<span style="font-weight: bold; font-style: italic; text-decoration: underline;">x</span>',
+      ),
+    ).toBe("<b><i><u>x</u></i></b>");
+  });
+
+  test("un enlace no se lleva por delante el formato del texto", () => {
+    expect(
+      sanitizeRichText('<a href="https://x.com"><span style="font-weight: bold;">pincha</span></a>'),
+    ).toContain("<b>pincha</b>");
+    expect(
+      sanitizeRichText('<span style="font-weight: bold;"><a href="https://x.com">pincha</a></span>'),
+    ).toContain("<b>");
+  });
+
+  test("<b> con color propio conserva ambas cosas", () => {
+    expect(sanitizeRichText('<b style="color:#ff0000">x</b>')).toBe(
+      '<span style="color:#ff0000"><b>x</b></span>',
+    );
+  });
+
+  test("un span que solo trae estilos inútiles sigue sin dejar rastro", () => {
+    expect(sanitizeRichText('<span style="line-height: 2; font-size: 40px">x</span>')).toBe("x");
+  });
+
+  test("spans anidados no descolocan el cierre", () => {
+    expect(
+      sanitizeRichText('<span style="color:#ff0000">rojo <span style="font-size:9px">y</span> más</span>'),
+    ).toBe('<span style="color:#ff0000">rojo y más</span>');
+  });
+});

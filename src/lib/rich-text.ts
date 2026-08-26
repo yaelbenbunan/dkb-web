@@ -74,10 +74,36 @@ function safeColor(raw: string): string | null {
   return null;
 }
 
+/** Valor de una propiedad CSS dentro de un atributo `style`. El `(?:^|;)` evita
+ *  que `background-color` cuele como `color`. */
+function cssProp(style: string, prop: string): string | null {
+  const m = new RegExp(`(?:^|;)\\s*${prop}\\s*:\\s*([^;]+)`, "i").exec(style);
+  return m ? m[1].trim() : null;
+}
+
 /** Color declarado en un atributo `style`, ignorando cualquier otra propiedad. */
 function colorFromStyle(style: string): string | null {
-  const m = /(?:^|;)\s*color\s*:\s*([^;]+)/i.exec(style);
-  return m ? safeColor(m[1]) : null;
+  const v = cssProp(style, "color");
+  return v ? safeColor(v) : null;
+}
+
+/**
+ * Formato que viene expresado como CSS en vez de como etiqueta.
+ *
+ * Es el caso normal, no el raro: al aplicar negrita, Chrome y Safari escriben
+ * `<span style="font-weight: bold">`, no `<b>`. Si esto no se tradujera, todo
+ * el formato salvo el color se perdería al guardar.
+ */
+function formatFromStyle(style: string): { bold: boolean; italic: boolean; underline: boolean } {
+  const weight = cssProp(style, "font-weight");
+  const numeric = weight ? Number(weight) : NaN;
+  return {
+    bold: !!weight && (weight.toLowerCase() === "bold" || weight.toLowerCase() === "bolder" || numeric >= 600),
+    italic: (cssProp(style, "font-style") ?? "").toLowerCase() === "italic",
+    underline: /underline/i.test(
+      `${cssProp(style, "text-decoration") ?? ""} ${cssProp(style, "text-decoration-line") ?? ""}`,
+    ),
+  };
 }
 
 /** URL de enlace, o null si el protocolo no es de fiar. Los espacios y los
@@ -111,8 +137,16 @@ export function sanitizeRichText(input: string | null | undefined): string {
   if (!src) return "";
 
   const out: string[] = [];
-  const stack: string[] = [];
+  // Cada etiqueta de origen puede abrir VARIAS de salida: un
+  // `<span style="color:red; font-weight:bold">` se convierte en
+  // `<span style="color:#ff0000"><b>`. La pila guarda esas piezas juntas para
+  // poder cerrarlas en el orden correcto.
+  const stack: { key: string; parts: { open: string; close: string }[] }[] = [];
   let skipDepth = 0;
+
+  const closeEntry = (entry: (typeof stack)[number]) => {
+    for (let i = entry.parts.length - 1; i >= 0; i--) out.push(entry.parts[i].close);
+  };
 
   TOKEN.lastIndex = 0;
   let token: RegExpExecArray | null;
@@ -145,38 +179,41 @@ export function sanitizeRichText(input: string | null | undefined): string {
       }
 
       if (closing) {
-        const at = stack.lastIndexOf(canonical);
+        const at = stack.map((e) => e.key).lastIndexOf(canonical);
         if (at === -1) continue; // cierre huérfano
         // Cierra también lo que quedó abierto por encima: mantiene el anidado
         // válido aunque el usuario haya cruzado las etiquetas.
-        for (let i = stack.length - 1; i >= at; i--) out.push(`</${stack[i]}>`);
+        for (let i = stack.length - 1; i >= at; i--) closeEntry(stack[i]);
         stack.splice(at);
         continue;
       }
 
+      const style = attrValue(attrs, "style") ?? "";
+      const fmt = formatFromStyle(style);
+      // <font color> es lo que genera el execCommand clásico; se traduce.
+      const color = colorFromStyle(style) ?? safeColor(attrValue(attrs, "color") ?? "");
+
+      const opened: { open: string; close: string }[] = [];
+      // El color va por fuera para que envuelva a todo lo demás.
+      if (color) opened.push({ open: `<span style="color:${escapeAttr(color)}">`, close: "</span>" });
+      if (canonical === "b" || fmt.bold) opened.push({ open: "<b>", close: "</b>" });
+      if (canonical === "i" || fmt.italic) opened.push({ open: "<i>", close: "</i>" });
+      if (canonical === "u" || fmt.underline) opened.push({ open: "<u>", close: "</u>" });
       if (canonical === "a") {
         const href = safeHref(attrValue(attrs, "href") ?? "");
-        if (!href) continue; // enlace no fiable: se queda el texto, sin enlace
-        out.push(
-          `<a href="${escapeAttr(href)}" target="_blank" rel="noopener noreferrer">`,
-        );
-        stack.push("a");
-        continue;
+        // Enlace no fiable: se queda el texto (y su formato), sin enlace.
+        if (href) {
+          opened.push({
+            open: `<a href="${escapeAttr(href)}" target="_blank" rel="noopener noreferrer">`,
+            close: "</a>",
+          });
+        }
       }
 
-      if (canonical === "span") {
-        // <font color> es lo que genera el execCommand clásico; se traduce.
-        const color =
-          colorFromStyle(attrValue(attrs, "style") ?? "") ??
-          safeColor(attrValue(attrs, "color") ?? "");
-        if (!color) continue; // un span sin color no aporta nada al email
-        out.push(`<span style="color:${escapeAttr(color)}">`);
-        stack.push("span");
-        continue;
-      }
-
-      out.push(`<${canonical}>`);
-      stack.push(canonical);
+      for (const part of opened) out.push(part.open);
+      // Se apila SIEMPRE, aunque no aporte nada: así el cierre correspondiente
+      // encuentra su pareja y no va a cerrar por error una etiqueta de fuera.
+      stack.push({ key: canonical, parts: opened });
       continue;
     }
 
@@ -185,7 +222,7 @@ export function sanitizeRichText(input: string | null | undefined): string {
     else if (stray !== undefined) out.push("&lt;");
   }
 
-  for (let i = stack.length - 1; i >= 0; i--) out.push(`</${stack[i]}>`);
+  for (let i = stack.length - 1; i >= 0; i--) closeEntry(stack[i]);
   return out.join("");
 }
 

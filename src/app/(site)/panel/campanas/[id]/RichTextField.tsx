@@ -47,19 +47,45 @@ export function RichTextField({
     if (el) onChange(sanitizeRichText(el.innerHTML));
   };
 
+  // Última selección conocida dentro del editor. Hace falta porque el diálogo
+  // del enlace (window.prompt) roba el foco y hay navegadores que se dejan la
+  // selección por el camino: sin esto, el enlace se aplicaba donde no era y el
+  // texto perdía el formato que tenía.
+  const savedRange = useRef<Range | null>(null);
+  const rememberSelection = () => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    if (ref.current?.contains(range.commonAncestorContainer)) {
+      savedRange.current = range.cloneRange();
+    }
+  };
+  const restoreSelection = () => {
+    const range = savedRange.current;
+    if (!range) return;
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+  };
+
   /** Ejecuta un comando sobre la selección actual sin perder el foco. */
   const exec = (command: string, arg?: string) => {
     const el = ref.current;
     if (!el) return;
     el.focus();
-    // Con styleWithCSS el color sale como <span style="color:…">, que es lo
-    // que entienden los clientes de correo (mejor que <font color>).
-    document.execCommand("styleWithCSS", false, "true");
+    restoreSelection();
+    // El color se quiere como <span style="color:…">, que es lo que mejor
+    // entienden los clientes de correo. La negrita, la cursiva y el subrayado
+    // se quieren como <b>/<i>/<u>: con styleWithCSS activado saldrían también
+    // como estilos de un span, más frágiles de transportar a un email.
+    document.execCommand("styleWithCSS", false, command === "foreColor" ? "true" : "false");
     document.execCommand(command, false, arg);
     emit();
   };
 
   const addLink = () => {
+    // La selección se guarda ANTES de abrir el diálogo, que es cuando se pierde.
+    rememberSelection();
     const url = window.prompt("URL del enlace (https://, mailto: o tel:)", "https://");
     if (!url) return;
     if (!/^(https?:|mailto:|tel:)/i.test(url.trim())) {
@@ -140,6 +166,9 @@ export function RichTextField({
             emit();
           }}
           onInput={emit}
+          onKeyUp={rememberSelection}
+          onMouseUp={rememberSelection}
+          onSelect={rememberSelection}
           // Pegar siempre en plano: así no entra la maraña de estilos de Word
           // o de una web, que el saneador tiraría igual pero descolocando todo.
           onPaste={(e) => {
