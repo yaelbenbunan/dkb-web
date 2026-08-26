@@ -6,6 +6,9 @@ import {
   dueCount,
   isFollowupDate,
   todayInMadrid,
+  nextWeekday,
+  startOfNextMonth,
+  nextMonthLabel,
   AGENDA_BUCKETS,
 } from "../followup-agenda";
 
@@ -19,6 +22,14 @@ describe("isFollowupDate", () => {
   test("acepta fechas ISO de día reales", () => {
     for (const v of ["2026-09-01", "2026-02-28", "2028-02-29", "2026-12-31"]) {
       expect(isFollowupDate(v)).toBe(true);
+    }
+  });
+
+  test("rechaza años imposibles — lo que teclea el navegador a medias", () => {
+    // Escribiendo "1/9/26" el campo emite pasos intermedios como este, que es
+    // una fecha válida pero que nadie quiso poner.
+    for (const v of ["0020-09-01", "0002-09-01", "0202-09-01", "1899-12-31", "3000-01-01"]) {
+      expect(isFollowupDate(v)).toBe(false);
     }
   });
 
@@ -155,5 +166,28 @@ describe("dueCount", () => {
 
   test("sin nada pendiente, cero", () => {
     expect(dueCount([lead("a", null), lead("b", "2026-12-01")], hoy)).toBe(0);
+  });
+});
+
+describe("atajos de fecha", () => {
+  test("nextWeekday da el próximo lunes, nunca hoy", () => {
+    // 2026-08-26 es miércoles.
+    expect(nextWeekday("2026-08-26", 1)).toBe("2026-08-31");
+    // Si hoy ES lunes, "el lunes" es el de la semana que viene.
+    expect(nextWeekday("2026-08-31", 1)).toBe("2026-09-07");
+    // Viernes → lunes son 3 días.
+    expect(nextWeekday("2026-08-28", 1)).toBe("2026-08-31");
+  });
+
+  test("startOfNextMonth cae siempre en día 1 y cruza el año", () => {
+    expect(startOfNextMonth("2026-08-26")).toBe("2026-09-01");
+    expect(startOfNextMonth("2026-08-01")).toBe("2026-09-01");
+    expect(startOfNextMonth("2026-12-15")).toBe("2027-01-01");
+    expect(startOfNextMonth("2026-01-31")).toBe("2026-02-01");
+  });
+
+  test("nextMonthLabel nombra el mes siguiente en español", () => {
+    expect(nextMonthLabel("2026-08-26")).toBe("sept");
+    expect(nextMonthLabel("2026-12-01")).toBe("ene");
   });
 });

@@ -9,15 +9,30 @@ const TZ = "Europe/Madrid";
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
-/** ¿Es una fecha ISO de día (YYYY-MM-DD) que existe de verdad? */
+// Años admisibles para una llamada pendiente. El rango existe por un motivo muy
+// concreto: al teclear la fecha a mano, el navegador va emitiendo el valor a
+// medias, y "01/09/0020" es una fecha perfectamente formada que nadie quiso
+// escribir. Sin este filtro, ese año 20 acababa guardado en la base de datos.
+const MIN_YEAR = 2000;
+const MAX_YEAR = 2100;
+
+/** ¿Es una fecha ISO de día (YYYY-MM-DD), que existe de verdad y que además
+ *  tiene sentido como próxima llamada? */
 export function isFollowupDate(value: string | null | undefined): boolean {
   const v = (value ?? "").trim();
   if (!ISO_DAY.test(v)) return false;
+  const year = Number(v.slice(0, 4));
+  if (year < MIN_YEAR || year > MAX_YEAR) return false;
   // `new Date("2026-02-30")` no lanza: normaliza al 2 de marzo. Comparar el
   // resultado con la entrada descarta los días que no existen.
   const d = new Date(`${v}T00:00:00Z`);
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
 }
+
+/** Límites para los atributos `min`/`max` del campo de fecha, para que el
+ *  propio navegador impida elegir un año imposible. */
+export const FOLLOWUP_MIN_DATE = `${MIN_YEAR}-01-01`;
+export const FOLLOWUP_MAX_DATE = `${MAX_YEAR}-12-31`;
 
 /** Día de hoy en Madrid como YYYY-MM-DD (el servidor corre en UTC). */
 export function todayInMadrid(now: Date = new Date()): string {
@@ -37,6 +52,34 @@ export function addDays(date: string, days: number): string {
   const base = new Date(`${date}T00:00:00Z`);
   base.setUTCDate(base.getUTCDate() + days);
   return base.toISOString().slice(0, 10);
+}
+
+/** Día de la semana de una fecha YYYY-MM-DD: 0 domingo … 6 sábado. */
+function weekday(date: string): number {
+  return new Date(`${date}T00:00:00Z`).getUTCDay();
+}
+
+/** El próximo día de la semana pedido, sin contar hoy. `nextWeekday(hoy, 1)`
+ *  con hoy = lunes devuelve el lunes SIGUIENTE, que es lo que uno quiere decir
+ *  con "llámame el lunes". */
+export function nextWeekday(from: string, target: number): string {
+  const diff = (target - weekday(from) + 7) % 7 || 7;
+  return addDays(from, diff);
+}
+
+/** El día 1 del mes siguiente — el "a partir de septiembre" de toda la vida. */
+export function startOfNextMonth(from: string): string {
+  const d = new Date(`${from}T00:00:00Z`);
+  return `${d.getUTCFullYear() + (d.getUTCMonth() === 11 ? 1 : 0)}-${String(
+    ((d.getUTCMonth() + 1) % 12) + 1,
+  ).padStart(2, "0")}-01`;
+}
+
+/** Nombre del mes siguiente, para poner en el atajo ("sept"). */
+export function nextMonthLabel(from: string): string {
+  return new Intl.DateTimeFormat("es-ES", { month: "short", timeZone: "UTC" })
+    .format(new Date(`${startOfNextMonth(from)}T00:00:00Z`))
+    .replace(".", "");
 }
 
 export type AgendaBucketKey = "vencidos" | "hoy" | "manana" | "semana" | "despues";

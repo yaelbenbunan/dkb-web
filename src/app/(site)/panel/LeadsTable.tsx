@@ -23,7 +23,17 @@ import { LEAD_STATUSES, STATUS_COLORS, statusLabel } from "@/lib/lead-status";
 import { emailStatusLabel, EMAIL_STATUS_COLORS } from "@/lib/email-status";
 import { isLeadEmailable } from "@/lib/lead-emailable";
 import { ACCOUNT_MANAGERS, AM_COLORS } from "@/lib/account-managers";
-import { dueCount, isFollowupDate, todayInMadrid } from "@/lib/followup-agenda";
+import {
+  addDays,
+  dueCount,
+  isFollowupDate,
+  FOLLOWUP_MIN_DATE,
+  FOLLOWUP_MAX_DATE,
+  nextMonthLabel,
+  nextWeekday,
+  startOfNextMonth,
+  todayInMadrid,
+} from "@/lib/followup-agenda";
 import { Agenda } from "./Agenda";
 
 export interface LeadRowView {
@@ -113,7 +123,7 @@ const COLUMNS = [
   { key: "notas", label: "Notas adicionales", min: 390 },
   { key: "am", label: "Account manager", min: 160 },
   { key: "estado", label: "Estado", min: 160 },
-  { key: "llamar", label: "Llamar el", min: 165 },
+  { key: "llamar", label: "Llamar el", min: 185 },
   { key: "seguimiento", label: "Seguimiento", min: 350 },
 ] as const;
 
@@ -1376,8 +1386,13 @@ function ColumnsPanel({
   );
 }
 
-/** Fecha de la próxima llamada. Se guarda al elegirla; vaciarla saca al lead de
- *  la agenda. Rojo si ya venció, ámbar si es hoy o si el estado pide fecha. */
+/** Fecha de la próxima llamada.
+ *
+ *  El calendario se abre al pinchar en cualquier punto del campo, no solo en el
+ *  iconito: `showPicker()` es lo que hace que se comporte como uno espera.
+ *  Debajo van los atajos de lo que más se dice por teléfono ("el lunes que
+ *  viene", "a partir de septiembre"), que evitan tener que navegar el
+ *  calendario para la mitad de los casos. */
 function FollowupDateCell({
   id,
   value,
@@ -1391,15 +1406,46 @@ function FollowupDateCell({
   needsDate: boolean;
 }) {
   const [pending, start] = useTransition();
+  const ref = useRef<HTMLInputElement>(null);
   const valid = isFollowupDate(value);
   const overdue = valid && value! < today;
   const isToday = valid && value === today;
 
+  // Lo que se ve mientras se escribe. El campo de fecha emite un valor por cada
+  // pulsación ("0020-09-01" camino de "2026-09-01"), así que el borrador vive
+  // aquí y solo se guarda cuando la fecha ya tiene sentido. Sin esto, guardar a
+  // media escritura recargaba la tabla y el campo saltaba hacia atrás — que es
+  // lo que hacía imposible corregir una fecha ya puesta.
+  const [draft, setDraft] = useState(valid ? value! : "");
+  useEffect(() => {
+    setDraft(isFollowupDate(value) ? value! : "");
+  }, [value]);
+
   const save = (next: string) => {
+    setDraft(next);
     const fd = new FormData();
     fd.set("id", id);
     fd.set("followup_at", next);
     start(() => setLeadFollowupDate(fd));
+  };
+
+  /** Cambio en el campo: se acepta el borrador siempre, pero solo se guarda
+   *  cuando es una fecha completa y plausible (o cuando se ha vaciado). */
+  const onDraftChange = (next: string) => {
+    setDraft(next);
+    if (next === "" || isFollowupDate(next)) save(next);
+  };
+
+  /** Abre el calendario nativo. No todos los navegadores traen showPicker,
+   *  y si falta, el campo sigue funcionando a mano. */
+  const openPicker = () => {
+    const el = ref.current;
+    if (!el) return;
+    try {
+      el.showPicker?.();
+    } catch {
+      /* Firefox lo lanza si no viene de un gesto del usuario: se ignora */
+    }
   };
 
   const border = overdue
@@ -1408,32 +1454,98 @@ function FollowupDateCell({
       ? "#d97706"
       : "#e2e8f0";
 
+  const shortcuts: { label: string; date: string; title: string }[] = [
+    { label: "Mañana", date: addDays(today, 1), title: "Llamar mañana" },
+    { label: "Lunes", date: nextWeekday(today, 1), title: "El lunes que viene" },
+    { label: "+1 sem", date: addDays(today, 7), title: "Dentro de una semana" },
+    {
+      label: nextMonthLabel(today),
+      date: startOfNextMonth(today),
+      title: `A partir del 1 de ${nextMonthLabel(today)}`,
+    },
+  ];
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      <input
-        type="date"
-        value={valid ? value! : ""}
-        disabled={pending}
-        onChange={(e) => save(e.target.value)}
-        aria-label="Fecha de la próxima llamada"
-        style={{
-          width: "100%",
-          minWidth: 140,
-          border: `1px solid ${border}`,
-          borderRadius: 8,
-          padding: "6px 8px",
-          fontSize: 13,
-          fontFamily: "inherit",
-          color: overdue ? "#dc2626" : "#0f172a",
-          fontWeight: overdue || isToday ? 700 : 400,
-          background: pending ? "#f8fafc" : needsDate ? "#fffbeb" : "#fff",
-        }}
-      />
+    <div style={{ display: "flex", flexDirection: "column", gap: 5, minWidth: 150 }}>
+      <div style={{ position: "relative" }}>
+        <input
+          ref={ref}
+          type="date"
+          value={draft}
+          min={FOLLOWUP_MIN_DATE}
+          max={FOLLOWUP_MAX_DATE}
+          disabled={pending}
+          onChange={(e) => onDraftChange(e.target.value)}
+          // Si se sale del campo con algo a medias, se recupera lo guardado en
+          // vez de dejar a la vista una fecha que no existe en la base.
+          onBlur={() => setDraft(isFollowupDate(value) ? value! : "")}
+          onClick={openPicker}
+          onFocus={openPicker}
+          aria-label="Fecha de la próxima llamada"
+          style={{
+            width: "100%",
+            minWidth: 148,
+            border: `1px solid ${border}`,
+            borderRadius: 8,
+            padding: "6px 8px",
+            fontSize: 13,
+            fontFamily: "inherit",
+            color: overdue ? "#dc2626" : draft ? "#0f172a" : "#94a3b8",
+            fontWeight: overdue || isToday ? 700 : 400,
+            background: pending ? "#f8fafc" : needsDate ? "#fffbeb" : "#fff",
+            cursor: "pointer",
+          }}
+        />
+      </div>
+
       {needsDate && (
         <span style={{ fontSize: 11, color: "#b45309", fontWeight: 700 }}>
           ¿A partir de cuándo?
         </span>
       )}
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+        {shortcuts.map((s) => (
+          <button
+            key={s.label}
+            type="button"
+            onClick={() => save(s.date)}
+            disabled={pending}
+            title={s.title}
+            style={{
+              border: `1px solid ${value === s.date ? "#187bef" : "#e2e8f0"}`,
+              background: value === s.date ? "#eff6ff" : "#fff",
+              color: value === s.date ? "#187bef" : "#64748b",
+              borderRadius: 6,
+              padding: "2px 6px",
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: pending ? "default" : "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {s.label}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={openPicker}
+          disabled={pending}
+          title="Elegir otra fecha en el calendario"
+          style={{
+            border: "1px solid #e2e8f0",
+            background: "#fff",
+            color: "#64748b",
+            borderRadius: 6,
+            padding: "2px 6px",
+            fontSize: 11,
+            cursor: pending ? "default" : "pointer",
+          }}
+        >
+          📅
+        </button>
+      </div>
+
       {valid && (
         <button
           type="button"
