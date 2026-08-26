@@ -1,6 +1,7 @@
 import "server-only";
 import { getSupabaseAdmin } from "./supabase-admin";
 import { LEAD_STATUSES, type LeadStatus } from "./lead-status";
+import { isFollowupDate } from "./followup-agenda";
 import type { PromoQuestionnaireInput } from "./promo-questionnaire";
 import { promoQuestionnaireFields, formatQuestionnaireNotes } from "./promo-questionnaire";
 
@@ -31,6 +32,8 @@ export interface LeadRow {
   campaign: string | null;
   notes: string | null;
   followup: string | null;
+  /** Fecha (YYYY-MM-DD) en la que toca volver a llamar. null = sin agendar. */
+  followup_at: string | null;
   account_manager: string | null;
   archived: boolean;
   email_status: string | null;
@@ -154,6 +157,28 @@ export async function updateLeadField(
     .eq("id", leadId);
   if (error) {
     console.error(`[imagina-leads] updateLeadField(${field}) error:`, error.message);
+    return false;
+  }
+  return true;
+}
+
+/** Agenda (o desagenda) la próxima llamada. `date` debe ser YYYY-MM-DD; una
+ *  cadena vacía limpia la fecha y saca al lead de la agenda. Cualquier otra
+ *  cosa se rechaza sin tocar la fila. */
+export async function updateLeadFollowupDate(
+  leadId: string,
+  date: string,
+): Promise<boolean> {
+  const value = date.trim();
+  if (value !== "" && !isFollowupDate(value)) return false;
+  const sb = getSupabaseAdmin();
+  if (!sb) return false;
+  const { error } = await sb
+    .from(TABLE)
+    .update({ followup_at: value || null })
+    .eq("id", leadId);
+  if (error) {
+    console.error("[imagina-leads] updateLeadFollowupDate error:", error.message);
     return false;
   }
   return true;

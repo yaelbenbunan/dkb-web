@@ -6,6 +6,7 @@ import {
   setLeadAccountManager,
   setLeadNotes,
   setLeadFollowup,
+  setLeadFollowupDate,
   setLeadChannel,
   setLeadCampaign,
   setLeadName,
@@ -22,6 +23,8 @@ import { LEAD_STATUSES, STATUS_COLORS, statusLabel } from "@/lib/lead-status";
 import { emailStatusLabel, EMAIL_STATUS_COLORS } from "@/lib/email-status";
 import { isLeadEmailable } from "@/lib/lead-emailable";
 import { ACCOUNT_MANAGERS, AM_COLORS } from "@/lib/account-managers";
+import { dueCount, isFollowupDate, todayInMadrid } from "@/lib/followup-agenda";
+import { Agenda } from "./Agenda";
 
 export interface LeadRowView {
   id: string;
@@ -34,6 +37,8 @@ export interface LeadRowView {
   website: string | null;
   notes: string | null;
   followup: string | null;
+  /** Fecha (YYYY-MM-DD) de la próxima llamada. null = no está en la agenda. */
+  followup_at: string | null;
   account_manager: string | null;
   status: string;
   email_status: string | null;
@@ -92,6 +97,32 @@ function webHref(raw: string | null): string | null {
   return null;
 }
 
+// Columnas de la tabla. `min` es el ancho mínimo que necesita cada una para
+// leerse sin cortes: la suma de las visibles fija el ancho de la tabla, así que
+// ocultar columnas recupera espacio de verdad en vez de dejar hueco muerto.
+const COLUMNS = [
+  { key: "fecha", label: "Fecha", min: 120 },
+  { key: "nombre", label: "Nombre", min: 170 },
+  { key: "telefono", label: "Teléfono", min: 200 },
+  { key: "email", label: "Email", min: 210 },
+  { key: "email_status", label: "Estado email", min: 150 },
+  { key: "consent", label: "Consent", min: 120 },
+  { key: "web", label: "Web", min: 150 },
+  { key: "canal", label: "Canal", min: 130 },
+  { key: "campana", label: "Campaña", min: 150 },
+  { key: "notas", label: "Notas adicionales", min: 390 },
+  { key: "am", label: "Account manager", min: 160 },
+  { key: "estado", label: "Estado", min: 160 },
+  { key: "llamar", label: "Llamar el", min: 165 },
+  { key: "seguimiento", label: "Seguimiento", min: 350 },
+] as const;
+
+type ColKey = (typeof COLUMNS)[number]["key"];
+
+/** Columnas ocultas, recordadas entre visitas (es una preferencia de trabajo,
+ *  no un filtro: si escondes "Consent" no quieres volver a esconderla mañana). */
+const COLS_STORAGE_KEY = "dkb-panel-hidden-cols";
+
 const webLabel = (raw: string) =>
   raw.replace(/^https?:\/\//i, "").replace(/\/$/, "");
 
@@ -103,6 +134,42 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
   const [showArchived, setShowArchived] = useState(false);
   const [adding, setAdding] = useState(false);
   const [busy, start] = useTransition();
+  const [view, setView] = useState<"tabla" | "agenda">("tabla");
+  const [hiddenCols, setHiddenCols] = useState<Set<ColKey>>(new Set());
+  const [colsOpen, setColsOpen] = useState(false);
+
+  // Se lee tras montar (no en el useState inicial) para que el HTML del
+  // servidor y el del cliente coincidan y no haya error de hidratación.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(COLS_STORAGE_KEY);
+      if (raw) setHiddenCols(new Set(JSON.parse(raw) as ColKey[]));
+    } catch {
+      /* localStorage puede fallar (modo privado); se ven todas las columnas */
+    }
+  }, []);
+
+  const persistCols = (next: Set<ColKey>) => {
+    setHiddenCols(next);
+    try {
+      localStorage.setItem(COLS_STORAGE_KEY, JSON.stringify([...next]));
+    } catch {
+      /* no poder recordarlo no debe romper la vista */
+    }
+  };
+  const toggleCol = (key: ColKey) => {
+    const next = new Set(hiddenCols);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    persistCols(next);
+  };
+
+  const cols = COLUMNS.filter((c) => !hiddenCols.has(c.key));
+  const show = (key: ColKey) => !hiddenCols.has(key);
+  const tableMinWidth = 36 + cols.reduce((n, c) => n + c.min, 0);
+
+  const today = todayInMadrid();
+  const pendingCalls = dueCount(leads, today);
 
   // Pool for the current view (active vs archived); los filtros se acumulan
   // sobre él, así que se pueden combinar (p. ej. enviables de Meta).
@@ -166,8 +233,21 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
     runBulk(deleteLeadsAction);
   };
 
+  // La agenda es una vista aparte, no un filtro más: sale con todos los hooks ya
+  // ejecutados, así que el orden de hooks no cambia entre vistas.
+  if (view === "agenda") {
+    return (
+      <>
+        <ViewTabs view={view} onChange={setView} pending={pendingCalls} />
+        <Agenda leads={leads} />
+      </>
+    );
+  }
+
   return (
     <>
+      <ViewTabs view={view} onChange={setView} pending={pendingCalls} />
+
       {/* Toolbar: filtro por estado + archivados */}
       <div
         style={{
@@ -330,6 +410,19 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
           </>
         )}
         <div style={{ flex: 1 }} />
+        <button
+          type="button"
+          onClick={() => setColsOpen((v) => !v)}
+          title="Mostrar u ocultar columnas"
+          style={btnStyle(
+            colsOpen ? "#e2e8f0" : "#fff",
+            "#334155",
+            false,
+            "#cbd5e1",
+          )}
+        >
+          ⚙ Columnas{hiddenCols.size > 0 ? ` (${hiddenCols.size} ocultas)` : ""}
+        </button>
         {!showArchived && selected.size === 0 && (
           <button
             type="button"
@@ -340,6 +433,14 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
           </button>
         )}
       </div>
+
+      {colsOpen && (
+        <ColumnsPanel
+          hidden={hiddenCols}
+          onToggle={toggleCol}
+          onShowAll={() => persistCols(new Set())}
+        />
+      )}
 
       {adding && !showArchived && (
         <AddLeadPanel onDone={() => setAdding(false)} />
@@ -358,7 +459,7 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
             borderCollapse: "collapse",
             width: "100%",
             fontSize: 14,
-            minWidth: 1360,
+            minWidth: tableMinWidth,
           }}
         >
           <thead>
@@ -372,23 +473,9 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
                   style={{ cursor: "pointer", width: 16, height: 16 }}
                 />
               </th>
-              {[
-                "Fecha",
-                "Nombre",
-                "Teléfono",
-                "Email",
-                "Estado email",
-                "Consent",
-                "Web",
-                "Canal",
-                "Campaña",
-                "Notas adicionales",
-                "Account manager",
-                "Estado",
-                "Seguimiento",
-              ].map((h) => (
-                <th key={h} style={th}>
-                  {h}
+              {cols.map((c) => (
+                <th key={c.key} style={{ ...th, minWidth: c.min }}>
+                  {c.label}
                 </th>
               ))}
             </tr>
@@ -397,7 +484,7 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
             {visible.length === 0 && (
               <tr>
                 <td
-                  colSpan={14}
+                  colSpan={cols.length + 1}
                   style={{
                     ...td,
                     textAlign: "center",
@@ -429,103 +516,143 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
                       style={{ cursor: "pointer", width: 16, height: 16 }}
                     />
                   </td>
-                  <td style={{ ...td, color: "#64748b", fontSize: 13 }}>
-                    {fmtDate(l.created_at)}
-                  </td>
-                  <td style={{ ...td, fontWeight: 600, minWidth: 160 }}>
-                    <InlineText
-                      id={l.id}
-                      field="name"
-                      action={setLeadName}
-                      value={l.name ?? ""}
-                      placeholder="—"
-                    />
-                  </td>
-                  <td style={{ ...td, minWidth: 150 }}>
-                    <InlineText
-                      id={l.id}
-                      field="phone"
-                      action={setLeadPhone}
-                      value={l.phone ?? ""}
-                      placeholder="—"
-                    />
-                  </td>
-                  <td style={{ ...td, minWidth: 190 }}>
-                    <InlineText
-                      id={l.id}
-                      field="email"
-                      action={setLeadEmail}
-                      value={l.email ?? ""}
-                      placeholder="—"
-                    />
-                  </td>
-                  <td style={td}>
-                    <EmailStatusCell
-                      id={l.id}
-                      status={l.email_status}
-                      campaign={l.campaign}
-                      hasEmail={!!(l.email ?? "").trim()}
-                    />
-                  </td>
-                  <td style={td}>
-                    <ConsentSelect id={l.id} value={l.consent} />
-                  </td>
-                  <td style={td}>
-                    {href ? (
-                      <a
-                        href={href}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        style={{ color: "#187bef" }}
-                      >
-                        {webLabel(l.website ?? "")} ↗
-                      </a>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td style={td}>
-                    <ChannelSelect id={l.id} value={l.channel ?? ""} />
-                  </td>
-                  <td style={td}>
-                    <InlineText
-                      id={l.id}
-                      field="campaign"
-                      action={setLeadCampaign}
-                      value={l.campaign ?? ""}
-                      placeholder="—"
-                    />
-                  </td>
-                  <td style={{ ...td, whiteSpace: "normal", minWidth: 380 }}>
-                    <EditableCell
-                      id={l.id}
-                      field="notes"
-                      action={setLeadNotes}
-                      value={l.notes ?? ""}
-                      placeholder="Añadir notas…"
-                      rows={5}
-                      minWidth={360}
-                      autoGrow
-                    />
-                  </td>
-                  <td style={td}>
-                    <AccountManagerSelect
-                      id={l.id}
-                      value={l.account_manager ?? ""}
-                    />
-                  </td>
-                  <td style={td}>
-                    <StatusSelect id={l.id} value={l.status} />
-                  </td>
-                  <td style={{ ...td, whiteSpace: "normal", minWidth: 220 }}>
-                    <EditableCell
-                      id={l.id}
-                      field="followup"
-                      action={setLeadFollowup}
-                      value={l.followup ?? ""}
-                      placeholder="Ej: llamado, no contesta…"
-                    />
-                  </td>
+                  {show("fecha") && (
+                    <td style={{ ...td, color: "#64748b", fontSize: 13 }}>
+                      {fmtDate(l.created_at)}
+                    </td>
+                  )}
+                  {show("nombre") && (
+                    <td style={{ ...td, fontWeight: 600, minWidth: 160 }}>
+                      <InlineText
+                        id={l.id}
+                        field="name"
+                        action={setLeadName}
+                        value={l.name ?? ""}
+                        placeholder="—"
+                      />
+                    </td>
+                  )}
+                  {show("telefono") && (
+                    <td style={{ ...td, minWidth: 190 }}>
+                      <InlineText
+                        id={l.id}
+                        field="phone"
+                        minWidth={180}
+                        action={setLeadPhone}
+                        value={l.phone ?? ""}
+                        placeholder="—"
+                      />
+                    </td>
+                  )}
+                  {show("email") && (
+                    <td style={{ ...td, minWidth: 190 }}>
+                      <InlineText
+                        id={l.id}
+                        field="email"
+                        action={setLeadEmail}
+                        value={l.email ?? ""}
+                        placeholder="—"
+                      />
+                    </td>
+                  )}
+                  {show("email_status") && (
+                    <td style={td}>
+                      <EmailStatusCell
+                        id={l.id}
+                        status={l.email_status}
+                        campaign={l.campaign}
+                        hasEmail={!!(l.email ?? "").trim()}
+                      />
+                    </td>
+                  )}
+                  {show("consent") && (
+                    <td style={td}>
+                      <ConsentSelect id={l.id} value={l.consent} />
+                    </td>
+                  )}
+                  {show("web") && (
+                    <td style={td}>
+                      {href ? (
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          style={{ color: "#187bef" }}
+                        >
+                          {webLabel(l.website ?? "")} ↗
+                        </a>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                  )}
+                  {show("canal") && (
+                    <td style={td}>
+                      <ChannelSelect id={l.id} value={l.channel ?? ""} />
+                    </td>
+                  )}
+                  {show("campana") && (
+                    <td style={td}>
+                      <InlineText
+                        id={l.id}
+                        field="campaign"
+                        action={setLeadCampaign}
+                        value={l.campaign ?? ""}
+                        placeholder="—"
+                      />
+                    </td>
+                  )}
+                  {show("notas") && (
+                    <td style={{ ...td, whiteSpace: "normal", minWidth: 380 }}>
+                      <EditableCell
+                        id={l.id}
+                        field="notes"
+                        action={setLeadNotes}
+                        value={l.notes ?? ""}
+                        placeholder="Añadir notas…"
+                        rows={5}
+                        minWidth={360}
+                        autoGrow
+                      />
+                    </td>
+                  )}
+                  {show("am") && (
+                    <td style={td}>
+                      <AccountManagerSelect
+                        id={l.id}
+                        value={l.account_manager ?? ""}
+                      />
+                    </td>
+                  )}
+                  {show("estado") && (
+                    <td style={td}>
+                      <StatusSelect id={l.id} value={l.status} />
+                    </td>
+                  )}
+                  {show("llamar") && (
+                    <td style={td}>
+                      <FollowupDateCell
+                        id={l.id}
+                        value={l.followup_at}
+                        today={today}
+                        needsDate={l.status === "seguimiento" && !l.followup_at}
+                      />
+                    </td>
+                  )}
+                  {show("seguimiento") && (
+                    <td style={{ ...td, whiteSpace: "normal", minWidth: 340 }}>
+                      <EditableCell
+                        id={l.id}
+                        field="followup"
+                        action={setLeadFollowup}
+                        value={l.followup ?? ""}
+                        placeholder="Ej: llamado, no contesta…"
+                        rows={6}
+                        minWidth={330}
+                        autoGrow
+                      />
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -908,12 +1035,16 @@ function InlineText({
   action,
   value,
   placeholder,
+  minWidth = 110,
 }: {
   id: string;
   field: string;
   action: (formData: FormData) => void | Promise<void>;
   value: string;
   placeholder: string;
+  /** Ancho mínimo de la caja. Súbelo en campos que no deben cortarse nunca
+   *  (teléfonos con prefijo internacional, por ejemplo). */
+  minWidth?: number;
 }) {
   const [val, setVal] = useState(value);
   const [pending, start] = useTransition();
@@ -938,7 +1069,7 @@ function InlineText({
       }}
       style={{
         width: "100%",
-        minWidth: 110,
+        minWidth,
         border: "1px solid #e2e8f0",
         borderRadius: 8,
         padding: "6px 8px",
@@ -983,13 +1114,18 @@ function EditableCell({
     lastSaved.current = value;
   }, [value]);
 
-  // Ajusta el alto al contenido. Se recalcula al escribir, no solo al montar.
+  // Alto mínimo en píxeles equivalente a `rows` líneas (13px · 1.5 + padding).
+  // Sin esto, autoGrow encoge la caja a la altura del contenido e ignora `rows`.
+  const minHeight = rows * 20 + 18;
+
+  // Ajusta el alto al contenido, nunca por debajo del mínimo. Se recalcula al
+  // escribir, no solo al montar.
   useEffect(() => {
     const el = ref.current;
     if (!autoGrow || !el) return;
     el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`;
-  }, [autoGrow, maxHeight, val]);
+    el.style.height = `${Math.min(Math.max(el.scrollHeight, minHeight), maxHeight)}px`;
+  }, [autoGrow, maxHeight, minHeight, val]);
 
   return (
     <textarea
@@ -1010,6 +1146,7 @@ function EditableCell({
       style={{
         width: "100%",
         minWidth,
+        minHeight,
         resize: "both",
         border: "1px solid #e2e8f0",
         borderRadius: 8,
@@ -1113,6 +1250,210 @@ function btnStyle(
     cursor: disabled ? "wait" : "pointer",
     opacity: disabled ? 0.6 : 1,
   };
+}
+
+/** Conmutador Tabla ↔ Agenda. El contador rojo son las llamadas vencidas o de
+ *  hoy: es el número que no debe quedarse sin mirar. */
+function ViewTabs({
+  view,
+  onChange,
+  pending,
+}: {
+  view: "tabla" | "agenda";
+  onChange: (v: "tabla" | "agenda") => void;
+  pending: number;
+}) {
+  const tab = (active: boolean): React.CSSProperties => ({
+    border: `1px solid ${active ? "#0b1220" : "#cbd5e1"}`,
+    background: active ? "#0b1220" : "#fff",
+    color: active ? "#fff" : "#475569",
+    borderRadius: 999,
+    padding: "7px 16px",
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: "pointer",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+  });
+  return (
+    <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+      <button type="button" onClick={() => onChange("tabla")} style={tab(view === "tabla")}>
+        📋 Tabla
+      </button>
+      <button type="button" onClick={() => onChange("agenda")} style={tab(view === "agenda")}>
+        📅 Agenda
+        {pending > 0 && (
+          <span
+            style={{
+              background: "#dc2626",
+              color: "#fff",
+              borderRadius: 999,
+              padding: "1px 8px",
+              fontSize: 12,
+              fontWeight: 800,
+            }}
+          >
+            {pending}
+          </span>
+        )}
+      </button>
+    </div>
+  );
+}
+
+/** Casillas para esconder columnas que ahora mismo estorban. */
+function ColumnsPanel({
+  hidden,
+  onToggle,
+  onShowAll,
+}: {
+  hidden: Set<ColKey>;
+  onToggle: (key: ColKey) => void;
+  onShowAll: () => void;
+}) {
+  return (
+    <div
+      style={{
+        background: "#fff",
+        border: "1px solid #e2e8f0",
+        borderRadius: 12,
+        padding: "14px 16px",
+        marginBottom: 12,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 10,
+        }}
+      >
+        <strong style={{ fontSize: 13, color: "#334155" }}>Columnas visibles</strong>
+        <button
+          type="button"
+          onClick={onShowAll}
+          disabled={hidden.size === 0}
+          style={{
+            border: "1px solid #cbd5e1",
+            background: "#fff",
+            color: hidden.size === 0 ? "#cbd5e1" : "#475569",
+            borderRadius: 8,
+            padding: "4px 10px",
+            fontSize: 12,
+            fontWeight: 700,
+            cursor: hidden.size === 0 ? "default" : "pointer",
+          }}
+        >
+          Mostrar todas
+        </button>
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 18px" }}>
+        {COLUMNS.map((c) => (
+          <label
+            key={c.key}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 13,
+              color: hidden.has(c.key) ? "#94a3b8" : "#0f172a",
+              cursor: "pointer",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={!hidden.has(c.key)}
+              onChange={() => onToggle(c.key)}
+              style={{ cursor: "pointer", width: 15, height: 15 }}
+            />
+            {c.label}
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Fecha de la próxima llamada. Se guarda al elegirla; vaciarla saca al lead de
+ *  la agenda. Rojo si ya venció, ámbar si es hoy o si el estado pide fecha. */
+function FollowupDateCell({
+  id,
+  value,
+  today,
+  needsDate,
+}: {
+  id: string;
+  value: string | null;
+  today: string;
+  /** El lead está en "Volver a llamar" pero nadie ha dicho cuándo. */
+  needsDate: boolean;
+}) {
+  const [pending, start] = useTransition();
+  const valid = isFollowupDate(value);
+  const overdue = valid && value! < today;
+  const isToday = valid && value === today;
+
+  const save = (next: string) => {
+    const fd = new FormData();
+    fd.set("id", id);
+    fd.set("followup_at", next);
+    start(() => setLeadFollowupDate(fd));
+  };
+
+  const border = overdue
+    ? "#dc2626"
+    : isToday || needsDate
+      ? "#d97706"
+      : "#e2e8f0";
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <input
+        type="date"
+        value={valid ? value! : ""}
+        disabled={pending}
+        onChange={(e) => save(e.target.value)}
+        aria-label="Fecha de la próxima llamada"
+        style={{
+          width: "100%",
+          minWidth: 140,
+          border: `1px solid ${border}`,
+          borderRadius: 8,
+          padding: "6px 8px",
+          fontSize: 13,
+          fontFamily: "inherit",
+          color: overdue ? "#dc2626" : "#0f172a",
+          fontWeight: overdue || isToday ? 700 : 400,
+          background: pending ? "#f8fafc" : needsDate ? "#fffbeb" : "#fff",
+        }}
+      />
+      {needsDate && (
+        <span style={{ fontSize: 11, color: "#b45309", fontWeight: 700 }}>
+          ¿A partir de cuándo?
+        </span>
+      )}
+      {valid && (
+        <button
+          type="button"
+          onClick={() => save("")}
+          disabled={pending}
+          style={{
+            border: "none",
+            background: "none",
+            color: "#94a3b8",
+            fontSize: 11,
+            padding: 0,
+            textAlign: "left",
+            cursor: "pointer",
+          }}
+        >
+          Quitar de la agenda
+        </button>
+      )}
+    </div>
+  );
 }
 
 const th: React.CSSProperties = {

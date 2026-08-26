@@ -11,6 +11,7 @@ import {
 import {
   updateLeadStatus,
   updateLeadField,
+  updateLeadFollowupDate,
   archiveLeads,
   deleteLeads,
   createManualLead,
@@ -80,6 +81,15 @@ export async function setLeadFollowup(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (id) {
     await updateLeadField(id, "followup", String(formData.get("followup") ?? ""));
+    revalidatePath("/panel");
+  }
+}
+
+/** Agenda la próxima llamada. Valor vacío = quitar de la agenda. */
+export async function setLeadFollowupDate(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  if (id) {
+    await updateLeadFollowupDate(id, String(formData.get("followup_at") ?? ""));
     revalidatePath("/panel");
   }
 }
