@@ -155,47 +155,46 @@ export default function GrowthPage() {
           altura, así que centrarlo dentro de 100svh dejaba entre 500 y 750 px
           muertos. Fuera de apaisado manda un suelo en píxeles, que no crece con
           la altura de la pantalla y por tanto no puede volver a abrir el hueco. */}
-      <header className="relative flex min-h-[32rem] items-center overflow-hidden py-16 lg:landscape:min-h-[100svh]">
+      <header className="relative flex min-h-[32rem] items-center overflow-hidden py-16 lg:landscape:min-h-[88svh]">
         <div
           aria-hidden
           className="pointer-events-none absolute -top-40 left-1/2 h-[38rem] w-[38rem] -translate-x-1/2 rounded-full blur-[120px]"
           style={{ background: T.lime, opacity: 0.1 }}
         />
         <Wrap className="relative">
-          {/* **El titular ocupa todo el ancho, y el formulario va debajo.**
-              Antes compartían fila y eso le comía la mitad del espacio: para
-              caber al lado del formulario tenía que encogerse hasta 4,75 rem,
-              que en una pantalla de portátil se ve pequeño para lo que es —la
-              única frase que tiene que quedarse en la cabeza—.
+          {/* **El titular y el formulario, uno al lado del otro.**
+              El formulario lleva ancho fijo y el titular se queda con lo que
+              sobre. Es al revés de lo normal —repartir en fracciones— y es a
+              propósito: con fracciones, el titular crecía con la pantalla y a
+              1375 px se partía en tres líneas. Con el formulario clavado en
+              23 rem, lo que le queda al titular es previsible, y por eso se
+              puede impedir que se corte sin que se salga nunca.
 
-              Así el titular respira a 8 rem y el formulario sigue por encima
-              del pliegue, que era lo que había que conservar. */}
-          <h1
-            className="font-black leading-[0.88] tracking-[-0.035em]"
-            style={{ fontSize: "clamp(2.75rem, 8.2vw, 8rem)" }}
-          >
-            Llenar tu agenda es fácil.
-            <br />
-            <span style={{ color: T.lime }}>Ganar más, no.</span>
-          </h1>
-
-          <div className="mt-10 grid items-start gap-10 lg:mt-14 lg:grid-cols-[1.25fr_1fr] lg:gap-20">
+              El tamaño está calculado para que "Llenar tu agenda es fácil."
+              quepa entero en esa columna. Si algún día cambia esa frase, hay
+              que volver a mirarlo. */}
+          <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_23rem] lg:gap-16">
             <div>
-              <p
-                className="max-w-2xl font-bold leading-[1.25] tracking-[-0.01em]"
-                style={{ fontSize: "clamp(1.5rem, 3vw, 2.5rem)" }}
+              <h1
+                className="font-black leading-[0.9] tracking-[-0.035em]"
+                style={{ fontSize: "clamp(2.5rem, 5vw, 3.75rem)" }}
               >
-                Cualquiera te trae pacientes.{" "}
-                <span style={{ color: T.lime }}>Nosotros te hacemos ganar más.</span>
-              </p>
+                <span className="lg:whitespace-nowrap">Llenar tu agenda es fácil.</span>
+                <br />
+                <span className="lg:whitespace-nowrap" style={{ color: T.lime }}>
+                  Ganar más, no.
+                </span>
+              </h1>
 
+              {/* En blanco entero: el lima ya está en el titular, justo encima,
+                  y repetirlo aquí hacía que las dos frases compitieran. Lo que
+                  destaca "ganar más" es el trazo, no el color. */}
               <p
-                className="mt-8 max-w-xl leading-relaxed"
-                style={{ fontSize: "clamp(1.0625rem, 1.4vw, 1.25rem)", color: T.muted }}
+                className="mt-8 max-w-xl font-bold leading-[1.3] tracking-[-0.01em] text-balance"
+                style={{ fontSize: "clamp(1.375rem, 2.2vw, 1.875rem)" }}
               >
-                Nos ocupamos de la web, de las campañas y de que ningún paciente se pierda por
-                el camino. Y sabemos cuáles te dejan dinero, para que decidas con números y no
-                con corazonadas.
+                Cualquiera te trae pacientes. Nosotros te hacemos{" "}
+                <Subrayado>ganar más</Subrayado>.
               </p>
             </div>
 
