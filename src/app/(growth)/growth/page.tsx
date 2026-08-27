@@ -4,6 +4,7 @@ import { GROWTH, GROWTH_THEME as T } from "@/lib/growth-config";
 import { LineaDeTiempo } from "./_components/LineaDeTiempo";
 import { Subrayado } from "./_components/Subrayado";
 import { Circulo } from "./_components/Circulo";
+import { Trama } from "./_components/Trama";
 import { FormularioHero } from "./_components/FormularioHero";
 import { Planes } from "./_components/Planes";
 
@@ -148,39 +149,56 @@ export default function GrowthPage() {
           muertos. Fuera de apaisado manda un suelo en píxeles, que no crece con
           la altura de la pantalla y por tanto no puede volver a abrir el hueco. */}
       <header className="relative flex min-h-[30rem] items-center overflow-hidden py-12 md:py-16 lg:landscape:min-h-[80svh]">
+        {/* Tres capas para que la cabecera deje de ser un rectángulo negro, y
+            ninguna se ve como tal: una trama de puntos que da textura sin hacer
+            ruido, un halo verde detrás del formulario —que además empuja la
+            tarjeta clara hacia delante— y otro más flojo arriba a la izquierda
+            para que el titular no flote sobre la nada. */}
+        <Trama />
         <div
           aria-hidden
-          className="pointer-events-none absolute -top-40 left-1/2 h-[38rem] w-[38rem] -translate-x-1/2 rounded-full blur-[120px]"
-          style={{ background: T.lime, opacity: 0.1 }}
+          className="pointer-events-none absolute -right-32 top-1/2 h-[42rem] w-[42rem] -translate-y-1/2 rounded-full blur-[130px]"
+          style={{ background: T.lime, opacity: 0.16 }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-40 -top-40 h-[34rem] w-[34rem] rounded-full blur-[140px]"
+          style={{ background: T.lime, opacity: 0.07 }}
         />
         <Wrap className="relative">
           {/* **El titular y el formulario, uno al lado del otro.**
               El formulario lleva ancho fijo y el titular se queda con lo que
               sobre. Es al revés de lo normal —repartir en fracciones— y es a
               propósito: con fracciones, el titular crecía con la pantalla y a
-              1375 px se partía en tres líneas. Con el formulario clavado en
-              23 rem, lo que le queda al titular es previsible, y por eso se
-              puede impedir que se corte sin que se salga nunca.
+              1375 px se partía en tres líneas. */}
+          <div className="grid items-center gap-10 xl:grid-cols-[minmax(0,1fr)_27rem] xl:gap-14">
+            {/* **El tamaño del titular se mide contra su columna, no contra la
+                ventana.** Con `vw` había que elegir el peor caso —el ancho más
+                estrecho donde hay dos columnas— y dejarlo pequeño en todos los
+                demás. Con `cqw` el cálculo es exacto en cada ancho, sea la que
+                sea la columna.
 
-              El tamaño está calculado para que "Llenar tu agenda es fácil."
-              quepa entero en esa columna en TODOS los anchos donde hay dos
-              columnas, no solo en el más grande. El caso que manda es el más
-              estrecho de los dos —1280 px—, y de ahí sale el 4,4vw. Si algún
-              día cambia esa frase, hay que rehacer la cuenta.
+                El 9,4 no es una estimación: la frase mide 10,27 veces su propio
+                cuerpo, medido en el navegador, así que cabe hasta 9,7 cqw y se
+                deja un dedo de margen. Si algún día cambia la frase, hay que
+                volver a medirla — a ojo sale un número mucho más conservador y
+                el titular se queda pequeño sin que se note por qué.
 
-              Y las dos columnas empiezan en xl y no en lg: entre 1024 y 1280 la
-              columna del titular se quedaba tan estrecha que había que
-              encogerlo hasta que dejaba de tener fuerza. Apilado ocupa todo el
-              ancho y se ve grande. */}
-          <div className="grid items-center gap-10 xl:grid-cols-[minmax(0,1fr)_25rem] xl:gap-14">
-            <div>
+                Por debajo de 640 px se le deja partirse: ahí no hay tamaño
+                legible que la meta en un renglón. */}
+            <div style={{ containerType: "inline-size" }}>
               <h1
-                className="font-black leading-[0.9] tracking-[-0.035em]"
-                style={{ fontSize: "clamp(2.75rem, 4.2vw, 5rem)" }}
+                className="font-black leading-[0.88] tracking-[-0.035em]"
+                style={{ fontSize: "clamp(2.5rem, 9.4cqw, 7rem)" }}
               >
-                <span className="xl:whitespace-nowrap">Llenar tu agenda es fácil.</span>
+                <span className="whitespace-nowrap max-sm:whitespace-normal">
+                  Llenar tu agenda es fácil.
+                </span>
                 <br />
-                <span className="xl:whitespace-nowrap" style={{ color: T.lime }}>
+                <span
+                  className="whitespace-nowrap max-sm:whitespace-normal"
+                  style={{ color: T.lime }}
+                >
                   Ganar más, no.
                 </span>
               </h1>
@@ -203,8 +221,12 @@ export default function GrowthPage() {
       </header>
 
       {/* ───────── 2. El problema ───────── */}
-      <section className="py-20 md:py-24 lg:py-28" style={{ background: T.surface }}>
-        <Wrap>
+      <section
+        className="relative overflow-hidden py-20 md:py-24 lg:py-28"
+        style={{ background: T.surface }}
+      >
+        <Trama motivo="rayas" desde="70% 40%" />
+        <Wrap className="relative">
           <Eyebrow>El problema</Eyebrow>
 
           <h2
@@ -219,7 +241,12 @@ export default function GrowthPage() {
               <div
                 key={c.titulo}
                 className="rounded-3xl p-7 md:p-9"
-                style={{ background: T.ink, border: `1px solid ${c.color}44` }}
+                style={{
+                  background: c.rodeado
+                    ? `radial-gradient(120% 100% at 50% 0%, ${T.lime}14, ${T.ink} 60%)`
+                    : T.ink,
+                  border: `1px solid ${c.color}44`,
+                }}
               >
                 <p
                   className="text-sm font-bold uppercase tracking-[0.18em]"
@@ -295,6 +322,7 @@ export default function GrowthPage() {
         className="relative overflow-hidden py-20 md:py-24 lg:py-28"
         style={{ background: T.surface }}
       >
+        <Trama desde="25% 30%" />
         <div
           aria-hidden
           className="pointer-events-none absolute -top-32 right-0 h-[32rem] w-[32rem] rounded-full blur-[130px]"
@@ -319,18 +347,11 @@ export default function GrowthPage() {
 
           {/* Y aquí el precio, sobre la espalda de lo que acaba de leer. */}
           <div className="mt-16 pt-14" style={{ borderTop: `1px solid ${T.line}` }}>
-            <Eyebrow>Nuestros packs</Eyebrow>
-
-            <h3
-              className="mt-8 font-black leading-[1.05] tracking-[-0.03em] text-balance"
-              style={{ fontSize: "clamp(2rem, 4vw, 3.5rem)" }}
-            >
-              Todo esto, de principio a fin, desde 199 € al mes.
-            </h3>
-
-            <div className="mt-8">
-              <Planes />
-            </div>
+            {/* Sin titular encima: el título va dentro de la tabla, en la
+                casilla vacía de la esquina. Esa celda existe solo para alinear
+                las columnas, así que estaba desaprovechada — y puesto ahí, el
+                título no separa la tabla de lo que acaba de leerse. */}
+            <Planes />
 
           </div>
         </Wrap>

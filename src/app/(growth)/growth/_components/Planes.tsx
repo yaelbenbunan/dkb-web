@@ -106,8 +106,16 @@ export function Planes() {
         <table className="w-full border-collapse text-left">
           <thead>
             <tr>
-              <th className="w-[46%] pb-6 align-bottom">
-                <span className="sr-only">Qué incluye</span>
+              <th className="w-[46%] pb-6 pr-6 align-bottom">
+                <h3
+                  className="font-black leading-[1.05] tracking-[-0.03em]"
+                  style={{ fontSize: "clamp(1.75rem, 3vw, 2.75rem)" }}
+                >
+                  Nuestros packs
+                </h3>
+                <p className="mt-2 text-base font-normal" style={{ color: T.muted }}>
+                  Los dos, sin permanencia
+                </p>
               </th>
               {PLANES.map((plan) => (
                 <th key={plan.id} className="pb-6 pl-6 align-bottom">
@@ -148,7 +156,19 @@ export function Planes() {
       </div>
 
       {/* ── Tarjetas, en móvil ── */}
-      <div className="grid gap-5 md:hidden">
+      <div className="md:hidden">
+        <h3
+          className="font-black leading-[1.05] tracking-[-0.03em]"
+          style={{ fontSize: "clamp(1.75rem, 6vw, 2.5rem)" }}
+        >
+          Nuestros packs
+        </h3>
+        <p className="mt-2 text-base" style={{ color: T.muted }}>
+          Los dos, sin permanencia
+        </p>
+      </div>
+
+      <div className="mt-6 grid gap-5 md:hidden">
         {PLANES.map((plan) => (
           <div
             key={plan.id}

@@ -21,7 +21,19 @@ import { appendUtms } from "@/lib/utm";
  * primera llamada —a una clínica dental y a un centro de estética no se les
  * enseña el mismo caso— y se responde en un toque. Cualquier campo de más aquí
  * arriba se paga en leads perdidos.
+ *
+ * **Y va en claro sobre el fondo oscuro, no en gris sobre negro.** Era una
+ * tarjeta apenas un tono más clara que la página: se camuflaba justo donde
+ * tiene que llamar la atención. En una página casi negra, lo blanco es lo único
+ * que grita "esto se rellena". El botón invierte otra vez —negro con letra
+ * lima— para que dentro de la tarjeta clara siga habiendo un punto de máximo
+ * contraste, que es donde tiene que ir el dedo.
  */
+
+/** La tarjeta clara. Estos colores solo viven aquí: no son del tema. */
+const PAPEL = "#F5F7F8";
+const TINTA = "#08090C";
+const BORDE = "rgba(11, 27, 43, 0.16)";
 const SECTORES = [
   "Clínica dental",
   "Centro de estética",
@@ -41,20 +53,18 @@ export function FormularioHero() {
     return (
       <div
         role="status"
-        className="rounded-2xl p-6"
-        style={{ background: T.surface, border: `1px solid ${T.lime}55` }}
+        className="rounded-3xl p-7 sm:p-8"
+        style={{ background: PAPEL, color: TINTA, boxShadow: `0 0 0 6px ${T.lime}22` }}
       >
-        <p className="text-lg font-black" style={{ color: T.lime }}>
-          Recibido.
-        </p>
-        <p className="mt-2 text-sm leading-relaxed" style={{ color: T.muted }}>
+        <p className="text-2xl font-black leading-tight">Recibido.</p>
+        <p className="mt-3 text-base leading-relaxed" style={{ color: "rgba(11,27,43,0.65)" }}>
           Te escribimos hoy mismo. Mientras tanto, si quieres ir con los deberes hechos,
           calcula lo que te cuesta hoy conseguir un paciente.
         </p>
         <Link
           href="/growth/calculadora"
-          className="mt-5 inline-flex h-11 items-center justify-center rounded-full px-6 text-sm font-bold"
-          style={{ background: T.lime, color: T.ink }}
+          className="mt-6 inline-flex h-12 items-center justify-center rounded-full px-7 text-base font-bold"
+          style={{ background: TINTA, color: T.lime }}
         >
           Calcular
         </Link>
@@ -64,8 +74,14 @@ export function FormularioHero() {
 
   return (
     <form
-      className="rounded-3xl p-6 sm:p-7"
-      style={{ background: T.surface, border: `1px solid ${T.line}` }}
+      className="relative rounded-3xl p-7 sm:p-8"
+      style={{
+        background: PAPEL,
+        color: TINTA,
+        // Un halo de lima en vez de un borde: separa la tarjeta del fondo sin
+        // dibujarle una caja alrededor.
+        boxShadow: `0 0 0 6px ${T.lime}22, 0 30px 60px -20px rgba(0,0,0,0.6)`,
+      }}
       action={(fd) => {
         // La calculadora manda tres cifras; aquí no se preguntan. Vacías
         // significan "no lo sé", que es exactamente lo que sabemos de esta
@@ -97,8 +113,17 @@ export function FormularioHero() {
         });
       }}
     >
-      <p className="text-xl font-black leading-tight" style={{ color: T.fg }}>
-        Cuéntanos quién eres y te llamamos
+      <span
+        aria-hidden
+        className="absolute -right-3 -top-4 rotate-[-7deg] rounded-full px-4 py-1.5 text-sm font-black"
+        style={{ background: T.lime, color: TINTA, boxShadow: "0 8px 20px -8px rgba(0,0,0,0.7)" }}
+      >
+        Te llamamos hoy
+      </span>
+
+      <p className="text-2xl font-black leading-[1.15] tracking-[-0.01em]">
+        Cuéntanos quién eres
+        <br />y te llamamos
       </p>
 
       <div className="mt-5 space-y-3.5">
@@ -157,21 +182,21 @@ export function FormularioHero() {
 
         <label
           className="flex items-start gap-3 text-xs leading-relaxed"
-          style={{ color: T.muted }}
+          style={{ color: "rgba(11,27,43,0.6)" }}
         >
           <input
             name="consent"
             type="checkbox"
             value="true"
             required
-            className="mt-0.5 h-4 w-4 shrink-0 accent-[#C7F73E]"
+            className="mt-0.5 h-4 w-4 shrink-0 accent-[#08090C]"
           />
           <span>
             Acepto que dinkbit me contacte y me envíe comunicaciones comerciales, según la{" "}
             <Link
               href="/privacidad"
               className="font-bold underline underline-offset-2"
-              style={{ color: T.lime }}
+              style={{ color: TINTA }}
             >
               política de privacidad
             </Link>
@@ -196,13 +221,13 @@ export function FormularioHero() {
         type="submit"
         disabled={pendiente}
         className="mt-6 inline-flex w-full items-center justify-center rounded-full py-4 text-lg font-bold transition-transform enabled:hover:-translate-y-0.5 disabled:opacity-60"
-        style={{ background: T.lime, color: T.ink }}
+        style={{ background: TINTA, color: T.lime }}
       >
         {pendiente ? "Enviando…" : "Quiero que me llaméis"}
       </button>
 
       {error && (
-        <p role="alert" className="mt-3 text-center text-sm font-bold" style={{ color: T.lime }}>
+        <p role="alert" className="mt-3 text-center text-sm font-bold" style={{ color: "#B4321F" }}>
           {error}
         </p>
       )}
@@ -211,10 +236,10 @@ export function FormularioHero() {
 }
 
 const campo =
-  "w-full rounded-xl px-4 py-3.5 text-base outline-none transition focus:border-[#C7F73E]";
+  "w-full rounded-xl px-4 py-3.5 text-base outline-none transition placeholder:text-[rgba(11,27,43,0.45)] focus:border-[rgba(11,27,43,0.5)]";
 
 const estiloCampo = {
-  background: T.ink,
-  border: `1px solid ${T.line}`,
-  color: T.fg,
+  background: "#FFFFFF",
+  border: `1px solid ${BORDE}`,
+  color: TINTA,
 } as const;
