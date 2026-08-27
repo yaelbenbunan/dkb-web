@@ -76,7 +76,7 @@ export function FormularioHero() {
   return (
     <form
       id="empezar"
-      // `scroll-mt` para que al llegar desde los botones de los packs no se
+      // `scroll-mt` para que al llegar desde los botones de los planes no se
       // pegue al borde de arriba de la ventana.
       className="relative scroll-mt-8 rounded-3xl p-7 sm:p-8"
       style={{

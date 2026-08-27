@@ -320,11 +320,11 @@ export default function GrowthPage() {
         </Wrap>
       </section>
 
-      {/* ───────── 3. La solución: qué es, qué cuesta y qué te llevas ─────────
-          Va todo junto a propósito. Separar "cómo funciona" de "lo que cuesta"
-          debilitaba las dos partes: el proceso quedaba en teoría y el precio
-          aparecía sin contexto. Leídos seguidos, los cuatro pasos son a la vez
-          la explicación y el inventario de lo que compras. */}
+      {/* ───────── 3. La solución ─────────
+          Los tres pasos son a la vez la explicación del proceso y el inventario
+          de lo que se compra, así que el precio va dos secciones más abajo
+          apoyado en ellos: "desde 199 €" solo se entiende si acabas de leer qué
+          es "todo esto". */}
       <section
         className="relative overflow-hidden py-20 md:py-24 lg:py-28"
         style={{ background: T.surface }}
@@ -348,34 +348,49 @@ export default function GrowthPage() {
           </h2>
 
           <Pasos pasos={PASOS} />
+        </Wrap>
+      </section>
 
-          {/* El remate de la sección, y lo que de verdad compra una clínica:
-              no un sistema, sino dejar de ocuparse de esto. Va después de los
-              tres pasos porque solo funciona cuando acabas de ver todo lo que
-              hay que hacer — antes sería una promesa, aquí es un alivio. */}
+      {/* ───────── 4. El alivio ─────────
+          Lo que de verdad compra una clínica no es un sistema: es dejar de
+          ocuparse de esto. Se lleva la pantalla entera porque es la única frase
+          de la página que no explica nada — se siente o no se siente, y para
+          eso necesita silencio alrededor.
+
+          Va después de los tres pasos y no antes: solo funciona cuando acabas
+          de ver todo lo que hay que hacer. Antes sería una promesa más; aquí es
+          un alivio. */}
+      <section className="relative flex items-center overflow-hidden py-28 md:py-36 lg:landscape:min-h-[86svh]">
+        <Trama motivo="rayas" desde="30% 50%" />
+        <Wrap className="relative">
           <p
-            className="mt-16 max-w-4xl font-black leading-[1.15] tracking-[-0.02em] text-balance"
-            style={{ fontSize: "clamp(1.75rem, 3.2vw, 3rem)" }}
+            className="max-w-5xl font-black leading-[1.1] tracking-[-0.03em] text-balance"
+            style={{ fontSize: "clamp(2.25rem, 5.5vw, 5rem)" }}
           >
             Nosotros nos encargamos de todo.{" "}
             <span style={{ color: T.lime }}>
               Tú, de recibir a tus pacientes y darles un buen servicio.
             </span>
           </p>
-
-          {/* Y aquí el precio, sobre la espalda de lo que acaba de leer. */}
-          <div className="mt-16 pt-14" style={{ borderTop: `1px solid ${T.line}` }}>
-            {/* Sin titular encima: el título va dentro de la tabla, en la
-                casilla vacía de la esquina. Esa celda existe solo para alinear
-                las columnas, así que estaba desaprovechada — y puesto ahí, el
-                título no separa la tabla de lo que acaba de leerse. */}
-            <Planes />
-
-          </div>
         </Wrap>
       </section>
 
-      {/* ───────── 4. El compromiso ─────────
+      {/* ───────── 5. Los planes ─────────
+          El título va DENTRO de la tabla, en la casilla vacía de la esquina.
+          Esa celda existe solo para alinear las columnas, así que estaba
+          desaprovechada — y puesto ahí, el título no separa la tabla de lo que
+          acaba de leerse. */}
+      <section
+        className="relative overflow-hidden py-20 md:py-24 lg:py-28"
+        style={{ background: T.surface }}
+      >
+        <Trama desde="75% 40%" />
+        <Wrap className="relative">
+          <Planes />
+        </Wrap>
+      </section>
+
+      {/* ───────── 6. El compromiso ─────────
           Va justo después del precio y las garantías: es la respuesta a la
           desconfianza que deja cualquier tarifa.
 

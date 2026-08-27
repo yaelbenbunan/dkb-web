@@ -1,7 +1,7 @@
 import { GROWTH_THEME as T } from "@/lib/growth-config";
 
 /**
- * Los dos packs, comparados línea a línea.
+ * Los dos planes, comparados línea a línea.
  *
  * **Sin descripciones.** Cada fila era un título y un renglón explicándolo, y
  * eso convertía una tabla —que se mira— en un texto —que se lee—. Aquí lo único
@@ -67,7 +67,7 @@ export function Planes() {
                   className="font-black leading-[1.05] tracking-[-0.03em]"
                   style={{ fontSize: "clamp(1.75rem, 3vw, 2.75rem)" }}
                 >
-                  Nuestros packs
+                  Elige tu plan
                 </h3>
                 <p className="mt-2 text-base font-normal" style={{ color: T.muted }}>
                   Los dos, sin permanencia
@@ -137,7 +137,7 @@ export function Planes() {
           className="font-black leading-[1.05] tracking-[-0.03em]"
           style={{ fontSize: "clamp(1.75rem, 6vw, 2.5rem)" }}
         >
-          Nuestros packs
+          Elige tu plan
         </h3>
         <p className="mt-2 text-base" style={{ color: T.muted }}>
           Los dos, sin permanencia
