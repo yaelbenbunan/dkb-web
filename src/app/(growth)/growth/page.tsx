@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { GROWTH, GROWTH_THEME as T } from "@/lib/growth-config";
-import { LineaDeTiempo } from "./_components/LineaDeTiempo";
+import { Pasos } from "./_components/Pasos";
 import { Subrayado } from "./_components/Subrayado";
 import { Circulo } from "./_components/Circulo";
 import { Trama } from "./_components/Trama";
@@ -122,17 +122,17 @@ const PASOS = [
   {
     n: "01",
     t: "Traemos los pacientes",
-    d: "Nos encargamos de todo: tu web, la estrategia y las campañas en Google y Meta. No tienes que contratar nada por separado.",
+    d: "Tu web y tus campañas en Google y Meta. No contratas nada por separado.",
   },
   {
     n: "02",
     t: "Los pasamos a tu agenda",
-    d: "Cada paciente entra en un sistema de gestión con su ficha y de dónde vino. Tu recepción lo llama, le da hora, y la cita se escribe en la agenda de la clínica.",
+    d: "Entran en un sistema con su ficha y su origen. Tu recepción llama, da hora, y la cita se escribe en tu calendario.",
   },
   {
     n: "03",
     t: "Analizamos tu rentabilidad",
-    d: "Quién acudió de verdad, qué tratamiento se hizo y cuánto facturó. Con eso sabemos qué campañas te rentan y cuáles no, y ajustamos cada mes.",
+    d: "Quién acudió, qué se hizo y cuánto facturó. Con eso ajustamos las campañas cada mes.",
   },
 ];
 
@@ -347,10 +347,7 @@ export default function GrowthPage() {
             <span style={{ color: T.lime }}>De principio a fin.</span>
           </h2>
 
-          {/* Los tres pasos, a todo lo ancho para que tengan presencia. El
-              hilo se rellena con el scroll: eso es lo que hace que se lean como
-              una cadena y no como tres servicios en una lista. */}
-          <LineaDeTiempo pasos={PASOS} />
+          <Pasos pasos={PASOS} />
 
           {/* Y aquí el precio, sobre la espalda de lo que acaba de leer. */}
           <div className="mt-16 pt-14" style={{ borderTop: `1px solid ${T.line}` }}>
