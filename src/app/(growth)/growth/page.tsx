@@ -5,6 +5,7 @@ import { LineaDeTiempo } from "./_components/LineaDeTiempo";
 import { Subrayado } from "./_components/Subrayado";
 import { Circulo } from "./_components/Circulo";
 import { Trama } from "./_components/Trama";
+import { Logotipo } from "./_components/Logotipo";
 import { FormularioHero } from "./_components/FormularioHero";
 import { Planes } from "./_components/Planes";
 
@@ -187,6 +188,12 @@ export default function GrowthPage() {
                 Por debajo de 640 px se le deja partirse: ahí no hay tamaño
                 legible que la meta en un renglón. */}
             <div style={{ containerType: "inline-size" }}>
+              {/* El logotipo va dentro de la columna del titular y no en una
+                  barra propia: esta landing no tiene navegación —no hay a dónde
+                  ir— y ponerle una cabecera al uso solo serviría para quitarle
+                  altura al hero. */}
+              <Logotipo className="mb-10" />
+
               <h1
                 className="font-black leading-[0.88] tracking-[-0.035em]"
                 style={{ fontSize: "clamp(2.5rem, 9.4cqw, 7rem)" }}
