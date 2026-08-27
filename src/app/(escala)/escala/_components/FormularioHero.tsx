@@ -63,7 +63,7 @@ export function FormularioHero() {
           calcula lo que te cuesta hoy conseguir un paciente.
         </p>
         <Link
-          href="/growth/calculadora"
+          href="/escala/calculadora"
           className="mt-6 inline-flex h-12 items-center justify-center rounded-full px-7 text-base font-bold"
           style={{ background: TINTA, color: T.lime }}
         >

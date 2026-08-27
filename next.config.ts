@@ -23,6 +23,22 @@ const config: NextConfig = {
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
   redirects: async () => [
+    // La landing del sistema para clínicas deja de llamarse "growth" y pasa a
+    // llamarse Escala. 301 y no 302: la ruta vieja estaba en el sitemap y hay
+    // enlaces sueltos por ahí —correos, mensajes— que van a seguir vivos años.
+    //
+    // Esta redirección NO se quita nunca, aunque parezca que ya no la usa
+    // nadie: lo que se rompe al quitarla no se ve desde aquí.
+    {
+      source: "/growth",
+      destination: "/escala",
+      permanent: true,
+    },
+    {
+      source: "/growth/:slug*",
+      destination: "/escala/:slug*",
+      permanent: true,
+    },
     // Renombrado del slug por consistencia en plural.
     {
       source: "/casos-de-exito/reforma-servilucas",

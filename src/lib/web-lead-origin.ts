@@ -341,8 +341,8 @@ export function growthLead(
     // contesta "88 €".
     notes: [
       d.origen === "hero"
-        ? "Origen: landing /growth (formulario de arriba, sin calculadora)"
-        : "Origen: landing /growth (calculadora de coste por paciente)",
+        ? "Origen: landing /escala (formulario de arriba, sin calculadora)"
+        : "Origen: landing /escala (calculadora de coste por paciente)",
       // El sector va justo detrás del origen porque es lo primero que cambia la
       // llamada: a una clínica dental y a un centro de estética no se les
       // enseña el mismo caso.

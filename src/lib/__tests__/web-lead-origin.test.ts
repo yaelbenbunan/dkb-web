@@ -324,7 +324,7 @@ describe("growthLead", () => {
 
   test("las notas llevan las respuestas de la calculadora", () => {
     const notes = growthLead(base).notes ?? "";
-    expect(notes).toContain("/growth");
+    expect(notes).toContain("/escala");
     expect(notes).toContain("1500");
     expect(notes).toContain("17");
     expect(notes).toContain("400");

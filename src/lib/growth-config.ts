@@ -1,16 +1,21 @@
 /**
  * Configuración de la landing de captación del sistema para clínicas.
  *
- * El nombre comercial está sin decidir (ver §14 del documento de producto), así
- * que vive aquí y NINGÚN componente lo escribe literal: cuando se decida, se
- * cambia en este fichero y ya. Lo mismo con la ruta, que además necesitaría un
- * redirect 301 en next.config.ts si cambiara.
+ * El nombre comercial vive aquí y NINGÚN componente lo escribe literal: si
+ * cambia, se cambia en este fichero. Lo mismo con la ruta — y esa además
+ * necesita un redirect 301 en next.config.ts, como el que ya hay de /growth,
+ * que se queda para siempre.
+ *
+ * **"Escala" todavía no está cerrado del todo** (§14 del documento de
+ * producto). Está puesto porque la landing no puede seguir llamándose "growth"
+ * mientras se decide, y porque cambiarlo ahora —sin campañas en marcha— cuesta
+ * una redirección y nada más.
  */
 export const GROWTH = {
-  /** Nombre comercial provisional. */
-  name: "Growth",
+  /** Nombre comercial. */
+  name: "Escala",
   /** Ruta de la landing. */
-  path: "/growth",
+  path: "/escala",
   /**
    * Fuente del vídeo del hero. Mientras sea null, la sección de vídeo no se
    * renderiza: la landing no debe esperar al vídeo para poder publicarse.
