@@ -10,7 +10,7 @@ export interface PasoLinea {
 }
 
 /**
- * Los cuatro pasos del sistema, que se van encendiendo según el usuario baja.
+ * Los pasos del sistema, que se van encendiendo según el usuario baja.
  *
  * El hilo que los une se rellena al hacer scroll: es lo que comunica que esto
  * es una secuencia con un principio y un final, y no cuatro servicios sueltos
@@ -70,7 +70,7 @@ export function LineaDeTiempo({ pasos }: { pasos: PasoLinea[] }) {
             ref={(el) => {
               refs.current[i] = el;
             }}
-            className="relative flex gap-6 pb-12 last:pb-0 md:gap-8"
+            className="relative flex gap-6 pb-14 last:pb-0 md:gap-9"
           >
             <span
               className="relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-black tabular-nums motion-safe:transition-colors motion-safe:duration-500 md:h-14 md:w-14 md:text-base"
@@ -86,11 +86,14 @@ export function LineaDeTiempo({ pasos }: { pasos: PasoLinea[] }) {
             <div className="pt-1.5 md:pt-3">
               <p
                 className="font-black leading-tight"
-                style={{ fontSize: "clamp(1.25rem, 3vw, 1.75rem)" }}
+                style={{ fontSize: "clamp(1.375rem, 2.4vw, 2.125rem)" }}
               >
                 {p.t}
               </p>
-              <p className="mt-2 max-w-xl leading-relaxed" style={{ color: T.muted }}>
+              <p
+                className="mt-3 max-w-2xl leading-relaxed"
+                style={{ fontSize: "clamp(1.0625rem, 1.4vw, 1.25rem)", color: T.muted }}
+              >
                 {p.d}
               </p>
             </div>

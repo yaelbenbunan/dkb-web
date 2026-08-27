@@ -8,7 +8,7 @@ import { FormularioHero } from "./_components/FormularioHero";
 export const metadata: Metadata = {
   title: "Llenar tu agenda es fácil. Ganar más, no",
   description:
-    "Un sistema integral que se ocupa de todo el proceso, con un único objetivo: que cada euro invertido genere más. Desde 199 €/mes, sin permanencia.",
+    "Un sistema integral que se ocupa de todo el proceso, con un único objetivo: que cada euro invertido genere más. Desde 299 €/mes, sin cuota de alta y sin permanencia.",
   alternates: { canonical: GROWTH.path },
   openGraph: {
     type: "website",
@@ -20,8 +20,15 @@ export const metadata: Metadata = {
   },
 };
 
-/** Ancho máximo propio: no usamos el Container del sitio para no heredar su
- *  escala, que está pensada para páginas corporativas y aquí se queda corta. */
+/**
+ * Ancho máximo propio: no usamos el Container del sitio para no heredar su
+ * escala, pensada para páginas corporativas.
+ *
+ * 1408 px y no 1152: con el ancho anterior, en un portátil normal quedaban
+ * cuatro dedos de negro a cada lado y todo el contenido apretado en el centro.
+ * La página parecía alejada, como si el navegador tuviera el zoom bajado. Un
+ * ancho mayor con más aire dentro llena la pantalla sin apretar nada.
+ */
 function Wrap({
   children,
   narrow = false,
@@ -33,7 +40,7 @@ function Wrap({
 }) {
   return (
     <div
-      className={`mx-auto w-full px-6 md:px-10 ${narrow ? "max-w-3xl" : "max-w-6xl"} ${className}`}
+      className={`mx-auto w-full px-6 sm:px-10 lg:px-14 ${narrow ? "max-w-4xl" : "max-w-[88rem]"} ${className}`}
     >
       {children}
     </div>
@@ -43,7 +50,7 @@ function Wrap({
 /** Etiqueta pequeña en mayúsculas que abre cada sección. */
 function Eyebrow({ children, color = T.lime }: { children: React.ReactNode; color?: string }) {
   return (
-    <p className="text-xs font-bold uppercase tracking-[0.28em]" style={{ color }}>
+    <p className="text-sm font-bold uppercase tracking-[0.24em]" style={{ color }}>
       {children}
     </p>
   );
@@ -80,11 +87,19 @@ const COMPARATIVA = [
 ];
 
 /**
- * Los cuatro pasos del sistema, en orden cronológico real.
+ * Los tres pasos del sistema, en orden cronológico real.
+ *
+ * Eran cuatro y sobraba uno: "no se pierde ni uno" y "sabemos quién vino" son
+ * el mismo tramo contado dos veces —lo que le pasa al paciente desde que deja
+ * el teléfono hasta que se sienta en el sillón—. Tres pasos se leen de una
+ * pasada; cuatro ya piden esfuerzo.
  *
  * Hacen doble trabajo: explican el proceso y son, a la vez, el inventario de
  * lo que entra en la cuota. Por eso el precio va justo detrás — "todo esto,
- * por 199 €" solo se entiende si acabas de leer qué es "todo esto".
+ * por 299 €" solo se entiende si acabas de leer qué es "todo esto".
+ *
+ * Y ninguno dice "CRM". Lo entiende quien ya sabe lo que es, que no es el
+ * dueño de una clínica dental.
  */
 const PASOS = [
   {
@@ -94,33 +109,36 @@ const PASOS = [
   },
   {
     n: "02",
-    t: "No se pierde ni uno",
-    d: "Todos los leads entran en nuestro sistema para ser atendidos, con su ficha y su origen. Ninguno se queda sin respuesta.",
+    t: "Los pasamos a tu agenda",
+    d: "Cada paciente entra en un sistema de gestión con su ficha y de dónde vino. Tu recepción lo llama, le da hora, y la cita se escribe en la agenda de la clínica.",
   },
   {
     n: "03",
-    t: "Sabemos quién vino de verdad",
-    d: "Cuando el paciente pasa por consulta se registran dos datos: si acudió y cuánto facturó. Dos toques y ya está.",
-  },
-  {
-    n: "04",
-    t: "Optimizamos para que rinda más",
-    d: "Hacemos los ajustes necesarios en las campañas para que tu inversión rinda cada vez más. Tú lo ves todo en el panel.",
+    t: "Vemos cuáles te dejan dinero",
+    d: "Quién acudió de verdad, qué se hizo y cuánto facturó. Con eso ajustamos las campañas cada mes para que tu inversión rinda más.",
   },
 ];
 
+/**
+ * Las tres promesas que responden a la desconfianza que deja cualquier tarifa.
+ *
+ * La cuota de alta se cae de aquí porque se cae del producto: la barrera de
+ * entrada tiene que ser lo más baja posible, y siempre se puede volver a poner.
+ * En su sitio entra la que más tranquiliza a quien ya se ha quemado con una
+ * agencia — que el dinero de los anuncios no pasa por nosotros.
+ */
 const GARANTIAS = [
   {
     t: "Sin desembolsos grandes",
-    d: "Pagas mes a mes. Ni inversiones iniciales de miles de euros ni contratos a un año.",
+    d: "Pagas mes a mes. Ni cuota de alta, ni inversiones iniciales de miles de euros, ni contratos a un año.",
   },
   {
-    t: "Una cuota de alta, dicha por delante",
-    d: "Montarlo todo lleva trabajo, así que hay un pago inicial. Lo sabrás antes de empezar, nunca en la última llamada.",
+    t: "Tu inversión es tuya",
+    d: "Los anuncios los pagas tú directamente a Google y a Meta, con tu tarjeta. Ese dinero no pasa por nuestras manos.",
   },
   {
-    t: "Sin comisión sobre tu inversión",
-    d: "Muchas agencias se llevan un porcentaje de lo que gastas en anuncios. Aquí la cuota es la cuota.",
+    t: "Sin comisión sobre lo que gastas",
+    d: "Muchas agencias se llevan un porcentaje de tu inversión, así que ganan más cuanto más gastes. Aquí la cuota es la cuota.",
   },
 ];
 
@@ -144,46 +162,40 @@ export default function GrowthPage() {
           style={{ background: T.lime, opacity: 0.1 }}
         />
         <Wrap className="relative">
-          {/* Dos columnas en pantalla ancha: el argumento a la izquierda y el
-              formulario a la derecha, los dos por encima del pliegue. Quien
-              llega convencido no debería tener que buscar dónde dejar su
-              teléfono, y antes lo único que había arriba era un botón que
-              llevaba a una calculadora de tres preguntas. */}
-          <div className="grid items-center gap-12 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
-            <div>
-              {/* Sin etiqueta de audiencia por encima: daba por hecho que la
-                  clínica ya invierte en publicidad, y muchas de las que
-                  interesan todavía no lo hacen. La palabra "pacientes" del
-                  subtítulo ya señala a quién va dirigido. */}
-              <h1
-                className="font-black leading-[0.92] tracking-[-0.03em]"
-                style={{ fontSize: "clamp(2.5rem, 6vw, 4.75rem)" }}
-              >
-                Llenar tu agenda es fácil.
-                <br />
-                <span style={{ color: T.lime }}>Ganar más, no.</span>
-              </h1>
+          {/* **El titular ocupa todo el ancho, y el formulario va debajo.**
+              Antes compartían fila y eso le comía la mitad del espacio: para
+              caber al lado del formulario tenía que encogerse hasta 4,75 rem,
+              que en una pantalla de portátil se ve pequeño para lo que es —la
+              única frase que tiene que quedarse en la cabeza—.
 
+              Así el titular respira a 8 rem y el formulario sigue por encima
+              del pliegue, que era lo que había que conservar. */}
+          <h1
+            className="font-black leading-[0.88] tracking-[-0.035em]"
+            style={{ fontSize: "clamp(2.75rem, 8.2vw, 8rem)" }}
+          >
+            Llenar tu agenda es fácil.
+            <br />
+            <span style={{ color: T.lime }}>Ganar más, no.</span>
+          </h1>
+
+          <div className="mt-10 grid items-start gap-10 lg:mt-14 lg:grid-cols-[1.25fr_1fr] lg:gap-20">
+            <div>
               <p
-                className="mt-6 max-w-xl leading-relaxed"
-                style={{ fontSize: "clamp(1.0625rem, 1.7vw, 1.25rem)", color: T.muted }}
+                className="max-w-2xl font-bold leading-[1.25] tracking-[-0.01em]"
+                style={{ fontSize: "clamp(1.5rem, 3vw, 2.5rem)" }}
               >
-                Cualquiera te trae pacientes. Nosotros, además, te decimos{" "}
-                <strong style={{ color: T.fg, fontWeight: 700 }}>
-                  cuáles te dejan dinero y cuáles te lo quitan
-                </strong>
-                , para que tomes mejores decisiones.
+                Cualquiera te trae pacientes.{" "}
+                <span style={{ color: T.lime }}>Nosotros te hacemos ganar más.</span>
               </p>
 
-              <p className="mt-6 text-sm" style={{ color: T.muted }}>
-                ¿Prefieres verlo con tus números primero?{" "}
-                <Link
-                  href="/growth/calculadora"
-                  className="font-bold underline underline-offset-4"
-                  style={{ color: T.lime }}
-                >
-                  Calcula qué te cuesta un paciente
-                </Link>
+              <p
+                className="mt-8 max-w-xl leading-relaxed"
+                style={{ fontSize: "clamp(1.0625rem, 1.4vw, 1.25rem)", color: T.muted }}
+              >
+                Nos ocupamos de la web, de las campañas y de que ningún paciente se pierda por
+                el camino. Y sabemos cuáles te dejan dinero, para que decidas con números y no
+                con corazonadas.
               </p>
             </div>
 
@@ -193,19 +205,22 @@ export default function GrowthPage() {
       </header>
 
       {/* ───────── 2. El problema ───────── */}
-      <section className="py-20 md:py-28" style={{ background: T.surface }}>
+      <section className="py-24 md:py-32 lg:py-40" style={{ background: T.surface }}>
         <Wrap>
           <Eyebrow>El problema</Eyebrow>
 
           <h2
             className="mt-8 max-w-4xl font-black leading-[1.05] tracking-[-0.02em] text-balance"
-            style={{ fontSize: "clamp(2rem, 5.5vw, 4rem)" }}
+            style={{ fontSize: "clamp(2.25rem, 5.2vw, 4.5rem)" }}
           >
             Puedes tener la agenda llena y{" "}
             <Subrayado grosor={1.15}>estar perdiendo dinero</Subrayado>.
           </h2>
 
-          <p className="mt-6 max-w-2xl text-lg leading-relaxed" style={{ color: T.muted }}>
+          <p
+            className="mt-7 max-w-2xl leading-relaxed"
+            style={{ fontSize: "clamp(1.125rem, 1.5vw, 1.375rem)", color: T.muted }}
+          >
             Dos clínicas del mismo tamaño, el mismo mes y el mismo ticket medio:
           </p>
 
@@ -217,7 +232,7 @@ export default function GrowthPage() {
                 style={{ background: T.ink, border: `1px solid ${c.color}44` }}
               >
                 <p
-                  className="text-xs font-bold uppercase tracking-[0.2em]"
+                  className="text-sm font-bold uppercase tracking-[0.18em]"
                   style={{ color: c.color }}
                 >
                   {c.titulo}
@@ -231,29 +246,39 @@ export default function GrowthPage() {
                     { k: "Factura", v: c.factura },
                   ].map((f) => (
                     <div key={f.k} className="flex items-baseline justify-between gap-3">
-                      <span className="text-sm" style={{ color: T.muted }}>
+                      <span className="text-base" style={{ color: T.muted }}>
                         {f.k}
                       </span>
-                      <span className="text-2xl font-black tabular-nums">{f.v}</span>
+                      <span
+                        className="font-black tabular-nums"
+                        style={{ fontSize: "clamp(1.5rem, 2.2vw, 1.875rem)" }}
+                      >
+                        {f.v}
+                      </span>
                     </div>
                   ))}
                   <div
                     className="flex items-baseline justify-between gap-3"
                     style={{ borderTop: `1px solid ${T.line}`, paddingTop: "1rem" }}
                   >
-                    <span className="text-sm font-bold" style={{ color: T.fg }}>
+                    <span className="text-base font-bold" style={{ color: T.fg }}>
                       Le queda
                     </span>
                     <span
                       className="font-black leading-none tabular-nums"
-                      style={{ fontSize: "clamp(2rem, 6.5vw, 3rem)", color: c.color }}
+                      style={{ fontSize: "clamp(2.25rem, 4.5vw, 3.5rem)", color: c.color }}
                     >
                       {c.queda}
                     </span>
                   </div>
                 </div>
 
-                <p className="mt-7 text-base font-bold leading-snug">{c.remate}</p>
+                <p
+                  className="mt-8 font-bold leading-snug"
+                  style={{ fontSize: "clamp(1.0625rem, 1.4vw, 1.25rem)" }}
+                >
+                  {c.remate}
+                </p>
               </div>
             ))}
           </div>
@@ -266,7 +291,7 @@ export default function GrowthPage() {
           aparecía sin contexto. Leídos seguidos, los cuatro pasos son a la vez
           la explicación y el inventario de lo que compras. */}
       <section
-        className="relative overflow-hidden py-20 md:py-28"
+        className="relative overflow-hidden py-24 md:py-32 lg:py-40"
         style={{ background: T.surface }}
       >
         <div
@@ -278,48 +303,32 @@ export default function GrowthPage() {
           <Eyebrow>La solución</Eyebrow>
 
           <h2
-            className="mt-8 max-w-4xl font-black leading-[1.02] tracking-[-0.03em] text-balance"
-            style={{ fontSize: "clamp(2.25rem, 6.5vw, 4.75rem)" }}
+            className="mt-8 max-w-5xl font-black leading-[1.02] tracking-[-0.03em] text-balance"
+            style={{ fontSize: "clamp(2.5rem, 6vw, 5.5rem)" }}
           >
             Un sistema integral.
             <br />
             <span style={{ color: T.lime }}>De principio a fin.</span>
           </h2>
 
-          <p
-            className="mt-8 max-w-3xl leading-relaxed"
-            style={{ fontSize: "clamp(1.125rem, 2.2vw, 1.5rem)", color: T.muted }}
-          >
-            No contratas piezas sueltas ni te dejamos un programa para que te apañes.{" "}
-            <strong style={{ color: T.fg, fontWeight: 700 }}>
-              Nos ocupamos de todo el proceso
-            </strong>{" "}
-            con un único objetivo:{" "}
-            {/* En una sola línea: partida a la mitad pierde toda la fuerza. */}
-            <strong
-              className="inline-block whitespace-nowrap"
-              style={{ color: T.lime, fontWeight: 700 }}
-            >
-              que cada euro invertido genere más
-            </strong>
-            .
-          </p>
-
-          {/* Los cuatro pasos, a todo lo ancho para que tengan presencia. El
+          {/* Los tres pasos, a todo lo ancho para que tengan presencia. El
               hilo se rellena con el scroll: eso es lo que hace que se lean como
-              una cadena y no como cuatro servicios en una lista. */}
+              una cadena y no como tres servicios en una lista. */}
           <LineaDeTiempo pasos={PASOS} />
 
           {/* Y aquí el precio, sobre la espalda de lo que acaba de leer. */}
           <div className="mt-16 pt-14" style={{ borderTop: `1px solid ${T.line}` }}>
-            <p className="text-xl font-bold" style={{ color: T.muted }}>
+            <p
+              className="font-bold"
+              style={{ fontSize: "clamp(1.25rem, 2vw, 1.75rem)", color: T.muted }}
+            >
               Todo esto, de principio a fin, por
             </p>
             <p
               className="mt-2 flex flex-wrap items-baseline gap-x-4 font-black leading-[0.85] tracking-[-0.04em]"
               style={{ fontSize: "clamp(4.5rem, 19vw, 11rem)", color: T.lime }}
             >
-              <span className="tabular-nums">199 €</span>
+              <span className="tabular-nums">299 €</span>
               <span
                 className="font-black tracking-[-0.02em]"
                 style={{ fontSize: "clamp(1.5rem, 4vw, 2.5rem)", color: T.fg }}
@@ -329,16 +338,24 @@ export default function GrowthPage() {
             </p>
             <p
               className="mt-4 font-black leading-none"
-              style={{ fontSize: "clamp(1.5rem, 4vw, 2.5rem)" }}
+              style={{ fontSize: "clamp(1.75rem, 4vw, 3rem)" }}
             >
               Sin permanencia.
+            </p>
+            <p
+              className="mt-6 max-w-2xl leading-relaxed"
+              style={{ fontSize: "clamp(1.0625rem, 1.4vw, 1.25rem)", color: T.muted }}
+            >
+              Un canal de captación incluido. Por{" "}
+              <strong style={{ color: T.fg, fontWeight: 700 }}>399 € al mes</strong> añadimos el
+              segundo canal y la confirmación de citas por WhatsApp.
             </p>
 
             <div className="mt-12 grid gap-6 md:grid-cols-3">
               {GARANTIAS.map((g) => (
                 <div key={g.t}>
-                  <p className="font-bold">{g.t}</p>
-                  <p className="mt-2 text-sm leading-relaxed" style={{ color: T.muted }}>
+                  <p className="text-lg font-bold">{g.t}</p>
+                  <p className="mt-2 text-base leading-relaxed" style={{ color: T.muted }}>
                     {g.d}
                   </p>
                 </div>
@@ -348,27 +365,91 @@ export default function GrowthPage() {
         </Wrap>
       </section>
 
-      {/* ───────── 5. El compromiso ─────────
+      {/* ───────── 5. El número que no tienen ─────────
+          La calculadora vive fuera de la landing, así que aquí hay que darle
+          una razón para ir — y la razón es el argumento entero del producto:
+          para hacerte ganar más, primero hay que medir.
+
+          La cifra va en el mismo cuerpo gigante que el precio de la sección
+          anterior, y a propósito: el lector acaba de ver un "299 €" enorme y se
+          encuentra con un "?? €" del mismo tamaño donde debería estar SU
+          número. Ese hueco hace más que cualquier frase. */}
+      <section className="py-24 md:py-32 lg:py-40">
+        <Wrap>
+          <div className="grid items-center gap-12 lg:grid-cols-[1fr_1.1fr] lg:gap-20">
+            <div>
+              <Eyebrow>Empieza por aquí</Eyebrow>
+              <p
+                className="mt-8 font-black leading-[0.85] tracking-[-0.04em]"
+                style={{ fontSize: "clamp(5rem, 16vw, 12rem)", color: T.lime }}
+              >
+                ?? €
+              </p>
+              <p
+                className="mt-4 font-bold"
+                style={{ fontSize: "clamp(1.125rem, 1.6vw, 1.5rem)", color: T.muted }}
+              >
+                lo que te cuesta hoy un paciente nuevo
+              </p>
+            </div>
+
+            <div>
+              <h2
+                className="font-black leading-[1.02] tracking-[-0.03em] text-balance"
+                style={{ fontSize: "clamp(2.25rem, 4.5vw, 4rem)" }}
+              >
+                Para hacerte ganar más, primero hay que{" "}
+                <Subrayado grosor={1.1}>medirlo todo</Subrayado>.
+              </h2>
+
+              <p
+                className="mt-8 max-w-2xl leading-relaxed"
+                style={{ fontSize: "clamp(1.125rem, 1.5vw, 1.375rem)", color: T.muted }}
+              >
+                Y ese número, el más importante de tu clínica, casi nadie lo tiene. No es
+                dejadez:{" "}
+                <strong style={{ color: T.fg, fontWeight: 700 }}>
+                  es que nadie se lo ha calculado nunca
+                </strong>
+                . Sin él, cualquiera puede decirte que su campaña ha ido muy bien.
+              </p>
+
+              <Link
+                href="/growth/calculadora"
+                className="mt-10 inline-flex h-16 items-center justify-center rounded-full px-10 text-lg font-bold transition-transform hover:-translate-y-0.5"
+                style={{ background: T.lime, color: T.ink }}
+              >
+                Calcula el tuyo
+              </Link>
+              <p className="mt-4 text-base" style={{ color: T.muted }}>
+                Tres preguntas. Un minuto. Y si no sabes las respuestas, eso ya es el
+                diagnóstico.
+              </p>
+            </div>
+          </div>
+        </Wrap>
+      </section>
+
+      {/* ───────── 6. El compromiso ─────────
           Va justo después del precio y las garantías: es la respuesta a la
-          desconfianza que deja cualquier tarifa, y por eso se lleva la pantalla
-          entera para ella sola —en apaisado, por lo mismo que la bisagra. */}
-      <section className="flex items-center py-24 lg:landscape:min-h-[100svh]">
+          desconfianza que deja cualquier tarifa.
+
+          Ya no reserva la pantalla entera: al quitarle el botón de debajo se
+          quedaba media pantalla de negro entre la calculadora y la frase, que
+          es justo el hueco que esta página tenía de más por todas partes. */}
+      <section className="flex items-center py-28 md:py-36 lg:py-44">
         <Wrap>
           <p
-            className="font-black leading-[0.95] tracking-[-0.03em] text-balance"
-            style={{ fontSize: "clamp(2.5rem, 8vw, 6.5rem)" }}
+            className="font-black leading-[0.95] tracking-[-0.035em] text-balance"
+            style={{ fontSize: "clamp(2.75rem, 7.5vw, 7rem)" }}
           >
             Vas a querer quedarte{" "}
             <span style={{ color: T.lime }}>por los resultados</span>, no porque te obliguemos.
           </p>
 
-          <Link
-            href="/growth/calculadora"
-            className="mt-14 inline-flex h-14 items-center justify-center rounded-full px-9 text-base font-bold transition-transform hover:-translate-y-0.5"
-            style={{ background: T.lime, color: T.ink }}
-          >
-            Calcula qué te cuesta un paciente
-          </Link>
+          {/* Sin botón: la sección anterior acaba de llevar a la calculadora
+              y repetirlo aquí convertiría el cierre en otra llamada a la
+              acción. Esta frase se lee mejor sola. */}
         </Wrap>
       </section>
 
