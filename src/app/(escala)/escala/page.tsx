@@ -347,28 +347,23 @@ export default function GrowthPage() {
             <span style={{ color: T.lime }}>De principio a fin.</span>
           </h2>
 
-          <Pasos pasos={PASOS} />
+          {/* El subtítulo, y lo que de verdad compra una clínica: no un
+              sistema, sino dejar de ocuparse de esto.
 
-          {/* El remate de la sección, y lo que de verdad compra una clínica: no
-              un sistema, sino dejar de ocuparse de esto. Va después de los tres
-              pasos porque solo funciona cuando acabas de ver todo lo que hay que
-              hacer — antes sería una promesa, aquí es un alivio.
-
-              Empieza por "tú" y no por "nosotros", y no es un matiz: puesta al
-              revés, la frase habla de lo que hacemos nosotros. Así habla de lo
-              que sabe hacer él, y nuestra parte queda donde tiene que quedar
-              —"todo lo demás"— sin enumerarla otra vez.
-
-              Sin `max-w`: ocupa el ancho entero de la página. Se probó a darle
-              una sección propia a pantalla completa y era peor — la frase no
-              necesita más tamaño, necesita más línea. */}
+              Estuvo suelto después de los tres pasos, de remate. Aquí funciona
+              mejor por una razón que no es de maquetación: "todo lo demás" pide
+              que le expliquen qué es, y justo debajo están los tres pasos
+              diciéndolo. Antes cerraba; ahora abre. */}
           <p
-            className="mt-16 font-black leading-[1.15] tracking-[-0.02em] text-balance"
-            style={{ fontSize: "clamp(1.75rem, 3.2vw, 3rem)" }}
+            className="mt-8 font-bold leading-[1.2] tracking-[-0.015em] text-balance"
+            style={{ fontSize: "clamp(1.375rem, 2.4vw, 2.25rem)" }}
           >
             Tú encárgate de darle un buen servicio a tus pacientes.{" "}
             <span style={{ color: T.lime }}>Nosotros, de todo lo demás.</span>
           </p>
+
+          <Pasos pasos={PASOS} />
+
         </Wrap>
       </section>
 
