@@ -25,10 +25,14 @@ export const metadata: Metadata = {
  * Ancho máximo propio: no usamos el Container del sitio para no heredar su
  * escala, pensada para páginas corporativas.
  *
- * 1408 px y no 1152: con el ancho anterior, en un portátil normal quedaban
- * cuatro dedos de negro a cada lado y todo el contenido apretado en el centro.
- * La página parecía alejada, como si el navegador tuviera el zoom bajado. Un
- * ancho mayor con más aire dentro llena la pantalla sin apretar nada.
+ * 1760 px y no 1152: con el ancho de antes, en una pantalla de 1920 quedaban
+ * 256 px muertos a cada lado —más de una cuarta parte del monitor— y todo el
+ * contenido apretado en el centro. La página parecía alejada, como si el
+ * navegador tuviera el zoom bajado.
+ *
+ * Se topa igualmente, y no se deja crecer sin límite: una línea de texto de
+ * 2000 px no se lee, se recorre con el cuello. Lo que se busca es llenar un
+ * monitor normal, no cualquier monitor.
  */
 function Wrap({
   children,
@@ -41,7 +45,7 @@ function Wrap({
 }) {
   return (
     <div
-      className={`mx-auto w-full px-6 sm:px-10 lg:px-14 ${narrow ? "max-w-4xl" : "max-w-[88rem]"} ${className}`}
+      className={`mx-auto w-full px-6 sm:px-10 lg:px-14 ${narrow ? "max-w-4xl" : "max-w-[110rem]"} ${className}`}
     >
       {children}
     </div>
@@ -172,17 +176,24 @@ export default function GrowthPage() {
               puede impedir que se corte sin que se salga nunca.
 
               El tamaño está calculado para que "Llenar tu agenda es fácil."
-              quepa entero en esa columna. Si algún día cambia esa frase, hay
-              que volver a mirarlo. */}
-          <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_23rem] lg:gap-16">
+              quepa entero en esa columna en TODOS los anchos donde hay dos
+              columnas, no solo en el más grande. El caso que manda es el más
+              estrecho de los dos —1280 px—, y de ahí sale el 4,4vw. Si algún
+              día cambia esa frase, hay que rehacer la cuenta.
+
+              Y las dos columnas empiezan en xl y no en lg: entre 1024 y 1280 la
+              columna del titular se quedaba tan estrecha que había que
+              encogerlo hasta que dejaba de tener fuerza. Apilado ocupa todo el
+              ancho y se ve grande. */}
+          <div className="grid items-center gap-12 xl:grid-cols-[minmax(0,1fr)_23rem] xl:gap-16">
             <div>
               <h1
                 className="font-black leading-[0.9] tracking-[-0.035em]"
-                style={{ fontSize: "clamp(2.5rem, 5vw, 3.75rem)" }}
+                style={{ fontSize: "clamp(2.5rem, 4.4vw, 5.25rem)" }}
               >
-                <span className="lg:whitespace-nowrap">Llenar tu agenda es fácil.</span>
+                <span className="xl:whitespace-nowrap">Llenar tu agenda es fácil.</span>
                 <br />
-                <span className="lg:whitespace-nowrap" style={{ color: T.lime }}>
+                <span className="xl:whitespace-nowrap" style={{ color: T.lime }}>
                   Ganar más, no.
                 </span>
               </h1>
