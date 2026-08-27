@@ -348,24 +348,18 @@ export default function GrowthPage() {
           </h2>
 
           <Pasos pasos={PASOS} />
-        </Wrap>
-      </section>
 
-      {/* ───────── 4. El alivio ─────────
-          Lo que de verdad compra una clínica no es un sistema: es dejar de
-          ocuparse de esto. Se lleva la pantalla entera porque es la única frase
-          de la página que no explica nada — se siente o no se siente, y para
-          eso necesita silencio alrededor.
+          {/* El remate de la sección, y lo que de verdad compra una clínica: no
+              un sistema, sino dejar de ocuparse de esto. Va después de los tres
+              pasos porque solo funciona cuando acabas de ver todo lo que hay que
+              hacer — antes sería una promesa, aquí es un alivio.
 
-          Va después de los tres pasos y no antes: solo funciona cuando acabas
-          de ver todo lo que hay que hacer. Antes sería una promesa más; aquí es
-          un alivio. */}
-      <section className="relative flex items-center overflow-hidden py-28 md:py-36 lg:landscape:min-h-[86svh]">
-        <Trama motivo="rayas" desde="30% 50%" />
-        <Wrap className="relative">
+              Sin `max-w`: ocupa el ancho entero de la página. Se probó a darle
+              una sección propia a pantalla completa y era peor — la frase no
+              necesita más tamaño, necesita más línea. */}
           <p
-            className="max-w-5xl font-black leading-[1.1] tracking-[-0.03em] text-balance"
-            style={{ fontSize: "clamp(2.25rem, 5.5vw, 5rem)" }}
+            className="mt-16 font-black leading-[1.15] tracking-[-0.02em] text-balance"
+            style={{ fontSize: "clamp(1.75rem, 3.2vw, 3rem)" }}
           >
             Nosotros nos encargamos de todo.{" "}
             <span style={{ color: T.lime }}>
@@ -375,7 +369,7 @@ export default function GrowthPage() {
         </Wrap>
       </section>
 
-      {/* ───────── 5. Los planes ─────────
+      {/* ───────── 4. Los planes ─────────
           El título va DENTRO de la tabla, en la casilla vacía de la esquina.
           Esa celda existe solo para alinear las columnas, así que estaba
           desaprovechada — y puesto ahí, el título no separa la tabla de lo que
@@ -390,7 +384,7 @@ export default function GrowthPage() {
         </Wrap>
       </section>
 
-      {/* ───────── 6. El compromiso ─────────
+      {/* ───────── 5. El compromiso ─────────
           Va justo después del precio y las garantías: es la respuesta a la
           desconfianza que deja cualquier tarifa.
 

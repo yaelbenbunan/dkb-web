@@ -15,6 +15,16 @@ import { GROWTH_THEME as T } from "@/lib/growth-config";
  * Y cada columna termina en su botón. La tabla es donde se decide, así que
  * obligar a subir a buscar el formulario después de haber decidido es perder
  * gente por el camino.
+ *
+ * **Los dos planes se venden igual de bien.** Se llegó a marcar mucho el
+ * avanzado —columna teñida, precio en lima, botón de color solo en él— y era un
+ * error de negocio: nos interesa que contraten, sea el que sea, y un básico
+ * apagado al lado de un avanzado encendido dice "el barato es el de segunda".
+ * Quien no se puede permitir 299 no sube de plan al ver eso: se va.
+ *
+ * Así que los dos llevan el mismo precio en lima, el mismo botón y el mismo
+ * peso. Lo único que distingue al avanzado es una etiqueta discreta y un fondo
+ * apenas teñido: suficiente para guiar, no tanto como para descartar el otro.
  */
 
 const PLANES = [
@@ -77,7 +87,7 @@ export function Planes() {
                 <th
                   key={plan.id}
                   className="px-6 pb-7 align-bottom"
-                  style={plan.destacado ? { background: `${T.lime}0f` } : undefined}
+                  style={plan.destacado ? { background: `${T.lime}08` } : undefined}
                 >
                   <Encabezado plan={plan} />
                 </th>
@@ -102,7 +112,7 @@ export function Planes() {
                   <td
                     key={plan.id}
                     className="px-6 py-4 align-middle"
-                    style={plan.destacado ? { background: `${T.lime}0f` } : undefined}
+                    style={plan.destacado ? { background: `${T.lime}08` } : undefined}
                   >
                     <Celda
                       valor={plan.id === "basico" ? fila.basico : fila.avanzado}
@@ -120,9 +130,9 @@ export function Planes() {
                 <td
                   key={plan.id}
                   className="px-6 pb-7 pt-7 align-top"
-                  style={plan.destacado ? { background: `${T.lime}0f` } : undefined}
+                  style={plan.destacado ? { background: `${T.lime}08` } : undefined}
                 >
-                  <Boton plan={plan} />
+                  <Boton />
                 </td>
               ))}
             </tr>
@@ -150,8 +160,8 @@ export function Planes() {
             key={plan.id}
             className="rounded-3xl p-6"
             style={{
-              background: plan.destacado ? `${T.lime}0f` : T.ink,
-              border: `1px solid ${plan.destacado ? `${T.lime}66` : T.line}`,
+              background: plan.destacado ? `${T.lime}08` : T.ink,
+              border: `1px solid ${plan.destacado ? `${T.lime}33` : T.line}`,
             }}
           >
             <Encabezado plan={plan} />
@@ -176,16 +186,16 @@ export function Planes() {
               })}
             </ul>
             <div className="mt-7">
-              <Boton plan={plan} />
+              <Boton />
             </div>
           </div>
         ))}
       </div>
 
-      <p
-        className="mt-10 max-w-4xl text-sm leading-relaxed"
-        style={{ color: T.muted, opacity: 0.75 }}
-      >
+      {/* A todo el ancho y en letra pequeña: es la letra pequeña de verdad, la
+          que se lee de corrido si a alguien le interesa. Encajonada en una
+          columna estrecha volvía a parecer un bloque con importancia propia. */}
+      <p className="mt-10 text-sm leading-relaxed" style={{ color: T.muted, opacity: 0.75 }}>
         {CONDICIONES}
       </p>
     </div>
@@ -198,26 +208,23 @@ function Encabezado({ plan }: { plan: (typeof PLANES)[number] }) {
       <p className="flex items-center gap-3">
         <span
           className="text-sm font-black uppercase tracking-[0.2em]"
-          style={{ color: plan.destacado ? T.lime : T.muted }}
+          style={{ color: T.muted }}
         >
           {plan.nombre}
         </span>
         {plan.destacado && (
           <span
-            className="rounded-full px-2.5 py-1 text-[0.7rem] font-black uppercase tracking-[0.12em]"
-            style={{ background: T.lime, color: T.ink }}
+            className="rounded-full px-2.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-[0.12em]"
+            style={{ color: T.lime, border: `1px solid ${T.lime}55` }}
           >
-            El completo
+            Más completo
           </span>
         )}
       </p>
       <p className="mt-3 flex items-baseline gap-2">
         <span
           className="font-black leading-none tabular-nums tracking-[-0.03em]"
-          style={{
-            fontSize: "clamp(2.75rem, 5vw, 4.25rem)",
-            color: plan.destacado ? T.lime : T.fg,
-          }}
+          style={{ fontSize: "clamp(2.75rem, 5vw, 4.25rem)", color: T.lime }}
         >
           {plan.precio}
         </span>
@@ -229,17 +236,16 @@ function Encabezado({ plan }: { plan: (typeof PLANES)[number] }) {
   );
 }
 
-/** Lleva al formulario de arriba, que es el único sitio donde se deja el teléfono. */
-function Boton({ plan }: { plan: (typeof PLANES)[number] }) {
+/**
+ * Lleva al formulario de arriba, que es el único sitio donde se deja el
+ * teléfono. Es idéntico en los dos planes: ya no depende de cuál sea.
+ */
+function Boton() {
   return (
     <a
       href="#empezar"
       className="inline-flex w-full items-center justify-center rounded-full px-6 py-3.5 text-base font-bold transition-transform hover:-translate-y-0.5"
-      style={
-        plan.destacado
-          ? { background: T.lime, color: T.ink }
-          : { background: "transparent", color: T.fg, border: `1px solid ${T.line}` }
-      }
+      style={{ background: T.lime, color: T.ink }}
     >
       Me interesa este plan
     </a>
