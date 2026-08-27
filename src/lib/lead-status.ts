@@ -9,6 +9,7 @@ export const LEAD_STATUSES = [
   "contactado",
   "seguimiento",
   "kit-digital",
+  "cliente-kit-digital",
   "ilocalizable",
   "propuesta",
   "ganado",
@@ -24,6 +25,7 @@ export const STATUS_LABELS: Record<string, string> = {
   contactado: "Contactado",
   seguimiento: "Volver a llamar",
   "kit-digital": "Interés en Kit Digital",
+  "cliente-kit-digital": "Cliente Kit Digital",
   ilocalizable: "Ilocalizable",
   propuesta: "Propuesta",
   ganado: "Ganado",
@@ -41,6 +43,7 @@ export const STATUS_COLORS: Record<string, string> = {
   contactado: "#0891b2", // cian
   seguimiento: "#db2777", // rosa
   "kit-digital": "#7c3aed", // violeta
+  "cliente-kit-digital": "#0d9488", // verde azulado
   ilocalizable: "#64748b", // gris pizarra
   propuesta: "#d97706", // ámbar
   ganado: "#16a34a", // verde

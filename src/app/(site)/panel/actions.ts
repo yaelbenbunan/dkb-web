@@ -15,12 +15,15 @@ import {
   archiveLeads,
   deleteLeads,
   createManualLead,
+  createLeadsBulk,
+  listLeadContacts,
   listLeads,
   setLeadConsent,
   LEAD_STATUSES,
   type LeadStatus,
 } from "@/lib/imagina-leads";
 import { ACCOUNT_MANAGERS } from "@/lib/account-managers";
+import { dedupeKey, parseLeadsCsv, type CsvRowError } from "@/lib/leads-csv";
 import { sendKitDigital2026Email } from "@/lib/kit-digital-2026-resend";
 
 export async function panelLogin(formData: FormData) {
@@ -158,6 +161,76 @@ export async function createLeadAction(
   }
   revalidatePath("/panel");
   return { ok: true };
+}
+
+export interface ImportLeadsResult {
+  ok: boolean;
+  /** Leads dados de alta. */
+  inserted: number;
+  /** Filas descartadas por coincidir con un lead que ya está en el CRM. */
+  duplicates: number;
+  /** Filas descartadas por el propio fichero (formato, estado desconocido…). */
+  errors: CsvRowError[];
+  error?: string;
+}
+
+/**
+ * Importación masiva desde CSV. Recibe el texto crudo del fichero y lo vuelve a
+ * parsear en el servidor: la previsualización del panel es solo información
+ * para quien sube el fichero, nunca la fuente de lo que se inserta.
+ */
+export async function importLeadsAction(formData: FormData): Promise<ImportLeadsResult> {
+  const csv = String(formData.get("csv") ?? "");
+  const skipDuplicates = String(formData.get("skip_duplicates") ?? "true") === "true";
+
+  if (!csv.trim()) {
+    return { ok: false, inserted: 0, duplicates: 0, errors: [], error: "El fichero está vacío." };
+  }
+
+  const { rows, errors } = parseLeadsCsv(csv);
+
+  let toInsert = rows;
+  let duplicates = 0;
+  if (skipDuplicates && rows.length > 0) {
+    const existing = new Set(
+      (await listLeadContacts()).map((l) => dedupeKey(l)).filter((k): k is string => !!k),
+    );
+    toInsert = rows.filter((r) => {
+      const key = dedupeKey(r);
+      if (key && existing.has(key)) {
+        duplicates++;
+        return false;
+      }
+      return true;
+    });
+  }
+
+  if (toInsert.length === 0) {
+    revalidatePath("/panel");
+    return {
+      ok: rows.length > 0,
+      inserted: 0,
+      duplicates,
+      errors,
+      error: rows.length === 0 ? "No hay ninguna fila válida que importar." : undefined,
+    };
+  }
+
+  const res = await createLeadsBulk(toInsert);
+  revalidatePath("/panel");
+  if (!res.ok) {
+    return {
+      ok: false,
+      inserted: res.inserted,
+      duplicates,
+      errors,
+      error:
+        res.error === "supabase_not_configured"
+          ? "Supabase no está configurado."
+          : "No se pudieron guardar todos los leads. Revisa cuántos entraron antes de reintentar.",
+    };
+  }
+  return { ok: true, inserted: res.inserted, duplicates, errors };
 }
 
 export async function resendKitDigitalEmailAction(

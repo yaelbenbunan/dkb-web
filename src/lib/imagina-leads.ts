@@ -347,6 +347,73 @@ export async function createManualLead(
   return { ok: true, id: row.id };
 }
 
+export interface BulkLeadInput extends ManualLeadInput {
+  status?: string | null;
+  consent?: boolean | null;
+}
+
+/** Email y teléfono de todos los leads (incluidos los archivados), para detectar
+ *  duplicados antes de una importación masiva. Solo dos columnas: una tabla de
+ *  miles de filas cabe de sobra y evita traerse los PDFs y las notas. */
+export async function listLeadContacts(
+  limit = 10000,
+): Promise<Array<{ email: string | null; phone: string | null }>> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return [];
+  const { data, error } = await sb.from(TABLE).select("email,phone").limit(limit);
+  if (error) {
+    console.error("[imagina-leads] listLeadContacts error:", error.message);
+    return [];
+  }
+  return (data ?? []) as Array<{ email: string | null; phone: string | null }>;
+}
+
+/**
+ * Alta masiva desde CSV. Inserta en lotes para no mandar un único payload
+ * enorme a Supabase; si un lote falla se aborta y se devuelve cuántos habían
+ * entrado ya, porque dejar el resto a medias en silencio haría imposible saber
+ * qué hay que reimportar.
+ */
+export async function createLeadsBulk(
+  inputs: BulkLeadInput[],
+  chunkSize = 200,
+): Promise<{ ok: boolean; inserted: number; error?: string }> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return { ok: false, inserted: 0, error: "supabase_not_configured" };
+  if (inputs.length === 0) return { ok: true, inserted: 0 };
+
+  const clean = (v?: string | null) => {
+    const t = (v ?? "").trim();
+    return t || null;
+  };
+  const rows = inputs.map((input) => ({
+    id: crypto.randomUUID(),
+    name: clean(input.name),
+    email: clean(input.email),
+    phone: clean(input.phone),
+    current_website: clean(input.website),
+    channel: clean(input.channel) ?? "Web",
+    campaign: clean(input.campaign),
+    notes: clean(input.notes),
+    status: LEAD_STATUSES.includes(input.status as LeadStatus)
+      ? (input.status as LeadStatus)
+      : "nuevo",
+    consent: input.consent ?? null,
+  }));
+
+  let inserted = 0;
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const chunk = rows.slice(i, i + chunkSize);
+    const { error } = await sb.from(TABLE).insert(chunk);
+    if (error) {
+      console.error("[imagina-leads] createLeadsBulk error:", error.message);
+      return { ok: false, inserted, error: error.message };
+    }
+    inserted += chunk.length;
+  }
+  return { ok: true, inserted };
+}
+
 /** Archive (or unarchive) one or more leads. Archived leads are hidden from
  *  the panel by default. Returns the number of rows updated. */
 export async function archiveLeads(

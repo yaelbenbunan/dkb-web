@@ -35,6 +35,7 @@ import {
   todayInMadrid,
 } from "@/lib/followup-agenda";
 import { Agenda } from "./Agenda";
+import { ImportLeadsPanel } from "./ImportLeadsPanel";
 
 export interface LeadRowView {
   id: string;
@@ -143,6 +144,7 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
   const [emailableOnly, setEmailableOnly] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [busy, start] = useTransition();
   const [view, setView] = useState<"tabla" | "agenda">("tabla");
   const [hiddenCols, setHiddenCols] = useState<Set<ColKey>>(new Set());
@@ -434,13 +436,33 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
           ⚙ Columnas{hiddenCols.size > 0 ? ` (${hiddenCols.size} ocultas)` : ""}
         </button>
         {!showArchived && selected.size === 0 && (
-          <button
-            type="button"
-            onClick={() => setAdding((v) => !v)}
-            style={btnStyle(adding ? "#e2e8f0" : "#187bef", adding ? "#334155" : "#fff", false, adding ? "#cbd5e1" : "#187bef")}
-          >
-            {adding ? "Cancelar" : "+ Añadir lead"}
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                setImporting((v) => !v);
+                setAdding(false);
+              }}
+              style={btnStyle(
+                importing ? "#e2e8f0" : "#fff",
+                "#334155",
+                false,
+                "#cbd5e1",
+              )}
+            >
+              {importing ? "Cerrar importación" : "⬆ Importar CSV"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAdding((v) => !v);
+                setImporting(false);
+              }}
+              style={btnStyle(adding ? "#e2e8f0" : "#187bef", adding ? "#334155" : "#fff", false, adding ? "#cbd5e1" : "#187bef")}
+            >
+              {adding ? "Cancelar" : "+ Añadir lead"}
+            </button>
+          </>
         )}
       </div>
 
@@ -450,6 +472,10 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
           onToggle={toggleCol}
           onShowAll={() => persistCols(new Set())}
         />
+      )}
+
+      {importing && !showArchived && (
+        <ImportLeadsPanel onDone={() => setImporting(false)} />
       )}
 
       {adding && !showArchived && (
