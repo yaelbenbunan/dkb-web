@@ -317,6 +317,10 @@ export function growthLead(
     ticket: number | null;
     costePorPaciente: number | null;
     rama: Rama;
+    /** Qué tipo de centro dice tener. Solo lo pregunta el formulario del hero. */
+    sector?: string | null;
+    /** Dónde dejó los datos: cambia la primera frase de la llamada. */
+    origen?: "hero" | "calculadora";
   },
   utm?: UtmInput,
 ): WebhookLeadInput {
@@ -336,7 +340,13 @@ export function growthLead(
     // llamada: quien contesta "no lo sé" necesita otra conversación que quien
     // contesta "88 €".
     notes: [
-      "Origen: landing /growth (calculadora de coste por paciente)",
+      d.origen === "hero"
+        ? "Origen: landing /growth (formulario de arriba, sin calculadora)"
+        : "Origen: landing /growth (calculadora de coste por paciente)",
+      // El sector va justo detrás del origen porque es lo primero que cambia la
+      // llamada: a una clínica dental y a un centro de estética no se les
+      // enseña el mismo caso.
+      ...(d.sector ? [`Tipo de centro: ${d.sector}`] : []),
       `Inversión: ${d.inversion === null ? "no invierte todavía" : `${d.inversion} €/mes`}`,
       `Pacientes/mes: ${d.pacientes === null ? "no lo sabe" : d.pacientes}`,
       `Ticket medio: ${d.ticket === null ? "no lo dijo" : `${d.ticket} €`}`,

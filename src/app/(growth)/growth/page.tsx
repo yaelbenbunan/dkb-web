@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { GROWTH, GROWTH_THEME as T } from "@/lib/growth-config";
-import { CalculadoraWizard } from "./_components/CalculadoraWizard";
 import { LineaDeTiempo } from "./_components/LineaDeTiempo";
 import { Subrayado } from "./_components/Subrayado";
+import { FormularioHero } from "./_components/FormularioHero";
 
 export const metadata: Metadata = {
   title: "Llenar tu agenda es fácil. Ganar más, no",
@@ -143,41 +144,50 @@ export default function GrowthPage() {
           style={{ background: T.lime, opacity: 0.1 }}
         />
         <Wrap className="relative">
-          {/* Sin etiqueta de audiencia por encima: daba por hecho que la
-              clínica ya invierte en publicidad, y muchas de las que interesan
-              todavía no lo hacen. La palabra "pacientes" del subtítulo ya
-              señala a quién va dirigido. */}
-          <h1
-            className="font-black leading-[0.92] tracking-[-0.03em]"
-            style={{ fontSize: "clamp(2.5rem, 7.5vw, 5.75rem)" }}
-          >
-            Llenar tu agenda es fácil.
-            <br />
-            <span style={{ color: T.lime }}>Ganar más, no.</span>
-          </h1>
+          {/* Dos columnas en pantalla ancha: el argumento a la izquierda y el
+              formulario a la derecha, los dos por encima del pliegue. Quien
+              llega convencido no debería tener que buscar dónde dejar su
+              teléfono, y antes lo único que había arriba era un botón que
+              llevaba a una calculadora de tres preguntas. */}
+          <div className="grid items-center gap-12 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
+            <div>
+              {/* Sin etiqueta de audiencia por encima: daba por hecho que la
+                  clínica ya invierte en publicidad, y muchas de las que
+                  interesan todavía no lo hacen. La palabra "pacientes" del
+                  subtítulo ya señala a quién va dirigido. */}
+              <h1
+                className="font-black leading-[0.92] tracking-[-0.03em]"
+                style={{ fontSize: "clamp(2.5rem, 6vw, 4.75rem)" }}
+              >
+                Llenar tu agenda es fácil.
+                <br />
+                <span style={{ color: T.lime }}>Ganar más, no.</span>
+              </h1>
 
-          <p
-            className="mt-7 max-w-2xl leading-relaxed"
-            style={{ fontSize: "clamp(1.0625rem, 1.9vw, 1.375rem)", color: T.muted }}
-          >
-            Cualquiera te trae pacientes. Nosotros, además, te decimos{" "}
-            <strong style={{ color: T.fg, fontWeight: 700 }}>
-              cuáles te dejan dinero y cuáles te lo quitan
-            </strong>
-            , para que tomes mejores decisiones.
-          </p>
+              <p
+                className="mt-6 max-w-xl leading-relaxed"
+                style={{ fontSize: "clamp(1.0625rem, 1.7vw, 1.25rem)", color: T.muted }}
+              >
+                Cualquiera te trae pacientes. Nosotros, además, te decimos{" "}
+                <strong style={{ color: T.fg, fontWeight: 700 }}>
+                  cuáles te dejan dinero y cuáles te lo quitan
+                </strong>
+                , para que tomes mejores decisiones.
+              </p>
 
-          <div className="mt-9 flex flex-col gap-4 sm:flex-row sm:items-center">
-            <a
-              href="#calculadora"
-              className="inline-flex h-14 items-center justify-center rounded-full px-9 text-base font-bold transition-transform hover:-translate-y-0.5"
-              style={{ background: T.lime, color: T.ink }}
-            >
-              Calcula qué te cuesta un paciente
-            </a>
-            <span className="text-sm" style={{ color: T.muted }}>
-              Gratis y en 1 minuto
-            </span>
+              <p className="mt-6 text-sm" style={{ color: T.muted }}>
+                ¿Prefieres verlo con tus números primero?{" "}
+                <Link
+                  href="/growth/calculadora"
+                  className="font-bold underline underline-offset-4"
+                  style={{ color: T.lime }}
+                >
+                  Calcula qué te cuesta un paciente
+                </Link>
+              </p>
+            </div>
+
+            <FormularioHero />
           </div>
         </Wrap>
       </header>
@@ -247,24 +257,6 @@ export default function GrowthPage() {
               </div>
             ))}
           </div>
-        </Wrap>
-      </section>
-
-      {/* ───────── 3. La bisagra: la frase, a pantalla completa en apaisado ─────────
-          En vertical la frase se queda en 114 px de texto: reservarle la pantalla
-          entera eran 730 px de negro alrededor. Ahí manda el relleno. */}
-      <section className="flex items-center py-24 lg:landscape:min-h-[100svh]">
-        <Wrap>
-          <p
-            className="font-black leading-[0.95] tracking-[-0.03em] text-balance"
-            style={{ fontSize: "clamp(2.5rem, 9vw, 7rem)" }}
-          >
-            El objetivo no es
-            <br />
-            llenarte la agenda.
-            <br />
-            <span style={{ color: T.lime }}>Es que ganes más.</span>
-          </p>
         </Wrap>
       </section>
 
@@ -370,38 +362,16 @@ export default function GrowthPage() {
             <span style={{ color: T.lime }}>por los resultados</span>, no porque te obliguemos.
           </p>
 
-          <a
-            href="#calculadora"
+          <Link
+            href="/growth/calculadora"
             className="mt-14 inline-flex h-14 items-center justify-center rounded-full px-9 text-base font-bold transition-transform hover:-translate-y-0.5"
             style={{ background: T.lime, color: T.ink }}
           >
             Calcula qué te cuesta un paciente
-          </a>
+          </Link>
         </Wrap>
       </section>
 
-      {/* ───────── 6. La calculadora ───────── */}
-      <section id="calculadora" className="scroll-mt-8 pb-24 pt-8 md:pb-32">
-        <Wrap narrow>
-          <Eyebrow>Empieza por aquí</Eyebrow>
-
-          <h2
-            className="mt-8 font-black leading-[1.05] tracking-[-0.02em] text-balance"
-            style={{ fontSize: "clamp(2rem, 5.5vw, 3.5rem)" }}
-          >
-            ¿Cuánto te cuesta hoy conseguir un paciente?
-          </h2>
-
-          <p className="mt-6 text-lg leading-relaxed" style={{ color: T.muted }}>
-            Tres preguntas. Si no sabes las respuestas, también nos vale — de hecho, eso ya es
-            el diagnóstico.
-          </p>
-
-          <div className="mt-10">
-            <CalculadoraWizard />
-          </div>
-        </Wrap>
-      </section>
     </>
   );
 }

@@ -24,6 +24,10 @@ const schema = z
     inversion: z.string(),
     pacientes: z.string(),
     ticket: z.string(),
+    // Solo lo manda el formulario de arriba; la calculadora no lo pregunta
+    // para no añadirle un paso más.
+    sector: z.string().trim().max(40).optional(),
+    origen: z.enum(["hero", "calculadora"]).default("calculadora"),
     consent: z.literal(true),
     website: z.string().max(0, "Honeypot field must be empty"),
     // positive() y no solo number(): un campo ausente da Number(null) = 0, que
@@ -51,6 +55,8 @@ export async function requestGrowth(formData: FormData): Promise<GrowthResult> {
     inversion: String(formData.get("inversion") ?? ""),
     pacientes: String(formData.get("pacientes") ?? ""),
     ticket: String(formData.get("ticket") ?? ""),
+    sector: formData.get("sector") ? String(formData.get("sector")) : undefined,
+    origen: formData.get("origen") === "hero" ? "hero" : "calculadora",
     consent: formData.get("consent") === "on" || formData.get("consent") === "true",
     website: formData.get("website") ?? "",
     formLoadedAt: Number(formData.get("formLoadedAt")),
@@ -76,6 +82,8 @@ export async function requestGrowth(formData: FormData): Promise<GrowthResult> {
       ticket,
       costePorPaciente: resultado.costePorPaciente,
       rama: resultado.rama,
+      sector: d.sector ?? null,
+      origen: d.origen,
     },
     utmFromFormData(formData),
   );
@@ -112,7 +120,10 @@ export async function requestGrowth(formData: FormData): Promise<GrowthResult> {
         from,
         to,
         replyTo: d.email,
-        subject: `Growth — ${d.name} (rama ${resultado.rama})`,
+        subject:
+          d.origen === "hero"
+            ? `Growth — ${d.name}${d.sector ? ` (${d.sector})` : ""}`
+            : `Growth — ${d.name} (rama ${resultado.rama})`,
         text: [
           `Nombre: ${d.name}`,
           `Email: ${d.email}`,
