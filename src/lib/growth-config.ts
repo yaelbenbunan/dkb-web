@@ -33,8 +33,15 @@ export const GROWTH = {
  *    claro en LOS DOS temas. Aquí los colores son explícitos y no dependen de
  *    nada externo, así que ese fallo no puede repetirse.
  *
- * El lima es el color del dinero y de lo que se gana; el rojo se reserva para
+ * El lima es el color del dinero y de lo que se gana; el ámbar se reserva para
  * la fuga, es decir para todo lo que ilustra el problema. No mezclarlos.
+ *
+ * **El ámbar era rojo, y el rojo estaba mal.** El rojo dice "error, algo se ha
+ * roto", y aquí lo que se está contando es otra cosa: una clínica que va bien y
+ * aun así pierde dinero sin saberlo. Pintar eso de rojo suena a reproche —a
+ * "lo estás haciendo fatal"— justo en la sección donde el lector tiene que
+ * reconocerse sin ponerse a la defensiva. El ámbar dice "mira esto", que es lo
+ * que hace falta.
  */
 export const GROWTH_THEME = {
   /** Fondo principal, casi negro. */
@@ -46,7 +53,7 @@ export const GROWTH_THEME = {
   /** Acento principal: lo que se gana. */
   lime: "#C7F73E",
   /** Acento del problema: lo que se fuga. */
-  red: "#FF5C4D",
+  alerta: "#E9B44C",
   /** Texto principal. */
   fg: "#F5F7F8",
   /** Texto secundario. */

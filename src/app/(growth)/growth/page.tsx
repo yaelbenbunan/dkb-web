@@ -59,7 +59,7 @@ const TICKET_COMPARATIVA = "250 €";
 const COMPARATIVA = [
   {
     titulo: "La que llena la agenda",
-    color: T.red,
+    color: T.alerta,
     pacientes: "40",
     gasto: "8.000 €",
     factura: "10.000 €",
@@ -184,14 +184,14 @@ export default function GrowthPage() {
       {/* ───────── 2. El problema ───────── */}
       <section className="py-20 md:py-28" style={{ background: T.surface }}>
         <Wrap>
-          <Eyebrow color={T.red}>El problema</Eyebrow>
+          <Eyebrow color={T.alerta}>El problema</Eyebrow>
 
           <h2
             className="mt-8 max-w-4xl font-black leading-[1.05] tracking-[-0.02em] text-balance"
             style={{ fontSize: "clamp(2rem, 5.5vw, 4rem)" }}
           >
             Puedes tener la agenda llena y{" "}
-            <span style={{ color: T.red }}>estar perdiendo dinero</span>.
+            <span style={{ color: T.alerta }}>estar perdiendo dinero</span>.
           </h2>
 
           <p className="mt-6 max-w-2xl text-lg leading-relaxed" style={{ color: T.muted }}>
