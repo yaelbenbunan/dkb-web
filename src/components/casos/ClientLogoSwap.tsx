@@ -32,11 +32,14 @@ function toNegativePath(src: string): string {
  * conpakser: el isotipo es azul, pero el logotipo va en #1e1e1e, así que al
  * hacer swap sobre oscuro desaparecería la mitad del logo (la que dice el
  * nombre).
+ * kaino: su azul de marca es #1018a0, que contra el fondo dark (#0e1015) da
+ * 1.8:1 — el logo se apagaría justo al pasar el ratón por encima.
  */
 const MONOCHROME_LOGOS = [
   "/img/casos/hydrup/",
   "/img/casos/enfocalife/",
   "/img/casos/conpakser/",
+  "/img/casos/kaino/",
 ];
 
 function isMonochrome(src: string): boolean {
