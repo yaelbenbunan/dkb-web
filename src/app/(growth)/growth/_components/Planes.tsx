@@ -67,12 +67,14 @@ const INCLUYE: {
     avanzado: true,
   },
   {
-    // El sistema ya guarda qué tratamiento se hizo en cada cita, así que esto
-    // no es una promesa nueva: es enseñar un dato que ya está dentro.
+    // Igual en los dos, y a propósito: es LA razón de ser del producto, así que
+    // recortárselo al plan de entrada sería vender a medias justo lo que nos
+    // diferencia. Se partió un rato en "por campaña" y "por campaña y
+    // tratamiento", y era un matiz que nadie iba a pesar en una tabla.
     t: "Panel de rentabilidad",
     d: "Quién acudió, cuánto facturó y qué te renta de verdad",
-    basico: "Por campaña",
-    avanzado: "Por campaña y tratamiento",
+    basico: true,
+    avanzado: true,
   },
   {
     t: "Confirmación por WhatsApp",
