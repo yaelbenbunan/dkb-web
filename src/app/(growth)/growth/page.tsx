@@ -3,6 +3,7 @@ import Link from "next/link";
 import { GROWTH, GROWTH_THEME as T } from "@/lib/growth-config";
 import { LineaDeTiempo } from "./_components/LineaDeTiempo";
 import { Subrayado } from "./_components/Subrayado";
+import { Circulo } from "./_components/Circulo";
 import { FormularioHero } from "./_components/FormularioHero";
 import { Planes } from "./_components/Planes";
 
@@ -64,29 +65,38 @@ function Eyebrow({ children, color = T.lime }: { children: React.ReactNode; colo
 /**
  * Las dos clínicas del bloque del problema.
  *
- * Es la pieza que sostiene todo el argumento: la de arriba trabaja el doble y
- * se lleva un tercio. Va en cifras grandes y no en prosa porque el dueño de una
- * clínica reconoce su propia situación en un número antes que en un párrafo.
+ * Es la pieza que sostiene todo el argumento: una trabaja el doble y se lleva un
+ * tercio. Va en cifras grandes y no en prosa porque el dueño de una clínica
+ * reconoce su propia situación en un número antes que en un párrafo.
+ *
+ * Se llaman "Clínica 1" y "Clínica 2" y no "la que llena la agenda" / "la que
+ * mira los números". Aquellas etiquetas ya daban el veredicto antes de enseñar
+ * los números, y así el lector no comparaba: leía una conclusión. Con dos
+ * nombres neutros tiene que mirar las cifras, que es donde está la fuerza. La
+ * frase de debajo de cada tarjeta sigue diciendo quién es quién, pero después.
  */
 const TICKET_COMPARATIVA = "250 €";
 
 const COMPARATIVA = [
   {
-    titulo: "La que llena la agenda",
+    titulo: "Clínica 1",
     color: T.muted,
     pacientes: "40",
     gasto: "8.000 €",
     factura: "10.000 €",
     queda: "2.000 €",
+    rodeado: false,
     remate: "Trabaja a tope. Y cobra por trabajar, no por ganar.",
   },
   {
-    titulo: "La que mira los números",
+    titulo: "Clínica 2",
     color: T.lime,
     pacientes: "20",
     gasto: "1.000 €",
     factura: "5.000 €",
     queda: "4.000 €",
+    // Solo ésta se rodea: si se marcaran las dos, no señalaría nada.
+    rodeado: true,
     remate: "La mitad de pacientes. El doble de beneficio.",
   },
 ];
@@ -124,29 +134,6 @@ const PASOS = [
   },
 ];
 
-/**
- * Las tres promesas que responden a la desconfianza que deja cualquier tarifa.
- *
- * La cuota de alta se cae de aquí porque se cae del producto: la barrera de
- * entrada tiene que ser lo más baja posible, y siempre se puede volver a poner.
- * En su sitio entra la que más tranquiliza a quien ya se ha quemado con una
- * agencia — que el dinero de los anuncios no pasa por nosotros.
- */
-const GARANTIAS = [
-  {
-    t: "Sin desembolsos grandes",
-    d: "Pagas mes a mes. Ni inversiones iniciales de miles de euros ni contratos a un año.",
-  },
-  {
-    t: "Tu inversión es tuya",
-    d: "Los anuncios los pagas tú directamente a Google y a Meta, con tu tarjeta. Ese dinero no pasa por nuestras manos.",
-  },
-  {
-    t: "Sin comisión sobre lo que gastas",
-    d: "Muchas agencias se llevan un porcentaje de tu inversión, así que ganan más cuanto más gastes. Aquí la cuota es la cuota.",
-  },
-];
-
 export default function GrowthPage() {
   return (
     <>
@@ -160,7 +147,7 @@ export default function GrowthPage() {
           altura, así que centrarlo dentro de 100svh dejaba entre 500 y 750 px
           muertos. Fuera de apaisado manda un suelo en píxeles, que no crece con
           la altura de la pantalla y por tanto no puede volver a abrir el hueco. */}
-      <header className="relative flex min-h-[32rem] items-center overflow-hidden py-16 lg:landscape:min-h-[88svh]">
+      <header className="relative flex min-h-[30rem] items-center overflow-hidden py-12 md:py-16 lg:landscape:min-h-[80svh]">
         <div
           aria-hidden
           className="pointer-events-none absolute -top-40 left-1/2 h-[38rem] w-[38rem] -translate-x-1/2 rounded-full blur-[120px]"
@@ -185,11 +172,11 @@ export default function GrowthPage() {
               columna del titular se quedaba tan estrecha que había que
               encogerlo hasta que dejaba de tener fuerza. Apilado ocupa todo el
               ancho y se ve grande. */}
-          <div className="grid items-center gap-12 xl:grid-cols-[minmax(0,1fr)_23rem] xl:gap-16">
+          <div className="grid items-center gap-10 xl:grid-cols-[minmax(0,1fr)_25rem] xl:gap-14">
             <div>
               <h1
                 className="font-black leading-[0.9] tracking-[-0.035em]"
-                style={{ fontSize: "clamp(2.5rem, 4.4vw, 5.25rem)" }}
+                style={{ fontSize: "clamp(2.75rem, 4.2vw, 5rem)" }}
               >
                 <span className="xl:whitespace-nowrap">Llenar tu agenda es fácil.</span>
                 <br />
@@ -202,8 +189,8 @@ export default function GrowthPage() {
                   y repetirlo aquí hacía que las dos frases compitieran. Lo que
                   destaca "ganar más" es el trazo, no el color. */}
               <p
-                className="mt-8 max-w-xl font-bold leading-[1.3] tracking-[-0.01em] text-balance"
-                style={{ fontSize: "clamp(1.375rem, 2.2vw, 1.875rem)" }}
+                className="mt-7 max-w-2xl font-bold leading-[1.25] tracking-[-0.015em] text-balance"
+                style={{ fontSize: "clamp(1.5rem, 2.1vw, 2.125rem)" }}
               >
                 Cualquiera te trae pacientes. Nosotros te hacemos{" "}
                 <Subrayado>ganar más</Subrayado>.
@@ -216,7 +203,7 @@ export default function GrowthPage() {
       </header>
 
       {/* ───────── 2. El problema ───────── */}
-      <section className="py-24 md:py-32 lg:py-40" style={{ background: T.surface }}>
+      <section className="py-20 md:py-24 lg:py-28" style={{ background: T.surface }}>
         <Wrap>
           <Eyebrow>El problema</Eyebrow>
 
@@ -224,18 +211,10 @@ export default function GrowthPage() {
             className="mt-8 max-w-4xl font-black leading-[1.05] tracking-[-0.02em] text-balance"
             style={{ fontSize: "clamp(2.25rem, 5.2vw, 4.5rem)" }}
           >
-            Puedes tener la agenda llena y{" "}
-            <Subrayado grosor={1.15}>estar perdiendo dinero</Subrayado>.
+            Puedes tener la agenda llena y estar perdiendo dinero.
           </h2>
 
-          <p
-            className="mt-7 max-w-2xl leading-relaxed"
-            style={{ fontSize: "clamp(1.125rem, 1.5vw, 1.375rem)", color: T.muted }}
-          >
-            Dos clínicas del mismo tamaño, el mismo mes y el mismo ticket medio:
-          </p>
-
-          <div className="mt-10 grid gap-5 md:grid-cols-2">
+          <div className="mt-12 grid gap-5 md:grid-cols-2">
             {COMPARATIVA.map((c) => (
               <div
                 key={c.titulo}
@@ -273,14 +252,25 @@ export default function GrowthPage() {
                     style={{ borderTop: `1px solid ${T.line}`, paddingTop: "1rem" }}
                   >
                     <span className="text-base font-bold" style={{ color: T.fg }}>
-                      Le queda
+                      Beneficio
                     </span>
-                    <span
-                      className="font-black leading-none tabular-nums"
-                      style={{ fontSize: "clamp(2.25rem, 4.5vw, 3.5rem)", color: c.color }}
-                    >
-                      {c.queda}
-                    </span>
+                    {c.rodeado ? (
+                      <Circulo>
+                        <span
+                          className="font-black leading-none tabular-nums"
+                          style={{ fontSize: "clamp(2.25rem, 4.5vw, 3.5rem)", color: c.color }}
+                        >
+                          {c.queda}
+                        </span>
+                      </Circulo>
+                    ) : (
+                      <span
+                        className="font-black leading-none tabular-nums"
+                        style={{ fontSize: "clamp(2.25rem, 4.5vw, 3.5rem)", color: c.color }}
+                      >
+                        {c.queda}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -296,13 +286,13 @@ export default function GrowthPage() {
         </Wrap>
       </section>
 
-      {/* ───────── 4. La solución: qué es, qué cuesta y qué te llevas ─────────
+      {/* ───────── 3. La solución: qué es, qué cuesta y qué te llevas ─────────
           Va todo junto a propósito. Separar "cómo funciona" de "lo que cuesta"
           debilitaba las dos partes: el proceso quedaba en teoría y el precio
           aparecía sin contexto. Leídos seguidos, los cuatro pasos son a la vez
           la explicación y el inventario de lo que compras. */}
       <section
-        className="relative overflow-hidden py-24 md:py-32 lg:py-40"
+        className="relative overflow-hidden py-20 md:py-24 lg:py-28"
         style={{ background: T.surface }}
       >
         <div
@@ -329,111 +319,55 @@ export default function GrowthPage() {
 
           {/* Y aquí el precio, sobre la espalda de lo que acaba de leer. */}
           <div className="mt-16 pt-14" style={{ borderTop: `1px solid ${T.line}` }}>
-            <p
-              className="font-bold"
-              style={{ fontSize: "clamp(1.25rem, 2vw, 1.75rem)", color: T.muted }}
+            <Eyebrow>Nuestros packs</Eyebrow>
+
+            <h3
+              className="mt-8 font-black leading-[1.05] tracking-[-0.03em] text-balance"
+              style={{ fontSize: "clamp(2rem, 4vw, 3.5rem)" }}
             >
-              Todo esto, de principio a fin, desde
-            </p>
+              Todo esto, de principio a fin, desde 199 € al mes.
+            </h3>
 
             <div className="mt-8">
               <Planes />
             </div>
 
-            <div className="mt-16 grid gap-8 md:grid-cols-3">
-              {GARANTIAS.map((g) => (
-                <div key={g.t}>
-                  <p className="text-lg font-bold">{g.t}</p>
-                  <p className="mt-2 text-base leading-relaxed" style={{ color: T.muted }}>
-                    {g.d}
-                  </p>
-                </div>
-              ))}
-            </div>
           </div>
         </Wrap>
       </section>
 
-      {/* ───────── 5. El número que no tienen ─────────
-          La calculadora vive fuera de la landing, así que aquí hay que darle
-          una razón para ir — y la razón es el argumento entero del producto:
-          para hacerte ganar más, primero hay que medir.
-
-          La cifra va en el mismo cuerpo gigante que el precio de la sección
-          anterior, y a propósito: el lector acaba de ver los precios y se
-          encuentra con un "?? €" enorme donde debería estar SU número. Ese
-          hueco hace más que cualquier frase. */}
-      <section className="py-24 md:py-32 lg:py-40">
-        <Wrap>
-          <div className="grid items-center gap-12 lg:grid-cols-[1fr_1.1fr] lg:gap-20">
-            <div>
-              <Eyebrow>Empieza por aquí</Eyebrow>
-              <p
-                className="mt-8 font-black leading-[0.85] tracking-[-0.04em]"
-                style={{ fontSize: "clamp(5rem, 16vw, 12rem)", color: T.lime }}
-              >
-                ?? €
-              </p>
-              <p
-                className="mt-4 font-bold"
-                style={{ fontSize: "clamp(1.125rem, 1.6vw, 1.5rem)", color: T.muted }}
-              >
-                lo que te cuesta hoy un paciente nuevo
-              </p>
-            </div>
-
-            <div>
-              <h2
-                className="font-black leading-[1.02] tracking-[-0.03em] text-balance"
-                style={{ fontSize: "clamp(2.25rem, 4.5vw, 4rem)" }}
-              >
-                Para hacerte ganar más, primero hay que{" "}
-                <Subrayado grosor={1.1}>medirlo todo</Subrayado>.
-              </h2>
-
-              <p
-                className="mt-8 max-w-2xl leading-relaxed"
-                style={{ fontSize: "clamp(1.125rem, 1.5vw, 1.375rem)", color: T.muted }}
-              >
-                Y ese número, el más importante de tu clínica, casi nadie lo tiene. No es
-                dejadez:{" "}
-                <strong style={{ color: T.fg, fontWeight: 700 }}>
-                  es que nadie se lo ha calculado nunca
-                </strong>
-                . Sin él, cualquiera puede decirte que su campaña ha ido muy bien.
-              </p>
-
-              <Link
-                href="/growth/calculadora"
-                className="mt-10 inline-flex h-16 items-center justify-center rounded-full px-10 text-lg font-bold transition-transform hover:-translate-y-0.5"
-                style={{ background: T.lime, color: T.ink }}
-              >
-                Calcula el tuyo
-              </Link>
-              <p className="mt-4 text-base" style={{ color: T.muted }}>
-                Tres preguntas. Un minuto. Y si no sabes las respuestas, eso ya es el
-                diagnóstico.
-              </p>
-            </div>
-          </div>
-        </Wrap>
-      </section>
-
-      {/* ───────── 6. El compromiso ─────────
+      {/* ───────── 4. El compromiso ─────────
           Va justo después del precio y las garantías: es la respuesta a la
           desconfianza que deja cualquier tarifa.
+
+          Va sobre lima y en negro, la única sección de toda la página que
+          invierte los colores. Después de cuatro pantallas de fondo oscuro, el
+          cambio se nota antes de leer una palabra — y esta es justo la frase
+          que tiene que quedarse.
 
           Ya no reserva la pantalla entera: al quitarle el botón de debajo se
           quedaba media pantalla de negro entre la calculadora y la frase, que
           es justo el hueco que esta página tenía de más por todas partes. */}
-      <section className="flex items-center py-28 md:py-36 lg:py-44">
+      <section className="flex items-center py-24 md:py-28 lg:py-32" style={{ background: T.lime, color: T.ink }}>
         <Wrap>
+          {/* Dos líneas, y el corte en la coma.
+
+              El tamaño sale de ahí y no al revés: para que "Vas a querer
+              quedarte por los resultados," quepa entera en un renglón a 1024 px
+              —el ancho más estrecho donde se le prohíbe partirse— no puede pasar
+              de 4,4vw. Es más pequeña que antes, y es el precio de que la frase
+              no se rompa por la mitad. Debajo de lg sí se parte, porque en un
+              móvil no hay tamaño que la deje en dos líneas sin que se lea con
+              lupa. */}
           <p
-            className="font-black leading-[0.95] tracking-[-0.035em] text-balance"
-            style={{ fontSize: "clamp(2.75rem, 7.5vw, 7rem)" }}
+            className="font-black leading-[1.02] tracking-[-0.035em]"
+            style={{ fontSize: "clamp(2rem, 4.4vw, 5rem)" }}
           >
-            Vas a querer quedarte{" "}
-            <span style={{ color: T.lime }}>por los resultados</span>, no porque te obliguemos.
+            <span className="lg:whitespace-nowrap">
+              Vas a querer quedarte por los resultados,
+            </span>
+            <br />
+            <span className="lg:whitespace-nowrap">no porque te obliguemos.</span>
           </p>
 
           {/* Sin botón: la sección anterior acaba de llevar a la calculadora

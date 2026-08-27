@@ -25,7 +25,14 @@ const PLANES = [
 
 type Valor = true | false | string;
 
-const INCLUYE: { t: string; d: string; basico: Valor; avanzado: Valor }[] = [
+const INCLUYE: {
+  t: string;
+  d: string;
+  basico: Valor;
+  avanzado: Valor;
+  /** El texto de esa fila informa, no promete: se pinta apagado y no en lima. */
+  apagado?: boolean;
+}[] = [
   {
     t: "Tu web de captación",
     d: "La hacemos, la publicamos y la mantenemos nosotros",
@@ -33,9 +40,18 @@ const INCLUYE: { t: string; d: string; basico: Valor; avanzado: Valor }[] = [
     avanzado: true,
   },
   {
+    // Justifica precio y además funciona: quien busca "implante dental" y
+    // aterriza en una página de implantes convierte bastante mejor que quien
+    // cae en la portada y tiene que buscarse la vida.
+    t: "Páginas por tratamiento",
+    d: "Una página propia para implantes, ortodoncia o lo que anunciemos, en vez de mandar a todo el mundo a la portada",
+    basico: false,
+    avanzado: true,
+  },
+  {
     t: "Campañas de publicidad",
     d: "Estrategia, anuncios y ajustes cada mes",
-    basico: "Un canal",
+    basico: "Google o Meta",
     avanzado: "Google y Meta",
   },
   {
@@ -51,16 +67,34 @@ const INCLUYE: { t: string; d: string; basico: Valor; avanzado: Valor }[] = [
     avanzado: true,
   },
   {
+    // El sistema ya guarda qué tratamiento se hizo en cada cita, así que esto
+    // no es una promesa nueva: es enseñar un dato que ya está dentro.
     t: "Panel de rentabilidad",
-    d: "Quién acudió, cuánto facturó y qué campaña te renta de verdad",
-    basico: true,
-    avanzado: true,
+    d: "Quién acudió, cuánto facturó y qué te renta de verdad",
+    basico: "Por campaña",
+    avanzado: "Por campaña y tratamiento",
   },
   {
     t: "Confirmación por WhatsApp",
     d: "El paciente recibe el recordatorio y confirma; tú lo ves en su ficha",
     basico: false,
     avanzado: true,
+  },
+  {
+    t: "Revisión mensual contigo",
+    d: "Una llamada al mes para mirar los números juntos y decidir qué se toca",
+    basico: false,
+    avanzado: true,
+  },
+  {
+    // Va DENTRO de la tabla y no en la letra pequeña. Es la pregunta que hace
+    // todo el mundo en la primera llamada, y descubrirla después de haber
+    // dicho un precio es la forma más rápida de parecer que se escondía.
+    t: "Inversión en anuncios",
+    d: "Lo que se gasta en Google y en Meta. Lo pagas tú directamente, con tu tarjeta",
+    basico: "No incluida",
+    avanzado: "No incluida",
+    apagado: true,
   },
 ];
 
@@ -101,7 +135,10 @@ export function Planes() {
                         : undefined
                     }
                   >
-                    <Celda valor={plan.id === "basico" ? fila.basico : fila.avanzado} />
+                    <Celda
+                      valor={plan.id === "basico" ? fila.basico : fila.avanzado}
+                      apagado={fila.apagado}
+                    />
                   </td>
                 ))}
               </tr>
@@ -128,17 +165,20 @@ export function Planes() {
                 return (
                   <li key={fila.t} className="flex gap-3">
                     <span className="mt-0.5 shrink-0">
-                      <Marca activo={valor !== false} />
+                      <Marca activo={valor !== false && !fila.apagado} />
                     </span>
                     <span>
                       <span
                         className="font-bold"
-                        style={valor === false ? { color: T.muted } : undefined}
+                        style={valor === false || fila.apagado ? { color: T.muted } : undefined}
                       >
                         {fila.t}
                       </span>
                       {typeof valor === "string" && (
-                        <span className="font-bold" style={{ color: T.lime }}>
+                        <span
+                          className="font-bold"
+                          style={{ color: fila.apagado ? T.muted : T.lime }}
+                        >
                           {" "}
                           · {valor}
                         </span>
@@ -155,11 +195,22 @@ export function Planes() {
         ))}
       </div>
 
-      <p className="mt-8 max-w-3xl text-base leading-relaxed" style={{ color: T.muted }}>
-        Los dos planes van <strong style={{ color: T.fg, fontWeight: 700 }}>sin permanencia y
-        sin cuota de alta</strong>. El segundo canal necesita una inversión mínima de 300 € al
-        mes en anuncios, que pagas tú directamente a Google y a Meta.
-      </p>
+      {/* Las tres cosas que responden a la desconfianza que deja cualquier
+          tarifa. Estaban en tres columnas debajo, repitiendo media tabla; aquí
+          se leen del tirón y en el sitio donde surge la duda. */}
+      <div className="mt-10 space-y-3">
+        {[
+          "La inversión en anuncios NO está incluida en ninguno de los dos packs: la pagas tú directamente a Google y a Meta, con tu tarjeta. Ese dinero no pasa por nuestras manos.",
+          "Tampoco nos llevamos comisión de lo que inviertes. La cuota es la cuota, gastes 300 € o 3.000 €.",
+          "El segundo canal pide una inversión mínima de 300 € al mes para que dé tiempo a aprender.",
+          "Sin permanencia y sin cuota de alta: pagas mes a mes y te vas cuando quieras.",
+        ].map((linea) => (
+          <p key={linea} className="flex gap-3 text-base leading-relaxed" style={{ color: T.muted }}>
+            <span aria-hidden className="mt-[0.55em] h-[2px] w-4 shrink-0" style={{ background: T.line }} />
+            <span>{linea}</span>
+          </p>
+        ))}
+      </div>
     </div>
   );
 }
@@ -192,10 +243,10 @@ function Encabezado({ plan }: { plan: (typeof PLANES)[number] }) {
 }
 
 /** Un sí, un no, o el dato cuando lo que cambia no es si entra sino cuánto. */
-function Celda({ valor }: { valor: Valor }) {
+function Celda({ valor, apagado }: { valor: Valor; apagado?: boolean }) {
   if (typeof valor === "string") {
     return (
-      <span className="text-lg font-bold" style={{ color: T.lime }}>
+      <span className="text-lg font-bold" style={{ color: apagado ? T.muted : T.lime }}>
         {valor}
       </span>
     );

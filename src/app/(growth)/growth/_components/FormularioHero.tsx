@@ -64,7 +64,7 @@ export function FormularioHero() {
 
   return (
     <form
-      className="rounded-2xl p-5 sm:p-6"
+      className="rounded-3xl p-6 sm:p-7"
       style={{ background: T.surface, border: `1px solid ${T.line}` }}
       action={(fd) => {
         // La calculadora manda tres cifras; aquí no se preguntan. Vacías
@@ -97,11 +97,11 @@ export function FormularioHero() {
         });
       }}
     >
-      <p className="text-base font-black" style={{ color: T.fg }}>
+      <p className="text-xl font-black leading-tight" style={{ color: T.fg }}>
         Cuéntanos quién eres y te llamamos
       </p>
 
-      <div className="mt-4 space-y-3">
+      <div className="mt-5 space-y-3.5">
         <label className="block">
           <span className="sr-only">Nombre</span>
           <input
@@ -195,7 +195,7 @@ export function FormularioHero() {
       <button
         type="submit"
         disabled={pendiente}
-        className="mt-5 inline-flex h-13 w-full items-center justify-center rounded-full py-3.5 text-base font-bold transition-transform enabled:hover:-translate-y-0.5 disabled:opacity-60"
+        className="mt-6 inline-flex w-full items-center justify-center rounded-full py-4 text-lg font-bold transition-transform enabled:hover:-translate-y-0.5 disabled:opacity-60"
         style={{ background: T.lime, color: T.ink }}
       >
         {pendiente ? "Enviando…" : "Quiero que me llaméis"}
@@ -211,7 +211,7 @@ export function FormularioHero() {
 }
 
 const campo =
-  "w-full rounded-xl px-4 py-3 text-base outline-none transition focus:border-[#C7F73E]";
+  "w-full rounded-xl px-4 py-3.5 text-base outline-none transition focus:border-[#C7F73E]";
 
 const estiloCampo = {
   background: T.ink,
