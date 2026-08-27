@@ -114,8 +114,8 @@ const PASOS = [
   },
   {
     n: "03",
-    t: "Vemos cuáles te dejan dinero",
-    d: "Quién acudió de verdad, qué se hizo y cuánto facturó. Con eso ajustamos las campañas cada mes para que tu inversión rinda más.",
+    t: "Analizamos tu rentabilidad",
+    d: "Quién acudió de verdad, qué tratamiento se hizo y cuánto facturó. Con eso sabemos qué campañas te rentan y cuáles no, y ajustamos cada mes.",
   },
 ];
 
