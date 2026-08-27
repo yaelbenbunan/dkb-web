@@ -4,11 +4,12 @@ import { GROWTH, GROWTH_THEME as T } from "@/lib/growth-config";
 import { LineaDeTiempo } from "./_components/LineaDeTiempo";
 import { Subrayado } from "./_components/Subrayado";
 import { FormularioHero } from "./_components/FormularioHero";
+import { Planes } from "./_components/Planes";
 
 export const metadata: Metadata = {
   title: "Llenar tu agenda es fácil. Ganar más, no",
   description:
-    "Un sistema integral que se ocupa de todo el proceso, con un único objetivo: que cada euro invertido genere más. Desde 299 €/mes, sin cuota de alta y sin permanencia.",
+    "Un sistema integral que se ocupa de todo el proceso, con un único objetivo: que cada euro invertido genere más. Desde 199 €/mes, sin cuota de alta y sin permanencia.",
   alternates: { canonical: GROWTH.path },
   openGraph: {
     type: "website",
@@ -96,7 +97,7 @@ const COMPARATIVA = [
  *
  * Hacen doble trabajo: explican el proceso y son, a la vez, el inventario de
  * lo que entra en la cuota. Por eso el precio va justo detrás — "todo esto,
- * por 299 €" solo se entiende si acabas de leer qué es "todo esto".
+ * desde 199 €" solo se entiende si acabas de leer qué es "todo esto".
  *
  * Y ninguno dice "CRM". Lo entiende quien ya sabe lo que es, que no es el
  * dueño de una clínica dental.
@@ -130,7 +131,7 @@ const PASOS = [
 const GARANTIAS = [
   {
     t: "Sin desembolsos grandes",
-    d: "Pagas mes a mes. Ni cuota de alta, ni inversiones iniciales de miles de euros, ni contratos a un año.",
+    d: "Pagas mes a mes. Ni inversiones iniciales de miles de euros ni contratos a un año.",
   },
   {
     t: "Tu inversión es tuya",
@@ -321,36 +322,14 @@ export default function GrowthPage() {
               className="font-bold"
               style={{ fontSize: "clamp(1.25rem, 2vw, 1.75rem)", color: T.muted }}
             >
-              Todo esto, de principio a fin, por
-            </p>
-            <p
-              className="mt-2 flex flex-wrap items-baseline gap-x-4 font-black leading-[0.85] tracking-[-0.04em]"
-              style={{ fontSize: "clamp(4.5rem, 19vw, 11rem)", color: T.lime }}
-            >
-              <span className="tabular-nums">299 €</span>
-              <span
-                className="font-black tracking-[-0.02em]"
-                style={{ fontSize: "clamp(1.5rem, 4vw, 2.5rem)", color: T.fg }}
-              >
-                al mes
-              </span>
-            </p>
-            <p
-              className="mt-4 font-black leading-none"
-              style={{ fontSize: "clamp(1.75rem, 4vw, 3rem)" }}
-            >
-              Sin permanencia.
-            </p>
-            <p
-              className="mt-6 max-w-2xl leading-relaxed"
-              style={{ fontSize: "clamp(1.0625rem, 1.4vw, 1.25rem)", color: T.muted }}
-            >
-              Un canal de captación incluido. Por{" "}
-              <strong style={{ color: T.fg, fontWeight: 700 }}>399 € al mes</strong> añadimos el
-              segundo canal y la confirmación de citas por WhatsApp.
+              Todo esto, de principio a fin, desde
             </p>
 
-            <div className="mt-12 grid gap-6 md:grid-cols-3">
+            <div className="mt-8">
+              <Planes />
+            </div>
+
+            <div className="mt-16 grid gap-8 md:grid-cols-3">
               {GARANTIAS.map((g) => (
                 <div key={g.t}>
                   <p className="text-lg font-bold">{g.t}</p>
@@ -370,9 +349,9 @@ export default function GrowthPage() {
           para hacerte ganar más, primero hay que medir.
 
           La cifra va en el mismo cuerpo gigante que el precio de la sección
-          anterior, y a propósito: el lector acaba de ver un "299 €" enorme y se
-          encuentra con un "?? €" del mismo tamaño donde debería estar SU
-          número. Ese hueco hace más que cualquier frase. */}
+          anterior, y a propósito: el lector acaba de ver los precios y se
+          encuentra con un "?? €" enorme donde debería estar SU número. Ese
+          hueco hace más que cualquier frase. */}
       <section className="py-24 md:py-32 lg:py-40">
         <Wrap>
           <div className="grid items-center gap-12 lg:grid-cols-[1fr_1.1fr] lg:gap-20">
