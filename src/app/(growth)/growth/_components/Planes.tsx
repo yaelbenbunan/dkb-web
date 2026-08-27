@@ -1,21 +1,20 @@
 import { GROWTH_THEME as T } from "@/lib/growth-config";
 
 /**
- * Los dos planes, comparados fila a fila.
+ * Los dos packs, comparados línea a línea.
  *
- * Antes era un precio gigante con una frase debajo diciendo que por 100 € más
- * había otras dos cosas. Se leía como una nota al pie, y lo que decide una
- * compra de este tipo es justo lo contrario: ver **qué entra y qué no** de un
- * vistazo, sin tener que reconstruirlo leyendo un párrafo.
+ * **Sin descripciones.** Cada fila era un título y un renglón explicándolo, y
+ * eso convertía una tabla —que se mira— en un texto —que se lee—. Aquí lo único
+ * que se busca es que alguien vea en dos segundos qué se lleva por 199 y qué
+ * más por 299; lo que necesite explicación se explica en la llamada.
  *
- * Las filas no son todas de sí o no. "Campañas" está en los dos planes y lo que
- * cambia es cuántos canales, así que ahí va el dato en vez de un check: un check
- * en las dos columnas diría que son iguales, que es exactamente lo contrario de
- * lo que pasa.
+ * Las filas no son todas de sí o no. "Campañas" está en los dos y lo que cambia
+ * es cuántos canales, así que ahí va el dato: dos checks dirían que son iguales,
+ * que es lo contrario de lo que pasa.
  *
- * En pantalla ancha va como tabla y en móvil como dos tarjetas, con los mismos
- * datos. Una tabla de tres columnas en un móvil se lee con lupa, y esta pantalla
- * la va a abrir mucha gente desde el teléfono.
+ * Y cada columna termina en su botón. La tabla es donde se decide, así que
+ * obligar a subir a buscar el formulario después de haber decidido es perder
+ * gente por el camino.
  */
 
 const PLANES = [
@@ -25,80 +24,35 @@ const PLANES = [
 
 type Valor = true | false | string;
 
-const INCLUYE: {
-  t: string;
-  d: string;
-  basico: Valor;
-  avanzado: Valor;
-  /** El texto de esa fila informa, no promete: se pinta apagado y no en lima. */
-  apagado?: boolean;
-}[] = [
-  {
-    t: "Tu web de captación",
-    d: "La hacemos, la publicamos y la mantenemos nosotros",
-    basico: true,
-    avanzado: true,
-  },
-  {
-    // Justifica precio y además funciona: quien busca "implante dental" y
-    // aterriza en una página de implantes convierte bastante mejor que quien
-    // cae en la portada y tiene que buscarse la vida.
-    t: "Landings de captación",
-    d: "Una página propia para implantes, ortodoncia o lo que anunciemos, en vez de mandar a todo el mundo a la web general",
-    basico: false,
-    avanzado: true,
-  },
-  {
-    t: "Campañas de publicidad",
-    d: "Estrategia, anuncios y ajustes cada mes",
-    basico: "Google o Meta",
-    avanzado: "Google y Meta",
-  },
-  {
-    t: "Sistema de pacientes",
-    d: "Cada persona que deja su teléfono, con su ficha y de dónde vino",
-    basico: true,
-    avanzado: true,
-  },
-  {
-    t: "Citas en tu agenda",
-    d: "Se escriben en el calendario de la clínica sin apuntarlas dos veces",
-    basico: true,
-    avanzado: true,
-  },
-  {
-    // Igual en los dos, y a propósito: es LA razón de ser del producto, así que
-    // recortárselo al plan de entrada sería vender a medias justo lo que nos
-    // diferencia. Se partió un rato en "por campaña" y "por campaña y
-    // tratamiento", y era un matiz que nadie iba a pesar en una tabla.
-    t: "Panel de rentabilidad",
-    d: "Quién acudió, cuánto facturó y qué te renta de verdad",
-    basico: true,
-    avanzado: true,
-  },
-  {
-    t: "Confirmación por WhatsApp",
-    d: "El paciente recibe el recordatorio y confirma; tú lo ves en su ficha",
-    basico: false,
-    avanzado: true,
-  },
-  {
-    t: "Revisión mensual contigo",
-    d: "Una llamada al mes para mirar los números juntos y decidir qué se toca",
-    basico: false,
-    avanzado: true,
-  },
-  {
-    // Va DENTRO de la tabla y no en la letra pequeña. Es la pregunta que hace
-    // todo el mundo en la primera llamada, y descubrirla después de haber
-    // dicho un precio es la forma más rápida de parecer que se escondía.
-    t: "Inversión en anuncios",
-    d: "Lo que se gasta en Google y en Meta. Lo pagas tú directamente, con tu tarjeta",
-    basico: "No incluida",
-    avanzado: "No incluida",
-    apagado: true,
-  },
+const INCLUYE: { t: string; basico: Valor; avanzado: Valor; apagado?: boolean }[] = [
+  { t: "Página web", basico: true, avanzado: true },
+  { t: "Campañas de publicidad", basico: "Google o Meta", avanzado: "Google y Meta" },
+  { t: "Sistema de pacientes", basico: true, avanzado: true },
+  { t: "Citas en tu agenda", basico: true, avanzado: true },
+  { t: "Panel de rentabilidad", basico: true, avanzado: true },
+  { t: "Confirmación de citas por WhatsApp", basico: false, avanzado: true },
+  { t: "Revisión mensual contigo", basico: false, avanzado: true },
+  // Va DENTRO de la tabla y no en la letra pequeña. Es la pregunta que hace
+  // todo el mundo en la primera llamada, y descubrirla después de haber dicho
+  // un precio es la forma más rápida de parecer que se escondía.
+  { t: "Inversión en anuncios", basico: "No incluida", avanzado: "No incluida", apagado: true },
 ];
+
+/**
+ * Las condiciones, en un párrafo pequeño y seguido.
+ *
+ * Estaban en cuatro líneas con viñeta, y con esa forma pesaban lo mismo que la
+ * tabla: cuatro promesas puestas en fila parecen cuatro cosas importantes que
+ * hay que sopesar antes de decidir. Son lo contrario — son lo que se cuenta
+ * para que nadie se lleve una sorpresa. En letra pequeña y de corrido están en
+ * su sitio: quien las quiera, ahí están.
+ */
+const CONDICIONES =
+  "La inversión en anuncios la pagas tú directamente a Google y a Meta, con tu tarjeta: " +
+  "ese dinero no pasa por nuestras manos, y tampoco nos llevamos comisión de lo que " +
+  "inviertes. El segundo canal pide una inversión mínima de 300 € al mes para que dé " +
+  "tiempo a aprender. Sin permanencia y sin cuota de alta: pagas mes a mes y te vas " +
+  "cuando quieras.";
 
 export function Planes() {
   return (
@@ -108,7 +62,7 @@ export function Planes() {
         <table className="w-full border-collapse text-left">
           <thead>
             <tr>
-              <th className="w-[46%] pb-6 pr-6 align-bottom">
+              <th className="w-[42%] pb-7 pr-6 align-bottom">
                 <h3
                   className="font-black leading-[1.05] tracking-[-0.03em]"
                   style={{ fontSize: "clamp(1.75rem, 3vw, 2.75rem)" }}
@@ -120,7 +74,11 @@ export function Planes() {
                 </p>
               </th>
               {PLANES.map((plan) => (
-                <th key={plan.id} className="pb-6 pl-6 align-bottom">
+                <th
+                  key={plan.id}
+                  className="px-6 pb-7 align-bottom"
+                  style={plan.destacado ? { background: `${T.lime}0f` } : undefined}
+                >
                   <Encabezado plan={plan} />
                 </th>
               ))}
@@ -129,21 +87,22 @@ export function Planes() {
           <tbody>
             {INCLUYE.map((fila) => (
               <tr key={fila.t} style={{ borderTop: `1px solid ${T.line}` }}>
-                <td className="py-5 pr-6">
-                  <p className="text-lg font-bold">{fila.t}</p>
-                  <p className="mt-1 text-base leading-snug" style={{ color: T.muted }}>
-                    {fila.d}
+                <td className="py-4 pr-6">
+                  <p
+                    className="font-bold leading-snug"
+                    style={{
+                      fontSize: "clamp(1.0625rem, 1.4vw, 1.25rem)",
+                      color: fila.apagado ? T.muted : T.fg,
+                    }}
+                  >
+                    {fila.t}
                   </p>
                 </td>
                 {PLANES.map((plan) => (
                   <td
                     key={plan.id}
-                    className="py-5 pl-6 align-middle"
-                    style={
-                      plan.destacado
-                        ? { background: `${T.lime}0d` }
-                        : undefined
-                    }
+                    className="px-6 py-4 align-middle"
+                    style={plan.destacado ? { background: `${T.lime}0f` } : undefined}
                   >
                     <Celda
                       valor={plan.id === "basico" ? fila.basico : fila.avanzado}
@@ -154,10 +113,25 @@ export function Planes() {
               </tr>
             ))}
           </tbody>
+          <tfoot>
+            <tr style={{ borderTop: `1px solid ${T.line}` }}>
+              <td />
+              {PLANES.map((plan) => (
+                <td
+                  key={plan.id}
+                  className="px-6 pb-7 pt-7 align-top"
+                  style={plan.destacado ? { background: `${T.lime}0f` } : undefined}
+                >
+                  <Boton plan={plan} />
+                </td>
+              ))}
+            </tr>
+          </tfoot>
         </table>
       </div>
 
-      {/* ── Tarjetas, en móvil ── */}
+      {/* ── Tarjetas, en móvil. Una tabla de tres columnas en un teléfono se
+             lee con lupa, y esta página la van a abrir muchos desde el móvil. ── */}
       <div className="md:hidden">
         <h3
           className="font-black leading-[1.05] tracking-[-0.03em]"
@@ -176,63 +150,44 @@ export function Planes() {
             key={plan.id}
             className="rounded-3xl p-6"
             style={{
-              background: T.ink,
+              background: plan.destacado ? `${T.lime}0f` : T.ink,
               border: `1px solid ${plan.destacado ? `${T.lime}66` : T.line}`,
             }}
           >
             <Encabezado plan={plan} />
-            <ul className="mt-6 space-y-4">
+            <ul className="mt-6 space-y-3">
               {INCLUYE.map((fila) => {
                 const valor = plan.id === "basico" ? fila.basico : fila.avanzado;
+                const dentro = valor !== false && !fila.apagado;
                 return (
-                  <li key={fila.t} className="flex gap-3">
-                    <span className="mt-0.5 shrink-0">
-                      <Marca activo={valor !== false && !fila.apagado} />
-                    </span>
-                    <span>
-                      <span
-                        className="font-bold"
-                        style={valor === false || fila.apagado ? { color: T.muted } : undefined}
-                      >
-                        {fila.t}
-                      </span>
+                  <li key={fila.t} className="flex items-center gap-3">
+                    <Marca activo={dentro} />
+                    <span
+                      className="font-bold"
+                      style={!dentro ? { color: T.muted } : undefined}
+                    >
+                      {fila.t}
                       {typeof valor === "string" && (
-                        <span
-                          className="font-bold"
-                          style={{ color: fila.apagado ? T.muted : T.lime }}
-                        >
-                          {" "}
-                          · {valor}
-                        </span>
+                        <span style={{ color: fila.apagado ? T.muted : T.lime }}> · {valor}</span>
                       )}
-                      <span className="block text-sm leading-snug" style={{ color: T.muted }}>
-                        {fila.d}
-                      </span>
                     </span>
                   </li>
                 );
               })}
             </ul>
+            <div className="mt-7">
+              <Boton plan={plan} />
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Las tres cosas que responden a la desconfianza que deja cualquier
-          tarifa. Estaban en tres columnas debajo, repitiendo media tabla; aquí
-          se leen del tirón y en el sitio donde surge la duda. */}
-      <div className="mt-10 space-y-3">
-        {[
-          "La inversión en anuncios NO está incluida en ninguno de los dos packs: la pagas tú directamente a Google y a Meta, con tu tarjeta. Ese dinero no pasa por nuestras manos.",
-          "Tampoco nos llevamos comisión de lo que inviertes. La cuota es la cuota, gastes 300 € o 3.000 €.",
-          "El segundo canal pide una inversión mínima de 300 € al mes para que dé tiempo a aprender.",
-          "Sin permanencia y sin cuota de alta: pagas mes a mes y te vas cuando quieras.",
-        ].map((linea) => (
-          <p key={linea} className="flex gap-3 text-base leading-relaxed" style={{ color: T.muted }}>
-            <span aria-hidden className="mt-[0.55em] h-[2px] w-4 shrink-0" style={{ background: T.line }} />
-            <span>{linea}</span>
-          </p>
-        ))}
-      </div>
+      <p
+        className="mt-10 max-w-4xl text-sm leading-relaxed"
+        style={{ color: T.muted, opacity: 0.75 }}
+      >
+        {CONDICIONES}
+      </p>
     </div>
   );
 }
@@ -240,17 +195,27 @@ export function Planes() {
 function Encabezado({ plan }: { plan: (typeof PLANES)[number] }) {
   return (
     <div>
-      <p
-        className="text-sm font-bold uppercase tracking-[0.2em]"
-        style={{ color: plan.destacado ? T.lime : T.muted }}
-      >
-        {plan.nombre}
+      <p className="flex items-center gap-3">
+        <span
+          className="text-sm font-black uppercase tracking-[0.2em]"
+          style={{ color: plan.destacado ? T.lime : T.muted }}
+        >
+          {plan.nombre}
+        </span>
+        {plan.destacado && (
+          <span
+            className="rounded-full px-2.5 py-1 text-[0.7rem] font-black uppercase tracking-[0.12em]"
+            style={{ background: T.lime, color: T.ink }}
+          >
+            El completo
+          </span>
+        )}
       </p>
-      <p className="mt-2 flex items-baseline gap-2">
+      <p className="mt-3 flex items-baseline gap-2">
         <span
           className="font-black leading-none tabular-nums tracking-[-0.03em]"
           style={{
-            fontSize: "clamp(2.5rem, 5vw, 4rem)",
+            fontSize: "clamp(2.75rem, 5vw, 4.25rem)",
             color: plan.destacado ? T.lime : T.fg,
           }}
         >
@@ -264,11 +229,31 @@ function Encabezado({ plan }: { plan: (typeof PLANES)[number] }) {
   );
 }
 
+/** Lleva al formulario de arriba, que es el único sitio donde se deja el teléfono. */
+function Boton({ plan }: { plan: (typeof PLANES)[number] }) {
+  return (
+    <a
+      href="#empezar"
+      className="inline-flex w-full items-center justify-center rounded-full px-6 py-3.5 text-base font-bold transition-transform hover:-translate-y-0.5"
+      style={
+        plan.destacado
+          ? { background: T.lime, color: T.ink }
+          : { background: "transparent", color: T.fg, border: `1px solid ${T.line}` }
+      }
+    >
+      Me interesa este plan
+    </a>
+  );
+}
+
 /** Un sí, un no, o el dato cuando lo que cambia no es si entra sino cuánto. */
 function Celda({ valor, apagado }: { valor: Valor; apagado?: boolean }) {
   if (typeof valor === "string") {
     return (
-      <span className="text-lg font-bold" style={{ color: apagado ? T.muted : T.lime }}>
+      <span
+        className="font-bold"
+        style={{ fontSize: "1.125rem", color: apagado ? T.muted : T.lime }}
+      >
         {valor}
       </span>
     );
@@ -283,7 +268,7 @@ function Marca({ activo }: { activo: boolean }) {
     return (
       <span
         aria-label="No incluido"
-        className="inline-block h-[2px] w-5 rounded-full align-middle"
+        className="inline-block h-[2px] w-5 shrink-0 rounded-full align-middle"
         style={{ background: T.line }}
       />
     );
@@ -293,14 +278,14 @@ function Marca({ activo }: { activo: boolean }) {
       aria-label="Incluido"
       role="img"
       viewBox="0 0 24 24"
-      className="h-6 w-6"
+      className="h-7 w-7 shrink-0"
       style={{ color: T.lime }}
     >
       <path
         d="M4.5 12.5l5 5 10-11"
         fill="none"
         stroke="currentColor"
-        strokeWidth="2.6"
+        strokeWidth="2.8"
         strokeLinecap="round"
         strokeLinejoin="round"
       />

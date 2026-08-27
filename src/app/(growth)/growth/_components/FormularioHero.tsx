@@ -52,8 +52,9 @@ export function FormularioHero() {
   if (enviado) {
     return (
       <div
+        id="empezar"
         role="status"
-        className="rounded-3xl p-7 sm:p-8"
+        className="scroll-mt-8 rounded-3xl p-7 sm:p-8"
         style={{ background: PAPEL, color: TINTA, boxShadow: `0 0 0 6px ${T.lime}22` }}
       >
         <p className="text-2xl font-black leading-tight">Recibido.</p>
@@ -74,7 +75,10 @@ export function FormularioHero() {
 
   return (
     <form
-      className="relative rounded-3xl p-7 sm:p-8"
+      id="empezar"
+      // `scroll-mt` para que al llegar desde los botones de los packs no se
+      // pegue al borde de arriba de la ventana.
+      className="relative scroll-mt-8 rounded-3xl p-7 sm:p-8"
       style={{
         background: PAPEL,
         color: TINTA,

@@ -349,6 +349,20 @@ export default function GrowthPage() {
 
           <Pasos pasos={PASOS} />
 
+          {/* El remate de la sección, y lo que de verdad compra una clínica:
+              no un sistema, sino dejar de ocuparse de esto. Va después de los
+              tres pasos porque solo funciona cuando acabas de ver todo lo que
+              hay que hacer — antes sería una promesa, aquí es un alivio. */}
+          <p
+            className="mt-16 max-w-4xl font-black leading-[1.15] tracking-[-0.02em] text-balance"
+            style={{ fontSize: "clamp(1.75rem, 3.2vw, 3rem)" }}
+          >
+            Nosotros nos encargamos de todo.{" "}
+            <span style={{ color: T.lime }}>
+              Tú, de recibir a tus pacientes y darles un buen servicio.
+            </span>
+          </p>
+
           {/* Y aquí el precio, sobre la espalda de lo que acaba de leer. */}
           <div className="mt-16 pt-14" style={{ borderTop: `1px solid ${T.line}` }}>
             {/* Sin titular encima: el título va dentro de la tabla, en la
