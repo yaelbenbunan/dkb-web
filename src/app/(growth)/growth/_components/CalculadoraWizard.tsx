@@ -323,7 +323,7 @@ export function CalculadoraWizard({
             {pendiente ? "Calculando…" : "Ver mi resultado"}
           </button>
           {error && (
-            <p role="alert" className="mt-3 text-center text-sm font-bold" style={{ color: T.alerta }}>
+            <p role="alert" className="mt-3 text-center text-sm font-bold" style={{ color: T.lime }}>
               {error}
             </p>
           )}

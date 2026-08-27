@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { GROWTH, GROWTH_THEME as T } from "@/lib/growth-config";
 import { CalculadoraWizard } from "./_components/CalculadoraWizard";
 import { LineaDeTiempo } from "./_components/LineaDeTiempo";
+import { Subrayado } from "./_components/Subrayado";
 
 export const metadata: Metadata = {
   title: "Llenar tu agenda es fácil. Ganar más, no",
@@ -59,7 +60,7 @@ const TICKET_COMPARATIVA = "250 €";
 const COMPARATIVA = [
   {
     titulo: "La que llena la agenda",
-    color: T.alerta,
+    color: T.muted,
     pacientes: "40",
     gasto: "8.000 €",
     factura: "10.000 €",
@@ -184,14 +185,14 @@ export default function GrowthPage() {
       {/* ───────── 2. El problema ───────── */}
       <section className="py-20 md:py-28" style={{ background: T.surface }}>
         <Wrap>
-          <Eyebrow color={T.alerta}>El problema</Eyebrow>
+          <Eyebrow>El problema</Eyebrow>
 
           <h2
             className="mt-8 max-w-4xl font-black leading-[1.05] tracking-[-0.02em] text-balance"
             style={{ fontSize: "clamp(2rem, 5.5vw, 4rem)" }}
           >
             Puedes tener la agenda llena y{" "}
-            <span style={{ color: T.alerta }}>estar perdiendo dinero</span>.
+            <Subrayado grosor={1.15}>estar perdiendo dinero</Subrayado>.
           </h2>
 
           <p className="mt-6 max-w-2xl text-lg leading-relaxed" style={{ color: T.muted }}>

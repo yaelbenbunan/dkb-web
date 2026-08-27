@@ -33,15 +33,19 @@ export const GROWTH = {
  *    claro en LOS DOS temas. Aquí los colores son explícitos y no dependen de
  *    nada externo, así que ese fallo no puede repetirse.
  *
- * El lima es el color del dinero y de lo que se gana; el ámbar se reserva para
- * la fuga, es decir para todo lo que ilustra el problema. No mezclarlos.
+ * **Hay UN acento y solo uno.** Hubo dos —lima para lo que se gana, rojo y
+ * luego ámbar para el problema— y era peor: con dos colores el lector tiene que
+ * ir aprendiendo qué significa cada uno mientras lee, y el rojo además sonaba a
+ * reproche justo donde el dueño de la clínica tiene que reconocerse sin
+ * ponerse a la defensiva.
  *
- * **El ámbar era rojo, y el rojo estaba mal.** El rojo dice "error, algo se ha
- * roto", y aquí lo que se está contando es otra cosa: una clínica que va bien y
- * aun así pierde dinero sin saberlo. Pintar eso de rojo suena a reproche —a
- * "lo estás haciendo fatal"— justo en la sección donde el lector tiene que
- * reconocerse sin ponerse a la defensiva. El ámbar dice "mira esto", que es lo
- * que hace falta.
+ * Con un solo acento, el lima quiere decir siempre lo mismo: esto importa. Y lo
+ * que antes distinguía el color ahora lo distingue el sitio — la clínica que va
+ * mal se pinta en gris y la que va bien en lima, así que la comparación se ve
+ * antes de leerla.
+ *
+ * Para remarcar dentro de una frase está `Subrayado`, un trazo torcido a mano.
+ * Ver el porqué en ese componente.
  */
 export const GROWTH_THEME = {
   /** Fondo principal, casi negro. */
@@ -52,8 +56,6 @@ export const GROWTH_THEME = {
   line: "#23262E",
   /** Acento principal: lo que se gana. */
   lime: "#C7F73E",
-  /** Acento del problema: lo que se fuga. */
-  alerta: "#E9B44C",
   /** Texto principal. */
   fg: "#F5F7F8",
   /** Texto secundario. */
