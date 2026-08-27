@@ -21,6 +21,22 @@ export const GROWTH = {
    * renderiza: la landing no debe esperar al vídeo para poder publicarse.
    */
   videoSrc: null as string | null,
+  /**
+   * Enlace para agendar una videollamada de demostración.
+   *
+   * Mientras sea null, el enlace no aparece — igual que el vídeo. Va como
+   * segunda opción y nunca como botón al lado del formulario: dos llamadas a la
+   * acción del mismo tamaño no suman, se reparten. El formulario captura a
+   * quien quiere que le llamen, que son más; esto es para quien prefiere verlo
+   * antes de dar su teléfono.
+   *
+   * De momento apunta a una herramienta de terceros. Hacerlo con nuestro propio
+   * sistema —el mismo que agenda a los pacientes de las clínicas— es posible y
+   * sería un argumento de venta bonito, pero pide bastante más de lo que
+   * tenemos hecho: invitación al asistente, enlace de videollamada, cancelar y
+   * cambiar la hora, y protección contra reservas basura.
+   */
+  demoUrl: null as string | null,
 } as const;
 
 /**

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { requestGrowth } from "@/lib/growth-action";
-import { GROWTH_THEME as T } from "@/lib/growth-config";
+import { GROWTH, GROWTH_THEME as T } from "@/lib/growth-config";
 import { track, pushUserData } from "@/lib/gtm";
 import { newEventId, trackMetaLead } from "@/lib/meta-pixel";
 import { appendUtms } from "@/lib/utm";
@@ -233,6 +233,24 @@ export function FormularioHero() {
       {error && (
         <p role="alert" className="mt-3 text-center text-sm font-bold" style={{ color: "#B4321F" }}>
           {error}
+        </p>
+      )}
+
+      {/* La segunda opción, y en letra pequeña a propósito: quien quiere que le
+          llamen ya ha rellenado arriba. Esto es para quien prefiere verlo antes
+          de dar su teléfono. */}
+      {GROWTH.demoUrl && (
+        <p className="mt-4 text-center text-sm" style={{ color: "rgba(11,27,43,0.6)" }}>
+          ¿Prefieres que te lo enseñemos?{" "}
+          <a
+            href={GROWTH.demoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-bold underline underline-offset-2"
+            style={{ color: TINTA }}
+          >
+            Agenda una demo de 15 minutos
+          </a>
         </p>
       )}
     </form>
