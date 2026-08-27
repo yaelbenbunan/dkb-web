@@ -43,8 +43,8 @@ const INCLUYE: {
     // Justifica precio y además funciona: quien busca "implante dental" y
     // aterriza en una página de implantes convierte bastante mejor que quien
     // cae en la portada y tiene que buscarse la vida.
-    t: "Páginas por tratamiento",
-    d: "Una página propia para implantes, ortodoncia o lo que anunciemos, en vez de mandar a todo el mundo a la portada",
+    t: "Landings de captación",
+    d: "Una página propia para implantes, ortodoncia o lo que anunciemos, en vez de mandar a todo el mundo a la web general",
     basico: false,
     avanzado: true,
   },
