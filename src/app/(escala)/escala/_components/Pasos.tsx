@@ -1,4 +1,5 @@
 import { GROWTH_THEME as T } from "@/lib/growth-config";
+import { AlAparecer } from "./AlAparecer";
 
 /**
  * Los tres pasos, en tres tarjetas con dibujo.
@@ -32,9 +33,17 @@ export function Pasos({ pasos }: { pasos: Paso[] }) {
       {pasos.map((p, i) => {
         const Dibujo = dibujos[i] ?? Captacion;
         return (
-          <li
-            key={p.n}
-            className="relative flex flex-col rounded-3xl p-7"
+          // El envoltorio va DENTRO del <li> y no fuera: un <ol> solo admite
+          // <li> como hijo directo, y meter un <div> entre medias rompe la
+          // lista para el lector de pantalla — que es quien más la necesita,
+          // porque estos tres son una secuencia y no tres tarjetas sueltas.
+          //
+          // Escalonados en el orden de los pasos, por lo mismo: entrando a la
+          // vez se leen como tres servicios a la carta.
+          <li key={p.n} className="relative h-full">
+          <AlAparecer retraso={i * 130} className="h-full">
+          <div
+            className="flex h-full flex-col rounded-3xl p-7"
             style={{ background: T.ink, border: `1px solid ${T.line}` }}
           >
             <div className="flex items-center justify-between">
@@ -72,7 +81,7 @@ export function Pasos({ pasos }: { pasos: Paso[] }) {
             </div>
 
             <p
-              className="mt-6 font-black leading-tight"
+              className="mt-6 font-black leading-tight text-balance"
               style={{ fontSize: "clamp(1.25rem, 1.8vw, 1.625rem)" }}
             >
               {p.t}
@@ -80,6 +89,8 @@ export function Pasos({ pasos }: { pasos: Paso[] }) {
             <p className="mt-2.5 text-base leading-relaxed" style={{ color: T.muted }}>
               {p.d}
             </p>
+          </div>
+          </AlAparecer>
           </li>
         );
       })}

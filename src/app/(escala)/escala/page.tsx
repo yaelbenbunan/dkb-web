@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { GROWTH, GROWTH_THEME as T } from "@/lib/growth-config";
+import { CONTACT_INFO } from "@/lib/contact-info";
 import { Pasos } from "./_components/Pasos";
 import { Subrayado } from "./_components/Subrayado";
 import { Circulo } from "./_components/Circulo";
@@ -9,6 +10,7 @@ import { Logotipo } from "./_components/Logotipo";
 import { FormularioHero } from "./_components/FormularioHero";
 import { Planes } from "./_components/Planes";
 import { Faqs } from "./_components/Faqs";
+import { AlAparecer } from "./_components/AlAparecer";
 
 export const metadata: Metadata = {
   title: "Llenar tu agenda es fácil. Ganar más, no",
@@ -141,16 +143,23 @@ export default function GrowthPage() {
   return (
     <>
       {/* ───────── 1. Hero ───────── */}
-      {/* Alturas contenidas a propósito: todo el hero, botón incluido, tiene
-          que caber sin scroll nada más entrar, también en portátiles bajos.
+      {/* **La pantalla entera, y nada más que el hero.** Estaba en 80svh y el
+          resultado era el peor de los dos mundos: no llenaba la pantalla, pero
+          asomaba un dedo de la sección siguiente por abajo. Esa franja de otro
+          color no invita a bajar —para eso hace falta que se note que hay algo
+          debajo, no verlo a medias— y en cambio le quita al titular la única
+          ventaja que tiene un hero, que es ser lo único que se ve.
 
-          La pantalla completa se condiciona a `lg:landscape` y no a un ancho a
-          secas: el problema no es la anchura sino la proporción. En cualquier
-          viewport vertical —móvil o tableta— el contenido ocupa un tercio de la
-          altura, así que centrarlo dentro de 100svh dejaba entre 500 y 750 px
-          muertos. Fuera de apaisado manda un suelo en píxeles, que no crece con
-          la altura de la pantalla y por tanto no puede volver a abrir el hueco. */}
-      <header className="relative flex min-h-[30rem] items-center overflow-hidden py-12 md:py-16 lg:landscape:min-h-[80svh]">
+          Se condiciona a `lg:landscape` y no a un ancho a secas: el problema no
+          es la anchura sino la proporción. En cualquier viewport vertical
+          —móvil o tableta— el contenido ocupa un tercio de la altura, así que
+          centrarlo dentro de 100svh dejaría entre 500 y 750 px muertos. Fuera
+          de apaisado manda un suelo en píxeles, que no crece con la altura de
+          la pantalla y por tanto no puede volver a abrir ese hueco.
+
+          `svh` y no `vh`: en el móvil, `vh` cuenta la barra del navegador como
+          si no estuviera y el botón del formulario queda por debajo del corte. */}
+      <header className="relative flex min-h-[30rem] items-center overflow-hidden py-12 md:py-16 lg:landscape:min-h-svh lg:landscape:py-20">
         {/* Tres capas para que la cabecera deje de ser un rectángulo negro, y
             ninguna se ve como tal: una trama de puntos que da textura sin hacer
             ruido, un halo verde detrás del formulario —que además empuja la
@@ -186,6 +195,14 @@ export default function GrowthPage() {
                 volver a medirla — a ojo sale un número mucho más conservador y
                 el titular se queda pequeño sin que se note por qué.
 
+                **El tope sube de 7 a 8,75 rem.** Quien limita el tamaño es el
+                9,4 cqw, que es el que garantiza que la frase quepa en un
+                renglón; el tope solo decidía a partir de qué ancho de columna
+                el titular dejaba de crecer, y a 7 rem frenaba justo en los
+                monitores donde más sitio hay. Subirlo no puede partir la frase
+                —de eso se sigue encargando el cqw—, solo deja que llene la
+                pantalla que tiene delante.
+
                 Por debajo de 640 px se le deja partirse: ahí no hay tamaño
                 legible que la meta en un renglón. */}
             <div style={{ containerType: "inline-size" }}>
@@ -195,9 +212,21 @@ export default function GrowthPage() {
                   altura al hero. */}
               <Logotipo className="mb-10" />
 
+              {/* **`text-balance` para que ninguna línea se quede coja.**
+                  Por debajo de 640 px las dos frases pueden partirse, y el
+                  navegador parte donde deja de caber: "Llenar tu agenda es" y
+                  debajo "fácil." sola. Una palabra suelta en su propio renglón
+                  no es un titular, es un titular roto — y en un titular a este
+                  tamaño se ve antes que se lee.
+
+                  Con `balance`, el navegador reparte el texto entre las líneas
+                  que necesite en vez de llenar la primera hasta el borde, así
+                  que sale "Llenar tu agenda / es fácil.". No hace falta elegir
+                  el punto de corte a mano frase por frase, que además habría
+                  que rehacer cada vez que cambie el texto. */}
               <h1
-                className="font-black leading-[0.88] tracking-[-0.035em]"
-                style={{ fontSize: "clamp(2.5rem, 9.4cqw, 7rem)" }}
+                className="font-black leading-[0.88] tracking-[-0.035em] text-balance"
+                style={{ fontSize: "clamp(2.5rem, 9.4cqw, 8.75rem)" }}
               >
                 <span className="whitespace-nowrap max-sm:whitespace-normal">
                   Llenar tu agenda es fácil.
@@ -216,7 +245,7 @@ export default function GrowthPage() {
                   destaca "ganar más" es el trazo, no el color. */}
               <p
                 className="mt-7 max-w-2xl font-bold leading-[1.25] tracking-[-0.015em] text-balance"
-                style={{ fontSize: "clamp(1.5rem, 2.1vw, 2.125rem)" }}
+                style={{ fontSize: "clamp(1.5rem, 2.1vw, 2.5rem)" }}
               >
                 Cualquiera te trae pacientes. Nosotros te hacemos{" "}
                 <Subrayado>ganar más</Subrayado>.
@@ -226,29 +255,67 @@ export default function GrowthPage() {
             <FormularioHero />
           </div>
         </Wrap>
+
+        {/* **La señal de que hay más abajo.** Es la contrapartida de ocupar la
+            pantalla entera: sin nada asomando por el borde, un hero a pantalla
+            completa se puede leer como la página entera, y quien lo lea así no
+            baja. Antes lo decía —mal— la franja de la sección siguiente
+            asomando por abajo.
+
+            Va solo donde el hero llena la pantalla. Fuera de apaisado la
+            siguiente sección ya asoma sola por el borde y esto sobraría, que es
+            la manera más rápida de que un adorno se convierta en ruido.
+
+            Un trazo y una palabra, sin flecha: la flecha es el icono que ya usa
+            todo el mundo para esto y no dice a dónde lleva. "El problema" sí, y
+            además es el título de la sección a la que va — de modo que quien lo
+            lee ya sabe qué se va a encontrar antes de bajar. */}
+        <a
+          href="#problema"
+          className="absolute inset-x-0 bottom-10 mx-auto hidden w-fit flex-col items-center gap-3 transition-opacity hover:opacity-100 lg:landscape:flex"
+          style={{ opacity: 0.45 }}
+        >
+          <span
+            className="text-[0.7rem] font-bold uppercase tracking-[0.28em]"
+            style={{ color: T.muted }}
+          >
+            El problema
+          </span>
+          <span
+            aria-hidden
+            className="block h-10 w-px animate-pulse"
+            style={{ background: `linear-gradient(to bottom, ${T.lime}, transparent)` }}
+          />
+        </a>
       </header>
 
       {/* ───────── 2. El problema ───────── */}
       <section
+        id="problema"
         className="relative overflow-hidden py-20 md:py-24 lg:py-28"
         style={{ background: T.surface }}
       >
         <Trama motivo="rayas" desde="70% 40%" />
         <Wrap className="relative">
-          <Eyebrow>El problema</Eyebrow>
+          <AlAparecer>
+            <Eyebrow>El problema</Eyebrow>
 
-          <h2
-            className="mt-8 max-w-4xl font-black leading-[1.05] tracking-[-0.02em] text-balance"
-            style={{ fontSize: "clamp(2.25rem, 5.2vw, 4.5rem)" }}
-          >
-            Puedes tener la agenda llena y estar perdiendo dinero.
-          </h2>
+            <h2
+              className="mt-8 max-w-4xl font-black leading-[1.05] tracking-[-0.02em] text-balance"
+              style={{ fontSize: "clamp(2.25rem, 5.2vw, 4.5rem)" }}
+            >
+              Puedes tener la agenda llena y estar perdiendo dinero.
+            </h2>
+          </AlAparecer>
 
+          {/* Escalonadas: entrando a la vez se leen como un bloque, y lo que
+              tienen que leerse es como una comparación — primero una clínica y
+              después la otra, que es el orden en que se entiende. */}
           <div className="mt-12 grid gap-5 md:grid-cols-2">
-            {COMPARATIVA.map((c) => (
+            {COMPARATIVA.map((c, i) => (
+              <AlAparecer key={c.titulo} retraso={i * 140} className="h-full">
               <div
-                key={c.titulo}
-                className="rounded-3xl p-7 md:p-9"
+                className="h-full rounded-3xl p-7 md:p-9"
                 style={{
                   background: c.rodeado
                     ? `radial-gradient(120% 100% at 50% 0%, ${T.lime}14, ${T.ink} 60%)`
@@ -316,6 +383,7 @@ export default function GrowthPage() {
                   {c.remate}
                 </p>
               </div>
+              </AlAparecer>
             ))}
           </div>
         </Wrap>
@@ -337,16 +405,17 @@ export default function GrowthPage() {
           style={{ background: T.lime, opacity: 0.09 }}
         />
         <Wrap className="relative">
-          <Eyebrow>La solución</Eyebrow>
+          <AlAparecer>
+            <Eyebrow>La solución</Eyebrow>
 
-          <h2
-            className="mt-8 max-w-5xl font-black leading-[1.02] tracking-[-0.03em] text-balance"
-            style={{ fontSize: "clamp(2.5rem, 6vw, 5.5rem)" }}
-          >
-            Un sistema integral.
-            <br />
-            <span style={{ color: T.lime }}>De principio a fin.</span>
-          </h2>
+            <h2
+              className="mt-8 max-w-5xl font-black leading-[1.02] tracking-[-0.03em] text-balance"
+              style={{ fontSize: "clamp(2.5rem, 6vw, 5.5rem)" }}
+            >
+              Un sistema integral.
+              <br />
+              <span style={{ color: T.lime }}>De principio a fin.</span>
+            </h2>
 
           {/* El subtítulo, y lo que de verdad compra una clínica: no un
               sistema, sino dejar de ocuparse de esto.
@@ -355,13 +424,14 @@ export default function GrowthPage() {
               mejor por una razón que no es de maquetación: "todo lo demás" pide
               que le expliquen qué es, y justo debajo están los tres pasos
               diciéndolo. Antes cerraba; ahora abre. */}
-          <p
-            className="mt-8 font-bold leading-[1.2] tracking-[-0.015em] text-balance"
-            style={{ fontSize: "clamp(1.375rem, 2.4vw, 2.25rem)" }}
-          >
-            Tú encárgate de darle un buen servicio a tus pacientes.{" "}
-            <span style={{ color: T.lime }}>Nosotros, de todo lo demás.</span>
-          </p>
+            <p
+              className="mt-8 font-bold leading-[1.2] tracking-[-0.015em] text-balance"
+              style={{ fontSize: "clamp(1.375rem, 2.4vw, 2.25rem)" }}
+            >
+              Tú encárgate de darle un buen servicio a tus pacientes.{" "}
+              <span style={{ color: T.lime }}>Nosotros, de todo lo demás.</span>
+            </p>
+          </AlAparecer>
 
           <Pasos pasos={PASOS} />
 
@@ -382,29 +452,29 @@ export default function GrowthPage() {
       >
         <Trama desde="75% 40%" />
         <Wrap className="relative">
-          <Eyebrow>Los planes</Eyebrow>
+          {/* **Solo el título, y la tabla pegada debajo.** Hubo aquí un
+              subtítulo grande y una línea de apoyo, y el bloque entero ocupaba
+              media pantalla de alto por la izquierda con el resto vacío: la
+              cabecera de las otras secciones funciona porque debajo hay algo
+              ancho, y aquí lo ancho es la tabla, que empezaba demasiado tarde.
 
-          <h2
-            className="mt-8 font-black leading-[1.02] tracking-[-0.03em]"
-            style={{ fontSize: "clamp(2.5rem, 6vw, 5.5rem)" }}
-          >
-            Nuestros planes
-          </h2>
+              Lo que decían esas dos líneas no se ha perdido — "desde 199 €" lo
+              dice la propia tabla mejor que un texto, y "sin permanencia" está
+              en las condiciones de debajo y en las preguntas frecuentes. */}
+          <AlAparecer>
+            <h2
+              className="font-black leading-[1.02] tracking-[-0.03em] text-balance"
+              style={{ fontSize: "clamp(2.5rem, 6vw, 5.5rem)" }}
+            >
+              Nuestros planes
+            </h2>
+          </AlAparecer>
 
-          <p
-            className="mt-7 max-w-4xl font-bold leading-[1.2] tracking-[-0.015em] text-balance"
-            style={{ fontSize: "clamp(1.375rem, 2.4vw, 2.25rem)" }}
-          >
-            Todo lo que acabas de leer, funcionando en tu clínica{" "}
-            <span style={{ color: T.lime }}>desde 199 € al mes</span>.
-          </p>
-          <p className="mt-4 text-base" style={{ color: T.muted }}>
-            Los dos, sin permanencia.
-          </p>
-
-          <div className="mt-14">
-            <Planes />
-          </div>
+          <AlAparecer retraso={120}>
+            <div className="mt-8 md:mt-10">
+              <Planes />
+            </div>
+          </AlAparecer>
         </Wrap>
       </section>
 
@@ -431,20 +501,48 @@ export default function GrowthPage() {
               no se rompa por la mitad. Debajo de lg sí se parte, porque en un
               móvil no hay tamaño que la deje en dos líneas sin que se lea con
               lupa. */}
-          <p
-            className="font-black leading-[1.02] tracking-[-0.035em]"
-            style={{ fontSize: "clamp(2rem, 4.4vw, 5rem)" }}
-          >
-            <span className="lg:whitespace-nowrap">
-              Vas a querer quedarte por los resultados,
-            </span>
-            <br />
-            <span className="lg:whitespace-nowrap">no porque te obliguemos.</span>
-          </p>
+          <AlAparecer>
+            <p
+              className="font-black leading-[1.02] tracking-[-0.035em] text-balance"
+              style={{ fontSize: "clamp(2rem, 4.4vw, 5rem)" }}
+            >
+              <span className="lg:whitespace-nowrap">
+                Vas a querer quedarte por los resultados,
+              </span>
+              <br />
+              <span className="lg:whitespace-nowrap">no porque te obliguemos.</span>
+            </p>
 
-          {/* Sin botón: la sección anterior acaba de llevar a la calculadora
-              y repetirlo aquí convertiría el cierre en otra llamada a la
-              acción. Esta frase se lee mejor sola. */}
+            {/* **WhatsApp y no otro formulario.** Aquí hubo un tiempo sin
+                botón, y el argumento era bueno: repetir la misma llamada a la
+                acción convierte el cierre en un anuncio. Lo que cambia es que
+                esto no repite nada — el formulario del hero pide un teléfono
+                para que llamemos nosotros, y hay bastante gente que no lo deja
+                pero sí escribe. Son dos puertas distintas para dos personas
+                distintas, no la misma dos veces.
+
+                Y va justo detrás de "no porque te obliguemos" a propósito: es
+                el momento con menos fricción de la página, y escribir por
+                WhatsApp es el gesto que menos compromete de todos los que se
+                pueden pedir. */}
+            <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
+              <a
+                href={CONTACT_INFO.socials.whatsapp}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-3 rounded-full px-7 py-4 text-base font-bold transition-transform hover:-translate-y-0.5 sm:text-lg"
+                style={{ background: T.ink, color: T.fg }}
+              >
+                <svg aria-hidden viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="currentColor">
+                  <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.46 1.32 4.96L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.19 8.19 0 0 1-1.26-4.38c0-4.54 3.7-8.23 8.25-8.23a8.2 8.2 0 0 1 8.24 8.24c0 4.54-3.7 8.23-8.24 8.23Zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.24-.64.8-.79.97-.14.16-.29.18-.54.06-.25-.13-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.01-.38.11-.5.11-.11.25-.29.37-.43.13-.15.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.42-.56-.43h-.48c-.16 0-.43.06-.65.31-.22.25-.85.83-.85 2.03s.87 2.35.99 2.51c.12.17 1.71 2.61 4.15 3.66.58.25 1.03.4 1.39.51.58.19 1.11.16 1.53.1.47-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.06-.11-.22-.17-.47-.29Z" />
+                </svg>
+                Escríbenos por WhatsApp
+              </a>
+              <p className="max-w-xs text-sm font-medium leading-snug" style={{ opacity: 0.6 }}>
+                Sin formulario y sin dejar tu teléfono. Preguntas lo que quieras.
+              </p>
+            </div>
+          </AlAparecer>
         </Wrap>
       </section>
 
@@ -465,7 +563,9 @@ export default function GrowthPage() {
       >
         <Trama motivo="rayas" desde="20% 60%" />
         <Wrap className="relative">
-          <Faqs />
+          <AlAparecer>
+            <Faqs />
+          </AlAparecer>
         </Wrap>
       </section>
 

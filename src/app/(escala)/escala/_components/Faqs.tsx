@@ -114,7 +114,7 @@ export function Faqs() {
             style={{ borderColor: T.line }}
           >
             <summary
-              className="flex cursor-pointer list-none items-center justify-between gap-6 py-6 font-bold leading-snug transition-colors hover:opacity-80 [&::-webkit-details-marker]:hidden"
+              className="flex cursor-pointer list-none items-center justify-between gap-6 py-6 font-bold leading-snug text-pretty transition-colors hover:opacity-80 [&::-webkit-details-marker]:hidden"
               style={{ fontSize: "clamp(1.125rem, 1.6vw, 1.375rem)" }}
             >
               {f.p}
