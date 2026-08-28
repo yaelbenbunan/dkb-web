@@ -121,18 +121,32 @@ export function Planes() {
                   alinear las columnas, los dos desaparecen de golpe: el título
                   ocupa el hueco que ya existía y queda a la misma altura que los
                   precios, que es justo con lo que se quiere que se lea junto. */}
-              <th className="w-[38%] pb-7 pr-6 text-left align-bottom">
+              {/* **Del tamaño de los precios y en dos líneas.** A cuerpo menor
+                  y en una sola, el título terminaba muy por encima del borde de
+                  la tabla y dejaba un hueco muerto sobre él: la casilla mide lo
+                  que mide la columna del precio —nombre, cifra y «al mes»— y el
+                  título no llegaba ni a la mitad. Puesto a la misma escala y
+                  partido, ocupa el alto que la fila ya tenía y se lee a la par
+                  que las cifras, que es con lo que tiene que leerse.
+
+                  El salto va escrito y no se deja al azar del ancho: «Nuestros
+                  planes» partido por donde caiga es lo que da un «Nuestros
+                  pla-nes» el día que alguien toque el tamaño. Por eso tampoco
+                  lleva `text-balance`, que reparte las líneas por su cuenta. */}
+              <th className="w-[38%] pb-8 pl-1 pr-6 pt-3 text-left align-bottom">
                 <h2
-                  className="font-black leading-[1.02] tracking-[-0.03em] text-balance"
-                  style={{ fontSize: "clamp(2.25rem, 4.4vw, 4rem)" }}
+                  className="font-black leading-[0.92] tracking-[-0.035em]"
+                  style={{ fontSize: "clamp(2.25rem, 5.2vw, 4.75rem)" }}
                 >
-                  Nuestros planes
+                  Nuestros
+                  <br />
+                  planes
                 </h2>
               </th>
               {PLANES.map((plan) => (
                 <th
                   key={plan.id}
-                  className="px-6 pb-7 text-center align-bottom"
+                  className="px-6 pb-8 pt-3 text-center align-bottom"
                   style={plan.destacado ? { background: `${T.lime}08` } : undefined}
                 >
                   <Encabezado plan={plan} />
@@ -143,7 +157,7 @@ export function Planes() {
           <tbody>
             {INCLUYE.map((fila) => (
               <tr key={fila.t} style={{ borderTop: `1px solid ${T.line}` }}>
-                <td className="py-4 pr-6 text-left">
+                <td className="py-4 pl-1 pr-6 text-left">
                   <p
                     className="font-bold leading-snug"
                     style={{
