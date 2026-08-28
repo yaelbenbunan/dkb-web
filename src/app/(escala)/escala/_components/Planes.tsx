@@ -107,16 +107,23 @@ export function Planes() {
         <table className="w-full border-collapse">
           <thead>
             <tr>
-              {/* La esquina ya no lleva el título de la sección, pero tampoco
-                  se queda vacía: nombra la columna que tiene debajo, que es
-                  para lo que sirve una esquina en una tabla comparativa. */}
+              {/* **El título de la sección vive aquí, en la esquina.**
+                  Estuvo fuera, encima de la tabla, y dejaba dos huecos a la vez:
+                  una banda vacía a su derecha —el título ocupa un tercio del
+                  ancho y la sección es toda la pantalla— y otra debajo, entre él
+                  y la tabla. Dos agujeros para un texto de dos palabras.
+
+                  Puesto en la casilla que la tabla necesita de todas formas para
+                  alinear las columnas, los dos desaparecen de golpe: el título
+                  ocupa el hueco que ya existía y queda a la misma altura que los
+                  precios, que es justo con lo que se quiere que se lea junto. */}
               <th className="w-[38%] pb-7 pr-6 text-left align-bottom">
-                <p
-                  className="text-sm font-black uppercase tracking-[0.2em]"
-                  style={{ color: T.muted }}
+                <h2
+                  className="font-black leading-[1.02] tracking-[-0.03em] text-balance"
+                  style={{ fontSize: "clamp(2.25rem, 4.4vw, 4rem)" }}
                 >
-                  Qué incluye
-                </p>
+                  Nuestros planes
+                </h2>
               </th>
               {PLANES.map((plan) => (
                 <th
@@ -176,8 +183,19 @@ export function Planes() {
       </div>
 
       {/* ── Tarjetas, en móvil. Una tabla de tres columnas en un teléfono se
-             lee con lupa, y esta página la van a abrir muchos desde el móvil. ── */}
-      <div className="grid gap-5 md:hidden">
+             lee con lupa, y esta página la van a abrir muchos desde el móvil.
+
+             Aquí el título sí va encima: sin tabla no hay esquina donde
+             meterlo, y una columna de tarjetas que empieza sin nombre no dice
+             de qué sección forma parte. ── */}
+      <h2
+        className="font-black leading-[1.02] tracking-[-0.03em] text-balance md:hidden"
+        style={{ fontSize: "clamp(2.25rem, 8vw, 3rem)" }}
+      >
+        Nuestros planes
+      </h2>
+
+      <div className="mt-7 grid gap-5 md:hidden">
         {PLANES.map((plan) => (
           <div
             key={plan.id}

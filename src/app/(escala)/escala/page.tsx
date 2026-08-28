@@ -43,16 +43,24 @@ export const metadata: Metadata = {
 function Wrap({
   children,
   narrow = false,
+  ancho = false,
   className = "",
 }: {
   children: React.ReactNode;
   narrow?: boolean;
+  /**
+   * Solo el hero. 124 rem en vez de 110: el titular se mide contra el ancho de
+   * su columna, así que cada centímetro que se le da al contenedor sale
+   * directamente en el tamaño de letra. En las secciones de texto ese ancho de
+   * más sería peor —una línea de prosa de 1900 px no se lee, se recorre con el
+   * cuello—, pero el hero no es prosa: son ocho palabras.
+   */
+  ancho?: boolean;
   className?: string;
 }) {
+  const tope = narrow ? "max-w-4xl" : ancho ? "max-w-[124rem]" : "max-w-[110rem]";
   return (
-    <div
-      className={`mx-auto w-full px-6 sm:px-10 lg:px-14 ${narrow ? "max-w-4xl" : "max-w-[110rem]"} ${className}`}
-    >
+    <div className={`mx-auto w-full px-6 sm:px-10 lg:px-14 ${tope} ${className}`}>
       {children}
     </div>
   );
@@ -176,7 +184,7 @@ export default function GrowthPage() {
           className="pointer-events-none absolute -left-40 -top-40 h-[34rem] w-[34rem] rounded-full blur-[140px]"
           style={{ background: T.lime, opacity: 0.07 }}
         />
-        <Wrap className="relative">
+        <Wrap ancho className="relative">
           {/* **El titular y el formulario, uno al lado del otro.**
               El formulario lleva ancho fijo y el titular se queda con lo que
               sobre. Es al revés de lo normal —repartir en fracciones— y es a
@@ -210,7 +218,7 @@ export default function GrowthPage() {
                   barra propia: esta landing no tiene navegación —no hay a dónde
                   ir— y ponerle una cabecera al uso solo serviría para quitarle
                   altura al hero. */}
-              <Logotipo className="mb-10" />
+              <Logotipo className="mb-12 lg:mb-20" />
 
               {/* **`text-balance` para que ninguna línea se quede coja.**
                   Por debajo de 640 px las dos frases pueden partirse, y el
@@ -225,8 +233,8 @@ export default function GrowthPage() {
                   el punto de corte a mano frase por frase, que además habría
                   que rehacer cada vez que cambie el texto. */}
               <h1
-                className="font-black leading-[0.88] tracking-[-0.035em] text-balance"
-                style={{ fontSize: "clamp(2.5rem, 9.4cqw, 8.75rem)" }}
+                className="font-black leading-[0.94] tracking-[-0.035em] text-balance"
+                style={{ fontSize: "clamp(2.75rem, 9.5cqw, 10rem)" }}
               >
                 <span className="whitespace-nowrap max-sm:whitespace-normal">
                   Llenar tu agenda es fácil.
@@ -244,8 +252,8 @@ export default function GrowthPage() {
                   y repetirlo aquí hacía que las dos frases compitieran. Lo que
                   destaca "ganar más" es el trazo, no el color. */}
               <p
-                className="mt-7 max-w-2xl font-bold leading-[1.25] tracking-[-0.015em] text-balance"
-                style={{ fontSize: "clamp(1.5rem, 2.1vw, 2.5rem)" }}
+                className="mt-9 max-w-3xl font-bold leading-[1.3] tracking-[-0.015em] text-balance lg:mt-14"
+                style={{ fontSize: "clamp(1.5rem, 2.6vw, 3.25rem)" }}
               >
                 Cualquiera te trae pacientes. Nosotros te hacemos{" "}
                 <Subrayado>ganar más</Subrayado>.
@@ -256,43 +264,12 @@ export default function GrowthPage() {
           </div>
         </Wrap>
 
-        {/* **La señal de que hay más abajo.** Es la contrapartida de ocupar la
-            pantalla entera: sin nada asomando por el borde, un hero a pantalla
-            completa se puede leer como la página entera, y quien lo lea así no
-            baja. Antes lo decía —mal— la franja de la sección siguiente
-            asomando por abajo.
-
-            Va solo donde el hero llena la pantalla. Fuera de apaisado la
-            siguiente sección ya asoma sola por el borde y esto sobraría, que es
-            la manera más rápida de que un adorno se convierta en ruido.
-
-            Un trazo y una palabra, sin flecha: la flecha es el icono que ya usa
-            todo el mundo para esto y no dice a dónde lleva. "El problema" sí, y
-            además es el título de la sección a la que va — de modo que quien lo
-            lee ya sabe qué se va a encontrar antes de bajar. */}
-        <a
-          href="#problema"
-          className="absolute inset-x-0 bottom-10 mx-auto hidden w-fit flex-col items-center gap-3 transition-opacity hover:opacity-100 lg:landscape:flex"
-          style={{ opacity: 0.45 }}
-        >
-          <span
-            className="text-[0.7rem] font-bold uppercase tracking-[0.28em]"
-            style={{ color: T.muted }}
-          >
-            El problema
-          </span>
-          <span
-            aria-hidden
-            className="block h-10 w-px animate-pulse"
-            style={{ background: `linear-gradient(to bottom, ${T.lime}, transparent)` }}
-          />
-        </a>
       </header>
 
       {/* ───────── 2. El problema ───────── */}
       <section
         id="problema"
-        className="relative overflow-hidden py-20 md:py-24 lg:py-28"
+        className="relative overflow-hidden py-16 md:py-20 lg:py-24"
         style={{ background: T.surface }}
       >
         <Trama motivo="rayas" desde="70% 40%" />
@@ -395,7 +372,7 @@ export default function GrowthPage() {
           apoyado en ellos: "desde 199 €" solo se entiende si acabas de leer qué
           es "todo esto". */}
       <section
-        className="relative overflow-hidden py-20 md:py-24 lg:py-28"
+        className="relative overflow-hidden py-16 md:py-20 lg:py-24"
         style={{ background: T.surface }}
       >
         <Trama desde="25% 30%" />
@@ -447,33 +424,16 @@ export default function GrowthPage() {
           engancha el precio con lo que se acaba de leer— la sección se
           anuncia, y el enganche lo hace ahora la frase, que es su trabajo. */}
       <section
-        className="relative overflow-hidden py-20 md:py-24 lg:py-28"
+        className="relative overflow-hidden py-16 md:py-20 lg:py-24"
         style={{ background: T.surface }}
       >
         <Trama desde="75% 40%" />
         <Wrap className="relative">
-          {/* **Solo el título, y la tabla pegada debajo.** Hubo aquí un
-              subtítulo grande y una línea de apoyo, y el bloque entero ocupaba
-              media pantalla de alto por la izquierda con el resto vacío: la
-              cabecera de las otras secciones funciona porque debajo hay algo
-              ancho, y aquí lo ancho es la tabla, que empezaba demasiado tarde.
-
-              Lo que decían esas dos líneas no se ha perdido — "desde 199 €" lo
-              dice la propia tabla mejor que un texto, y "sin permanencia" está
-              en las condiciones de debajo y en las preguntas frecuentes. */}
+          {/* El título de esta sección va DENTRO de `Planes`, en la esquina de
+              la tabla. Ver el porqué allí: aquí fuera dejaba una banda vacía a
+              su derecha y otra entre él y la tabla. */}
           <AlAparecer>
-            <h2
-              className="font-black leading-[1.02] tracking-[-0.03em] text-balance"
-              style={{ fontSize: "clamp(2.5rem, 6vw, 5.5rem)" }}
-            >
-              Nuestros planes
-            </h2>
-          </AlAparecer>
-
-          <AlAparecer retraso={120}>
-            <div className="mt-8 md:mt-10">
-              <Planes />
-            </div>
+            <Planes />
           </AlAparecer>
         </Wrap>
       </section>
@@ -490,7 +450,7 @@ export default function GrowthPage() {
           Ya no reserva la pantalla entera: al quitarle el botón de debajo se
           quedaba media pantalla de negro entre la calculadora y la frase, que
           es justo el hueco que esta página tenía de más por todas partes. */}
-      <section className="flex items-center py-24 md:py-28 lg:py-32" style={{ background: T.lime, color: T.ink }}>
+      <section className="flex items-center py-20 md:py-24 lg:py-28" style={{ background: T.lime, color: T.ink }}>
         <Wrap>
           {/* Dos líneas, y el corte en la coma.
 
@@ -525,7 +485,7 @@ export default function GrowthPage() {
                 el momento con menos fricción de la página, y escribir por
                 WhatsApp es el gesto que menos compromete de todos los que se
                 pueden pedir. */}
-            <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
+            <div className="mt-10">
               <a
                 href={CONTACT_INFO.socials.whatsapp}
                 target="_blank"
@@ -538,9 +498,6 @@ export default function GrowthPage() {
                 </svg>
                 Escríbenos por WhatsApp
               </a>
-              <p className="max-w-xs text-sm font-medium leading-snug" style={{ opacity: 0.6 }}>
-                Sin formulario y sin dejar tu teléfono. Preguntas lo que quieras.
-              </p>
             </div>
           </AlAparecer>
         </Wrap>
@@ -558,7 +515,7 @@ export default function GrowthPage() {
           cierre emocional y tiene que quedarse como tal. Esto de aquí es la
           letra pequeña bien contada, y se lee mejor con el tono de siempre. */}
       <section
-        className="relative overflow-hidden py-20 md:py-24 lg:py-28"
+        className="relative overflow-hidden py-16 md:py-20 lg:py-24"
         style={{ background: T.surface }}
       >
         <Trama motivo="rayas" desde="20% 60%" />

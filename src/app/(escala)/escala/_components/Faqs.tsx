@@ -88,7 +88,11 @@ const PREGUNTAS: { p: string; r: string }[] = [
 
 export function Faqs() {
   return (
-    <div className="grid gap-10 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:gap-16">
+    // Un tercio y dos tercios, en proporción y no en un ancho fijo. La columna
+    // del título estaba topada en 22 rem, así que en un monitor ancho se
+    // quedaba en la cuarta parte y el titular se partía en cuatro renglones
+    // mientras al lado sobraba sitio. En fracciones, las dos crecen juntas.
+    <div className="grid gap-10 lg:grid-cols-[1fr_2fr] lg:gap-16">
       <div>
         <p className="text-sm font-bold uppercase tracking-[0.24em]" style={{ color: T.lime }}>
           Preguntas frecuentes
@@ -136,8 +140,11 @@ export function Faqs() {
                 />
               </span>
             </summary>
+            {/* Sin tope de ancho: la columna ya es la que decide, y encima de
+                ella un `max-w` solo servía para dejar un canal vacío a la
+                derecha de cada respuesta. */}
             <p
-              className="max-w-3xl pb-7 pr-10 text-base leading-relaxed"
+              className="pb-7 pr-10 text-base leading-relaxed"
               style={{ color: T.muted }}
             >
               {f.r}
