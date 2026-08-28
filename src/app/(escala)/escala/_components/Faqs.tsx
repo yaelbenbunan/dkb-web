@@ -42,12 +42,11 @@ const PREGUNTAS: { p: string; r: string }[] = [
   {
     p: "¿Hay algún pago al empezar?",
     r:
-      "Sí: una cuota de alta que se paga una sola vez. El trabajo del principio es real y " +
-      "está concentrado —tu web, la configuración de las campañas y el alta en el " +
-      "sistema— y por eso no va dentro de la cuota mensual. No es una cifra fija: depende " +
-      "de cuánto vayas a invertir y de si llevas uno o dos canales, porque una clínica con " +
-      "un canal y poco presupuesto no da el mismo trabajo de montaje que una con dos. Te " +
-      "decimos el importe en la primera llamada, antes de que contrates nada.",
+      "Sí: una cuota de alta que se paga una sola vez, 150 € en el plan básico y 200 € en " +
+      "el avanzado. El trabajo del principio es real y está concentrado —tu web, la " +
+      "configuración de las campañas y el alta en el sistema— y por eso no va dentro de la " +
+      "cuota mensual. Ese es el importe y no hay otro: lo tienes escrito aquí para que no " +
+      "aparezca por sorpresa en la llamada.",
   },
   {
     p: "¿Cuánto tengo que invertir en anuncios?",

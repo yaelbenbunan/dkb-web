@@ -58,11 +58,14 @@ const INCLUYE: { t: string; basico: Valor; avanzado: Valor; apagado?: boolean }[
   // después de haber leído un precio es la forma más rápida de parecer que se
   // escondían — que es justo lo contrario de lo que este producto vende.
   { t: "Inversión en anuncios", basico: "No incluida", avanzado: "No incluida", apagado: true },
-  // El importe no se publica porque no es uno: depende del trabajo inicial real
-  // de cada clínica. Que EXISTE sí se publica, y aquí (§3 del documento de
-  // producto). Anunciar "desde 199 €" y soltar el pago inicial en la llamada
-  // mata la confianza justo en el momento de cerrar.
-  { t: "Cuota de alta", basico: "Según tu caso", avanzado: "Según tu caso", apagado: true },
+  // El importe se publica desde el 2026-08-28 (§3 del documento de producto).
+  // Estuvo como "Según tu caso" mientras la cuota se calculaba sobre la
+  // inversión prevista; ahora es una cifra por plan, y esconderla solo servía
+  // para que el pago inicial apareciera en la llamada — que es exactamente la
+  // peor secuencia posible: anunciar "desde 199 €" y sacar el desembolso justo
+  // al cerrar mata la confianza en el momento de decidir. Escritos aquí, 150 €
+  // se leen por lo que son al lado de la cuota: baratos.
+  { t: "Cuota de alta (una sola vez)", basico: "150 €", avanzado: "200 €", apagado: true },
 ];
 
 /**
@@ -74,12 +77,13 @@ const INCLUYE: { t: string; basico: Valor; avanzado: Valor; apagado?: boolean }[
  * para que nadie se lleve una sorpresa. En letra pequeña y de corrido están en
  * su sitio: quien las quiera, ahí están.
  *
- * **La cuota de alta se dice, y se dice aquí.** Estuvo escrito "sin cuota de
- * alta", que contradecía §3 del documento de producto y —peor— era la peor
- * secuencia comercial posible: anunciar 199 € y sacar el pago inicial en la
- * llamada mata la confianza justo en el momento de cerrar, y la confianza es
- * el producto. No se publica el importe, porque no hay uno solo; se publica que
- * existe y de qué depende.
+ * **La cuota de alta se dice, y se dice con su importe.** Estuvo escrito "sin
+ * cuota de alta", que contradecía §3 del documento de producto y —peor— era la
+ * peor secuencia comercial posible: anunciar 199 € y sacar el pago inicial en
+ * la llamada mata la confianza justo en el momento de cerrar, y la confianza es
+ * el producto. Después estuvo como "según tu caso", que era verdad mientras se
+ * calculaba sobre la inversión prevista y dejaba igualmente el desembolso para
+ * la llamada. Desde el 2026-08-28 es una cifra por plan y va escrita.
  *
  * **El suelo de 300 € se explica por el calendario, no por el algoritmo.**
  * Decía "para que dé tiempo a aprender", que es cierto por dentro y no dice
@@ -95,9 +99,9 @@ const CONDICIONES =
   "inviertes. El segundo canal pide una inversión mínima de 300 € al mes: por debajo de " +
   "esa cifra, el presupuesto no da para mantener dos campañas activas todos los días del " +
   "mes. Sin permanencia: pagas mes a mes y te vas cuando quieras. Al empezar sí hay una " +
-  "cuota de alta única —la web, la configuración de las campañas y el alta en el sistema " +
-  "son trabajo real y concentrado—; depende de tu inversión y de cuántos canales lleves, y " +
-  "se te dice en la llamada antes de contratar nada.";
+  "cuota de alta única de 150 € en el básico y 200 € en el avanzado: la web, la " +
+  "configuración de las campañas y el alta en el sistema son trabajo real y concentrado, y " +
+  "por eso no van dentro de la mensualidad.";
 
 export function Planes() {
   return (
