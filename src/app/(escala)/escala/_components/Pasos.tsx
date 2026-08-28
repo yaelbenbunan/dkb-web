@@ -82,8 +82,12 @@ export function Pasos({ pasos }: { pasos: Paso[] }) {
                 dibujo pedía 160, así que llegaba de borde a borde y pesaba más
                 que el titular que va debajo. En móvil pasaba lo mismo por el
                 otro lado — una tarjeta a todo el ancho con un dibujo enorme
-                antes de haber leído nada. */}
-            <div className="mt-6 flex h-16 items-center sm:h-20 lg:h-24">
+                antes de haber leído nada.
+
+                Y bajó otra vez: el dibujo es la viñeta que acompaña al paso,
+                no el paso. Quien pasa la vista tiene que leer «Traemos los
+                pacientes» y ver el dibujo de refilón, no al revés. */}
+            <div className="mt-6 flex h-12 items-center sm:h-14 lg:h-16">
               <Dibujo />
             </div>
 
