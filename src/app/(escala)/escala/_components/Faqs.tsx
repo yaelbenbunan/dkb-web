@@ -78,11 +78,13 @@ const PREGUNTAS: { p: string; r: string }[] = [
   {
     p: "¿Y si ya tengo web?",
     r:
-      "La tuya se queda como está, no la tocamos. Montamos una página de captación en un " +
-      "subdominio tuyo —del tipo citas.tuclinica.com— y ahí dirigimos todo el tráfico de " +
-      "las campañas. Sale mejor así: a esa página solo llega gente de anuncios, y por eso " +
-      "los números se pueden atribuir con precisión. Lo que sí hay que saber es que los " +
-      "pacientes que entren por tu web de siempre no aparecerán en el sistema.",
+      "La tuya se queda como está: no la tocamos ni la sustituimos. Montamos aparte una " +
+      "página de captación, alojada por nosotros, y ahí dirigimos todo el tráfico de las " +
+      "campañas. Está lista en días y no hay que tocar nada de lo que ya tienes. Sale " +
+      "mejor así: a esa página solo llega gente de anuncios, y por eso los números se " +
+      "pueden atribuir con precisión. Lo que sí conviene saber es que los pacientes que " +
+      "entren por tu web de siempre no aparecerán en el sistema. Si más adelante quieres " +
+      "que la página vaya en un dominio tuyo, se cambia cuando digas.",
   },
 ];
 
