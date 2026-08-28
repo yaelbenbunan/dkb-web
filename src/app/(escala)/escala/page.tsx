@@ -8,11 +8,12 @@ import { Trama } from "./_components/Trama";
 import { Logotipo } from "./_components/Logotipo";
 import { FormularioHero } from "./_components/FormularioHero";
 import { Planes } from "./_components/Planes";
+import { Faqs } from "./_components/Faqs";
 
 export const metadata: Metadata = {
   title: "Llenar tu agenda es fácil. Ganar más, no",
   description:
-    "Un sistema integral que se ocupa de todo el proceso, con un único objetivo: que cada euro invertido genere más. Desde 199 €/mes, sin cuota de alta y sin permanencia.",
+    "Un sistema integral que se ocupa de todo el proceso, con un único objetivo: que cada euro invertido genere más. Desde 199 €/mes y sin permanencia.",
   alternates: { canonical: GROWTH.path },
   openGraph: {
     type: "website",
@@ -122,7 +123,7 @@ const PASOS = [
   {
     n: "01",
     t: "Traemos los pacientes",
-    d: "Tu web y tus campañas en Google y Meta. No contratas nada por separado.",
+    d: "Tu web y tus campañas en Google y Meta, montadas y gestionadas por el mismo equipo.",
   },
   {
     n: "02",
@@ -368,17 +369,42 @@ export default function GrowthPage() {
       </section>
 
       {/* ───────── 4. Los planes ─────────
-          El título va DENTRO de la tabla, en la casilla vacía de la esquina.
-          Esa celda existe solo para alinear las columnas, así que estaba
-          desaprovechada — y puesto ahí, el título no separa la tabla de lo que
-          acaba de leerse. */}
+          El título estuvo DENTRO de la tabla, en la casilla vacía de la
+          esquina, para no separar los precios de los tres pasos que los
+          justifican. Salió mal: sin nada que abriera la sección, la tabla
+          aparecía de golpe y ni siquiera se veía que había empezado un
+          capítulo nuevo. Con su cabecera —etiqueta, título y una línea que
+          engancha el precio con lo que se acaba de leer— la sección se
+          anuncia, y el enganche lo hace ahora la frase, que es su trabajo. */}
       <section
         className="relative overflow-hidden py-20 md:py-24 lg:py-28"
         style={{ background: T.surface }}
       >
         <Trama desde="75% 40%" />
         <Wrap className="relative">
-          <Planes />
+          <Eyebrow>Los planes</Eyebrow>
+
+          <h2
+            className="mt-8 font-black leading-[1.02] tracking-[-0.03em]"
+            style={{ fontSize: "clamp(2.5rem, 6vw, 5.5rem)" }}
+          >
+            Nuestros planes
+          </h2>
+
+          <p
+            className="mt-7 max-w-4xl font-bold leading-[1.2] tracking-[-0.015em] text-balance"
+            style={{ fontSize: "clamp(1.375rem, 2.4vw, 2.25rem)" }}
+          >
+            Todo lo que acabas de leer, funcionando en tu clínica{" "}
+            <span style={{ color: T.lime }}>desde 199 € al mes</span>.
+          </p>
+          <p className="mt-4 text-base" style={{ color: T.muted }}>
+            Los dos, sin permanencia.
+          </p>
+
+          <div className="mt-14">
+            <Planes />
+          </div>
         </Wrap>
       </section>
 
@@ -419,6 +445,27 @@ export default function GrowthPage() {
           {/* Sin botón: la sección anterior acaba de llevar a la calculadora
               y repetirlo aquí convertiría el cierre en otra llamada a la
               acción. Esta frase se lee mejor sola. */}
+        </Wrap>
+      </section>
+
+      {/* ───────── 6. Preguntas frecuentes ─────────
+          Después de la frase del compromiso y no antes del precio. Quien llega
+          hasta aquí ya ha visto la tabla y ya ha decidido si le encaja; lo que
+          le queda es la desconfianza, y eso no se resuelve con más argumentos
+          sino contestando la pregunta incómoda con su nombre. Puestas antes,
+          estas mismas respuestas plantarían dudas que el lector todavía no
+          tenía.
+
+          Vuelve al fondo oscuro a propósito: el bloque lima de arriba es el
+          cierre emocional y tiene que quedarse como tal. Esto de aquí es la
+          letra pequeña bien contada, y se lee mejor con el tono de siempre. */}
+      <section
+        className="relative overflow-hidden py-20 md:py-24 lg:py-28"
+        style={{ background: T.surface }}
+      >
+        <Trama motivo="rayas" desde="20% 60%" />
+        <Wrap className="relative">
+          <Faqs />
         </Wrap>
       </section>
 

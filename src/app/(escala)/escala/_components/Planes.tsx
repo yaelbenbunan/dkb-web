@@ -16,6 +16,17 @@ import { GROWTH_THEME as T } from "@/lib/growth-config";
  * obligar a subir a buscar el formulario después de haber decidido es perder
  * gente por el camino.
  *
+ * **El título ya no vive en la esquina de la tabla.** Estuvo ahí para no
+ * separar la tabla de lo anterior, y el efecto fue el contrario: sin nada que
+ * abriera la sección, los planes aparecían de golpe y no se leían como un
+ * capítulo nuevo. Ahora la sección se presenta arriba —ver `page.tsx`— y la
+ * esquina hace lo único que le corresponde: poner nombre a la columna de filas.
+ *
+ * **Cada columna va centrada.** Alineadas a la izquierda, el precio, el nombre
+ * y los checks colgaban del borde de su celda y las dos columnas se leían como
+ * un margen desordenado. Centradas, cada plan es un bloque con su eje, y el
+ * precio —que es lo que se viene a mirar— cae justo en medio.
+ *
  * **Los dos planes se venden igual de bien.** Se llegó a marcar mucho el
  * avanzado —columna teñida, precio en lima, botón de color solo en él— y era un
  * error de negocio: nos interesa que contraten, sea el que sea, y un básico
@@ -42,10 +53,16 @@ const INCLUYE: { t: string; basico: Valor; avanzado: Valor; apagado?: boolean }[
   { t: "Panel de rentabilidad", basico: true, avanzado: true },
   { t: "Confirmación de citas por WhatsApp", basico: false, avanzado: true },
   { t: "Revisión mensual contigo", basico: false, avanzado: true },
-  // Va DENTRO de la tabla y no en la letra pequeña. Es la pregunta que hace
-  // todo el mundo en la primera llamada, y descubrirla después de haber dicho
-  // un precio es la forma más rápida de parecer que se escondía.
+  // Las dos van DENTRO de la tabla y no en la letra pequeña. Son las dos
+  // preguntas que hace todo el mundo en la primera llamada, y descubrirlas
+  // después de haber leído un precio es la forma más rápida de parecer que se
+  // escondían — que es justo lo contrario de lo que este producto vende.
   { t: "Inversión en anuncios", basico: "No incluida", avanzado: "No incluida", apagado: true },
+  // El importe no se publica porque no es uno: depende del trabajo inicial real
+  // de cada clínica. Que EXISTE sí se publica, y aquí (§3 del documento de
+  // producto). Anunciar "desde 199 €" y soltar el pago inicial en la llamada
+  // mata la confianza justo en el momento de cerrar.
+  { t: "Cuota de alta", basico: "Según tu caso", avanzado: "Según tu caso", apagado: true },
 ];
 
 /**
@@ -56,37 +73,55 @@ const INCLUYE: { t: string; basico: Valor; avanzado: Valor; apagado?: boolean }[
  * hay que sopesar antes de decidir. Son lo contrario — son lo que se cuenta
  * para que nadie se lleve una sorpresa. En letra pequeña y de corrido están en
  * su sitio: quien las quiera, ahí están.
+ *
+ * **La cuota de alta se dice, y se dice aquí.** Estuvo escrito "sin cuota de
+ * alta", que contradecía §3 del documento de producto y —peor— era la peor
+ * secuencia comercial posible: anunciar 199 € y sacar el pago inicial en la
+ * llamada mata la confianza justo en el momento de cerrar, y la confianza es
+ * el producto. No se publica el importe, porque no hay uno solo; se publica que
+ * existe y de qué depende.
+ *
+ * **El suelo de 300 € se explica por el calendario, no por el algoritmo.**
+ * Decía "para que dé tiempo a aprender", que es cierto por dentro y no dice
+ * nada por fuera: nadie que lleve una clínica sabe qué tiene que aprender un
+ * anuncio. Lo que sí entiende cualquiera es que un presupuesto pequeño
+ * repartido en dos plataformas no llega para tener las dos encendidas todos los
+ * días del mes. Es la misma advertencia contada en unidades que se pueden
+ * comprobar en un calendario.
  */
 const CONDICIONES =
   "La inversión en anuncios la pagas tú directamente a Google y a Meta, con tu tarjeta: " +
   "ese dinero no pasa por nuestras manos, y tampoco nos llevamos comisión de lo que " +
-  "inviertes. El segundo canal pide una inversión mínima de 300 € al mes para que dé " +
-  "tiempo a aprender. Sin permanencia y sin cuota de alta: pagas mes a mes y te vas " +
-  "cuando quieras.";
+  "inviertes. El segundo canal pide una inversión mínima de 300 € al mes: por debajo de " +
+  "esa cifra, el presupuesto no da para mantener dos campañas activas todos los días del " +
+  "mes. Sin permanencia: pagas mes a mes y te vas cuando quieras. Al empezar sí hay una " +
+  "cuota de alta única —la web, la configuración de las campañas y el alta en el sistema " +
+  "son trabajo real y concentrado—; depende de tu inversión y de cuántos canales lleves, y " +
+  "se te dice en la llamada antes de contratar nada.";
 
 export function Planes() {
   return (
     <div>
       {/* ── Tabla, de tableta para arriba ── */}
       <div className="hidden md:block">
-        <table className="w-full border-collapse text-left">
+        <table className="w-full border-collapse">
           <thead>
             <tr>
-              <th className="w-[42%] pb-7 pr-6 align-bottom">
-                <h3
-                  className="font-black leading-[1.05] tracking-[-0.03em]"
-                  style={{ fontSize: "clamp(1.75rem, 3vw, 2.75rem)" }}
+              {/* La esquina ya no lleva el título de la sección, pero tampoco
+                  se queda vacía: nombra la columna que tiene debajo, que es
+                  para lo que sirve una esquina en una tabla comparativa. */}
+              <th className="w-[38%] pb-7 pr-6 text-left align-bottom">
+                <p
+                  className="text-sm font-black uppercase tracking-[0.2em]"
+                  style={{ color: T.muted }}
                 >
-                  Elige tu plan
-                </h3>
-                <p className="mt-2 text-base font-normal" style={{ color: T.muted }}>
-                  Los dos, sin permanencia
+                  Qué incluye
                 </p>
               </th>
               {PLANES.map((plan) => (
                 <th
                   key={plan.id}
-                  className="px-6 pb-7 align-bottom"
+                  className="px-6 pb-7 text-center align-bottom"
                   style={plan.destacado ? { background: `${T.lime}08` } : undefined}
                 >
                   <Encabezado plan={plan} />
@@ -97,7 +132,7 @@ export function Planes() {
           <tbody>
             {INCLUYE.map((fila) => (
               <tr key={fila.t} style={{ borderTop: `1px solid ${T.line}` }}>
-                <td className="py-4 pr-6">
+                <td className="py-4 pr-6 text-left">
                   <p
                     className="font-bold leading-snug"
                     style={{
@@ -111,7 +146,7 @@ export function Planes() {
                 {PLANES.map((plan) => (
                   <td
                     key={plan.id}
-                    className="px-6 py-4 align-middle"
+                    className="px-6 py-4 text-center align-middle"
                     style={plan.destacado ? { background: `${T.lime}08` } : undefined}
                   >
                     <Celda
@@ -142,19 +177,7 @@ export function Planes() {
 
       {/* ── Tarjetas, en móvil. Una tabla de tres columnas en un teléfono se
              lee con lupa, y esta página la van a abrir muchos desde el móvil. ── */}
-      <div className="md:hidden">
-        <h3
-          className="font-black leading-[1.05] tracking-[-0.03em]"
-          style={{ fontSize: "clamp(1.75rem, 6vw, 2.5rem)" }}
-        >
-          Elige tu plan
-        </h3>
-        <p className="mt-2 text-base" style={{ color: T.muted }}>
-          Los dos, sin permanencia
-        </p>
-      </div>
-
-      <div className="mt-6 grid gap-5 md:hidden">
+      <div className="grid gap-5 md:hidden">
         {PLANES.map((plan) => (
           <div
             key={plan.id}
@@ -165,7 +188,10 @@ export function Planes() {
             }}
           >
             <Encabezado plan={plan} />
-            <ul className="mt-6 space-y-3">
+            {/* La lista sí va a la izquierda aunque la cabecera esté centrada:
+                ocho renglones centrados no se recorren con la vista, se leen
+                uno a uno buscando dónde empieza cada cual. */}
+            <ul className="mt-6 space-y-3 text-left">
               {INCLUYE.map((fila) => {
                 const valor = plan.id === "basico" ? fila.basico : fila.avanzado;
                 const dentro = valor !== false && !fila.apagado;
@@ -202,10 +228,20 @@ export function Planes() {
   );
 }
 
+/**
+ * Nombre, etiqueta y precio, centrados y en ese orden.
+ *
+ * **El precio va solo en su renglón y es lo más grande de la sección.** Estaba
+ * en línea con "al mes" y compartía renglón con él, y esos dos elementos no
+ * pesan lo mismo: el número es la respuesta a lo único que se ha venido a
+ * preguntar aquí, y "al mes" es la unidad. Puesto debajo y en pequeño, la
+ * unidad sigue estando —hace falta, si no el precio parece un pago único— pero
+ * ya no le resta sitio a la cifra.
+ */
 function Encabezado({ plan }: { plan: (typeof PLANES)[number] }) {
   return (
-    <div>
-      <p className="flex items-center gap-3">
+    <div className="text-center">
+      <p className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
         <span
           className="text-sm font-black uppercase tracking-[0.2em]"
           style={{ color: T.muted }}
@@ -221,16 +257,17 @@ function Encabezado({ plan }: { plan: (typeof PLANES)[number] }) {
           </span>
         )}
       </p>
-      <p className="mt-3 flex items-baseline gap-2">
-        <span
-          className="font-black leading-none tabular-nums tracking-[-0.03em]"
-          style={{ fontSize: "clamp(2.75rem, 5vw, 4.25rem)", color: T.lime }}
-        >
-          {plan.precio}
-        </span>
-        <span className="text-base font-bold" style={{ color: T.muted }}>
-          al mes
-        </span>
+      <p
+        className="mt-3 block font-black leading-[0.9] tabular-nums tracking-[-0.04em]"
+        style={{ fontSize: "clamp(3.5rem, 6.4vw, 5.75rem)", color: T.lime }}
+      >
+        {plan.precio}
+      </p>
+      <p
+        className="mt-2 text-sm font-bold uppercase tracking-[0.18em]"
+        style={{ color: T.muted }}
+      >
+        al mes
       </p>
     </div>
   );
@@ -264,7 +301,13 @@ function Celda({ valor, apagado }: { valor: Valor; apagado?: boolean }) {
       </span>
     );
   }
-  return <Marca activo={valor} />;
+  // En bloque y centrado: el check es un SVG en línea y, suelto en una celda
+  // centrada, se apoyaba en la línea base del texto que no hay.
+  return (
+    <span className="flex items-center justify-center">
+      <Marca activo={valor} />
+    </span>
+  );
 }
 
 function Marca({ activo }: { activo: boolean }) {

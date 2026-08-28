@@ -8,8 +8,12 @@ import { GROWTH_THEME as T } from "@/lib/growth-config";
  * dueño de la clínica** si le pusieras las dos columnas en un papel delante.
  * Rodear el número que importa es lo que hace cualquiera con un boli.
  *
- * Va con un trazo que no cierra del todo y que se pasa de largo al final. Un
- * óvalo perfecto se lee como una forma; éste se lee como un gesto.
+ * **Nada en el trazo está centrado ni cerrado.** El óvalo va torcido respecto a
+ * la cifra, la vuelta no empalma con el arranque —se pasa de largo y cruza por
+ * encima, como cuando el boli sigue un poco más de la cuenta— y hay un segundo
+ * trazo corto en la curva de la izquierda, de los que salen cuando se repasa
+ * sin levantar la mano. Un óvalo perfecto se lee como una forma; éste tiene que
+ * leerse como un gesto, y para eso los defectos son el mensaje.
  *
  * Solo se usa en UNA de las dos tarjetas, a propósito: si se rodearan las dos,
  * no estaría señalando nada.
@@ -32,23 +36,41 @@ export function Circulo({
         style={{
           // Se sale por los cuatro lados: un círculo que toca justo el borde
           // del texto parece un recuadro, no un garabato.
-          left: "-0.35em",
-          right: "-0.35em",
-          top: "-0.28em",
-          bottom: "-0.28em",
+          left: "-0.38em",
+          right: "-0.42em",
+          top: "-0.3em",
+          bottom: "-0.32em",
           width: "auto",
           height: "auto",
           color,
           overflow: "visible",
         }}
       >
+        {/* La vuelta entera. Arranca en (164,20) y termina en (150,17): no
+            empalma, se pasa y cruza por encima del arranque. Los tramos tienen
+            curvaturas distintas a propósito —la izquierda cae más plana que la
+            derecha— porque una elipse con los cuatro cuartos iguales vuelve a
+            parecer dibujada por una máquina. */}
         <path
-          d="M172 26C152 9 96 2 52 11 20 18 5 38 11 58c7 24 60 38 111 33 40-4 66-18 71-35 3-12-6-24-24-32"
+          d="M164 20C143 11 110 6 79 9 49 12 22 25 14 43 7 60 21 75 47 84c28 10 71 10 100 2 27-8 44-23 41-39-2-13-16-23-38-30"
           fill="none"
           stroke="currentColor"
-          strokeWidth="3.2"
+          strokeWidth="3.4"
           strokeLinecap="round"
-          opacity={0.9}
+          strokeLinejoin="round"
+          opacity={0.92}
+          vectorEffect="non-scaling-stroke"
+        />
+        {/* El repaso: un trozo corto de la curva izquierda, ni encima ni al
+            lado del anterior. Es lo que deja el boli cuando vuelve sobre lo ya
+            hecho, y es lo que impide que el trazo parezca vectorial. */}
+        <path
+          d="M35 26C21 36 15 48 19 60"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          opacity={0.45}
           vectorEffect="non-scaling-stroke"
         />
       </svg>
