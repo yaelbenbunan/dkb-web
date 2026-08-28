@@ -249,7 +249,7 @@ export function FormularioHero() {
             className="font-bold underline underline-offset-2"
             style={{ color: TINTA }}
           >
-            Agenda una demo de 15 minutos
+            Agenda una videollamada
           </a>
         </p>
       )}

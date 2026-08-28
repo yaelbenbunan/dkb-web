@@ -1,3 +1,5 @@
+import { CONTACT_INFO } from "./contact-info";
+
 /**
  * Configuración de la landing de captación del sistema para clínicas.
  *
@@ -30,13 +32,22 @@ export const GROWTH = {
    * quien quiere que le llamen, que son más; esto es para quien prefiere verlo
    * antes de dar su teléfono.
    *
-   * De momento apunta a una herramienta de terceros. Hacerlo con nuestro propio
-   * sistema —el mismo que agenda a los pacientes de las clínicas— es posible y
-   * sería un argumento de venta bonito, pero pide bastante más de lo que
-   * tenemos hecho: invitación al asistente, enlace de videollamada, cancelar y
-   * cambiar la hora, y protección contra reservas basura.
+   * Apunta al Calendly de dinkbit, y **se lee de `contact-info.ts` en vez de
+   * copiarlo**: ese fichero ya es la única fuente del teléfono, el correo y
+   * esta agenda, y una segunda copia es la que se queda vieja el día que
+   * cambie.
+   *
+   * Es el enlace general, así que enseña todos los tipos de reunión que haya
+   * configurados. Lo suyo es crear uno propio de 15 minutos para esta landing
+   * —cuanto más corta se anuncie, más gente la coge— y apuntar aquí a ése.
+   *
+   * Hacerlo con nuestro propio sistema —el mismo que agenda a los pacientes de
+   * las clínicas— es posible y sería un argumento de venta bonito, pero pide
+   * bastante más de lo que tenemos hecho: invitación al asistente, enlace de
+   * videollamada, cancelar y cambiar la hora, y protección contra reservas
+   * basura.
    */
-  demoUrl: null as string | null,
+  demoUrl: CONTACT_INFO.calendly as string | null,
 } as const;
 
 /**
