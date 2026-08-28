@@ -76,7 +76,14 @@ export function Pasos({ pasos }: { pasos: Paso[] }) {
               )}
             </div>
 
-            <div className="mt-6 flex h-24 items-center">
+            {/* La altura del dibujo sube con el ancho de la tarjeta y no al
+                revés. Estaba fija en h-24: en una columna de tres a partir de
+                768px la tarjeta se queda en unos 175px de contenido y el
+                dibujo pedía 160, así que llegaba de borde a borde y pesaba más
+                que el titular que va debajo. En móvil pasaba lo mismo por el
+                otro lado — una tarjeta a todo el ancho con un dibujo enorme
+                antes de haber leído nada. */}
+            <div className="mt-6 flex h-16 items-center sm:h-20 lg:h-24">
               <Dibujo />
             </div>
 
@@ -101,7 +108,7 @@ export function Pasos({ pasos }: { pasos: Paso[] }) {
 /** Gente que llega: tres siluetas entrando por una boca que las encauza. */
 function Captacion() {
   return (
-    <svg aria-hidden viewBox="0 0 120 72" className="h-full w-auto" style={{ color: T.lime }}>
+    <svg aria-hidden viewBox="0 0 120 72" className="h-full w-auto max-w-full" style={{ color: T.lime }}>
       <g fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
         <path d="M6 14h44M6 30h34M6 46h24" opacity="0.35" />
         <path d="M62 8 96 36 62 64" opacity="0.25" />
@@ -137,7 +144,7 @@ function Agenda() {
     }
   }
   return (
-    <svg aria-hidden viewBox="0 0 120 84" className="h-full w-auto" style={{ color: T.lime }}>
+    <svg aria-hidden viewBox="0 0 120 84" className="h-full w-auto max-w-full" style={{ color: T.lime }}>
       <rect
         x="4"
         y="10"
@@ -164,7 +171,7 @@ function Agenda() {
 /** Barras que suben con la flecha del retorno por encima. */
 function Rentabilidad() {
   return (
-    <svg aria-hidden viewBox="0 0 120 76" className="h-full w-auto" style={{ color: T.lime }}>
+    <svg aria-hidden viewBox="0 0 120 76" className="h-full w-auto max-w-full" style={{ color: T.lime }}>
       <g fill="currentColor">
         <rect x="8" y="50" width="16" height="22" rx="3" opacity="0.3" />
         <rect x="34" y="38" width="16" height="34" rx="3" opacity="0.45" />
