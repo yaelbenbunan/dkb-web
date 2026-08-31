@@ -55,38 +55,34 @@ export const metadata: Metadata = {
  * subrayado que empieza y acaba exactamente donde la palabra es otra vez una
  * regla.
  *
- * `preserveAspectRatio="none"` para que se estire al ancho del texto sea cual
- * sea, y `vector-effect="non-scaling-stroke"` para que ese estirón no engorde el
- * trazo: sin lo segundo, en pantalla grande pasa de boli a rotulador.
+ * **Es una forma rellena, no una línea con grosor.** Un trazo estirado a lo
+ * ancho del texto con `preserveAspectRatio="none"` se deforma, y el
+ * `vector-effect` que lo compensaba dejaba los empalmes de las curvas duros y
+ * con dientes. Dibujando el contorno del trazo, el estirón solo lo alarga —que
+ * es lo que hace un subrayado más largo— y no toca su forma.
+ *
+ * Y de paso sale gratis lo que más lo hace parecer un boli: el grosor cambia a
+ * lo largo del trazo y se va a nada al final, como cuando se levanta la mano.
  */
 function SubrayadoABoli() {
   return (
     <svg
       aria-hidden
-      viewBox="0 0 300 18"
+      viewBox="0 0 300 20"
       preserveAspectRatio="none"
-      className="absolute inset-x-0 -bottom-[0.16em] h-[0.26em] w-full -rotate-[0.7deg] overflow-visible"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
+      className="absolute inset-x-0 -bottom-[0.17em] h-[0.3em] w-full overflow-visible"
+      fill="currentColor"
     >
-      {/* La pasada de ida: sube, baja y vuelve a subir, y se sale por los dos
-          extremos. Sin esa desviación vertical la línea se lee recta por mucho
-          que la curva exista — el trazo se estira a lo ancho del texto y lo que
-          se aplana es justo la ondulación. */}
+      {/* La pasada de ida. El contorno va de izquierda a derecha por el borde
+          de arriba y vuelve por el de abajo, con las dos curvas ligeramente
+          distintas: de ahí sale que engorde en el medio y se afile al final. */}
+      <path d="M2 12.6C58 6.2 118 12.9 168 9.1 218 5.2 258 10.6 298 6.5c-40 6.9-80 1.6-130 5.5C118 15.8 58 9.6 2 15.8Z" />
+      {/* La de vuelta: más corta, más baja y más floja. Nadie subraya de una
+          pasada, y es la segunda —desalineada y a medio gas— la que convierte
+          esto en un boli y no en una hoja de estilos. */}
       <path
-        d="M1 12.5C46 5.5 96 14 142 8.5 188 3 236 11.5 299 6"
-        strokeWidth={5}
-        vectorEffect="non-scaling-stroke"
-      />
-      {/* La de vuelta: más corta, más baja y más suave. Nadie subraya de una
-          pasada, y es la segunda —desalineada y a medio gas— la que hace que
-          esto parezca un boli y no una hoja de estilos. */}
-      <path
-        d="M26 16.5C92 11.5 168 17.5 244 12.5"
-        strokeWidth={2.6}
-        opacity={0.45}
-        vectorEffect="non-scaling-stroke"
+        opacity={0.4}
+        d="M28 17.4C94 12.6 170 18.2 246 13.4c-76 6.6-152 1-218 5.6Z"
       />
     </svg>
   );
@@ -503,7 +499,7 @@ export default function GrowthPage() {
           quedaba media pantalla de negro entre la calculadora y la frase, que
           es justo el hueco que esta página tenía de más por todas partes. */}
       <section className="flex items-center py-20 md:py-24 lg:py-28" style={{ background: T.lime, color: T.ink }}>
-        <Wrap>
+        <Wrap narrow>
           {/* **El hecho primero; el porqué, debajo.**
 
               Antes esto era una sola frase grande: "Vas a querer quedarte por
@@ -518,12 +514,17 @@ export default function GrowthPage() {
               baja y la frase sube: uno para el que escanea, la otra para el que
               se para.
 
-              **Las dos columnas son para que la derecha no sobre.** El
-              contenedor llega a 110 rem y el texto ocupaba la mitad izquierda,
-              con media pantalla de lima vacía al lado. El botón se va allí, que
-              además es donde acaba la mirada después de leer las dos líneas. */}
+              **El contenedor va estrecho, y ahí está la clave del hueco.** Con
+              los 110 rem de las demás secciones, el texto ocupaba la mitad
+              izquierda y quedaba media pantalla de lima vacía al lado. Se
+              intentó llenarla mandando el botón a la derecha y salió peor: un
+              botón solo, pegado al margen y a medio metro de la frase que lo
+              justifica. El problema no era dónde iba el botón, era el ancho de
+              la columna. A 56 rem el texto la llena, los márgenes quedan
+              iguales a los dos lados y el botón vuelve debajo, que es donde
+              cae la mirada al acabar de leer. */}
           <AlAparecer>
-            <div className="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between lg:gap-16">
+            <div>
               <div>
                 <p
                   className="relative inline-block font-black leading-[1.02] tracking-[-0.035em]"
@@ -557,7 +558,7 @@ export default function GrowthPage() {
                   Va al lado de "no porque te obliguemos" a propósito: es el
                   momento con menos fricción de la página, y escribir por
                   WhatsApp es el gesto que menos compromete de todos. */}
-              <div className="shrink-0">
+              <div className="mt-10">
               <a
                 href={CONTACT_INFO.socials.whatsapp}
                 target="_blank"
