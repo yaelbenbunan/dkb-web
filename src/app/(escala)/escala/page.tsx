@@ -452,25 +452,45 @@ export default function GrowthPage() {
           es justo el hueco que esta página tenía de más por todas partes. */}
       <section className="flex items-center py-20 md:py-24 lg:py-28" style={{ background: T.lime, color: T.ink }}>
         <Wrap>
-          {/* Dos líneas, y el corte en la coma.
+          {/* **El hecho primero; el porqué, debajo.**
 
-              El tamaño sale de ahí y no al revés: para que "Vas a querer
-              quedarte por los resultados," quepa entera en un renglón a 1024 px
-              —el ancho más estrecho donde se le prohíbe partirse— no puede pasar
-              de 4,4vw. Es más pequeña que antes, y es el precio de que la frase
-              no se rompa por la mitad. Debajo de lg sí se parte, porque en un
-              móvil no hay tamaño que la deje en dos líneas sin que se lea con
-              lupa. */}
+              Antes esto era una sola frase grande: "Vas a querer quedarte por
+              los resultados, no porque te obliguemos". Se lee bien, pero hay
+              que leerla ENTERA para saber qué te están diciendo, y en una
+              página de venta lo que se escanea es lo grande. Lo que de verdad
+              mata la objeción —y lo que la clínica está buscando cuando llega
+              aquí— es el dato: no hay permanencia.
+
+              Así que el dato sube a titular y la frase de antes pasa a
+              explicarlo. Dicen lo mismo, en el orden en que se lee.
+
+              El subrayado es del texto y no un borde: tiene que partirse con la
+              frase si algún día cambia o se traduce. Grueso y separado, porque
+              a este tamaño un subrayado fino desaparece.
+
+              Ya no hay `whitespace-nowrap` en ninguna: "Sin permanencia" son
+              dos palabras y no se parte sola a ningún ancho, y la de debajo es
+              lo bastante pequeña para partirse donde le convenga. La
+              restricción de 4,4vw que había aquí existía para que la frase
+              larga cupiera en un renglón a 1024 px, y ya no aplica. */}
           <AlAparecer>
             <p
-              className="font-black leading-[1.02] tracking-[-0.035em] text-balance"
-              style={{ fontSize: "clamp(2rem, 4.4vw, 5rem)" }}
+              className="font-black leading-[1.02] tracking-[-0.035em] underline decoration-[0.09em] underline-offset-[0.14em]"
+              style={{ fontSize: "clamp(2.75rem, 9vw, 7rem)" }}
             >
-              <span className="lg:whitespace-nowrap">
-                Vas a querer quedarte por los resultados,
-              </span>
-              <br />
-              <span className="lg:whitespace-nowrap">no porque te obliguemos.</span>
+              Sin permanencia
+            </p>
+            {/* El corte va en la coma, como iba antes de que esta frase fuera
+                la pequeña. Dejándolo al navegador partía por "los resultados",
+                que no significa nada; en la coma la frase se lee en dos golpes
+                que son sus dos mitades. Debajo de lg fluye sola, porque ahí no
+                hay ancho para elegir dónde romper. */}
+            <p
+              className="mt-6 font-semibold leading-[1.25] tracking-[-0.01em]"
+              style={{ fontSize: "clamp(1.125rem, 2.4vw, 1.875rem)" }}
+            >
+              <span className="lg:block">Vas a querer quedarte por los resultados,</span>{" "}
+              <span className="lg:block">no porque te obliguemos.</span>
             </p>
 
             {/* **WhatsApp y no otro formulario.** Aquí hubo un tiempo sin
