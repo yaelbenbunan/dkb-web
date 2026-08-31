@@ -499,7 +499,7 @@ export default function GrowthPage() {
           quedaba media pantalla de negro entre la calculadora y la frase, que
           es justo el hueco que esta página tenía de más por todas partes. */}
       <section className="flex items-center py-20 md:py-24 lg:py-28" style={{ background: T.lime, color: T.ink }}>
-        <Wrap narrow>
+        <Wrap>
           {/* **El hecho primero; el porqué, debajo.**
 
               Antes esto era una sola frase grande: "Vas a querer quedarte por
@@ -514,17 +514,21 @@ export default function GrowthPage() {
               baja y la frase sube: uno para el que escanea, la otra para el que
               se para.
 
-              **El contenedor va estrecho, y ahí está la clave del hueco.** Con
-              los 110 rem de las demás secciones, el texto ocupaba la mitad
-              izquierda y quedaba media pantalla de lima vacía al lado. Se
-              intentó llenarla mandando el botón a la derecha y salió peor: un
-              botón solo, pegado al margen y a medio metro de la frase que lo
-              justifica. El problema no era dónde iba el botón, era el ancho de
-              la columna. A 56 rem el texto la llena, los márgenes quedan
-              iguales a los dos lados y el botón vuelve debajo, que es donde
-              cae la mirada al acabar de leer. */}
+              **Alineado a la izquierda, como el resto de la página.** Esto pasó
+              por dos versiones antes de volver aquí: primero se mandó el botón
+              a la derecha para llenar el hueco —y quedó un botón solo, pegado
+              al margen y a medio metro de la frase que lo justifica—, después
+              se centró la columna entera, y centrado deja de leerse como las
+              demás secciones. El hueco de la derecha no era el problema: es el
+              mismo que tiene cualquier otra sección de texto de esta página, y
+              ahí no molesta porque no se mira. Lo que lo hacía cantar era que
+              el texto fuese pequeño, y eso ya está resuelto por otro lado.
+
+              Lo que sí se le pone es un tope de línea: sin él, la frase de
+              apoyo se estiraría hasta los 110 rem del contenedor y se leería
+              como un renglón interminable. */}
           <AlAparecer>
-            <div>
+            <div className="max-w-4xl">
               <div>
                 <p
                   className="relative inline-block font-black leading-[1.02] tracking-[-0.035em]"
