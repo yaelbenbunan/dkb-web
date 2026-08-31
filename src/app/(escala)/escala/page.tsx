@@ -40,6 +40,58 @@ export const metadata: Metadata = {
  * 2000 px no se lee, se recorre con el cuello. Lo que se busca es llenar un
  * monitor normal, no cualquier monitor.
  */
+/**
+ * El subrayado de «Sin permanencia», a mano.
+ *
+ * **Un `text-decoration` recto se lee como formato; esto se lee como que
+ * alguien lo ha subrayado.** Es lo que hace una persona con un boli sobre lo
+ * que le importa de un papel, y en una sección que va sobre confianza esa
+ * diferencia es el argumento entero: una raya perfecta la pone una hoja de
+ * estilos, esta la pone alguien.
+ *
+ * El trazo va con dos pasadas y no una, porque nadie subraya de una: la segunda
+ * es más corta, algo desalineada y más suave, como cuando se repasa sin
+ * levantar del todo. Y las dos se pasan de largo por los extremos — un
+ * subrayado que empieza y acaba exactamente donde la palabra es otra vez una
+ * regla.
+ *
+ * `preserveAspectRatio="none"` para que se estire al ancho del texto sea cual
+ * sea, y `vector-effect="non-scaling-stroke"` para que ese estirón no engorde el
+ * trazo: sin lo segundo, en pantalla grande pasa de boli a rotulador.
+ */
+function SubrayadoABoli() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 300 18"
+      preserveAspectRatio="none"
+      className="absolute inset-x-0 -bottom-[0.16em] h-[0.26em] w-full -rotate-[0.7deg] overflow-visible"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+    >
+      {/* La pasada de ida: sube, baja y vuelve a subir, y se sale por los dos
+          extremos. Sin esa desviación vertical la línea se lee recta por mucho
+          que la curva exista — el trazo se estira a lo ancho del texto y lo que
+          se aplana es justo la ondulación. */}
+      <path
+        d="M1 12.5C46 5.5 96 14 142 8.5 188 3 236 11.5 299 6"
+        strokeWidth={5}
+        vectorEffect="non-scaling-stroke"
+      />
+      {/* La de vuelta: más corta, más baja y más suave. Nadie subraya de una
+          pasada, y es la segunda —desalineada y a medio gas— la que hace que
+          esto parezca un boli y no una hoja de estilos. */}
+      <path
+        d="M26 16.5C92 11.5 168 17.5 244 12.5"
+        strokeWidth={2.6}
+        opacity={0.45}
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  );
+}
+
 function Wrap({
   children,
   narrow = false,
@@ -458,54 +510,54 @@ export default function GrowthPage() {
               los resultados, no porque te obliguemos". Se lee bien, pero hay
               que leerla ENTERA para saber qué te están diciendo, y en una
               página de venta lo que se escanea es lo grande. Lo que de verdad
-              mata la objeción —y lo que la clínica está buscando cuando llega
-              aquí— es el dato: no hay permanencia.
+              mata la objeción es el dato: no hay permanencia.
 
-              Así que el dato sube a titular y la frase de antes pasa a
-              explicarlo. Dicen lo mismo, en el orden en que se lee.
+              **Y el reparto de peso entre los dos.** El titular arrancó siendo
+              enorme y la explicación diminuta, y así el dato gritaba pero el
+              argumento —que es lo que convence— no se leía. Ahora el titular
+              baja y la frase sube: uno para el que escanea, la otra para el que
+              se para.
 
-              El subrayado es del texto y no un borde: tiene que partirse con la
-              frase si algún día cambia o se traduce. Grueso y separado, porque
-              a este tamaño un subrayado fino desaparece.
-
-              Ya no hay `whitespace-nowrap` en ninguna: "Sin permanencia" son
-              dos palabras y no se parte sola a ningún ancho, y la de debajo es
-              lo bastante pequeña para partirse donde le convenga. La
-              restricción de 4,4vw que había aquí existía para que la frase
-              larga cupiera en un renglón a 1024 px, y ya no aplica. */}
+              **Las dos columnas son para que la derecha no sobre.** El
+              contenedor llega a 110 rem y el texto ocupaba la mitad izquierda,
+              con media pantalla de lima vacía al lado. El botón se va allí, que
+              además es donde acaba la mirada después de leer las dos líneas. */}
           <AlAparecer>
-            <p
-              className="font-black leading-[1.02] tracking-[-0.035em] underline decoration-[0.09em] underline-offset-[0.14em]"
-              style={{ fontSize: "clamp(2.75rem, 9vw, 7rem)" }}
-            >
-              Sin permanencia
-            </p>
-            {/* El corte va en la coma, como iba antes de que esta frase fuera
-                la pequeña. Dejándolo al navegador partía por "los resultados",
-                que no significa nada; en la coma la frase se lee en dos golpes
-                que son sus dos mitades. Debajo de lg fluye sola, porque ahí no
-                hay ancho para elegir dónde romper. */}
-            <p
-              className="mt-6 font-semibold leading-[1.25] tracking-[-0.01em]"
-              style={{ fontSize: "clamp(1.125rem, 2.4vw, 1.875rem)" }}
-            >
-              <span className="lg:block">Vas a querer quedarte por los resultados,</span>{" "}
-              <span className="lg:block">no porque te obliguemos.</span>
-            </p>
+            <div className="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between lg:gap-16">
+              <div>
+                <p
+                  className="relative inline-block font-black leading-[1.02] tracking-[-0.035em]"
+                  style={{ fontSize: "clamp(2.25rem, 6.4vw, 5rem)" }}
+                >
+                  Sin permanencia
+                  <SubrayadoABoli />
+                </p>
 
-            {/* **WhatsApp y no otro formulario.** Aquí hubo un tiempo sin
-                botón, y el argumento era bueno: repetir la misma llamada a la
-                acción convierte el cierre en un anuncio. Lo que cambia es que
-                esto no repite nada — el formulario del hero pide un teléfono
-                para que llamemos nosotros, y hay bastante gente que no lo deja
-                pero sí escribe. Son dos puertas distintas para dos personas
-                distintas, no la misma dos veces.
+                {/* El corte va en la coma. Dejándoselo al navegador partía por
+                    "los resultados", que no significa nada; en la coma se lee
+                    en dos golpes que son sus dos mitades. Debajo de lg fluye
+                    sola, porque ahí no hay ancho para elegir dónde romper. */}
+                <p
+                  className="mt-7 font-bold leading-[1.2] tracking-[-0.02em]"
+                  style={{ fontSize: "clamp(1.375rem, 3.1vw, 2.5rem)" }}
+                >
+                  <span className="lg:block">Vas a querer quedarte por los resultados,</span>{" "}
+                  <span className="lg:block">no porque te obliguemos.</span>
+                </p>
+              </div>
 
-                Y va justo detrás de "no porque te obliguemos" a propósito: es
-                el momento con menos fricción de la página, y escribir por
-                WhatsApp es el gesto que menos compromete de todos los que se
-                pueden pedir. */}
-            <div className="mt-10">
+              {/* **WhatsApp y no otro formulario.** Aquí hubo un tiempo sin
+                  botón, y el argumento era bueno: repetir la misma llamada a la
+                  acción convierte el cierre en un anuncio. Lo que cambia es que
+                  esto no repite nada — el formulario del hero pide un teléfono
+                  para que llamemos nosotros, y hay bastante gente que no lo deja
+                  pero sí escribe. Son dos puertas distintas para dos personas
+                  distintas, no la misma dos veces.
+
+                  Va al lado de "no porque te obliguemos" a propósito: es el
+                  momento con menos fricción de la página, y escribir por
+                  WhatsApp es el gesto que menos compromete de todos. */}
+              <div className="shrink-0">
               <a
                 href={CONTACT_INFO.socials.whatsapp}
                 target="_blank"
@@ -518,6 +570,7 @@ export default function GrowthPage() {
                 </svg>
                 Escríbenos por WhatsApp
               </a>
+              </div>
             </div>
           </AlAparecer>
         </Wrap>
