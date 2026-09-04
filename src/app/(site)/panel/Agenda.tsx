@@ -154,8 +154,8 @@ function AgendaRow({
         flexWrap: "wrap",
         alignItems: "center",
         gap: 12,
-        padding: "12px 14px",
-        borderTop: first ? "none" : "1px solid #f1f5f9",
+        padding: "16px 14px",
+        borderTop: first ? "none" : "2px solid #dbe3ed",
         borderLeft: `4px solid ${color}`,
         opacity: pending ? 0.5 : 1,
       }}
