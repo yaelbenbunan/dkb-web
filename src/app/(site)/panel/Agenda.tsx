@@ -1,10 +1,14 @@
 "use client";
 
-import { useTransition } from "react";
-import { setLeadFollowupDate } from "./actions";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { setLeadFollowup, setLeadFollowupDate } from "./actions";
+import { EditableCell } from "./EditableCell";
 import {
   addDays,
   buildAgenda,
+  isFollowupDate,
+  FOLLOWUP_MAX_DATE,
+  FOLLOWUP_MIN_DATE,
   todayInMadrid,
   type AgendaBucketKey,
 } from "@/lib/followup-agenda";
@@ -134,12 +138,35 @@ function AgendaRow({
 }) {
   const [pending, start] = useTransition();
   const date = lead.followup_at!;
+  const dateRef = useRef<HTMLInputElement>(null);
 
   const reschedule = (value: string) => {
     const fd = new FormData();
     fd.set("id", lead.id);
     fd.set("followup_at", value);
     start(() => setLeadFollowupDate(fd));
+  };
+
+  // Lo que se ve mientras se escribe en el campo de fecha. Un `input[type=date]`
+  // emite un valor por cada pulsación ("0020-09-01" camino de "2026-09-01"), así
+  // que el borrador vive aquí y solo se guarda cuando la fecha ya tiene sentido:
+  // guardar a medias recargaría la agenda y el campo saltaría hacia atrás.
+  const [draft, setDraft] = useState(date);
+  useEffect(() => setDraft(date), [date]);
+
+  const onDraftChange = (next: string) => {
+    setDraft(next);
+    if (next === "" || isFollowupDate(next)) reschedule(next);
+  };
+
+  /** Abre el calendario nativo al pinchar en cualquier punto del campo, no solo
+   *  en el iconito. Si el navegador no trae `showPicker`, se escribe a mano. */
+  const openPicker = () => {
+    try {
+      dateRef.current?.showPicker?.();
+    } catch {
+      /* Firefox lo lanza si no viene de un gesto del usuario: se ignora */
+    }
   };
 
   // Posponer cuenta desde hoy, no desde la fecha vieja: si algo lleva dos
@@ -221,17 +248,21 @@ function AgendaRow({
         )}
       </div>
 
-      <div
-        style={{
-          flex: "2 1 260px",
-          minWidth: 220,
-          fontSize: 13,
-          lineHeight: 1.5,
-          color: lead.followup?.trim() ? "#334155" : "#cbd5e1",
-          whiteSpace: "pre-wrap",
-        }}
-      >
-        {lead.followup?.trim() || "Sin notas de seguimiento"}
+      {/* Editable aquí y no solo en la tabla: lo que se apunta de una llamada se
+          apunta al colgar, y salir a buscar el lead en la tabla para escribir
+          dos líneas es justo lo que hace que no se apunten. Es el mismo campo
+          `followup` de la tabla, así que lo escrito aparece en los dos sitios. */}
+      <div style={{ flex: "2 1 260px", minWidth: 220 }}>
+        <EditableCell
+          id={lead.id}
+          field="followup"
+          action={setLeadFollowup}
+          value={lead.followup ?? ""}
+          placeholder="Añadir seguimiento…"
+          rows={3}
+          minWidth={210}
+          autoGrow
+        />
       </div>
 
       <div style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
@@ -260,6 +291,31 @@ function AgendaRow({
         >
           +1 sem
         </button>
+        {/* El día concreto. Los atajos cubren "mañana" y "la semana que viene",
+            pero por teléfono lo que se dice es "llámame el 14": sin este campo
+            había que salir a la tabla a ponerlo. Muestra la fecha actual del
+            aviso, así que también sirve para ver qué día está puesto. */}
+        <input
+          ref={dateRef}
+          type="date"
+          value={draft}
+          min={FOLLOWUP_MIN_DATE}
+          max={FOLLOWUP_MAX_DATE}
+          disabled={pending}
+          onChange={(e) => onDraftChange(e.target.value)}
+          // Si se sale del campo con algo a medias, se recupera lo guardado en
+          // vez de dejar a la vista una fecha que no existe en la base.
+          onBlur={() => setDraft(date)}
+          onClick={openPicker}
+          onFocus={openPicker}
+          title="Elegir otro día para el aviso"
+          aria-label="Elegir otro día para el aviso"
+          style={{
+            ...agendaBtn("#fff", "#475569", "#cbd5e1", pending),
+            fontFamily: "inherit",
+            padding: "5px 8px",
+          }}
+        />
       </div>
     </div>
   );
