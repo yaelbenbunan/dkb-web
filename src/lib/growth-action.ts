@@ -98,6 +98,10 @@ export async function requestGrowth(formData: FormData): Promise<GrowthResult> {
       name: d.name,
       rama: resultado.rama,
       costePorPaciente: resultado.costePorPaciente,
+      // Sin esto el correo diagnostica el negocio de alguien a quien no se le
+      // ha preguntado nada: el formulario de la portada manda las tres cifras
+      // en blanco y el cálculo lee ese vacío como «no invierte».
+      origen: d.origen,
     }),
   });
 

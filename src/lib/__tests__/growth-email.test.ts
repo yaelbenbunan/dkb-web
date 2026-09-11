@@ -27,4 +27,37 @@ describe("growthAutoresponder", () => {
       growthAutoresponder({ name: null, rama: "A", costePorPaciente: 100 }),
     ).not.toThrow();
   });
+
+  test("a quien viene de la portada no se le diagnostica nada", () => {
+    // El formulario del hero manda las tres cifras en blanco para que el resto
+    // del proceso funcione igual, y el cálculo lee ese vacío como «no
+    // invierte». El correo le decía «todavía no inviertes en publicidad» a
+    // alguien a quien nunca se le preguntó: no contestar y no ser preguntado
+    // no son lo mismo.
+    const mail = growthAutoresponder({
+      name: "Ana",
+      rama: "C",
+      costePorPaciente: null,
+      origen: "hero",
+    });
+    expect(mail.intro).not.toMatch(/inviertes|coste por paciente|no se puede calcular/i);
+    expect(mail.subject).not.toMatch(/coste/i);
+  });
+
+  test("y el asunto habla de lo que ha pasado de verdad", () => {
+    // «Tu coste por paciente» en la bandeja de alguien que solo ha dejado su
+    // teléfono no se entiende, y lo que se abre es lo que se entiende.
+    const mail = growthAutoresponder({ name: null, rama: "C", costePorPaciente: null, origen: "hero" });
+    expect(mail.subject).toBe("Ya has dado el primer paso");
+    expect(mail.bullets?.length ?? 0).toBeGreaterThan(0);
+  });
+
+  test("quien SÍ ha usado la calculadora sigue recibiendo su resultado", () => {
+    // Ahí las tres preguntas se hicieron y se contestaron: el valor del correo
+    // es justamente devolverle la cifra por escrito.
+    const mail = growthAutoresponder({
+      name: "Ana", rama: "A", costePorPaciente: 88.24, origen: "calculadora",
+    });
+    expect(mail.intro).toMatch(/88/);
+  });
 });

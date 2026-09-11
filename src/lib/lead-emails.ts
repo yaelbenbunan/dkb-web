@@ -159,14 +159,52 @@ export function webExpressAutoresponder(input: {
 }
 
 /**
- * Calculadora de /growth. Le deja su resultado por escrito y abre hilo: es lo
- * que convierte, más que un "hemos recibido tus datos".
+ * Escala: el acuse de recibo del lead.
+ *
+ * **Hay dos correos porque hay dos conversaciones distintas.**
+ *
+ * Quien viene de la calculadora ha contestado tres preguntas sobre su dinero y
+ * espera el resultado: ese correo se lo da por escrito, y ahí está el valor.
+ *
+ * Quien viene del formulario de la portada solo ha dado nombre, teléfono,
+ * correo y sector. El formulario pone las tres cifras en blanco para que el
+ * resto del proceso funcione igual, y el cálculo lee ese vacío como «no
+ * invierte» — así que el correo le decía «todavía no inviertes en publicidad»
+ * a alguien a quien nunca se le preguntó. Afirmar sobre su negocio algo que no
+ * nos ha dicho es la forma más rápida de que el primer correo suene a
+ * automatismo.
+ *
+ * Por eso el origen viaja hasta aquí: **no contestar y no ser preguntado no
+ * son lo mismo**, y el correo tiene que saber cuál de las dos es.
  */
 export function growthAutoresponder(input: {
   name?: string | null;
   rama: Rama;
   costePorPaciente: number | null;
+  origen?: "hero" | "calculadora";
 }): BrandedEmailInput {
+  // **A esta persona no le hemos preguntado nada de su negocio**, así que aquí
+  // no se diagnostica: se confirma que ha llegado, se dice qué pasa ahora y se
+  // le devuelve el motivo por el que escribió, que es querer llenar la agenda.
+  if (input.origen === "hero") {
+    return {
+      subject: "Ya has dado el primer paso",
+      eyebrow: "Solicitud recibida",
+      heading: "Un paso más cerca de llenar tu agenda",
+      name: input.name,
+      intro:
+        "gracias por escribirnos. Ya tenemos tus datos y te llamamos en menos de 24 horas laborables para conocer tu clínica y ver si esto te encaja.",
+      preheader: "Te llamamos en menos de 24 horas laborables.",
+      bulletsLabel: "Qué pasa ahora",
+      bullets: [
+        "Hablamos 15 minutos: cómo consigues pacientes hoy y dónde se te están escapando.",
+        "Te enseñamos el sistema por dentro, con el recorrido entero: del anuncio a la cita y de la cita a la caja.",
+        "Si encaja, montamos tu web de captación y arrancamos las campañas.",
+      ],
+      cta: WHATSAPP_CTA,
+    };
+  }
+
   const intro =
     input.rama === "A" && input.costePorPaciente !== null
       ? `según los datos que nos has dado, cada paciente nuevo te está costando alrededor de **${formatEur(input.costePorPaciente)}**. Es un cálculo con tus medias: lo que todavía no sabes es **qué campaña** te trae los pacientes que de verdad se quedan.`
