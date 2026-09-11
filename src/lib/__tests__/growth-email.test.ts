@@ -49,7 +49,10 @@ describe("growthAutoresponder", () => {
     // teléfono no se entiende, y lo que se abre es lo que se entiende.
     const mail = growthAutoresponder({ name: null, rama: "C", costePorPaciente: null, origen: "hero" });
     expect(mail.subject).toBe("Ya has dado el primer paso");
-    expect(mail.bullets?.length ?? 0).toBeGreaterThan(0);
+    // Sin lista de pasos: quien ha dejado su teléfono no ha pedido un proceso.
+    expect(mail.bullets ?? []).toHaveLength(0);
+    // Pero sí la salida rápida, por si no quiere esperar a la llamada.
+    expect(mail.cta?.url).toBeTruthy();
   });
 
   test("quien SÍ ha usado la calculadora sigue recibiendo su resultado", () => {

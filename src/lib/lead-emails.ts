@@ -193,14 +193,13 @@ export function growthAutoresponder(input: {
       heading: "Un paso más cerca de llenar tu agenda",
       name: input.name,
       intro:
-        "gracias por escribirnos. Ya tenemos tus datos y te llamamos en menos de 24 horas laborables para conocer tu clínica y ver si esto te encaja.",
+        "gracias por escribirnos. Ya tenemos tus datos y te llamaremos en menos de 24 horas laborables para contarte cómo vamos a hacer para escalar tu negocio.",
       preheader: "Te llamamos en menos de 24 horas laborables.",
-      bulletsLabel: "Qué pasa ahora",
-      bullets: [
-        "Hablamos 15 minutos: cómo consigues pacientes hoy y dónde se te están escapando.",
-        "Te enseñamos el sistema por dentro, con el recorrido entero: del anuncio a la cita y de la cita a la caja.",
-        "Si encaja, montamos tu web de captación y arrancamos las campañas.",
-      ],
+      // **Sin lista de pasos.** Enumerar aquí lo que va a pasar en la llamada
+      // es contar la película antes de verla: esta persona ha dejado su
+      // teléfono, no ha pedido un proceso. Lo único que necesita saber es que
+      // ha llegado y cuándo le llamamos — y el botón, por si no quiere
+      // esperar.
       cta: WHATSAPP_CTA,
     };
   }
