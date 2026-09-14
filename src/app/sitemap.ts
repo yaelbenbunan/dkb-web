@@ -5,6 +5,7 @@ import {
   getAllPosts,
 } from "@/lib/content";
 import { ALL_DEVICES } from "@/lib/kit-digital-data";
+import { SECTORES_ESCALA } from "@/lib/escala-sectores";
 
 const SITE = "https://www.dinkbit.es";
 
@@ -68,5 +69,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
     changeFrequency: "monthly" as Freq,
     priority: 0.6,
   }));
-  return [...staticRoutes, ...services, ...cases, ...posts, ...kitDevices];
+  // Se generan de la lista y no se escriben a mano en STATIC_ROUTES: un sector
+  // nuevo entra en el sitemap el mismo día que existe su página, sin que haya que
+  // acordarse de venir aquí.
+  const sectoresEscala = SECTORES_ESCALA.map((s) => ({
+    url: `${SITE}/escala/${s.slug}`,
+    lastModified: now,
+    changeFrequency: "weekly" as Freq,
+    priority: 0.8,
+  }));
+  return [
+    ...staticRoutes,
+    ...sectoresEscala,
+    ...services,
+    ...cases,
+    ...posts,
+    ...kitDevices,
+  ];
 }

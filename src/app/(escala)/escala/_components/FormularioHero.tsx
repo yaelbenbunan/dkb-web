@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { requestGrowth } from "@/lib/growth-action";
 import { GROWTH, GROWTH_THEME as T } from "@/lib/growth-config";
+import { SECTORES_FORMULARIO } from "@/lib/escala-sectores";
 import { track, pushUserData } from "@/lib/gtm";
 import { newEventId, trackMetaLead } from "@/lib/meta-pixel";
 import { appendUtms } from "@/lib/utm";
@@ -34,15 +35,14 @@ import { appendUtms } from "@/lib/utm";
 const PAPEL = "#F5F7F8";
 const TINTA = "#08090C";
 const BORDE = "rgba(11, 27, 43, 0.16)";
-const SECTORES = [
-  "Clínica dental",
-  "Centro de estética",
-  "Fisioterapia",
-  "Psicología",
-  "Otro",
-] as const;
 
-export function FormularioHero() {
+/**
+ * @param sectorPorDefecto Deja el desplegable ya elegido. Lo pasan las landings
+ *   de sector: quien llega a /escala/dental ya ha dicho lo que es al entrar, y
+ *   volvérselo a preguntar es un campo más entre él y el botón. Además el sector
+ *   viaja con el lead, así que el aviso llega etiquetado aunque nadie lo toque.
+ */
+export function FormularioHero({ sectorPorDefecto }: { sectorPorDefecto?: string } = {}) {
   const [pendiente, iniciar] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [enviado, setEnviado] = useState(false);
@@ -172,11 +172,17 @@ export function FormularioHero() {
 
         <label className="block">
           <span className="sr-only">Tipo de centro</span>
-          <select name="sector" required defaultValue="" className={campo} style={estiloCampo}>
+          <select
+            name="sector"
+            required
+            defaultValue={sectorPorDefecto ?? ""}
+            className={campo}
+            style={estiloCampo}
+          >
             <option value="" disabled>
               ¿Qué tipo de centro tienes?
             </option>
-            {SECTORES.map((s) => (
+            {SECTORES_FORMULARIO.map((s) => (
               <option key={s} value={s}>
                 {s}
               </option>

@@ -87,7 +87,14 @@ const PREGUNTAS: { p: string; r: string }[] = [
   },
 ];
 
-export function Faqs() {
+/**
+ * @param extra Las preguntas propias de un sector, que van DELANTE de las
+ *   comunes. Delante y no detrás: quien entra por una landing de sector llega
+ *   con la duda de su gremio —si se puede anunciar terapia, si sirve trabajando
+ *   con mutuas—, y enterrada bajo siete preguntas de dinero no la encuentra.
+ */
+export function Faqs({ extra = [] }: { extra?: { p: string; r: string }[] } = {}) {
+  const preguntas = [...extra, ...PREGUNTAS];
   return (
     // Un tercio y dos tercios, en proporción y no en un ancho fijo. La columna
     // del título estaba topada en 22 rem, así que en un monitor ancho se
@@ -112,7 +119,7 @@ export function Faqs() {
       </div>
 
       <div>
-        {PREGUNTAS.map((f) => (
+        {preguntas.map((f) => (
           <details
             key={f.p}
             className="group border-t last:border-b"
