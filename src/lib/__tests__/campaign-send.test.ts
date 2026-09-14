@@ -159,6 +159,53 @@ describe("sendCampaign", () => {
     );
   });
 
+  test("el From lleva el nombre del remitente delante de la dirección", async () => {
+    getCampaignMock.mockResolvedValue({
+      id: "c1",
+      subject: "Asunto",
+      from_email: "hola@dinkbit.es",
+      from_name: "Alicia de dinkbit",
+      blocks: VALID_BLOCKS,
+    });
+    listEmailableLeadsMock.mockResolvedValue([makeLead("lead-1")]);
+
+    await sendCampaign("c1", ["lead-1"]);
+
+    expect(batchSendMock.mock.calls[0][0][0].from).toBe('"Alicia de dinkbit" <hola@dinkbit.es>');
+  });
+
+  test("sin nombre guardado, el From usa el nombre por defecto", async () => {
+    getCampaignMock.mockResolvedValue({
+      id: "c1",
+      subject: "Asunto",
+      from_email: "hola@dinkbit.es",
+      from_name: null,
+      blocks: VALID_BLOCKS,
+    });
+    listEmailableLeadsMock.mockResolvedValue([makeLead("lead-1")]);
+
+    await sendCampaign("c1", ["lead-1"]);
+
+    expect(batchSendMock.mock.calls[0][0][0].from).toBe('"dinkbit" <hola@dinkbit.es>');
+  });
+
+  test("un nombre con salto de línea no puede inyectar cabeceras", async () => {
+    getCampaignMock.mockResolvedValue({
+      id: "c1",
+      subject: "Asunto",
+      from_email: "hola@dinkbit.es",
+      from_name: "Alicia\r\nBcc: espia@evil.com",
+      blocks: VALID_BLOCKS,
+    });
+    listEmailableLeadsMock.mockResolvedValue([makeLead("lead-1")]);
+
+    await sendCampaign("c1", ["lead-1"]);
+
+    const from = batchSendMock.mock.calls[0][0][0].from;
+    expect(from).not.toMatch(/[\r\n]/);
+    expect(from.endsWith("<hola@dinkbit.es>")).toBe(true);
+  });
+
   test("from_email fuera de ALLOWED_SENDERS → ok:false y NO envía", async () => {
     getCampaignMock.mockResolvedValue({
       id: "c1",

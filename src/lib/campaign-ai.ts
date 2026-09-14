@@ -29,10 +29,13 @@ const SYSTEM_PROMPT = `Eres un asistente que diseña emails de campañas de mark
 
 Todos los bloques con contenido admiten además "align": "left"|"center"|"right"|"justify" (opcional). Si el usuario no pide una alineación concreta, omítela.
 
+Todos los bloques admiten "spacing": number (0-60, FUERA de "props", al lado de "id" y "type") — el aire vertical alrededor de la sección, en píxeles. 0 deja las secciones pegadas. Si el usuario no pide cambiar el espaciado, conserva el que ya tuviera cada bloque y no lo inventes.
+
 Los campos de texto enriquecido ("html", "bodyHtml") admiten SOLO estas etiquetas inline: <b>, <i>, <u>, <a href="...">, <span style="color:#rrggbb"> y <br />. Nada de <div>, <p>, <style>, <script> ni atributos de evento: se descartan al guardar.
 
 Tipos de bloque disponibles (8):
-- "hero": { eyebrow?: string, title: string, body?: string, bodyHtml?: string (texto enriquecido; si lo usas, "body" debe llevar el mismo texto sin etiquetas), accent?: string, align? } — bloque de cabecera con el titular principal.
+- "hero": { eyebrow?: string, title: string, body?: string, bodyHtml?: string (texto enriquecido; si lo usas, "body" debe llevar el mismo texto sin etiquetas), accent?: string, align?, eyebrowStyle?, titleStyle?, bodyStyle?, cta?: { label: string, url: string (URL válida), background?: "#rrggbb", style? } } — bloque de cabecera con el titular principal y, si hace falta, su propio botón.
+  Los estilos del hero son INDEPENDIENTES entre sí: cada uno de "eyebrowStyle", "titleStyle", "bodyStyle" y "cta.style" es un objeto { color?: "#rrggbb", size?: number (10-60, píxeles), align?, bold?: boolean, italic?: boolean, underline?: boolean } que afecta SOLO a ese apartado. Omite los que no haga falta tocar.
 - "paragraph": { text: string, html?: string (texto enriquecido; si lo usas, "text" debe llevar el mismo texto sin etiquetas), align?, size?: "sm"|"md"|"lg" } — párrafo de texto libre.
 - "textbox": { html: string (texto enriquecido), size?: "sm"|"md"|"lg", background?: "#rrggbb", borderColor?: "#rrggbb", align? } — caja destacada con fondo y borde propios, para avisos o notas.
 - "checklist": { label?: string, items: string[] (mínimo 1), accent?: string, align? } — lista de puntos/beneficios.

@@ -6,10 +6,17 @@ import { editAction, saveAsTemplateAction, uploadCampaignImageAction } from "../
 import {
   newBlock,
   ALIGNMENTS,
+  getSectionSpacing,
+  setSectionSpacing,
+  DEFAULT_SECTION_SPACING,
+  MIN_SECTION_SPACING,
+  MAX_SECTION_SPACING,
   type Block,
   type BlockType,
   type BlockAlign,
   type ImageWidth,
+  type TextStyle,
+  type HeroCta,
 } from "@/lib/campaign-blocks";
 import { plainToRichText, richTextToPlain } from "@/lib/rich-text";
 import { RichTextField } from "./RichTextField";
@@ -181,6 +188,10 @@ export function StepDesign({
         <p style={{ fontSize: 14, color: "#64748b", margin: 0 }}>
           Todavía no hay bloques. Añade uno abajo o vuelve al paso 1 para generar una propuesta.
         </p>
+      )}
+
+      {blocks.length > 0 && (
+        <SectionSpacingField blocks={blocks} setBlocks={setBlocks} />
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -448,33 +459,34 @@ function BlockFields({
 }) {
   switch (block.type) {
     case "hero":
+      // Cada apartado del hero se edita y se estiliza por su cuenta: lo que se
+      // toca en el título no se le pega ni al eyebrow ni a la bajada.
       return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <div>
-            <label style={labelStyle}>Eyebrow</label>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <HeroNode label="Eyebrow" style={block.props.eyebrowStyle} onStyle={(v) => onChange({ eyebrowStyle: v })}>
             <input
               style={inputStyle}
               value={block.props.eyebrow ?? ""}
               onChange={(e) => onChange({ eyebrow: e.target.value })}
+              placeholder="Antetítulo corto…"
             />
-          </div>
-          <div>
-            <label style={labelStyle}>Título</label>
+          </HeroNode>
+          <HeroNode label="Título" style={block.props.titleStyle} onStyle={(v) => onChange({ titleStyle: v })}>
             <input
               style={inputStyle}
               value={block.props.title}
               onChange={(e) => onChange({ title: e.target.value })}
             />
-          </div>
-          <div>
-            <label style={labelStyle}>Texto</label>
+          </HeroNode>
+          <HeroNode label="Bajada" style={block.props.bodyStyle} onStyle={(v) => onChange({ bodyStyle: v })}>
             <RichTextField
               value={block.props.bodyHtml ?? plainToRichText(block.props.body)}
               onChange={(html) => onChange({ bodyHtml: html, body: richTextToPlain(html) })}
               placeholder="Texto de apoyo del titular…"
               rows={3}
             />
-          </div>
+          </HeroNode>
+          <HeroCtaField cta={block.props.cta} onChange={(cta) => onChange({ cta })} />
           <AccentField value={block.props.accent} onChange={(v) => onChange({ accent: v })} />
         </div>
       );
@@ -904,6 +916,245 @@ function ChecklistItemsField({
         onChange={(e) => setText(e.target.value)}
         onBlur={commit}
       />
+    </div>
+  );
+}
+
+/**
+ * Espaciado vertical entre secciones. Es un control global del diseño: mueve el
+ * aire de TODAS las secciones a la vez, de 0 (pegadas del todo) a 60 px. El
+ * valor se escribe en cada bloque, así que viaja con la campaña y también con la
+ * plantilla si se guarda.
+ */
+function SectionSpacingField({
+  blocks,
+  setBlocks,
+}: {
+  blocks: Block[];
+  setBlocks: (next: Block[]) => void;
+}) {
+  const current = getSectionSpacing(blocks) ?? DEFAULT_SECTION_SPACING;
+  return (
+    <div
+      style={{
+        border: "1px solid #e2e8f0",
+        borderRadius: 10,
+        padding: 14,
+        display: "flex",
+        flexDirection: "column",
+        gap: 6,
+      }}
+    >
+      <label style={labelStyle} htmlFor="section-spacing">
+        Espaciado entre secciones
+      </label>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <input
+          id="section-spacing"
+          type="range"
+          min={MIN_SECTION_SPACING}
+          max={MAX_SECTION_SPACING}
+          step={2}
+          value={current}
+          onChange={(e) => setBlocks(setSectionSpacing(blocks, Number(e.target.value)))}
+          style={{ flex: 1, accentColor: "#187bef", cursor: "pointer" }}
+        />
+        <span style={{ fontSize: 13, fontWeight: 700, color: "#334155", width: 48, textAlign: "right" }}>
+          {current} px
+        </span>
+      </div>
+      <p style={{ fontSize: 12, color: "#94a3b8", margin: 0 }}>
+        0 = secciones pegadas, sin ningún hueco entre ellas.
+      </p>
+    </div>
+  );
+}
+
+/** Un apartado del hero: su contenido y, debajo, sus propios controles de
+ *  formato. Lo que se cambia aquí no afecta a los demás apartados. */
+function HeroNode({
+  label,
+  style,
+  onStyle,
+  children,
+}: {
+  label: string;
+  style?: TextStyle;
+  onStyle: (v: TextStyle) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        border: "1px solid #f1f5f9",
+        borderRadius: 8,
+        padding: 10,
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        background: "#fcfdff",
+      }}
+    >
+      <label style={labelStyle}>{label}</label>
+      {children}
+      <TextStyleControls value={style} onChange={onStyle} />
+    </div>
+  );
+}
+
+/** Barra de formato de un nodo de texto: color, tamaño, alineación y negrita /
+ *  cursiva / subrayado. Todo opcional — vacío significa «como estaba». */
+function TextStyleControls({
+  value,
+  onChange,
+}: {
+  value?: TextStyle;
+  onChange: (v: TextStyle) => void;
+}) {
+  const patch = (p: Partial<TextStyle>) => onChange({ ...value, ...p });
+  const toggle = (key: "bold" | "italic" | "underline") => patch({ [key]: !value?.[key] });
+
+  const toggleStyle = (on: boolean): React.CSSProperties => ({
+    border: `1px solid ${on ? "#187bef" : "#e2e8f0"}`,
+    background: on ? "#e8f2fe" : "#fff",
+    color: on ? "#187bef" : "#475569",
+    borderRadius: 6,
+    width: 30,
+    height: 28,
+    fontSize: 13,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  });
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+      <input
+        type="color"
+        aria-label="Color del texto"
+        title="Color del texto"
+        value={normalizeHex(value?.color ?? "#0f172a")}
+        onChange={(e) => patch({ color: e.target.value })}
+        style={{ width: 36, height: 28, border: "1px solid #e2e8f0", borderRadius: 6, padding: 2, cursor: "pointer" }}
+      />
+      <input
+        type="number"
+        min={10}
+        max={60}
+        aria-label="Tamaño de fuente"
+        title="Tamaño de fuente (px)"
+        placeholder="px"
+        value={value?.size ?? ""}
+        onChange={(e) => {
+          const n = Number(e.target.value);
+          patch({ size: e.target.value === "" || !Number.isFinite(n) ? undefined : Math.round(n) });
+        }}
+        style={{ ...inputStyle, width: 68, padding: "5px 8px" }}
+      />
+      <select
+        aria-label="Alineación del texto"
+        title="Alineación del texto"
+        value={value?.align ?? ""}
+        onChange={(e) => patch({ align: (e.target.value || undefined) as TextStyle["align"] })}
+        style={{ ...inputStyle, width: 132, padding: "5px 8px", cursor: "pointer" }}
+      >
+        <option value="">Alineación…</option>
+        {ALIGNMENTS.map((a) => (
+          <option key={a} value={a}>
+            {ALIGN_LABELS[a]}
+          </option>
+        ))}
+      </select>
+      <button type="button" onClick={() => toggle("bold")} style={{ ...toggleStyle(!!value?.bold), fontWeight: 800 }} aria-pressed={!!value?.bold} title="Negrita">
+        B
+      </button>
+      <button type="button" onClick={() => toggle("italic")} style={{ ...toggleStyle(!!value?.italic), fontStyle: "italic" }} aria-pressed={!!value?.italic} title="Cursiva">
+        I
+      </button>
+      <button type="button" onClick={() => toggle("underline")} style={{ ...toggleStyle(!!value?.underline), textDecoration: "underline" }} aria-pressed={!!value?.underline} title="Subrayado">
+        U
+      </button>
+    </div>
+  );
+}
+
+/** Botón opcional del hero, con su texto, su enlace, su color de fondo y su
+ *  propio formato de texto. */
+function HeroCtaField({
+  cta,
+  onChange,
+}: {
+  cta?: HeroCta;
+  onChange: (v: HeroCta | undefined) => void;
+}) {
+  if (!cta) {
+    return (
+      <button
+        type="button"
+        onClick={() => onChange({ label: "Ver más", url: "https://www.dinkbit.es" })}
+        style={{
+          alignSelf: "flex-start",
+          border: "1px dashed #cbd5e1",
+          background: "none",
+          borderRadius: 8,
+          padding: "6px 12px",
+          fontSize: 13,
+          fontWeight: 600,
+          color: "#187bef",
+          cursor: "pointer",
+        }}
+      >
+        ＋ Añadir botón al hero
+      </button>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        border: "1px solid #f1f5f9",
+        borderRadius: 8,
+        padding: 10,
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        background: "#fcfdff",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <label style={{ ...labelStyle, marginBottom: 0 }}>Botón (CTA)</label>
+        <button
+          type="button"
+          onClick={() => onChange(undefined)}
+          style={{ ...iconBtnStyle(false), color: "#b91c1c", borderColor: "#fecaca" }}
+          aria-label="Quitar el botón del hero"
+        >
+          🗑
+        </button>
+      </div>
+      <input
+        style={inputStyle}
+        value={cta.label}
+        onChange={(e) => onChange({ ...cta, label: e.target.value })}
+        placeholder="Texto del botón"
+      />
+      <input
+        type="url"
+        style={inputStyle}
+        value={cta.url}
+        onChange={(e) => onChange({ ...cta, url: e.target.value })}
+        placeholder="https://…"
+      />
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 12, color: "#64748b" }}>Fondo</span>
+        <input
+          type="color"
+          aria-label="Color de fondo del botón"
+          value={normalizeHex(cta.background ?? "#187bef")}
+          onChange={(e) => onChange({ ...cta, background: e.target.value })}
+          style={{ width: 36, height: 28, border: "1px solid #e2e8f0", borderRadius: 6, padding: 2, cursor: "pointer" }}
+        />
+      </div>
+      <TextStyleControls value={cta.style} onChange={(style) => onChange({ ...cta, style })} />
     </div>
   );
 }

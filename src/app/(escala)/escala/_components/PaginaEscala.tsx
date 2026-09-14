@@ -231,7 +231,7 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
           El punto medio es este: el hero mide lo que mide su contenido más un
           margen que lo separa de lo que viene detrás. El aire entre secciones no
           es desperdicio — es lo que hace que se lean como dos cosas distintas. */}
-      <header className="relative flex min-h-[26rem] items-start overflow-hidden py-12 md:py-14 lg:pb-20 lg:pt-16">
+      <header className="relative flex min-h-[26rem] items-start overflow-hidden py-16 md:py-20 lg:pb-28 lg:pt-24">
         {/* Tres capas para que la cabecera deje de ser un rectángulo negro, y
             ninguna se ve como tal: una trama de puntos que da textura sin hacer
             ruido, un halo verde detrás del formulario —que además empuja la

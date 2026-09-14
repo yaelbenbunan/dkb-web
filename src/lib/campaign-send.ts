@@ -10,6 +10,7 @@ import { listEmailableLeads, type LeadRow } from "./imagina-leads";
 import { renderCampaignEmail } from "./campaign-render";
 import { mintUnsubscribeToken } from "./unsubscribe-token";
 import { blocksSchema, DEFAULT_STYLE, type Block } from "./campaign-blocks";
+import { formatFromHeader, DEFAULT_SENDER_NAME } from "./email-from";
 
 const SITE = "https://www.dinkbit.es";
 const BATCH_SIZE = 100;
@@ -44,8 +45,11 @@ function chunk<T>(items: T[], size: number): T[][] {
 function validateCampaign(campaign: {
   subject: string | null;
   from_email: string | null;
+  from_name?: string | null;
   blocks: unknown;
-}): { ok: true; subject: string; from_email: string; blocks: Block[] } | { ok: false; error: string } {
+}):
+  | { ok: true; subject: string; from: string; blocks: Block[] }
+  | { ok: false; error: string } {
   const subject = campaign.subject?.trim();
   if (!subject) return { ok: false, error: "missing_subject" };
   if (!campaign.from_email || !ALLOWED_SENDERS.includes(campaign.from_email)) {
@@ -55,7 +59,11 @@ function validateCampaign(campaign: {
   if (!parsed.success || parsed.data.length === 0) {
     return { ok: false, error: "invalid_blocks" };
   }
-  return { ok: true, subject, from_email: campaign.from_email, blocks: parsed.data };
+  // La dirección está en lista blanca, pero el nombre lo escribe una persona:
+  // se limpia aquí (y no solo al guardarlo) para que ninguna fila antigua ni
+  // ninguna escritura directa en la base pueda colar una cabecera partida.
+  const from = formatFromHeader(campaign.from_name, campaign.from_email, DEFAULT_SENDER_NAME);
+  return { ok: true, subject, from, blocks: parsed.data };
 }
 
 function getResendClient(): Resend {
@@ -74,7 +82,7 @@ export async function sendCampaign(
 
   const validated = validateCampaign(campaign);
   if (!validated.ok) return { ok: false, sent: 0, skipped: 0, error: validated.error };
-  const { subject, from_email, blocks } = validated;
+  const { subject, from, blocks } = validated;
 
   // Guard contra doble envío: un reintento (doble clic, doble llamada) sobre una
   // campaña ya enviada no debe volver a mandar los emails.
@@ -98,7 +106,7 @@ export async function sendCampaign(
         preheader: subject,
         unsubscribeUrl: buildUnsubscribeUrl(lead.id),
       });
-      return { from: from_email, to: lead.email as string, subject, html, text };
+      return { from, to: lead.email as string, subject, html, text };
     });
 
     try {
@@ -150,12 +158,14 @@ export async function sendCampaign(
 export async function sendCampaignTest(input: {
   subject: string;
   from_email: string;
+  from_name?: string | null;
   blocks: unknown;
   toEmails: string[];
 }): Promise<{ ok: boolean; error?: string }> {
   const validated = validateCampaign({
     subject: input.subject,
     from_email: input.from_email,
+    from_name: input.from_name,
     blocks: input.blocks,
   });
   if (!validated.ok) return { ok: false, error: validated.error };
@@ -168,7 +178,7 @@ export async function sendCampaignTest(input: {
 
   const resend = getResendClient();
   const payloads = input.toEmails.map((to) => ({
-    from: validated.from_email,
+    from: validated.from,
     to,
     subject: validated.subject,
     html,

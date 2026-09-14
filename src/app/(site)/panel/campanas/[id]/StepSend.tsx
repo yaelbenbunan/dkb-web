@@ -2,17 +2,20 @@
 
 import { useState, useTransition } from "react";
 import { sendCampaignAction } from "../actions";
+import { DEFAULT_SENDER_NAME, sanitizeSenderName } from "@/lib/email-from";
 
 export function StepSend({
   campaignId,
   subject,
   fromEmail,
+  fromName,
   selectedCount,
   selectedIds,
 }: {
   campaignId: string;
   subject: string;
   fromEmail: string;
+  fromName: string;
   selectedCount: number;
   selectedIds: string[];
 }) {
@@ -51,7 +54,10 @@ export function StepSend({
         }}
       >
         <SummaryRow label="Asunto" value={subject || "—"} />
-        <SummaryRow label="Remitente" value={fromEmail || "—"} />
+        <SummaryRow
+          label="Remitente"
+          value={fromEmail ? `${sanitizeSenderName(fromName) || DEFAULT_SENDER_NAME} <${fromEmail}>` : "—"}
+        />
         <SummaryRow label="Destinatarios" value={String(selectedCount)} />
       </div>
 

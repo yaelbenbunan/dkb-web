@@ -189,3 +189,107 @@ describe("compatibilidad con campañas ya guardadas", () => {
     expect(html).toContain("Texto");
   });
 });
+
+describe("estilos independientes dentro del hero", () => {
+  test("título, eyebrow y bajada llevan cada uno su propio CSS inline", () => {
+    const { html } = render([
+      {
+        id: "h",
+        type: "hero",
+        props: {
+          eyebrow: "NOVEDAD",
+          title: "Titular",
+          body: "Bajada",
+          eyebrowStyle: { color: "#ff0000", size: 11 },
+          titleStyle: { size: 40, align: "center", underline: true },
+          bodyStyle: { color: "#123456", size: 15, align: "justify", italic: true },
+        },
+      },
+    ]);
+    expect(html).toContain("color:#ff0000");
+    expect(html).toContain("font-size:11px");
+    expect(html).toContain("font-size:40px");
+    expect(html).toContain("text-decoration:underline");
+    expect(html).toContain("color:#123456");
+    expect(html).toContain("font-size:15px");
+    expect(html).toContain("font-style:italic");
+  });
+
+  test("tocar el título no arrastra a la bajada", () => {
+    const { html } = render([
+      {
+        id: "h",
+        type: "hero",
+        props: {
+          title: "Titular",
+          body: "Bajada",
+          titleStyle: { color: "#ff0000", align: "right" },
+        },
+      },
+    ]);
+    const title = /<h1[^>]*style="([^"]*)"/.exec(html)?.[1] ?? "";
+    const body = /<p style="margin:14px 0 0;([^"]*)"/.exec(html)?.[1] ?? "";
+    expect(title).toContain("color:#ff0000");
+    expect(title).toContain("text-align:right");
+    expect(body).toContain("color:#475569");
+    expect(body).toContain("text-align:left");
+  });
+
+  test("negrita y cursiva salen como CSS inline, que es lo que entiende Outlook", () => {
+    const { html } = render([
+      { id: "h", type: "hero", props: { title: "T", titleStyle: { bold: false }, bodyStyle: { bold: true }, body: "B" } },
+    ]);
+    expect(html).toContain("font-weight:400");
+    expect(html).toContain("font-weight:700");
+  });
+
+  test("el hero puede llevar su propio botón, con enlace y texto seguros", () => {
+    const { html, text } = render([
+      {
+        id: "h",
+        type: "hero",
+        props: {
+          title: "T",
+          cta: { label: "Reservar", url: "https://dinkbit.es/reserva", background: "#00aa55", style: { size: 18, align: "center" } },
+        },
+      },
+    ]);
+    expect(html).toContain('href="https://dinkbit.es/reserva"');
+    expect(html).toContain("background:#00aa55");
+    expect(html).toContain("font-size:18px");
+    expect(html).toContain("Reservar");
+    expect(text).toContain("Reservar: https://dinkbit.es/reserva");
+  });
+
+  test("un hero sin estilos se sigue pintando como siempre", () => {
+    const { html } = render([{ id: "h", type: "hero", props: { title: "T", body: "B" } }]);
+    expect(html).toContain("font-size:28px");
+    expect(html).toContain("color:#0f172a");
+    expect(html).toContain("color:#475569");
+  });
+});
+
+describe("espaciado entre secciones", () => {
+  test("con spacing 0 las secciones quedan pegadas (padding vertical 0)", () => {
+    const { html } = render([
+      { id: "1", type: "paragraph", props: { text: "a" }, spacing: 0 },
+      { id: "2", type: "paragraph", props: { text: "b" }, spacing: 0 },
+    ]);
+    expect(html).toContain("padding:0px 36px 0px");
+  });
+
+  test("el valor se reparte mitad arriba y mitad abajo de cada sección", () => {
+    const { html } = render([{ id: "1", type: "paragraph", props: { text: "a" }, spacing: 40 }]);
+    expect(html).toContain("padding:20px 36px 20px");
+  });
+
+  test("el espaciado se aplica con padding de celda, no con márgenes", () => {
+    const { html } = render([{ id: "1", type: "button", props: { label: "B", url: "https://x.com" }, spacing: 30 }]);
+    expect(html).toContain('<td style="padding:15px 36px 15px');
+  });
+
+  test("un bloque sin spacing conserva el padding de toda la vida", () => {
+    const { html } = render([{ id: "1", type: "paragraph", props: { text: "a" } }]);
+    expect(html).toContain("padding:10px 36px 10px");
+  });
+});

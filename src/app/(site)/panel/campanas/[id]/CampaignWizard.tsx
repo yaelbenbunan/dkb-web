@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { saveBlocksAction, setCampaignMetaAction } from "../actions";
 import { blocksSchema, DEFAULT_STYLE, type Block, type CampaignStyle } from "@/lib/campaign-blocks";
+import { DEFAULT_SENDER_NAME, isValidSenderName, sanitizeSenderName } from "@/lib/email-from";
 import type { CampaignRow, EmailTemplateRow } from "@/lib/campaigns";
 import type { LeadRow } from "@/lib/imagina-leads";
 import { PreviewFrame } from "./PreviewFrame";
@@ -42,6 +43,7 @@ export function CampaignWizard({
   const [style] = useState<CampaignStyle>(DEFAULT_STYLE);
   const [subject, setSubject] = useState(campaign.subject ?? "");
   const [fromEmail, setFromEmail] = useState(campaign.from_email ?? "hola@dinkbit.es");
+  const [fromName, setFromName] = useState(campaign.from_name ?? "");
   const [name, setName] = useState(campaign.name ?? "");
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
 
@@ -59,7 +61,7 @@ export function CampaignWizard({
     // they can be edited — the details row is shown on every step, but only
     // steps 1-3 are "before send", so this is a good boundary to flush.
     if (step >= 1 && step <= 3) {
-      void setCampaignMetaAction(campaign.id, name, subject, fromEmail);
+      void setCampaignMetaAction(campaign.id, name, subject, fromEmail, fromName);
     }
     setStep(next);
   };
@@ -71,6 +73,12 @@ export function CampaignWizard({
       void saveBlocksAction(campaign.id, JSON.stringify(next));
     }, SAVE_DEBOUNCE_MS);
   };
+
+  // Lo que va a ver quien reciba el correo, calculado con las mismas reglas que
+  // aplica el servidor al enviar: nombre limpio, y el de por defecto si está vacío.
+  const cleanFromName = sanitizeSenderName(fromName) || DEFAULT_SENDER_NAME;
+  const fromPreview = `${cleanFromName} <${fromEmail.trim() || "hola@dinkbit.es"}>`;
+  const nameWarning = !isValidSenderName(fromName);
 
   const stepIndex = STEPS.findIndex((s) => s.step === step);
   const canGoPrev = stepIndex > 0;
@@ -162,8 +170,18 @@ export function CampaignWizard({
             style={{ padding: "8px 10px", border: "1px solid #e2e8f0", borderRadius: 6, fontSize: 13, color: "#0f172a" }}
           />
         </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: 4, flex: "1 1 200px", fontSize: 12, color: "#64748b" }}>
+          Nombre del remitente
+          <input
+            value={fromName}
+            onChange={(e) => setFromName(e.target.value)}
+            placeholder={DEFAULT_SENDER_NAME}
+            maxLength={64}
+            style={{ padding: "8px 10px", border: "1px solid #e2e8f0", borderRadius: 6, fontSize: 13, color: "#0f172a" }}
+          />
+        </label>
         <label style={{ display: "flex", flexDirection: "column", gap: 4, flex: "1 1 180px", fontSize: 12, color: "#64748b" }}>
-          Remitente
+          Email de envío
           <input
             value={fromEmail}
             onChange={(e) => setFromEmail(e.target.value)}
@@ -171,6 +189,12 @@ export function CampaignWizard({
             style={{ padding: "8px 10px", border: "1px solid #e2e8f0", borderRadius: 6, fontSize: 13, color: "#0f172a" }}
           />
         </label>
+        <p style={{ flexBasis: "100%", margin: 0, fontSize: 12, color: nameWarning ? "#b45309" : "#94a3b8" }}>
+          {nameWarning
+            ? "Se quitarán los caracteres que no valen en una cabecera de email: "
+            : "En la bandeja de entrada se verá: "}
+          <strong style={{ color: nameWarning ? "#b45309" : "#475569" }}>{fromPreview}</strong>
+        </p>
       </div>
 
       <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap" }}>
@@ -211,6 +235,7 @@ export function CampaignWizard({
               campaignId={campaign.id}
               subject={subject}
               fromEmail={fromEmail}
+              fromName={fromName}
               selectedCount={selectedLeadIds.size}
               selectedIds={[...selectedLeadIds]}
             />

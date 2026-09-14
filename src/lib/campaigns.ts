@@ -6,6 +6,9 @@ const CAMPAIGNS_TABLE = "campaigns";
 const RECIPIENTS_TABLE = "campaign_recipients";
 const TEMPLATES_TABLE = "email_templates";
 
+/** Columnas añadidas por migración manual, que pueden no existir todavía. */
+const OPTIONAL_COLUMNS = ["from_name"] as const;
+
 export interface CampaignRow {
   id: string;
   created_at: string;
@@ -13,6 +16,9 @@ export interface CampaignRow {
   name: string | null;
   subject: string | null;
   from_email: string | null;
+  /** Nombre visible del remitente. Opcional en el tipo porque su columna se
+   *  migra a mano: en una base sin migrar, la fila llega sin este campo. */
+  from_name?: string | null;
   status: string;
   template_id: string | null;
   blocks: unknown;
@@ -69,6 +75,7 @@ export async function updateCampaign(
     name: string | null;
     subject: string | null;
     from_email: string | null;
+    from_name: string | null;
     blocks: unknown;
     concept: string | null;
     status: string;
@@ -84,7 +91,25 @@ export async function updateCampaign(
   // así que si no cambia, la IA nunca refresca el editor tras escribir bloques.
   const payload: Record<string, unknown> = { ...patch, updated_at: new Date().toISOString() };
   const { error } = await sb.from(CAMPAIGNS_TABLE).update(payload).eq("id", id);
-  if (error) console.error("[campaigns] updateCampaign error:", error.message);
+  if (!error) return;
+
+  // Columnas cuya migración se lanza a mano en el SQL Editor (docs/sql). Si
+  // todavía no está aplicada, PostgREST rechaza el update ENTERO y se perdería
+  // también el asunto o los bloques: se reintenta sin la columna que falta.
+  const missing = OPTIONAL_COLUMNS.filter(
+    (col) => col in payload && error.message.includes(col),
+  );
+  if (missing.length > 0) {
+    console.error(
+      `[campaigns] updateCampaign: falta la columna ${missing.join(", ")} en la base de datos. ` +
+        "Ejecuta la migración de docs/sql. Se guarda el resto de campos.",
+    );
+    for (const col of missing) delete payload[col];
+    const retry = await sb.from(CAMPAIGNS_TABLE).update(payload).eq("id", id);
+    if (retry.error) console.error("[campaigns] updateCampaign error:", retry.error.message);
+    return;
+  }
+  console.error("[campaigns] updateCampaign error:", error.message);
 }
 
 export async function getCampaign(id: string): Promise<CampaignRow | null> {

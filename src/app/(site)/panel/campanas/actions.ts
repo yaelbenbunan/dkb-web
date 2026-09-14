@@ -17,6 +17,7 @@ import {
 import { sendCampaign, sendCampaignTest } from "@/lib/campaign-send";
 import { blocksSchema, sanitizeBlocks, type Block } from "@/lib/campaign-blocks";
 import { uploadCampaignImage } from "@/lib/campaign-images";
+import { sanitizeSenderName } from "@/lib/email-from";
 
 const AI_FAILURE_MESSAGE: Record<BlocksFailureReason, string> = {
   "missing-api-key":
@@ -147,13 +148,19 @@ export async function setCampaignMetaAction(
   name: string,
   subject: string,
   fromEmail: string,
+  fromName: string = "",
 ): Promise<{ ok: boolean; error?: string }> {
   if (!campaignId) return { ok: false, error: "Falta el id de campaña." };
+
+  // El nombre del remitente se guarda ya saneado: lo que hay en la base es
+  // exactamente lo que acabará en la cabecera `From`, sin sorpresas.
+  const senderName = sanitizeSenderName(fromName);
 
   await updateCampaign(campaignId, {
     name: name.trim() || null,
     subject: subject.trim() || null,
     from_email: fromEmail.trim() || null,
+    from_name: senderName || null,
   });
   revalidatePath("/panel/campanas");
   return { ok: true };
@@ -177,6 +184,7 @@ export async function sendTestAction(
   const res = await sendCampaignTest({
     subject: campaign.subject ?? "",
     from_email: campaign.from_email ?? "",
+    from_name: campaign.from_name ?? null,
     blocks: campaign.blocks,
     toEmails: emails,
   });
