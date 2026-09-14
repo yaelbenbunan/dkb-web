@@ -246,22 +246,25 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
                 fill
                 sizes="100vw"
                 className="object-cover"
-                // 0,32 y no 0,18: al 18 % había que buscar la foto para verla,
-                // y una imagen que hay que buscar no diferencia nada — que era
-                // justo el problema que venía a resolver. El titular sigue
-                // legible porque de eso se encarga el degradado, no la opacidad.
-                style={{ opacity: 0.32 }}
+                // **Al 60 %, y la legibilidad la sostiene el degradado.** Pasó
+                // por 0,18 y por 0,32 y en las dos había que buscar la foto para
+                // encontrarla: una imagen que hay que buscar no distingue una
+                // landing de otra, que era justo para lo que está. Subir la
+                // opacidad no le quita contraste al titular —de eso se encarga la
+                // capa de abajo—, solo hace que la consulta se reconozca.
+                style={{ opacity: 0.6 }}
               />
             </div>
             <div
               aria-hidden
               className="pointer-events-none absolute inset-0"
               style={{
-                // Negro entero donde se lee, y se suelta antes hacia la derecha
-                // para que la foto se reconozca. El tramo de la derecha queda
-                // además detrás del formulario, que es una tarjeta opaca: ahí la
-                // imagen no compite con ningún texto.
-                background: `linear-gradient(100deg, ${T.ink} 0%, ${T.ink}f2 30%, ${T.ink}b3 52%, ${T.ink}40 100%)`,
+                // Negro casi entero bajo el titular y se suelta deprisa a partir
+                // de la mitad. Lo que protege el texto es este tramo de la
+                // izquierda, no la opacidad de la foto: por eso se puede subir
+                // una sin tocar la otra. El lado derecho cae detrás del
+                // formulario, que es una tarjeta opaca y no compite con nada.
+                background: `linear-gradient(100deg, ${T.ink} 0%, ${T.ink}f7 24%, ${T.ink}b3 46%, ${T.ink}1a 100%)`,
               }}
             />
           </>
