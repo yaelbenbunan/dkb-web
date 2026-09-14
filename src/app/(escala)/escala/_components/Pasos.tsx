@@ -42,14 +42,37 @@ export function Pasos({ pasos }: { pasos: Paso[] }) {
           // vez se leen como tres servicios a la carta.
           <li key={p.n} className="relative h-full">
           <AlAparecer retraso={i * 130} className="h-full">
+          {/* **Las tarjetas estaban hundidas en el fondo, no encima.** Llevaban
+              el negro del tema sobre una sección que es más CLARA que ese negro,
+              con un borde de 1px casi del mismo tono y sin sombra: el resultado
+              eran tres rectángulos que se adivinaban más que verse.
+
+              Se refuerzan por tres sitios a la vez, que es lo que hace que algo
+              parezca elevado de verdad: el degradado las aclara por arriba y las
+              oscurece por abajo —eso ya es volumen—, el filo interior blanco
+              finge la luz que daría en el canto superior, y la sombra las
+              despega del fondo. Ninguna de las tres se nota por separado, y
+              juntas son la diferencia entre una caja dibujada y una tarjeta. */}
           <div
             className="flex h-full flex-col rounded-3xl p-7"
-            style={{ background: T.ink, border: `1px solid ${T.line}` }}
+            style={{
+              background: `linear-gradient(180deg, #191D24 0%, ${T.ink} 62%)`,
+              border: "1px solid #2B303A",
+              boxShadow:
+                "inset 0 1px 0 rgba(255,255,255,0.05), 0 24px 50px -28px rgba(0,0,0,0.95)",
+            }}
           >
             <div className="flex items-center justify-between">
+              {/* El número en su insignia. Suelto y en gris era un detalle que
+                  no se leía; aquí dice de un vistazo que esto es el paso uno de
+                  tres, que es la mitad del mensaje de esta sección. */}
               <span
-                className="text-sm font-black tabular-nums"
-                style={{ color: T.muted }}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-xs font-black tabular-nums"
+                style={{
+                  color: T.lime,
+                  background: `${T.lime}14`,
+                  border: `1px solid ${T.lime}33`,
+                }}
               >
                 {p.n}
               </span>
@@ -60,7 +83,10 @@ export function Pasos({ pasos }: { pasos: Paso[] }) {
                 <span
                   aria-hidden
                   className="absolute -right-[1.15rem] top-1/2 hidden -translate-y-1/2 md:block"
-                  style={{ color: T.line }}
+                  // Era del color de los bordes y no se veía: una flecha que no
+                  // se ve no encadena nada, y encadenar los tres pasos es justo
+                  // su único trabajo.
+                  style={{ color: T.muted, opacity: 0.55 }}
                 >
                   <svg aria-hidden viewBox="0 0 24 24" className="h-6 w-6">
                     <path

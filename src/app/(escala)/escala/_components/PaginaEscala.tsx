@@ -210,16 +210,18 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
 
           `svh` y no `vh`: en el móvil, `vh` cuenta la barra del navegador como
           si no estuviera y el botón del formulario queda por debajo del corte. */}
-      {/* **El contenido arranca arriba, no centrado.** Con `items-center` y la
-          pantalla entera de alto, un contenido más corto que la ventana se
-          quedaba flotando en el medio: 131 px de negro antes del logotipo,
-          medidos en el navegador. Nadie diseña una cabecera para que empiece a
-          un dedo del borde; eso es lo que hace el centrado cuando sobra sitio.
+      {/* **Mide lo que mide su contenido, y ni un píxel más.**
+          Reservaba la pantalla entera (`min-h-svh`) y centraba dentro. Eso tenía
+          sentido con el contenido centrado —llenaba— pero dejó de tenerlo en
+          cuanto empieza arriba: lo único que quedaba era un hueco muerto abajo
+          que hay que pasar con la rueda antes de llegar a lo siguiente. Un hero
+          alto no convence a nadie; lo que convence es lo que hay debajo.
 
-          El hueco sobrante se va abajo, donde además trabaja: insinúa que hay
-          algo debajo e invita a bajar, que es justo lo que el centrado
-          desperdiciaba repartiéndolo arriba y abajo por igual. */}
-      <header className="relative flex min-h-[30rem] items-start overflow-hidden py-10 md:py-12 lg:landscape:min-h-svh lg:landscape:pb-16 lg:landscape:pt-[6svh]">
+          El contenido arranca arriba y no centrado porque con `items-center`
+          sobraban 131 px de negro sobre el logotipo, medidos en el navegador:
+          eso es lo que hace el centrado cuando el contenido es más corto que la
+          ventana. */}
+      <header className="relative flex min-h-[26rem] items-start overflow-hidden py-10 md:py-12 lg:py-14">
         {/* Tres capas para que la cabecera deje de ser un rectángulo negro, y
             ninguna se ve como tal: una trama de puntos que da textura sin hacer
             ruido, un halo verde detrás del formulario —que además empuja la

@@ -78,7 +78,7 @@ export function FormularioHero({ sectorPorDefecto }: { sectorPorDefecto?: string
       id="empezar"
       // `scroll-mt` para que al llegar desde los botones de los planes no se
       // pegue al borde de arriba de la ventana.
-      className="relative scroll-mt-8 rounded-3xl p-7 sm:p-8"
+      className="relative scroll-mt-8 rounded-3xl p-6 sm:p-7"
       style={{
         background: PAPEL,
         color: TINTA,
@@ -130,7 +130,10 @@ export function FormularioHero({ sectorPorDefecto }: { sectorPorDefecto?: string
         <br />y te llamamos
       </p>
 
-      <div className="mt-5 space-y-3.5">
+      {/* Apretado a propósito: esta tarjeta es la que decide lo alto que es el
+          hero, y cada píxel suyo es scroll que alguien tiene que pasar antes de
+          llegar al argumento. No se quita ningún campo — se quita aire. */}
+      <div className="mt-4 space-y-3">
         <label className="block">
           <span className="sr-only">Nombre</span>
           <input
@@ -230,7 +233,7 @@ export function FormularioHero({ sectorPorDefecto }: { sectorPorDefecto?: string
       <button
         type="submit"
         disabled={pendiente}
-        className="mt-6 inline-flex w-full items-center justify-center rounded-full py-4 text-lg font-bold transition-transform enabled:hover:-translate-y-0.5 disabled:opacity-60"
+        className="mt-5 inline-flex w-full items-center justify-center rounded-full py-3.5 text-lg font-bold transition-transform enabled:hover:-translate-y-0.5 disabled:opacity-60"
         style={{ background: TINTA, color: T.lime }}
       >
         {pendiente ? "Enviando…" : "Quiero que me llaméis"}
@@ -259,7 +262,7 @@ export function FormularioHero({ sectorPorDefecto }: { sectorPorDefecto?: string
           es justo la fricción que esto evita. */}
       {(GROWTH.demoEmbedUrl || GROWTH.demoUrl) && (
         <>
-          <div className="mt-5 flex items-center gap-3" aria-hidden>
+          <div className="mt-4 flex items-center gap-3" aria-hidden>
             <span className="h-px flex-1" style={{ background: BORDE }} />
             <span className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "rgba(11,27,43,0.45)" }}>
               o
@@ -296,7 +299,7 @@ export function FormularioHero({ sectorPorDefecto }: { sectorPorDefecto?: string
 }
 
 const campo =
-  "w-full rounded-xl px-4 py-3.5 text-base outline-none transition placeholder:text-[rgba(11,27,43,0.45)] focus:border-[rgba(11,27,43,0.5)]";
+  "w-full rounded-xl px-4 py-3 text-base outline-none transition placeholder:text-[rgba(11,27,43,0.45)] focus:border-[rgba(11,27,43,0.5)]";
 
 const estiloCampo = {
   background: "#FFFFFF",
