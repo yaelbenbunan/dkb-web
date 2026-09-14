@@ -173,25 +173,31 @@ export function FormularioHero({ sectorPorDefecto }: { sectorPorDefecto?: string
           </label>
         </div>
 
-        <label className="block">
-          <span className="sr-only">Tipo de centro</span>
-          <select
-            name="sector"
-            required
-            defaultValue={sectorPorDefecto ?? ""}
-            className={campo}
-            style={estiloCampo}
-          >
-            <option value="" disabled>
-              ¿Qué tipo de centro tienes?
-            </option>
-            {SECTORES_FORMULARIO.map((s) => (
-              <option key={s} value={s}>
-                {s}
+        {/* **En una landing de sector no se pregunta qué sector es.**
+            Quien llega a /escala/dental ya lo ha dicho al entrar, y volvérselo a
+            preguntar es un campo más entre él y el botón — en un formulario de
+            captación eso se paga en leads perdidos. El dato viaja igual, oculto,
+            así que el aviso sigue llegando etiquetado («Growth — Ana (Clínica
+            dental)») y el desglose por sector no pierde nada.
+
+            En la landing general sí se pregunta: ahí no lo sabemos. */}
+        {sectorPorDefecto ? (
+          <input type="hidden" name="sector" value={sectorPorDefecto} />
+        ) : (
+          <label className="block">
+            <span className="sr-only">Tipo de centro</span>
+            <select name="sector" required defaultValue="" className={campo} style={estiloCampo}>
+              <option value="" disabled>
+                ¿Qué tipo de centro tienes?
               </option>
-            ))}
-          </select>
-        </label>
+              {SECTORES_FORMULARIO.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
 
         <label
           className="flex items-start gap-3 text-xs leading-relaxed"

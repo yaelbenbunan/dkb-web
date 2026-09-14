@@ -221,7 +221,12 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
           sobraban 131 px de negro sobre el logotipo, medidos en el navegador:
           eso es lo que hace el centrado cuando el contenido es más corto que la
           ventana. */}
-      <header className="relative flex min-h-[26rem] items-start overflow-hidden py-10 md:py-12 lg:py-14">
+      {/* En pantalla ancha el hero termina justo donde termina el formulario:
+          sin hueco abajo. El formulario es la columna más alta, así que ese
+          borde es el final natural de la cabecera — cualquier píxel de más es
+          scroll que no enseña nada. En vertical sí lleva aire, porque ahí el
+          formulario queda debajo del texto y pegarlo al corte se ve mal. */}
+      <header className="relative flex min-h-[26rem] items-start overflow-hidden py-10 md:py-12 lg:pb-0 lg:pt-14">
         {/* Tres capas para que la cabecera deje de ser un rectángulo negro, y
             ninguna se ve como tal: una trama de puntos que da textura sin hacer
             ruido, un halo verde detrás del formulario —que además empuja la
