@@ -263,9 +263,10 @@ export function FormularioHero({ sectorPorDefecto }: { sectorPorDefecto?: string
           competiría con el de enviar y dos llamadas a la acción del mismo peso
           no suman, se reparten. Contorno se ve, y sigue siendo la segunda.
 
-          Y dice que se elige hueco, no «agenda una videollamada»: lo segundo
-          suena a que alguien te devolverá el contacto para cuadrar una hora, que
-          es justo la fricción que esto evita. */}
+          Y dice de qué va la reunión, no cómo se reserva. «Elige tú el hueco»
+          contaba el mecanismo —que además ya se ve al bajar, porque el calendario
+          está ahí abajo— y lo que decide si alguien pulsa es lo que se lleva a
+          cambio de esos quince minutos. */}
       {(GROWTH.demoEmbedUrl || GROWTH.demoUrl) && (
         <>
           <div className="mt-4 flex items-center gap-3" aria-hidden>
@@ -289,7 +290,7 @@ export function FormularioHero({ sectorPorDefecto }: { sectorPorDefecto?: string
             className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-base font-bold transition hover:bg-[rgba(11,27,43,0.04)]"
             style={{ border: `1.5px solid ${BORDE}`, color: TINTA }}
           >
-            Elige tú el hueco
+            Agenda una reunión online
           </a>
           {/* Quince minutos, y tienen que ser quince también en Google: este
               texto y el calendario de abajo se leen seguidos, así que si uno dice

@@ -40,17 +40,20 @@ export function CalendarioReserva() {
             >
               Sin esperar a que te llamemos
             </p>
+            {/* «Elige tú el hueco» describía el mecanismo —cómo se reserva— y no
+                lo que se lleva quien reserva. Esto dice de qué va la reunión, que
+                es lo que decide si alguien la pide o cierra la pestaña. */}
             <h2
               className="mt-8 font-black leading-[1.02] tracking-[-0.03em] text-balance"
               style={{ fontSize: "clamp(2.25rem, 4vw, 3.5rem)" }}
             >
-              Elige tú el hueco
+              Agenda una
               <br />
-              <span style={{ color: T.lime }}>y hablamos.</span>
+              <span style={{ color: T.lime }}>reunión online.</span>
             </h2>
             <p className="mt-6 max-w-md text-base leading-relaxed" style={{ color: T.muted }}>
-              Una videollamada corta para ver tus números y decirte si esto te encaja. Sin
-              compromiso y sin que tengas que dejar el teléfono.
+              Una videollamada corta para ver tus números, explicarte el sistema y decirte si
+              encaja con tu negocio. Sin compromiso.
             </p>
           </div>
 
@@ -65,7 +68,7 @@ export function CalendarioReserva() {
           >
             <iframe
               src={GROWTH.demoEmbedUrl}
-              title="Elige un hueco para la videollamada"
+              title="Agenda una reunión online con dinkbit"
               loading="lazy"
               // La altura la manda el contenido de Google y no se puede medir
               // desde aquí —es de otro origen—, así que se le da sitio de sobra:
