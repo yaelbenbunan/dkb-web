@@ -15,13 +15,28 @@ import { GROWTH_THEME as T } from "@/lib/growth-config";
  * La última barra va en lima y las otras tres apagadas: no es decoración, es
  * que la que importa es la de después, la que todavía no ha pasado.
  */
-export function Logotipo({ className = "" }: { className?: string }) {
+export function Logotipo({
+  className = "",
+  compacto = false,
+}: {
+  className?: string;
+  /**
+   * Para cuando va dentro de una línea de texto y no como firma.
+   *
+   * Baja el símbolo, iguala el nombre al tamaño de lo que le rodea y **quita el
+   * «by dinkbit»**: en un rótulo de tarjeta esa segunda línea parte el renglón
+   * en dos y el logotipo deja de leerse como una palabra dentro de la frase.
+   */
+  compacto?: boolean;
+}) {
   return (
-    <span className={`inline-flex items-center gap-3 ${className}`}>
+    <span
+      className={`inline-flex items-center ${compacto ? "gap-1.5 align-middle" : "gap-3"} ${className}`}
+    >
       <svg
         aria-hidden
         viewBox="0 0 40 34"
-        className="h-8 w-auto shrink-0"
+        className={`${compacto ? "h-[1.05em]" : "h-8"} w-auto shrink-0`}
         style={{ color: T.lime }}
       >
         {[
@@ -46,16 +61,18 @@ export function Logotipo({ className = "" }: { className?: string }) {
       <span className="leading-none">
         <span
           className="block font-black tracking-[-0.045em]"
-          style={{ fontSize: "1.6rem", color: T.fg }}
+          style={compacto ? { color: T.fg } : { fontSize: "1.6rem", color: T.fg }}
         >
           escala
         </span>
-        <span
-          className="mt-1 block text-[0.7rem] font-bold uppercase tracking-[0.22em]"
-          style={{ color: T.muted }}
-        >
-          by dinkbit
-        </span>
+        {!compacto && (
+          <span
+            className="mt-1 block text-[0.7rem] font-bold uppercase tracking-[0.22em]"
+            style={{ color: T.muted }}
+          >
+            by dinkbit
+          </span>
+        )}
       </span>
     </span>
   );

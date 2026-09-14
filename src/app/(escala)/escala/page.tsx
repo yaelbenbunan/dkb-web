@@ -140,7 +140,7 @@ const TICKET_COMPARATIVA = "250 €";
 
 const COMPARATIVA = [
   {
-    titulo: "Clínica 1",
+    titulo: "Clínica sin escala",
     color: T.muted,
     pacientes: "40",
     gasto: "8.000 €",
@@ -150,7 +150,11 @@ const COMPARATIVA = [
     remate: "Trabaja a tope. Y cobra por trabajar, no por ganar.",
   },
   {
-    titulo: "Clínica 2",
+    titulo: "Clínica con escala",
+    // Solo ésta lleva el logotipo. Es lo que convierte una comparación abstracta
+    // —«clínica 1» contra «clínica 2», que no dice nada— en una promesa con
+    // nombre: la de la derecha es la que nos tiene a nosotros.
+    conLogo: true,
     color: T.lime,
     pacientes: "20",
     gasto: "1.000 €",
@@ -180,13 +184,13 @@ const COMPARATIVA = [
 const PASOS = [
   {
     n: "01",
-    t: "Traemos los pacientes",
-    d: "Tu web y tus campañas en Google y Meta, montadas y gestionadas por el mismo equipo.",
+    t: "Hacemos tu web",
+    d: "Montada y alojada por nosotros, pensada para que quien entre pida cita. No hay que tocar nada ni contratar a nadie más.",
   },
   {
     n: "02",
-    t: "Los pasamos a tu agenda",
-    d: "Entran en un sistema con su ficha y su origen. Tu recepción llama, da hora, y la cita se escribe en tu calendario.",
+    t: "Traemos tus pacientes",
+    d: "Campañas en Google y Meta gestionadas por el mismo equipo. Cada paciente entra en tu sistema con su ficha, su origen y su cita en tu calendario.",
   },
   {
     n: "03",
@@ -348,11 +352,22 @@ export default function GrowthPage() {
                   border: `1px solid ${c.color}44`,
                 }}
               >
+                {/* El rótulo de la tarjeta ganadora lleva el logotipo en vez de
+                    la palabra suelta: es lo que ata el número de abajo a un
+                    nombre. Va en versión compacta para no romper el renglón —el
+                    logotipo entero mete una segunda línea y deja de leerse como
+                    parte de la frase. */}
                 <p
-                  className="text-sm font-bold uppercase tracking-[0.18em]"
+                  className="flex flex-wrap items-center gap-x-1.5 text-sm font-bold uppercase tracking-[0.18em]"
                   style={{ color: c.color }}
                 >
-                  {c.titulo}
+                  {c.conLogo ? (
+                    <>
+                      Clínica con <Logotipo compacto />
+                    </>
+                  ) : (
+                    c.titulo
+                  )}
                 </p>
 
                 <div className="mt-7 space-y-4">

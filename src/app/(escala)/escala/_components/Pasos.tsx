@@ -15,8 +15,8 @@ import { AlAparecer } from "./AlAparecer";
  *
  * Los dibujos son de trazo, del mismo idioma que el subrayado y el círculo a
  * mano, y ninguno es un icono de librería: cada uno dice EXACTAMENTE lo que
- * hace su paso —gente que llega, un día marcado en un calendario, barras que
- * suben— en vez de una metáfora que hay que descifrar.
+ * hace su paso —una página, gente que llega, barras que suben— en vez de una
+ * metáfora que hay que descifrar.
  */
 
 export interface Paso {
@@ -26,7 +26,7 @@ export interface Paso {
 }
 
 export function Pasos({ pasos }: { pasos: Paso[] }) {
-  const dibujos = [Captacion, Agenda, Rentabilidad];
+  const dibujos = [Web, Captacion, Rentabilidad];
 
   return (
     <ol className="mt-12 grid gap-5 md:grid-cols-3">
@@ -125,49 +125,28 @@ function Captacion() {
   );
 }
 
-/** Un calendario con un día marcado: la cita escrita donde tiene que estar. */
-function Agenda() {
-  const celdas = [];
-  for (let f = 0; f < 3; f++) {
-    for (let c = 0; c < 5; c++) {
-      const marcada = f === 1 && c === 3;
-      celdas.push(
-        <rect
-          key={`${f}-${c}`}
-          x={10 + c * 20}
-          y={26 + f * 15}
-          width="13"
-          height="9"
-          rx="2.5"
-          fill={marcada ? "currentColor" : "none"}
-          stroke="currentColor"
-          strokeWidth="1.8"
-          opacity={marcada ? 1 : 0.3}
-        />,
-      );
-    }
-  }
+/**
+ * Una página web: el marco del navegador y, dentro, el botón de pedir cita.
+ *
+ * **Sustituye al calendario que había aquí.** Aquel dibujaba el paso «los
+ * pasamos a tu agenda», que ya no es uno de los tres: ahora el primero es hacer
+ * la web. Un dibujo que no dice lo que dice su paso es peor que ninguno, porque
+ * se mira antes de leer.
+ */
+function Web() {
   return (
-    <svg aria-hidden viewBox="0 0 120 84" className="h-full w-auto max-w-full" style={{ color: T.lime }}>
-      <rect
-        x="4"
-        y="10"
-        width="112"
-        height="70"
-        rx="8"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        opacity="0.4"
-      />
-      <path
-        d="M28 4v12M92 4v12"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        opacity="0.4"
-      />
-      {celdas}
+    <svg aria-hidden viewBox="0 0 120 72" className="h-full w-auto max-w-full" style={{ color: T.lime }}>
+      <g fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+        <rect x="4" y="6" width="112" height="60" rx="8" opacity="0.4" />
+        <path d="M4 22h112" opacity="0.4" />
+        <path d="M16 40h40M16 52h26" opacity="0.3" />
+      </g>
+      <g fill="currentColor">
+        <circle cx="16" cy="14" r="2.6" opacity="0.45" />
+        <circle cx="25" cy="14" r="2.6" opacity="0.45" />
+        <circle cx="34" cy="14" r="2.6" opacity="0.45" />
+        <rect x="72" y="36" width="34" height="18" rx="9" />
+      </g>
     </svg>
   );
 }

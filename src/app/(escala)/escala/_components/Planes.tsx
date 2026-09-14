@@ -51,8 +51,9 @@ const INCLUYE: { t: string; basico: Valor; avanzado: Valor; apagado?: boolean }[
   { t: "Sistema de pacientes", basico: true, avanzado: true },
   { t: "Citas en tu agenda", basico: true, avanzado: true },
   { t: "Panel de rentabilidad", basico: true, avanzado: true },
+  { t: "Informe mensual de resultados", basico: true, avanzado: true },
   { t: "Confirmación de citas por WhatsApp", basico: false, avanzado: true },
-  { t: "Revisión mensual contigo", basico: false, avanzado: true },
+  { t: "Reunión mensual online", basico: false, avanzado: true },
   // Las dos van DENTRO de la tabla y no en la letra pequeña. Son las dos
   // preguntas que hace todo el mundo en la primera llamada, y descubrirlas
   // después de haber leído un precio es la forma más rápida de parecer que se
