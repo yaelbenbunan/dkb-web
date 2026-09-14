@@ -236,22 +236,44 @@ export function FormularioHero() {
         </p>
       )}
 
-      {/* La segunda opción, y en letra pequeña a propósito: quien quiere que le
-          llamen ya ha rellenado arriba. Esto es para quien prefiere verlo antes
-          de dar su teléfono. */}
+      {/* **La segunda puerta, y ya no en letra pequeña.**
+          Estuvo como una línea gris debajo del botón, con el argumento de que
+          quien quiere que le llamen ya ha rellenado arriba. El argumento se
+          sostiene para el orden —el formulario sigue siendo lo primero— pero no
+          para el tamaño: dejar un teléfono es el gesto que más cuesta de esta
+          página, y quien no está dispuesto a darlo se iba sin ver que había
+          otra forma de entrar.
+
+          Ahora es un botón de verdad, pero de contorno y no relleno: relleno
+          competiría con el de enviar y dos llamadas a la acción del mismo peso
+          no suman, se reparten. Contorno se ve, y sigue siendo la segunda.
+
+          Y dice que se elige hueco, no «agenda una videollamada»: lo segundo
+          suena a que alguien te devolverá el contacto para cuadrar una hora, que
+          es justo la fricción que esto evita. */}
       {GROWTH.demoUrl && (
-        <p className="mt-4 text-center text-sm" style={{ color: "rgba(11,27,43,0.6)" }}>
-          ¿Prefieres que te lo enseñemos?{" "}
+        <>
+          <div className="mt-5 flex items-center gap-3" aria-hidden>
+            <span className="h-px flex-1" style={{ background: BORDE }} />
+            <span className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "rgba(11,27,43,0.45)" }}>
+              o
+            </span>
+            <span className="h-px flex-1" style={{ background: BORDE }} />
+          </div>
+
           <a
             href={GROWTH.demoUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-bold underline underline-offset-2"
-            style={{ color: TINTA }}
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-base font-bold transition hover:bg-[rgba(11,27,43,0.04)]"
+            style={{ border: `1.5px solid ${BORDE}`, color: TINTA }}
           >
-            Agenda una videollamada
+            Elige tú el hueco
           </a>
-        </p>
+          <p className="mt-2 text-center text-xs" style={{ color: "rgba(11,27,43,0.55)" }}>
+            15 minutos por videollamada, sin compromiso.
+          </p>
+        </>
       )}
     </form>
   );
