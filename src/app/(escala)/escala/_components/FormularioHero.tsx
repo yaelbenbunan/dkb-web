@@ -257,7 +257,7 @@ export function FormularioHero({ sectorPorDefecto }: { sectorPorDefecto?: string
           Y dice que se elige hueco, no «agenda una videollamada»: lo segundo
           suena a que alguien te devolverá el contacto para cuadrar una hora, que
           es justo la fricción que esto evita. */}
-      {GROWTH.demoUrl && (
+      {(GROWTH.demoEmbedUrl || GROWTH.demoUrl) && (
         <>
           <div className="mt-5 flex items-center gap-3" aria-hidden>
             <span className="h-px flex-1" style={{ background: BORDE }} />
@@ -267,17 +267,27 @@ export function FormularioHero({ sectorPorDefecto }: { sectorPorDefecto?: string
             <span className="h-px flex-1" style={{ background: BORDE }} />
           </div>
 
+          {/* **Con el calendario dentro de la página, esto baja hasta él.**
+              Antes abría otra pestaña, y ese salto se paga entero: quien está
+              decidido aterriza en una página de Google que no se parece a lo que
+              estaba leyendo, y una parte se cae ahí. Si algún día no hubiera
+              calendario embebido, vuelve a ser el enlace de siempre. */}
           <a
-            href={GROWTH.demoUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={GROWTH.demoEmbedUrl ? "#reservar" : (GROWTH.demoUrl as string)}
+            {...(GROWTH.demoEmbedUrl
+              ? {}
+              : { target: "_blank", rel: "noopener noreferrer" })}
             className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-base font-bold transition hover:bg-[rgba(11,27,43,0.04)]"
             style={{ border: `1.5px solid ${BORDE}`, color: TINTA }}
           >
             Elige tú el hueco
           </a>
+          {/* Sin decir cuántos minutos dura. Decía quince y el calendario ofrece
+              media hora: el número concreto solo puede desmentirse a sí mismo al
+              llegar abajo, y ahí es cuando se pierde la confianza. Cuando los dos
+              digan lo mismo, se vuelve a poner. */}
           <p className="mt-2 text-center text-xs" style={{ color: "rgba(11,27,43,0.55)" }}>
-            15 minutos por videollamada, sin compromiso.
+            Una videollamada corta, sin compromiso.
           </p>
         </>
       )}

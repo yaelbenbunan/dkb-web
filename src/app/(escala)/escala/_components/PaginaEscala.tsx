@@ -8,6 +8,7 @@ import { Trama } from "./Trama";
 import { Logotipo } from "./Logotipo";
 import { FormularioHero } from "./FormularioHero";
 import { Planes } from "./Planes";
+import { CalendarioReserva } from "./CalendarioReserva";
 import { Faqs } from "./Faqs";
 import { AlAparecer } from "./AlAparecer";
 
@@ -208,7 +209,16 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
 
           `svh` y no `vh`: en el móvil, `vh` cuenta la barra del navegador como
           si no estuviera y el botón del formulario queda por debajo del corte. */}
-      <header className="relative flex min-h-[30rem] items-center overflow-hidden py-12 md:py-16 lg:landscape:min-h-svh lg:landscape:py-20">
+      {/* **El contenido arranca arriba, no centrado.** Con `items-center` y la
+          pantalla entera de alto, un contenido más corto que la ventana se
+          quedaba flotando en el medio: 131 px de negro antes del logotipo,
+          medidos en el navegador. Nadie diseña una cabecera para que empiece a
+          un dedo del borde; eso es lo que hace el centrado cuando sobra sitio.
+
+          El hueco sobrante se va abajo, donde además trabaja: insinúa que hay
+          algo debajo e invita a bajar, que es justo lo que el centrado
+          desperdiciaba repartiéndolo arriba y abajo por igual. */}
+      <header className="relative flex min-h-[30rem] items-start overflow-hidden py-10 md:py-12 lg:landscape:min-h-svh lg:landscape:pb-16 lg:landscape:pt-[6svh]">
         {/* Tres capas para que la cabecera deje de ser un rectángulo negro, y
             ninguna se ve como tal: una trama de puntos que da textura sin hacer
             ruido, un halo verde detrás del formulario —que además empuja la
@@ -231,7 +241,11 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
               sobre. Es al revés de lo normal —repartir en fracciones— y es a
               propósito: con fracciones, el titular crecía con la pantalla y a
               1375 px se partía en tres líneas. */}
-          <div className="grid items-center gap-10 xl:grid-cols-[minmax(0,1fr)_27rem] xl:gap-14">
+          {/* **Arriba, no centradas.** Con `items-center` la columna del texto se
+              centraba respecto a la del formulario, que es bastante más alta: de
+              ahí salían 111 px de negro por encima del logotipo aunque la
+              cabecera ya empezara arriba. Medido en el navegador, no a ojo. */}
+          <div className="grid items-start gap-10 xl:grid-cols-[minmax(0,1fr)_27rem] xl:gap-14">
             {/* **El tamaño del titular se mide contra su columna, no contra la
                 ventana.** Con `vw` había que elegir el peor caso —el ancho más
                 estrecho donde hay dos columnas— y dejarlo pequeño en todos los
@@ -255,7 +269,7 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
                   barra propia: esta landing no tiene navegación —no hay a dónde
                   ir— y ponerle una cabecera al uso solo serviría para quitarle
                   altura al hero. */}
-              <Logotipo className="mb-12 lg:mb-20" />
+              <Logotipo className="mb-8 lg:mb-12" />
 
               {/* Solo en las landings de sector: es lo que dice «esta página es
                   para ti» antes de que se lea el titular. La general no lo
@@ -571,7 +585,13 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
         </Wrap>
       </section>
 
-      {/* ───────── 6. Preguntas frecuentes ─────────
+      {/* ───────── 6. Elegir hueco ─────────
+          Entre el cierre emocional y la letra pequeña: quien ha llegado hasta
+          aquí ya está convencido o casi, y es el momento en que tiene sentido
+          ofrecerle zanjarlo él mismo sin esperar una llamada. */}
+      <CalendarioReserva />
+
+      {/* ───────── 7. Preguntas frecuentes ─────────
           Después de la frase del compromiso y no antes del precio. Quien llega
           hasta aquí ya ha visto la tabla y ya ha decidido si le encaja; lo que
           le queda es la desconfianza, y eso no se resuelve con más argumentos

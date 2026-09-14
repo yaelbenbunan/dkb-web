@@ -48,6 +48,26 @@ export const GROWTH = {
    * basura.
    */
   demoUrl: CONTACT_INFO.calendly as string | null,
+  /**
+   * El mismo calendario, pero para meterlo DENTRO de la página.
+   *
+   * **Es una URL distinta y no un capricho.** La corta —`calendar.app.google/…`,
+   * la que se comparte— responde `x-frame-options: SAMEORIGIN`, así que en un
+   * iframe sale en blanco. La de inserción lleva `/calendar/` delante y
+   * `?gv=true` detrás, y esa Google sí la deja embeber: comprobado contra las
+   * cabeceras y cargándola de verdad en la landing.
+   *
+   * Va entera y no construida a partir de la corta: resolver el redirect en
+   * cada carga sería una petición de más para un valor que no cambia.
+   *
+   * Si algún día se rehace el calendario en Google, este identificador cambia y
+   * hay que traerlo de nuevo desde «Insertar» en los ajustes de la página de
+   * citas. La corta de `contact-info` cambiaría también.
+   */
+  demoEmbedUrl:
+    "https://calendar.google.com/calendar/appointments/schedules/AcZssZ01ovJTQGUCydYIWqt6uUqM12sfFGj0-hBEjC3Pe5ZhH88hVap-IUW2SaJ3KjBFnWFYjpDScvzl?gv=true" as
+      | string
+      | null,
 } as const;
 
 /**
