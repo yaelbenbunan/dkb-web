@@ -326,7 +326,11 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
                   barra propia: esta landing no tiene navegación —no hay a dónde
                   ir— y ponerle una cabecera al uso solo serviría para quitarle
                   altura al hero. */}
-              <Logotipo className="mb-8 lg:mb-12" />
+              {/* El hueco va DEBAJO del logotipo, no encima: el logotipo se
+                  queda donde está —lo fija el padding de la cabecera— y lo que
+                  se abre es la distancia hasta el titular, que es lo que separa
+                  la firma del mensaje. */}
+              <Logotipo className="mb-10 lg:mb-20" />
 
               {/* Solo en las landings de sector: es lo que dice «esta página es
                   para ti» antes de que se lea el titular. La general no lo
@@ -375,7 +379,17 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
               </p>
             </div>
 
-            <FormularioHero sectorPorDefecto={sector.valorFormulario} />
+            {/* El formulario baja un poco en pantalla ancha. Arrancando a la
+                misma altura que el logotipo competía con él por el mismo
+                renglón; algo más abajo, la vista lee primero la firma y el
+                titular y llega al formulario después, que es el orden en que
+                esta página quiere que se lea.
+
+                Solo desde xl, que es donde hay dos columnas: apiladas, ese
+                margen sería un hueco entre el texto y el formulario. */}
+            <div className="xl:mt-12">
+              <FormularioHero sectorPorDefecto={sector.valorFormulario} />
+            </div>
           </div>
         </Wrap>
       </header>
