@@ -282,12 +282,12 @@ export function FormularioHero({ sectorPorDefecto }: { sectorPorDefecto?: string
           >
             Elige tú el hueco
           </a>
-          {/* Sin decir cuántos minutos dura. Decía quince y el calendario ofrece
-              media hora: el número concreto solo puede desmentirse a sí mismo al
-              llegar abajo, y ahí es cuando se pierde la confianza. Cuando los dos
-              digan lo mismo, se vuelve a poner. */}
+          {/* Quince minutos, y tienen que ser quince también en Google: este
+              texto y el calendario de abajo se leen seguidos, así que si uno dice
+              15 y el otro 30 se desmienten a la vista. Cuanto más corta se
+              anuncia una llamada, más gente la coge. */}
           <p className="mt-2 text-center text-xs" style={{ color: "rgba(11,27,43,0.55)" }}>
-            Una videollamada corta, sin compromiso.
+            15 minutos por videollamada, sin compromiso.
           </p>
         </>
       )}

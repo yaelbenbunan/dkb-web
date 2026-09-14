@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { GROWTH_THEME as T } from "@/lib/growth-config";
 import { CONTACT_INFO } from "@/lib/contact-info";
 import type { SectorEscala } from "@/lib/escala-sectores";
@@ -225,6 +226,47 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
             tarjeta clara hacia delante— y otro más flojo arriba a la izquierda
             para que el titular no flote sobre la nada. */}
         <Trama />
+
+        {/* **La foto del sector, y el degradado que la hace posible.**
+            Sola no valdría: estas fotos son de consultas reales —blancas,
+            luminosas y con la ventana justo donde va el titular—, así que al 18 %
+            todavía levantan el fondo lo suficiente para comerse el contraste del
+            texto blanco. El degradado va en diagonal y deja el negro casi entero
+            a la izquierda, donde se lee, y suelta la imagen hacia la derecha,
+            donde solo hay que reconocer de qué sector es.
+
+            Por eso la opacidad vive aquí y no quemada en el fichero: sube o baja
+            en una línea, y el oscurecido usa exactamente el negro del tema. */}
+        {sector.imagen && (
+          <>
+            <div aria-hidden className="pointer-events-none absolute inset-0">
+              <Image
+                src={sector.imagen}
+                alt=""
+                fill
+                sizes="100vw"
+                className="object-cover"
+                // 0,32 y no 0,18: al 18 % había que buscar la foto para verla,
+                // y una imagen que hay que buscar no diferencia nada — que era
+                // justo el problema que venía a resolver. El titular sigue
+                // legible porque de eso se encarga el degradado, no la opacidad.
+                style={{ opacity: 0.32 }}
+              />
+            </div>
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0"
+              style={{
+                // Negro entero donde se lee, y se suelta antes hacia la derecha
+                // para que la foto se reconozca. El tramo de la derecha queda
+                // además detrás del formulario, que es una tarjeta opaca: ahí la
+                // imagen no compite con ningún texto.
+                background: `linear-gradient(100deg, ${T.ink} 0%, ${T.ink}f2 30%, ${T.ink}b3 52%, ${T.ink}40 100%)`,
+              }}
+            />
+          </>
+        )}
+
         <div
           aria-hidden
           className="pointer-events-none absolute -right-32 top-1/2 h-[42rem] w-[42rem] -translate-y-1/2 rounded-full blur-[130px]"

@@ -86,6 +86,21 @@ export interface SectorEscala {
   /** Cómo se llama el negocio en la comparativa: «Clínica sin escala», «Centro…». */
   negocio: string;
 
+  /**
+   * Foto de fondo del hero, muy tenue. Es lo que distingue una landing de otra
+   * antes de leer una sola palabra.
+   *
+   * **Opcional a propósito.** Un sector sin foto se queda con el fondo de
+   * siempre, que funciona perfectamente; lo que no puede pasar es poner la misma
+   * imagen en todas para rellenar, porque entonces no diferencia nada y solo
+   * añade medio mega de descarga.
+   *
+   * La opacidad y el degradado que protege el titular se aplican por CSS y no
+   * vienen quemados en el fichero: así se ajustan sin volver a exportar, y el
+   * oscurecido usa exactamente el negro del tema en vez de un gris que casi casa.
+   */
+  imagen?: string;
+
   /** Titular de la sección del problema. */
   tituloProblema: string;
 
@@ -166,6 +181,7 @@ export const DENTAL: SectorEscala = {
   },
   termino: { singular: "paciente", plural: "pacientes" },
   negocio: "Clínica",
+  imagen: "/img/landings/escala-dental.jpg",
 
   tituloProblema: "Puedes tener la agenda llena y estar perdiendo dinero.",
   ticket: "250 €",
