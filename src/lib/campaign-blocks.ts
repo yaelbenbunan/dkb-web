@@ -16,12 +16,49 @@ const hex = z.string().regex(/^#?[0-9a-fA-F]{6}$/);
  *  guardar y otra vez al renderizar: aquí solo se comprueba que sea texto. */
 const richText = z.string();
 
+/**
+ * Estilo de UN elemento de texto. A diferencia de `align`, que es del bloque
+ * entero, esto viaja pegado al nodo: el título del hero puede ir en rojo a 34px
+ * centrado y la bajada del mismo hero en gris a 15px a la izquierda.
+ * Todo opcional — sin nada puesto, cada nodo pinta como pintaba siempre.
+ */
+const textStyle = z.object({
+  color: hex.optional(),
+  /** Tamaño en píxeles: en email no valen rem ni em, que Outlook ignora. */
+  size: z.number().int().min(10).max(60).optional(),
+  align: align.optional(),
+  bold: z.boolean().optional(),
+  italic: z.boolean().optional(),
+  underline: z.boolean().optional(),
+});
+export type TextStyle = z.infer<typeof textStyle>;
+
+/** Espaciado vertical entre secciones, en píxeles. 0 = pegadas. */
+export const MIN_SECTION_SPACING = 0;
+export const MAX_SECTION_SPACING = 60;
+export const DEFAULT_SECTION_SPACING = 20;
+const sectionSpacing = z
+  .number()
+  .int()
+  .min(MIN_SECTION_SPACING)
+  .max(MAX_SECTION_SPACING);
+
 /** Ancho de una imagen: en porcentaje del ancho útil o en píxeles. */
 const imageWidth = z.object({
   unit: z.enum(["pct", "px"]),
   value: z.number().int().min(5).max(2000),
 });
 export type ImageWidth = z.infer<typeof imageWidth>;
+
+/** Botón opcional dentro del hero. Es un nodo más del bloque, con su propio
+ *  estilo, para poder maquetar la cabecera entera sin añadir otro bloque. */
+const heroCta = z.object({
+  label: z.string(),
+  url: z.string().url(),
+  background: hex.optional(),
+  style: textStyle.optional(),
+});
+export type HeroCta = z.infer<typeof heroCta>;
 
 const hero = z.object({
   eyebrow: z.string().optional(),
@@ -31,6 +68,11 @@ const hero = z.object({
   bodyHtml: richText.optional(),
   accent: z.string().optional(),
   align: align.optional(),
+  /** Estilo independiente de cada nodo de texto del hero. */
+  eyebrowStyle: textStyle.optional(),
+  titleStyle: textStyle.optional(),
+  bodyStyle: textStyle.optional(),
+  cta: heroCta.optional(),
 });
 const paragraph = z.object({
   text: z.string(),
@@ -71,15 +113,20 @@ const footer = z.object({ orgLine: z.string(), unsubscribe: z.literal(true) });
 const propsByType = { hero, paragraph, textbox, checklist, button, image, divider, footer } as const;
 export type BlockType = keyof typeof propsByType;
 
+// `spacing` va fuera de `props` a propósito: no es contenido del bloque, es
+// cuánto aire se deja alrededor de él. Como vive dentro del array de bloques,
+// se guarda con la campaña Y con la plantilla sin tocar la base de datos.
+const blockBase = { id: z.string(), spacing: sectionSpacing.optional() };
+
 export const blockSchema = z.discriminatedUnion("type", [
-  z.object({ id: z.string(), type: z.literal("hero"), props: hero }),
-  z.object({ id: z.string(), type: z.literal("paragraph"), props: paragraph }),
-  z.object({ id: z.string(), type: z.literal("textbox"), props: textbox }),
-  z.object({ id: z.string(), type: z.literal("checklist"), props: checklist }),
-  z.object({ id: z.string(), type: z.literal("button"), props: button }),
-  z.object({ id: z.string(), type: z.literal("image"), props: image }),
-  z.object({ id: z.string(), type: z.literal("divider"), props: divider }),
-  z.object({ id: z.string(), type: z.literal("footer"), props: footer }),
+  z.object({ ...blockBase, type: z.literal("hero"), props: hero }),
+  z.object({ ...blockBase, type: z.literal("paragraph"), props: paragraph }),
+  z.object({ ...blockBase, type: z.literal("textbox"), props: textbox }),
+  z.object({ ...blockBase, type: z.literal("checklist"), props: checklist }),
+  z.object({ ...blockBase, type: z.literal("button"), props: button }),
+  z.object({ ...blockBase, type: z.literal("image"), props: image }),
+  z.object({ ...blockBase, type: z.literal("divider"), props: divider }),
+  z.object({ ...blockBase, type: z.literal("footer"), props: footer }),
 ]);
 export type Block = z.infer<typeof blockSchema>;
 export const blocksSchema = z.array(blockSchema);
@@ -112,6 +159,22 @@ export function newBlock(type: BlockType): Block {
     footer: DEFAULT_FOOTER_BLOCK.props,
   };
   return blockSchema.parse({ id, type, props: defaults[type] });
+}
+
+/** Espaciado que tiene puesto el diseño ahora mismo, o `undefined` si ningún
+ *  bloque lo declara (campañas de antes del control deslizante). */
+export function getSectionSpacing(blocks: Block[]): number | undefined {
+  const withSpacing = blocks.find((b) => typeof b.spacing === "number");
+  return withSpacing?.spacing;
+}
+
+/** Aplica el mismo espaciado a todas las secciones. El slider del editor es
+ *  global, así que el valor se escribe en cada bloque y viaja con ellos. */
+export function setSectionSpacing(blocks: Block[], spacing: number): Block[] {
+  const clamped = Math.round(
+    Math.min(MAX_SECTION_SPACING, Math.max(MIN_SECTION_SPACING, spacing)),
+  );
+  return blocks.map((b) => ({ ...b, spacing: clamped }));
 }
 
 /**
