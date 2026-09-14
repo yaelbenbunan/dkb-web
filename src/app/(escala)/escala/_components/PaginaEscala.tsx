@@ -231,7 +231,7 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
           El punto medio es este: el hero mide lo que mide su contenido más un
           margen que lo separa de lo que viene detrás. El aire entre secciones no
           es desperdicio — es lo que hace que se lean como dos cosas distintas. */}
-      <header className="relative flex min-h-[26rem] items-start overflow-hidden py-16 md:py-20 lg:pb-28 lg:pt-24">
+      <header className="relative flex min-h-[26rem] items-start overflow-hidden py-16 md:py-20 lg:pb-16 lg:pt-24">
         {/* Tres capas para que la cabecera deje de ser un rectángulo negro, y
             ninguna se ve como tal: una trama de puntos que da textura sin hacer
             ruido, un halo verde detrás del formulario —que además empuja la
@@ -330,7 +330,7 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
                   queda donde está —lo fija el padding de la cabecera— y lo que
                   se abre es la distancia hasta el titular, que es lo que separa
                   la firma del mensaje. */}
-              <Logotipo className="mb-10 lg:mb-20" />
+              <Logotipo className="mb-10 lg:mb-28" />
 
               {/* Solo en las landings de sector: es lo que dice «esta página es
                   para ti» antes de que se lea el titular. La general no lo
