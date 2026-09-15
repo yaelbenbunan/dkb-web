@@ -11,6 +11,7 @@ import { renderCampaignEmail } from "./campaign-render";
 import { mintUnsubscribeToken } from "./unsubscribe-token";
 import { blocksSchema, DEFAULT_STYLE, type Block } from "./campaign-blocks";
 import { formatFromHeader, DEFAULT_SENDER_NAME } from "./email-from";
+import { sanitizePreheader } from "./email-preheader";
 
 const SITE = "https://www.dinkbit.es";
 const BATCH_SIZE = 100;
@@ -46,9 +47,10 @@ function validateCampaign(campaign: {
   subject: string | null;
   from_email: string | null;
   from_name?: string | null;
+  preheader?: string | null;
   blocks: unknown;
 }):
-  | { ok: true; subject: string; from: string; blocks: Block[] }
+  | { ok: true; subject: string; from: string; preheader: string; blocks: Block[] }
   | { ok: false; error: string } {
   const subject = campaign.subject?.trim();
   if (!subject) return { ok: false, error: "missing_subject" };
@@ -63,7 +65,10 @@ function validateCampaign(campaign: {
   // se limpia aquí (y no solo al guardarlo) para que ninguna fila antigua ni
   // ninguna escritura directa en la base pueda colar una cabecera partida.
   const from = formatFromHeader(campaign.from_name, campaign.from_email, DEFAULT_SENDER_NAME);
-  return { ok: true, subject, from, blocks: parsed.data };
+  // Vacío es una respuesta válida: el render cae entonces a la primera línea
+  // del cuerpo, que es mejor vista previa que repetir el asunto.
+  const preheader = sanitizePreheader(campaign.preheader);
+  return { ok: true, subject, from, preheader, blocks: parsed.data };
 }
 
 function getResendClient(): Resend {
@@ -82,7 +87,7 @@ export async function sendCampaign(
 
   const validated = validateCampaign(campaign);
   if (!validated.ok) return { ok: false, sent: 0, skipped: 0, error: validated.error };
-  const { subject, from, blocks } = validated;
+  const { subject, from, preheader, blocks } = validated;
 
   // Guard contra doble envío: un reintento (doble clic, doble llamada) sobre una
   // campaña ya enviada no debe volver a mandar los emails.
@@ -103,7 +108,7 @@ export async function sendCampaign(
   for (const batch of chunk(emailable, BATCH_SIZE)) {
     const payloads = batch.map((lead) => {
       const { html, text } = renderCampaignEmail(blocks, DEFAULT_STYLE, {
-        preheader: subject,
+        preheader,
         unsubscribeUrl: buildUnsubscribeUrl(lead.id),
       });
       return { from, to: lead.email as string, subject, html, text };
@@ -159,6 +164,7 @@ export async function sendCampaignTest(input: {
   subject: string;
   from_email: string;
   from_name?: string | null;
+  preheader?: string | null;
   blocks: unknown;
   toEmails: string[];
 }): Promise<{ ok: boolean; error?: string }> {
@@ -166,13 +172,14 @@ export async function sendCampaignTest(input: {
     subject: input.subject,
     from_email: input.from_email,
     from_name: input.from_name,
+    preheader: input.preheader,
     blocks: input.blocks,
   });
   if (!validated.ok) return { ok: false, error: validated.error };
   if (input.toEmails.length === 0) return { ok: false, error: "no_recipients" };
 
   const { html, text } = renderCampaignEmail(validated.blocks, DEFAULT_STYLE, {
-    preheader: validated.subject,
+    preheader: validated.preheader,
     unsubscribeUrl: `${SITE}/api/unsubscribe?id=test&token=test`,
   });
 

@@ -317,3 +317,60 @@ describe("sendCampaignTest", () => {
     expect(batchSendMock).not.toHaveBeenCalled();
   });
 });
+
+describe("texto previo del envío", () => {
+  beforeEach(() => {
+    batchSendMock.mockReset().mockResolvedValue({ data: { data: [{ id: "msg-1" }] }, error: null });
+    getCampaignMock.mockReset();
+    updateCampaignMock.mockReset().mockResolvedValue(undefined);
+    setCampaignStatusMock.mockReset().mockResolvedValue(undefined);
+    insertCampaignRecipientsMock.mockReset().mockResolvedValue(undefined);
+    listEmailableLeadsMock.mockReset().mockResolvedValue([makeLead("l1")]);
+    process.env.RESEND_API_KEY = "test-key";
+    delete process.env.CAMPAIGN_SENDERS;
+  });
+
+  test("manda el preheader guardado, no el asunto", async () => {
+    getCampaignMock.mockResolvedValue({
+      id: "c1",
+      subject: "Asunto",
+      from_email: "hola@dinkbit.es",
+      preheader: "Dos plazas libres en mayo",
+      blocks: VALID_BLOCKS,
+      status: "draft",
+    });
+    await sendCampaign("c1", ["l1"]);
+    const html = batchSendMock.mock.calls[0][0][0].html as string;
+    const oculto = html.slice(0, html.indexOf("<table"));
+    expect(oculto).toContain("Dos plazas libres en mayo");
+    expect(oculto).not.toContain("Asunto");
+  });
+
+  test("sin preheader guardado usa el cuerpo, nunca el asunto", async () => {
+    getCampaignMock.mockResolvedValue({
+      id: "c1",
+      subject: "Asunto",
+      from_email: "hola@dinkbit.es",
+      preheader: null,
+      blocks: VALID_BLOCKS,
+      status: "draft",
+    });
+    await sendCampaign("c1", ["l1"]);
+    const html = batchSendMock.mock.calls[0][0][0].html as string;
+    const oculto = html.slice(0, html.indexOf("<table"));
+    expect(oculto).toContain("Hola");
+    expect(oculto).not.toContain("Asunto");
+  });
+
+  test("el envío de prueba respeta el preheader", async () => {
+    await sendCampaignTest({
+      subject: "Asunto",
+      from_email: "hola@dinkbit.es",
+      preheader: "Vista previa de la plantilla",
+      blocks: VALID_BLOCKS,
+      toEmails: ["qa@dinkbit.es"],
+    });
+    const html = batchSendMock.mock.calls[0][0][0].html as string;
+    expect(html).toContain("Vista previa de la plantilla");
+  });
+});

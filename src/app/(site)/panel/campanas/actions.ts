@@ -18,6 +18,7 @@ import { sendCampaign, sendCampaignTest } from "@/lib/campaign-send";
 import { blocksSchema, sanitizeBlocks, type Block } from "@/lib/campaign-blocks";
 import { uploadCampaignImage } from "@/lib/campaign-images";
 import { sanitizeSenderName } from "@/lib/email-from";
+import { sanitizePreheader } from "@/lib/email-preheader";
 
 const AI_FAILURE_MESSAGE: Record<BlocksFailureReason, string> = {
   "missing-api-key":
@@ -149,6 +150,7 @@ export async function setCampaignMetaAction(
   subject: string,
   fromEmail: string,
   fromName: string = "",
+  preheader: string = "",
 ): Promise<{ ok: boolean; error?: string }> {
   if (!campaignId) return { ok: false, error: "Falta el id de campaña." };
 
@@ -161,6 +163,7 @@ export async function setCampaignMetaAction(
     subject: subject.trim() || null,
     from_email: fromEmail.trim() || null,
     from_name: senderName || null,
+    preheader: sanitizePreheader(preheader) || null,
   });
   revalidatePath("/panel/campanas");
   return { ok: true };
@@ -185,6 +188,7 @@ export async function sendTestAction(
     subject: campaign.subject ?? "",
     from_email: campaign.from_email ?? "",
     from_name: campaign.from_name ?? null,
+    preheader: campaign.preheader ?? null,
     blocks: campaign.blocks,
     toEmails: emails,
   });

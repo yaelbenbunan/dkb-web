@@ -9,6 +9,7 @@ export function StepSend({
   subject,
   fromEmail,
   fromName,
+  preheader,
   selectedCount,
   selectedIds,
 }: {
@@ -16,6 +17,7 @@ export function StepSend({
   subject: string;
   fromEmail: string;
   fromName: string;
+  preheader: string;
   selectedCount: number;
   selectedIds: string[];
 }) {
@@ -57,6 +59,10 @@ export function StepSend({
         <SummaryRow
           label="Remitente"
           value={fromEmail ? `${sanitizeSenderName(fromName) || DEFAULT_SENDER_NAME} <${fromEmail}>` : "—"}
+        />
+        <SummaryRow
+          label="Texto previo"
+          value={preheader || "La primera línea del correo"}
         />
         <SummaryRow label="Destinatarios" value={String(selectedCount)} />
       </div>

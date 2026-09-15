@@ -4,6 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { saveBlocksAction, setCampaignMetaAction } from "../actions";
 import { blocksSchema, DEFAULT_STYLE, type Block, type CampaignStyle } from "@/lib/campaign-blocks";
 import { DEFAULT_SENDER_NAME, isValidSenderName, sanitizeSenderName } from "@/lib/email-from";
+import {
+  MAX_PREHEADER_LENGTH,
+  RECOMMENDED_MAX_LENGTH,
+  RECOMMENDED_MIN_LENGTH,
+  preheaderLengthHint,
+  sanitizePreheader,
+} from "@/lib/email-preheader";
 import type { CampaignRow, EmailTemplateRow } from "@/lib/campaigns";
 import type { LeadRow } from "@/lib/imagina-leads";
 import { PreviewFrame } from "./PreviewFrame";
@@ -44,6 +51,7 @@ export function CampaignWizard({
   const [subject, setSubject] = useState(campaign.subject ?? "");
   const [fromEmail, setFromEmail] = useState(campaign.from_email ?? "hola@dinkbit.es");
   const [fromName, setFromName] = useState(campaign.from_name ?? "");
+  const [preheader, setPreheader] = useState(campaign.preheader ?? "");
   const [name, setName] = useState(campaign.name ?? "");
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
 
@@ -61,7 +69,7 @@ export function CampaignWizard({
     // they can be edited — the details row is shown on every step, but only
     // steps 1-3 are "before send", so this is a good boundary to flush.
     if (step >= 1 && step <= 3) {
-      void setCampaignMetaAction(campaign.id, name, subject, fromEmail, fromName);
+      void setCampaignMetaAction(campaign.id, name, subject, fromEmail, fromName, preheader);
     }
     setStep(next);
   };
@@ -79,6 +87,26 @@ export function CampaignWizard({
   const cleanFromName = sanitizeSenderName(fromName) || DEFAULT_SENDER_NAME;
   const fromPreview = `${cleanFromName} <${fromEmail.trim() || "hola@dinkbit.es"}>`;
   const nameWarning = !isValidSenderName(fromName);
+
+  // Contador del texto previo: cuenta lo que se va a guardar de verdad (ya
+  // limpio), no lo que hay tecleado con espacios de más.
+  const cleanPreheader = sanitizePreheader(preheader);
+  const preheaderHint = preheaderLengthHint(preheader);
+  const PREHEADER_HINT: Record<typeof preheaderHint, { color: string; text: string }> = {
+    vacio: {
+      color: "#94a3b8",
+      text: "Si lo dejas vacío se usará la primera línea del correo.",
+    },
+    corto: {
+      color: "#b45309",
+      text: `Se queda corto: a partir de ${RECOMMENDED_MIN_LENGTH} caracteres se aprovecha mejor la bandeja.`,
+    },
+    ok: { color: "#16a34a", text: "Longitud ideal para móvil." },
+    largo: {
+      color: "#b45309",
+      text: `Los móviles cortan a partir de ${RECOMMENDED_MAX_LENGTH} caracteres.`,
+    },
+  };
 
   const stepIndex = STEPS.findIndex((s) => s.step === step);
   const canGoPrev = stepIndex > 0;
@@ -189,6 +217,46 @@ export function CampaignWizard({
             style={{ padding: "8px 10px", border: "1px solid #e2e8f0", borderRadius: 6, fontSize: 13, color: "#0f172a" }}
           />
         </label>
+        <label
+          style={{ display: "flex", flexDirection: "column", gap: 4, flexBasis: "100%", fontSize: 12, color: "#64748b" }}
+        >
+          <span style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            Texto previo / Preheader
+            <span
+              title="Texto corto que aparece junto al asunto en la bandeja de entrada de dispositivos móviles. Si no lo rellenas, el cliente de correo repite el asunto o arrastra el principio del mensaje."
+              aria-hidden="true"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 15,
+                height: 15,
+                borderRadius: "50%",
+                border: "1px solid #cbd5e1",
+                color: "#94a3b8",
+                fontSize: 10,
+                fontWeight: 700,
+                cursor: "help",
+              }}
+            >
+              ?
+            </span>
+            <span style={{ marginLeft: "auto", color: PREHEADER_HINT[preheaderHint].color, fontWeight: 600 }}>
+              {cleanPreheader.length} · recomendado {RECOMMENDED_MIN_LENGTH}–{RECOMMENDED_MAX_LENGTH}
+            </span>
+          </span>
+          <input
+            value={preheader}
+            onChange={(e) => setPreheader(e.target.value)}
+            placeholder="Ej: Dos plazas libres en mayo — te contamos cómo las aprovechamos"
+            maxLength={MAX_PREHEADER_LENGTH}
+            style={{ padding: "8px 10px", border: "1px solid #e2e8f0", borderRadius: 6, fontSize: 13, color: "#0f172a" }}
+          />
+          <span style={{ fontSize: 12, color: PREHEADER_HINT[preheaderHint].color }}>
+            Texto corto que se ve junto al asunto en la bandeja de entrada del móvil.{" "}
+            {PREHEADER_HINT[preheaderHint].text}
+          </span>
+        </label>
         <p style={{ flexBasis: "100%", margin: 0, fontSize: 12, color: nameWarning ? "#b45309" : "#94a3b8" }}>
           {nameWarning
             ? "Se quitarán los caracteres que no valen en una cabecera de email: "
@@ -236,6 +304,7 @@ export function CampaignWizard({
               subject={subject}
               fromEmail={fromEmail}
               fromName={fromName}
+              preheader={cleanPreheader}
               selectedCount={selectedLeadIds.size}
               selectedIds={[...selectedLeadIds]}
             />
@@ -293,7 +362,7 @@ export function CampaignWizard({
           <p style={{ fontSize: 13, fontWeight: 600, color: "#64748b", margin: "0 0 8px" }}>
             Previsualización
           </p>
-          <PreviewFrame blocks={blocks} style={style} subject={subject || name || ""} />
+          <PreviewFrame blocks={blocks} style={style} preheader={preheader} />
         </div>
       </div>
     </div>

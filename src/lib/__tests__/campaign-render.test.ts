@@ -90,3 +90,39 @@ describe("renderCampaignEmail", () => {
     expect(html).not.toContain("<b>x</b>");
   });
 });
+
+describe("preheader", () => {
+  const blocks = [
+    { id: "1", type: "hero", props: { title: "Bienvenido a dinkbit", body: "Cuerpo del correo" } },
+    { id: "f", type: "footer", props: { orgLine: "d", unsubscribe: true } },
+  ] as Parameters<typeof renderCampaignEmail>[0];
+
+  test("pinta el texto previo oculto y con relleno invisible", () => {
+    const { html } = renderCampaignEmail(blocks, DEFAULT_STYLE, {
+      preheader: "Dos plazas libres en mayo",
+      unsubscribeUrl: ctx.unsubscribeUrl,
+    });
+    expect(html).toContain("Dos plazas libres en mayo");
+    expect(html).toContain("display:none!important");
+    expect(html).toContain("&#847;");
+    // va al principio del body, antes de la tabla del correo
+    expect(html.indexOf("Dos plazas")).toBeLessThan(html.indexOf("<table"));
+  });
+
+  test("sin texto previo cae a la primera línea del cuerpo, nunca al asunto", () => {
+    const { html } = renderCampaignEmail(blocks, DEFAULT_STYLE, {
+      preheader: "",
+      unsubscribeUrl: ctx.unsubscribeUrl,
+    });
+    const hidden = html.slice(0, html.indexOf("<table"));
+    expect(hidden).toContain("Bienvenido a dinkbit");
+  });
+
+  test("el texto previo se escapa", () => {
+    const { html } = renderCampaignEmail(blocks, DEFAULT_STYLE, {
+      preheader: "<script>alert(1)</script>",
+      unsubscribeUrl: ctx.unsubscribeUrl,
+    });
+    expect(html).not.toContain("<script>alert(1)</script>");
+  });
+});

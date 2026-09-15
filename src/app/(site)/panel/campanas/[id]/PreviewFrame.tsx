@@ -7,18 +7,20 @@ import type { Block, CampaignStyle } from "@/lib/campaign-blocks";
 export function PreviewFrame({
   blocks,
   style,
-  subject,
+  preheader,
 }: {
   blocks: Block[];
   style: CampaignStyle;
-  subject: string;
+  /** Texto previo escrito en el panel. Vacío = el render cae a la primera
+   *  línea del correo, igual que hará el envío real. */
+  preheader: string;
 }) {
   const html = useMemo(() => {
     return renderCampaignEmail(blocks, style, {
-      preheader: subject,
+      preheader,
       unsubscribeUrl: "#preview",
     }).html;
-  }, [blocks, style, subject]);
+  }, [blocks, style, preheader]);
 
   return (
     <iframe

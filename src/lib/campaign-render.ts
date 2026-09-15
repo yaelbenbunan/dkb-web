@@ -1,5 +1,6 @@
 import type { Block, BlockAlign, CampaignStyle, ImageWidth, TextStyle } from "./campaign-blocks";
 import { sanitizeRichText, richTextToPlain, isRichTextEmpty } from "./rich-text";
+import { fallbackPreheader, renderPreheaderHtml, sanitizePreheader } from "./email-preheader";
 
 function esc(s: string): string {
   return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
@@ -228,9 +229,14 @@ export function renderCampaignEmail(
   };
 
   const body = blocks.map(blockHtml).join("");
-  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+  // El texto previo se decide DESPUÉS de pintar los bloques: si no viene uno
+  // escrito a mano, se toma la primera línea con contenido del propio correo
+  // (que es lo que `textLines` ha ido acumulando). Nunca el asunto: repetirlo
+  // es justo lo que se ve mal en la bandeja de entrada.
+  const preheader = sanitizePreheader(ctx.preheader) || fallbackPreheader(textLines);
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="x-apple-disable-message-reformatting"></head>
 <body style="margin:0;padding:0;background:#eef2f7;font-family:${font};">
-${ctx.preheader ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(ctx.preheader)}</div>` : ""}
+${renderPreheaderHtml(preheader)}
 <table role="presentation" width="100%" style="background:#eef2f7;"><tr><td align="center" style="padding:24px 12px;">
 <table role="presentation" width="600" style="width:600px;max-width:600px;background:#fff;border-radius:16px;overflow:hidden;border-top:6px solid ${accent};">
 ${body}

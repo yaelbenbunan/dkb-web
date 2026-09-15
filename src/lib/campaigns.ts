@@ -7,7 +7,7 @@ const RECIPIENTS_TABLE = "campaign_recipients";
 const TEMPLATES_TABLE = "email_templates";
 
 /** Columnas añadidas por migración manual, que pueden no existir todavía. */
-const OPTIONAL_COLUMNS = ["from_name"] as const;
+const OPTIONAL_COLUMNS = ["from_name", "preheader"] as const;
 
 export interface CampaignRow {
   id: string;
@@ -19,6 +19,9 @@ export interface CampaignRow {
   /** Nombre visible del remitente. Opcional en el tipo porque su columna se
    *  migra a mano: en una base sin migrar, la fila llega sin este campo. */
   from_name?: string | null;
+  /** Texto previo que se ve junto al asunto en la bandeja. Opcional en el tipo
+   *  por el mismo motivo que `from_name`: su columna se migra a mano. */
+  preheader?: string | null;
   status: string;
   template_id: string | null;
   blocks: unknown;
@@ -76,6 +79,7 @@ export async function updateCampaign(
     subject: string | null;
     from_email: string | null;
     from_name: string | null;
+    preheader: string | null;
     blocks: unknown;
     concept: string | null;
     status: string;
