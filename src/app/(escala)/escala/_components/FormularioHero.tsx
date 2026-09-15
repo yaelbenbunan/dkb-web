@@ -114,7 +114,7 @@ export function FormularioHero({ sectorPorDefecto }: { sectorPorDefecto?: string
           });
           track("generate_lead", { form_location: "growth_hero" });
           trackMetaLead(eventId);
-          trackChatGptLead(eventId, "growth_hero");
+          trackChatGptLead(eventId);
           setEnviado(true);
         });
       }}

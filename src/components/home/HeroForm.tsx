@@ -50,7 +50,7 @@ export function HeroForm({ services }: Props) {
               form_location: "hero_home",
               service: String(fd.get("service") ?? ""),
             });
-            trackChatGptLead(newEventId(), "hero_home");
+            trackChatGptLead(newEventId());
             formRef.current?.reset();
           }
         });

@@ -35,16 +35,16 @@ function measure(
   window.oaiq("measure", event, data, options);
 }
 
-/** Conversión: alguien ha enviado un formulario de contacto o presupuesto. */
-export function trackChatGptLead(eventId: string, formLocation: string): void {
-  measure(
-    "lead_created",
-    {
-      type: "contents",
-      contents: [{ id: formLocation, name: formLocation, content_type: "form" }],
-    },
-    eventId ? { event_id: eventId } : {},
-  );
+/**
+ * Conversión: alguien ha enviado un formulario de contacto o presupuesto.
+ *
+ * `lead_created` va con la forma `customer_action`, que es la que OpenAI pide
+ * para los eventos de persona (lead, registro, cita) y que solo admite
+ * `amount` y `currency`. El formulario de origen no cabe aquí: ese desglose se
+ * mide en GA4 con `track("generate_lead", { form_location })`.
+ */
+export function trackChatGptLead(eventId: string): void {
+  measure("lead_created", { type: "customer_action" }, eventId ? { event_id: eventId } : {});
 }
 
 /** Vista de página en navegación interna. La primera carga ya la cuenta el

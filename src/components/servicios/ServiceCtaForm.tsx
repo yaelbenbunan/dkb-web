@@ -43,7 +43,7 @@ export function ServiceCtaForm({ serviceTitle }: Props) {
               form_location: "service_sidebar",
               service: serviceTitle,
             });
-            trackChatGptLead(newEventId(), "service_sidebar");
+            trackChatGptLead(newEventId());
             formRef.current?.reset();
           }
         });

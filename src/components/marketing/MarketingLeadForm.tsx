@@ -55,7 +55,7 @@ export function MarketingLeadForm({ landing, formLocation }: Props) {
               business_type: String(fd.get("businessType") ?? ""),
               budget: String(fd.get("budget") ?? ""),
             });
-            trackChatGptLead(newEventId(), formLocation);
+            trackChatGptLead(newEventId());
             formRef.current?.reset();
           }
         });

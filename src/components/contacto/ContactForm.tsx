@@ -62,7 +62,7 @@ export function ContactForm({ services }: Props) {
                 phone: String(fd.get("phone") ?? ""),
               });
               track("generate_lead", { form_location: "contact_long" });
-              trackChatGptLead(newEventId(), "contact_long");
+              trackChatGptLead(newEventId());
               formRef.current?.reset();
             }
           });

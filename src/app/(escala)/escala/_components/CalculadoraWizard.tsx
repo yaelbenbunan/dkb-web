@@ -240,7 +240,7 @@ export function CalculadoraWizard({
               });
               track("generate_lead", { form_location: "growth_calculadora" });
               trackMetaLead(eventId);
-              trackChatGptLead(eventId, "growth_calculadora");
+              trackChatGptLead(eventId);
               setResultado(res.resultado);
             });
           }}

@@ -18,38 +18,30 @@ describe("trackChatGptLead", () => {
 
   test("sin el SDK cargado no revienta ni intenta nada", () => {
     delete window.oaiq;
-    expect(() => trackChatGptLead("evt-1", "hero_home")).not.toThrow();
+    expect(() => trackChatGptLead("evt-1")).not.toThrow();
   });
 
   test("manda el evento estándar de lead con su id para deduplicar", () => {
     const oaiq = vi.fn();
     window.oaiq = oaiq;
 
-    trackChatGptLead("evt-1", "hero_home");
+    trackChatGptLead("evt-1");
 
     expect(oaiq).toHaveBeenCalledTimes(1);
     const [accion, evento, datos, opciones] = oaiq.mock.calls[0];
     expect(accion).toBe("measure");
     expect(evento).toBe("lead_created");
-    expect(datos).toMatchObject({ type: "contents" });
     expect(opciones).toMatchObject({ event_id: "evt-1" });
-  });
-
-  test("lleva el formulario de origen, para saber qué convierte", () => {
-    const oaiq = vi.fn();
-    window.oaiq = oaiq;
-
-    trackChatGptLead("evt-2", "contact_long");
-
-    const datos = oaiq.mock.calls[0][2] as { contents?: { id?: string }[] };
-    expect(datos.contents?.[0]?.id).toBe("contact_long");
+    // La forma que pide OpenAI para lead_created es customer_action, que solo
+    // admite amount y currency: nada de un array de contents.
+    expect(datos).toEqual({ type: "customer_action" });
   });
 
   test("sin event_id sigue mandando el evento", () => {
     const oaiq = vi.fn();
     window.oaiq = oaiq;
 
-    trackChatGptLead("", "hero_home");
+    trackChatGptLead("");
 
     expect(oaiq).toHaveBeenCalledTimes(1);
     expect(oaiq.mock.calls[0][3]).toEqual({});

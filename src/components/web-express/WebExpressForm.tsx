@@ -158,7 +158,7 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
           });
           track("generate_lead", { form_location: landing.key });
           trackMetaLead(eventId);
-          trackChatGptLead(eventId, landing.key);
+          trackChatGptLead(eventId);
           setDone({ method: String(fd.get("contactMethod") ?? "WhatsApp") });
         });
       }}
