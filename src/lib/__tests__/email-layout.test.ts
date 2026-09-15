@@ -113,3 +113,42 @@ describe("renderBrandedEmail", () => {
     expect(html).toContain("<strong>&lt;script&gt;");
   });
 });
+
+describe("tema de escala", () => {
+  const escala = () =>
+    renderBrandedEmail({ ...base, subject: "s", theme: "escala", cta: { label: "WhatsApp", url: "https://wa.me/34600" } });
+
+  test("pinta la paleta de la landing, no la azul de dinkbit", () => {
+    const { html } = escala();
+    expect(html).toContain("#08090C"); // fondo casi negro
+    expect(html).toContain("#131519"); // tarjeta
+    expect(html).toContain("#C7F73E"); // acento lima
+    expect(html).not.toContain("#187bef"); // el azul de dinkbit no pinta aquí
+  });
+
+  test("el logo azul no vale sobre fondo oscuro: va el rótulo de escala", () => {
+    const { html } = escala();
+    expect(html).not.toContain("dinkbit-email.png");
+    expect(html).toContain("escala");
+    expect(html).toContain("by dinkbit");
+  });
+
+  test("avisa a los clientes de correo de que el correo es oscuro", () => {
+    const { html } = escala();
+    expect(html).toContain('name="color-scheme" content="dark"');
+    expect(html).toContain("supported-color-schemes");
+  });
+
+  test("el botón lleva texto oscuro sobre el lima, que es donde se lee", () => {
+    const { html } = escala();
+    const boton = html.slice(html.indexOf("https://wa.me/34600"));
+    expect(boton).toContain("#08090C");
+  });
+
+  test("sin tema, los demás correos siguen siendo los de dinkbit", () => {
+    const { html } = renderBrandedEmail({ ...base, subject: "s" });
+    expect(html).toContain("#187bef");
+    expect(html).toContain("dinkbit-email.png");
+    expect(html).not.toContain("#C7F73E");
+  });
+});

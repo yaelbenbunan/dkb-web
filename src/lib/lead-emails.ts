@@ -201,6 +201,9 @@ export function growthAutoresponder(input: {
       // ha llegado y cuándo le llamamos — y el botón, por si no quiere
       // esperar.
       cta: WHATSAPP_CTA,
+      // Viene de una página casi negra con acento lima: el correo se viste
+      // igual, o el salto de una cosa a la otra se nota.
+      theme: "escala",
     };
   }
 
@@ -225,5 +228,6 @@ export function growthAutoresponder(input: {
       "Cuánto dinero generan, y el retorno de cada campaña",
     ],
     cta: WHATSAPP_CTA,
+    theme: "escala",
   };
 }

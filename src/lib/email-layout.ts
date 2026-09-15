@@ -25,6 +25,91 @@ export const BRAND = {
 
 const FONT_STACK = "'Source Sans Pro','Source Sans 3',Helvetica,Arial,sans-serif";
 
+/**
+ * Paletas del correo.
+ *
+ * Existen porque escala no es dinkbit: quien rellena el formulario viene de una
+ * página casi negra con acento lima, y recibía un correo blanco y azul. El salto
+ * se notaba, así que el correo se viste como la página de la que viene.
+ *
+ * Los colores del tema `escala` son los mismos de GROWTH_THEME (growth-config),
+ * copiados a mano: este fichero no puede importar de la landing porque lo usan
+ * también los correos que no tienen nada que ver con ella.
+ */
+const THEMES = {
+  dinkbit: {
+    page: "#eef2f7",
+    card: "#ffffff",
+    accent: "#187bef",
+    /** Texto que va ENCIMA del acento (botón). */
+    onAccent: "#ffffff",
+    heading: "#0f172a",
+    body: "#475569",
+    muted: "#94a3b8",
+    panel: "#f4f7fc",
+    panelLine: "#e2e8f0",
+    panelText: "#334155",
+    line: "#eef2f7",
+    ctaNote: "#64748b",
+    shadow: "0 18px 50px -24px rgba(15,23,42,0.35)",
+    colorScheme: "light",
+  },
+  escala: {
+    page: "#08090C",
+    card: "#131519",
+    accent: "#C7F73E",
+    onAccent: "#08090C",
+    heading: "#F5F7F8",
+    // Ni el gris apagado de la landing ni el blanco del titular: sobre #131519
+    // este gris claro da 12:1 de contraste, que es lo que hace que un párrafo
+    // largo se lea sin forzar la vista.
+    body: "#C3C8D0",
+    muted: "#8E949F",
+    panel: "#1A1D23",
+    panelLine: "#23262E",
+    panelText: "#C3C8D0",
+    line: "#23262E",
+    ctaNote: "#8E949F",
+    shadow: "0 18px 50px -24px rgba(0,0,0,0.75)",
+    colorScheme: "dark",
+  },
+} as const;
+
+export type EmailTheme = keyof typeof THEMES;
+
+/**
+ * Rótulo de escala en HTML, sin imágenes.
+ *
+ * El logotipo de la landing es un componente con cuatro barras, y no hay PNG
+ * equivalente para correo; el de dinkbit es azul y sobre este fondo no se lee.
+ * Las barras se pintan con celdas de tabla de colores sólidos, que es lo único
+ * que aguanta en Outlook, y los cuatro verdes son los del logotipo original.
+ */
+function escalaLockup(t: (typeof THEMES)["escala"]): string {
+  const bars = [
+    { h: 10, c: "#4A5A21" },
+    { h: 17, c: "#647C28" },
+    { h: 25, c: "#88A830" },
+    { h: 34, c: "#C7F73D" },
+  ];
+  return `<table role="presentation" cellpadding="0" cellspacing="0"><tr>
+      <td valign="bottom" style="padding-right:10px;">
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+          ${bars
+            .map(
+              (b) =>
+                `<td valign="bottom" style="padding-right:3px;"><div style="width:7px;height:${b.h}px;background:${b.c};font-size:1px;line-height:${b.h}px;">&nbsp;</div></td>`,
+            )
+            .join("")}
+        </tr></table>
+      </td>
+      <td valign="middle">
+        <div style="font-size:22px;font-weight:900;letter-spacing:-1px;color:${t.heading};line-height:1.1;">escala</div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:2.4px;color:${t.muted};text-transform:uppercase;">by dinkbit</div>
+      </td>
+    </tr></table>`;
+}
+
 function esc(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -87,6 +172,11 @@ export interface BrandedEmailInput {
   bulletsLabel?: string;
   /** Botón de acción. Se omite si falta o si la URL no es http/https. */
   cta?: { label: string; url: string };
+  /**
+   * Paleta del correo. Por defecto la de dinkbit (clara, azul); `"escala"`
+   * viste el correo como la landing de la que viene el lead.
+   */
+  theme?: EmailTheme;
 }
 
 export function renderBrandedEmail(input: BrandedEmailInput): {
@@ -94,7 +184,8 @@ export function renderBrandedEmail(input: BrandedEmailInput): {
   html: string;
   text: string;
 } {
-  const accent = BRAND.accentHex;
+  const t = THEMES[input.theme ?? "dinkbit"];
+  const accent = t.accent;
   const first = firstName(input.name);
   const greeting = first ? `Hola ${esc(first)}` : "Hola";
   const preheader = plainText(input.preheader ?? input.intro);
@@ -106,7 +197,7 @@ export function renderBrandedEmail(input: BrandedEmailInput): {
       ? ""
       : `
   <tr><td style="padding:22px 36px 6px;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fc;border:1px solid #e2e8f0;border-radius:14px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${t.panel};border:1px solid ${t.panelLine};border-radius:14px;">
       <tr><td style="padding:20px 22px 14px;">
         ${
           input.bulletsLabel
@@ -120,9 +211,9 @@ export function renderBrandedEmail(input: BrandedEmailInput): {
           <tr><td style="padding:9px 0;vertical-align:top;">
             <table role="presentation" cellpadding="0" cellspacing="0"><tr>
               <td valign="top" style="width:26px;">
-                <div style="width:20px;height:20px;border-radius:999px;background:${accent};color:#ffffff;font-size:12px;font-weight:900;text-align:center;line-height:20px;">✓</div>
+                <div style="width:20px;height:20px;border-radius:999px;background:${accent};color:${t.onAccent};font-size:12px;font-weight:900;text-align:center;line-height:20px;">✓</div>
               </td>
-              <td style="font-size:15px;line-height:1.5;color:#334155;padding-left:8px;">${richText(b)}</td>
+              <td style="font-size:15px;line-height:1.5;color:${t.panelText};padding-left:8px;">${richText(b)}</td>
             </tr></table>
           </td></tr>`,
             )
@@ -135,8 +226,8 @@ export function renderBrandedEmail(input: BrandedEmailInput): {
   const ctaHtml = ctaUrl
     ? `
   <tr><td style="padding:24px 36px 8px;text-align:center;">
-    <a href="${ctaUrl}" style="display:inline-block;background:${accent};color:#ffffff;font-size:16px;font-weight:800;text-decoration:none;padding:15px 32px;border-radius:12px;box-shadow:0 10px 24px -10px ${accent};">${esc(input.cta!.label)} →</a>
-    <p style="margin:14px 0 0;font-size:13px;color:#64748b;">O responde a este correo si tienes cualquier duda.</p>
+    <a href="${ctaUrl}" style="display:inline-block;background:${accent};color:${t.onAccent};font-size:16px;font-weight:800;text-decoration:none;padding:15px 32px;border-radius:12px;box-shadow:0 10px 24px -10px ${accent};">${esc(input.cta!.label)} →</a>
+    <p style="margin:14px 0 0;font-size:13px;color:${t.ctaNote};">O responde a este correo si tienes cualquier duda.</p>
   </td></tr>`
     : "";
 
@@ -145,15 +236,17 @@ export function renderBrandedEmail(input: BrandedEmailInput): {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="x-apple-disable-message-reformatting">
+<meta name="color-scheme" content="${t.colorScheme}">
+<meta name="supported-color-schemes" content="${t.colorScheme}">
 </head>
-<body style="margin:0;padding:0;background:#eef2f7;font-family:${FONT_STACK};color:#0f172a;">
+<body style="margin:0;padding:0;background:${t.page};font-family:${FONT_STACK};color:${t.heading};">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${esc(preheader)}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef2f7;"><tr><td align="center" style="padding:24px 12px;">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background:#ffffff;border-radius:20px;overflow:hidden;border-top:6px solid ${accent};box-shadow:0 18px 50px -24px rgba(15,23,42,0.35);">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${t.page}" style="background:${t.page};"><tr><td align="center" style="padding:24px 12px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" bgcolor="${t.card}" style="width:600px;max-width:600px;background:${t.card};border-radius:20px;overflow:hidden;border-top:6px solid ${accent};box-shadow:${t.shadow};">
 
   <tr><td style="padding:26px 36px 6px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td align="left" valign="middle"><img src="${BRAND.logoUrl}" alt="dinkbit" width="116" style="display:block;width:116px;height:auto;"></td>
+      <td align="left" valign="middle">${input.theme === "escala" ? escalaLockup(THEMES.escala) : `<img src="${BRAND.logoUrl}" alt="dinkbit" width="116" style="display:block;width:116px;height:auto;">`}</td>
       ${
         input.eyebrow
           ? `<td align="right" valign="middle" style="font-size:12px;font-weight:700;letter-spacing:2px;color:${accent};text-transform:uppercase;">${esc(input.eyebrow)}</td>`
@@ -163,12 +256,12 @@ export function renderBrandedEmail(input: BrandedEmailInput): {
   </td></tr>
 
   <tr><td style="padding:14px 36px 6px;">
-    <h1 style="margin:0;font-size:30px;line-height:1.12;color:#0f172a;font-weight:900;letter-spacing:-0.5px;">${esc(input.heading)}</h1>
-    <p style="margin:16px 0 0;font-size:17px;line-height:1.55;color:#475569;">${greeting}, ${richText(input.intro)}</p>
+    <h1 style="margin:0;font-size:30px;line-height:1.12;color:${t.heading};font-weight:900;letter-spacing:-0.5px;">${esc(input.heading)}</h1>
+    <p style="margin:16px 0 0;font-size:17px;line-height:1.55;color:${t.body};">${greeting}, ${richText(input.intro)}</p>
   </td></tr>
 ${bulletsHtml}${ctaHtml}
-  <tr><td style="padding:20px 36px 28px;border-top:1px solid #eef2f7;">
-    <p style="margin:0;font-size:12px;color:#94a3b8;">dinkbit · <a href="${BRAND.siteUrl}" style="color:${accent};text-decoration:none;">www.dinkbit.es</a> · ${BRAND.contactEmail}</p>
+  <tr><td style="padding:20px 36px 28px;border-top:1px solid ${t.line};">
+    <p style="margin:0;font-size:12px;color:${t.muted};">${input.theme === "escala" ? "escala by dinkbit" : "dinkbit"} · <a href="${BRAND.siteUrl}" style="color:${accent};text-decoration:none;">www.dinkbit.es</a> · ${BRAND.contactEmail}</p>
   </td></tr>
 
 </table>
