@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { appendUtms } from "@/lib/utm";
 import { sendMarketingLead } from "@/lib/marketing-lead-action";
 import { track, pushUserData } from "@/lib/gtm";
+import { newEventId } from "@/lib/meta-pixel";
+import { trackChatGptLead } from "@/lib/chatgpt-pixel";
 import {
   BUDGET_LABEL,
   BUDGET_OPTIONS,
@@ -53,6 +55,7 @@ export function MarketingLeadForm({ landing, formLocation }: Props) {
               business_type: String(fd.get("businessType") ?? ""),
               budget: String(fd.get("budget") ?? ""),
             });
+            trackChatGptLead(newEventId(), formLocation);
             formRef.current?.reset();
           }
         });

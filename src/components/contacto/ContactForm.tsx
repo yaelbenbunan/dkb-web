@@ -6,6 +6,8 @@ import Link from "next/link";
 import { sendContactEmail } from "@/lib/contact-action";
 import { SOURCE_OPTIONS, CONTACT_INFO } from "@/lib/contact-info";
 import { track, pushUserData } from "@/lib/gtm";
+import { newEventId } from "@/lib/meta-pixel";
+import { trackChatGptLead } from "@/lib/chatgpt-pixel";
 import type {
   ContactActionResult,
   ContactFieldErrors,
@@ -60,6 +62,7 @@ export function ContactForm({ services }: Props) {
                 phone: String(fd.get("phone") ?? ""),
               });
               track("generate_lead", { form_location: "contact_long" });
+              trackChatGptLead(newEventId(), "contact_long");
               formRef.current?.reset();
             }
           });

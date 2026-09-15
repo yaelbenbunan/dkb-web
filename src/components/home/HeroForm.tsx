@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { appendUtms } from "@/lib/utm";
 import { sendLead } from "@/lib/lead-action";
 import { track, pushUserData } from "@/lib/gtm";
+import { newEventId } from "@/lib/meta-pixel";
+import { trackChatGptLead } from "@/lib/chatgpt-pixel";
 import { ConsentCheckbox } from "@/components/forms/ConsentCheckbox";
 
 interface ServiceOption {
@@ -48,6 +50,7 @@ export function HeroForm({ services }: Props) {
               form_location: "hero_home",
               service: String(fd.get("service") ?? ""),
             });
+            trackChatGptLead(newEventId(), "hero_home");
             formRef.current?.reset();
           }
         });

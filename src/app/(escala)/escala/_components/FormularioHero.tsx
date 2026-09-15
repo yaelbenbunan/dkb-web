@@ -7,6 +7,7 @@ import { GROWTH, GROWTH_THEME as T } from "@/lib/growth-config";
 import { SECTORES_FORMULARIO } from "@/lib/escala-sectores";
 import { track, pushUserData } from "@/lib/gtm";
 import { newEventId, trackMetaLead } from "@/lib/meta-pixel";
+import { trackChatGptLead } from "@/lib/chatgpt-pixel";
 import { appendUtms } from "@/lib/utm";
 
 /**
@@ -113,6 +114,7 @@ export function FormularioHero({ sectorPorDefecto }: { sectorPorDefecto?: string
           });
           track("generate_lead", { form_location: "growth_hero" });
           trackMetaLead(eventId);
+          trackChatGptLead(eventId, "growth_hero");
           setEnviado(true);
         });
       }}

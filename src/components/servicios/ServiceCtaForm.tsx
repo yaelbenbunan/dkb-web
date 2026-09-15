@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { sendCallRequest } from "@/lib/call-request-action";
 import { track, pushUserData } from "@/lib/gtm";
+import { newEventId } from "@/lib/meta-pixel";
+import { trackChatGptLead } from "@/lib/chatgpt-pixel";
 import { appendUtms } from "@/lib/utm";
 import { ConsentCheckbox } from "@/components/forms/ConsentCheckbox";
 
@@ -41,6 +43,7 @@ export function ServiceCtaForm({ serviceTitle }: Props) {
               form_location: "service_sidebar",
               service: serviceTitle,
             });
+            trackChatGptLead(newEventId(), "service_sidebar");
             formRef.current?.reset();
           }
         });

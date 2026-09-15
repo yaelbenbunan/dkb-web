@@ -5,6 +5,7 @@ import "./globals.css";
 import { CookieBanner } from "@/components/legal/CookieBanner";
 import { ScrollProgress } from "@/components/ui/ScrollProgress";
 import { Analytics } from "@/components/analytics/Analytics";
+import { ChatGPTPixel } from "@/components/analytics/ChatGPTPixel";
 import { GTM } from "@/components/analytics/GTM";
 import { GTMNoScript } from "@/components/analytics/GTMNoScript";
 import { LinkTracker } from "@/components/analytics/LinkTracker";
@@ -171,6 +172,7 @@ export default function RootLayout({
         {children}
         <CookieBanner />
         <Analytics />
+        <ChatGPTPixel />
         <LinkTracker />
         <UtmCapture />
       </body>

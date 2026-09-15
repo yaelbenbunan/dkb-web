@@ -16,6 +16,7 @@ import { GROWTH_THEME as T } from "@/lib/growth-config";
 import { SimuladorInversion } from "./SimuladorInversion";
 import { track, pushUserData } from "@/lib/gtm";
 import { newEventId, trackMetaLead } from "@/lib/meta-pixel";
+import { trackChatGptLead } from "@/lib/chatgpt-pixel";
 import { appendUtms } from "@/lib/utm";
 
 /**
@@ -239,6 +240,7 @@ export function CalculadoraWizard({
               });
               track("generate_lead", { form_location: "growth_calculadora" });
               trackMetaLead(eventId);
+              trackChatGptLead(eventId, "growth_calculadora");
               setResultado(res.resultado);
             });
           }}

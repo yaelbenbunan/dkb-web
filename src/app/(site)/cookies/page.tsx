@@ -100,6 +100,19 @@ export default function CookiesPage() {
           <strong>Google Ads</strong> (Google Ireland Limited). Finalidad:
           remarketing y medición de conversiones en la red de Google.
         </li>
+        <li>
+          <strong>Píxel de medición de OpenAI</strong> (OpenAI, OpCo, LLC).
+          Finalidad: medir las conversiones de las visitas que llegan desde los
+          anuncios en ChatGPT. Más información en{" "}
+          <a
+            href="https://openai.com/policies/privacy-policy"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            openai.com/policies/privacy-policy
+          </a>
+          .
+        </li>
       </ul>
 
       <h2>4. Consentimiento del usuario</h2>
@@ -174,8 +187,8 @@ export default function CookiesPage() {
 
       <h2>6. Transferencias internacionales</h2>
       <p>
-        Algunas cookies de terceros (Google, Meta) implican transferencias de
-        datos fuera del Espacio Económico Europeo. Estas transferencias se
+        Algunas cookies de terceros (Google, Meta, OpenAI) implican
+        transferencias de datos fuera del Espacio Económico Europeo. Estas transferencias se
         realizan con las garantías adecuadas previstas en el RGPD.
       </p>
 

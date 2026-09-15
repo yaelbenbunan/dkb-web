@@ -6,6 +6,7 @@ import { track, pushUserData } from "@/lib/gtm";
 import { requestWebExpress } from "@/lib/web-express-action";
 import { CONTACT_INFO } from "@/lib/contact-info";
 import { newEventId, trackMetaLead } from "@/lib/meta-pixel";
+import { trackChatGptLead } from "@/lib/chatgpt-pixel";
 import {
   CONTACT_METHODS,
   TIME_SLOTS,
@@ -157,6 +158,7 @@ export function WebExpressForm({ landing }: { landing: WebExpressLanding }) {
           });
           track("generate_lead", { form_location: landing.key });
           trackMetaLead(eventId);
+          trackChatGptLead(eventId, landing.key);
           setDone({ method: String(fd.get("contactMethod") ?? "WhatsApp") });
         });
       }}
