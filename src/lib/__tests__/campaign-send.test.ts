@@ -11,25 +11,37 @@ const {
   getCampaignMock,
   updateCampaignMock,
   setCampaignStatusMock,
+  claimCampaignMock,
   insertCampaignRecipientsMock,
+  listDueScheduledMock,
 } = vi.hoisted(() => ({
   getCampaignMock: vi.fn(),
   updateCampaignMock: vi.fn(),
   setCampaignStatusMock: vi.fn(),
+  claimCampaignMock: vi.fn(),
   insertCampaignRecipientsMock: vi.fn(),
+  listDueScheduledMock: vi.fn(),
 }));
 vi.mock("../campaigns", () => ({
   getCampaign: getCampaignMock,
   updateCampaign: updateCampaignMock,
   setCampaignStatus: setCampaignStatusMock,
+  claimCampaignForSending: claimCampaignMock,
   insertCampaignRecipients: insertCampaignRecipientsMock,
+  listDueScheduledCampaigns: listDueScheduledMock,
   setRecipientMessageId: vi.fn(),
 }));
 
 const { listEmailableLeadsMock } = vi.hoisted(() => ({ listEmailableLeadsMock: vi.fn() }));
 vi.mock("../imagina-leads", () => ({ listEmailableLeads: listEmailableLeadsMock }));
 
-import { sendCampaign, sendCampaignTest, ALLOWED_SENDERS } from "../campaign-send";
+import {
+  sendCampaign,
+  sendCampaignTest,
+  sendDueScheduledCampaigns,
+  ALLOWED_SENDERS,
+  CAMPAIGN_NOT_CLAIMABLE,
+} from "../campaign-send";
 
 const VALID_BLOCKS = [
   { id: "1", type: "paragraph", props: { text: "Hola" } },
@@ -58,6 +70,7 @@ describe("sendCampaign", () => {
     getCampaignMock.mockReset();
     updateCampaignMock.mockReset().mockResolvedValue(undefined);
     setCampaignStatusMock.mockReset().mockResolvedValue(undefined);
+    claimCampaignMock.mockReset().mockResolvedValue(true);
     insertCampaignRecipientsMock.mockReset().mockResolvedValue(undefined);
     listEmailableLeadsMock.mockReset().mockResolvedValue([]);
     process.env.RESEND_API_KEY = "test-key";
@@ -281,6 +294,79 @@ describe("sendCampaign", () => {
   });
 });
 
+describe("reclamo de la campaña antes de enviar", () => {
+  const CAMPAIGN = {
+    id: "c1",
+    status: "draft",
+    subject: "Asunto",
+    from_email: "hola@dinkbit.es",
+    blocks: VALID_BLOCKS,
+  };
+
+  beforeEach(() => {
+    batchSendMock.mockReset().mockResolvedValue({ data: { data: [{ id: "msg-1" }] }, error: null });
+    getCampaignMock.mockReset().mockResolvedValue(CAMPAIGN);
+    updateCampaignMock.mockReset().mockResolvedValue(undefined);
+    setCampaignStatusMock.mockReset().mockResolvedValue(undefined);
+    claimCampaignMock.mockReset().mockResolvedValue(true);
+    insertCampaignRecipientsMock.mockReset().mockResolvedValue(undefined);
+    listEmailableLeadsMock.mockReset().mockResolvedValue([makeLead("lead-1")]);
+    listDueScheduledMock.mockReset().mockResolvedValue([]);
+    process.env.RESEND_API_KEY = "test-key";
+    delete process.env.CAMPAIGN_SENDERS;
+  });
+
+  test("el envío manual solo reclama borradores o campañas con error, nunca programadas", async () => {
+    await sendCampaign("c1", ["lead-1"]);
+    expect(claimCampaignMock).toHaveBeenCalledWith("c1", ["draft", "failed"]);
+  });
+
+  test("el envío del cron solo reclama campañas programadas", async () => {
+    await sendCampaign("c1", ["lead-1"], { scheduled: true });
+    expect(claimCampaignMock).toHaveBeenCalledWith("c1", ["scheduled"]);
+  });
+
+  test("si otro envío ya la tiene, no manda nada", async () => {
+    claimCampaignMock.mockResolvedValue(false);
+    const res = await sendCampaign("c1", ["lead-1"]);
+    expect(res).toEqual({ ok: false, sent: 0, skipped: 0, error: CAMPAIGN_NOT_CLAIMABLE });
+    expect(batchSendMock).not.toHaveBeenCalled();
+    expect(setCampaignStatusMock).not.toHaveBeenCalled();
+  });
+
+  test("el cron manda las campañas vencidas a los destinatarios guardados", async () => {
+    listDueScheduledMock.mockResolvedValue([{ id: "c1", scheduled_lead_ids: ["lead-1"] }]);
+    getCampaignMock.mockResolvedValue({ ...CAMPAIGN, status: "scheduled" });
+
+    const results = await sendDueScheduledCampaigns(new Date("2026-09-20T08:00:00Z"));
+
+    expect(listDueScheduledMock).toHaveBeenCalledWith("2026-09-20T08:00:00.000Z");
+    expect(results).toEqual([{ id: "c1", ok: true, sent: 1, skipped: 0 }]);
+    expect(batchSendMock.mock.calls[0][0][0].to).toBe("lead-1@example.com");
+    expect(setCampaignStatusMock).toHaveBeenLastCalledWith("c1", "sent");
+  });
+
+  test("una programada que ya no es válida queda como error, no se reintenta", async () => {
+    listDueScheduledMock.mockResolvedValue([{ id: "c1", scheduled_lead_ids: ["lead-1"] }]);
+    getCampaignMock.mockResolvedValue({ ...CAMPAIGN, status: "scheduled", subject: "" });
+
+    await sendDueScheduledCampaigns();
+
+    expect(batchSendMock).not.toHaveBeenCalled();
+    expect(setCampaignStatusMock).toHaveBeenCalledWith("c1", "failed");
+  });
+
+  test("perder la carrera contra otra ejecución no la marca como error", async () => {
+    listDueScheduledMock.mockResolvedValue([{ id: "c1", scheduled_lead_ids: ["lead-1"] }]);
+    getCampaignMock.mockResolvedValue({ ...CAMPAIGN, status: "scheduled" });
+    claimCampaignMock.mockResolvedValue(false);
+
+    await sendDueScheduledCampaigns();
+
+    expect(setCampaignStatusMock).not.toHaveBeenCalled();
+  });
+});
+
 describe("sendCampaignTest", () => {
   beforeEach(() => {
     batchSendMock.mockReset().mockResolvedValue({ data: { data: [{ id: "msg-1" }] }, error: null });
@@ -324,6 +410,7 @@ describe("texto previo del envío", () => {
     getCampaignMock.mockReset();
     updateCampaignMock.mockReset().mockResolvedValue(undefined);
     setCampaignStatusMock.mockReset().mockResolvedValue(undefined);
+    claimCampaignMock.mockReset().mockResolvedValue(true);
     insertCampaignRecipientsMock.mockReset().mockResolvedValue(undefined);
     listEmailableLeadsMock.mockReset().mockResolvedValue([makeLead("l1")]);
     process.env.RESEND_API_KEY = "test-key";

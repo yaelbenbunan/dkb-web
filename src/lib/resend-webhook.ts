@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import type { RecipientEventStatus } from "./campaign-stats";
 
 /** Verifica la firma Svix de un webhook de Resend.
  *  `secret` es "whsec_<base64>" (o el base64 pelado). La firma se calcula como
@@ -41,9 +42,23 @@ const EVENT_STATUS: Record<string, "delivered" | "bounced" | "complained"> = {
   "email.complained": "complained",
 };
 
-/** Estado que guardamos según el tipo de evento de Resend, o null si no interesa. */
+/** Estado que guardamos en el lead según el tipo de evento de Resend, o null si
+ *  no interesa. Aperturas y clics no entran: al CRM solo le importa si el
+ *  correo llega. */
 export function resendEventStatus(
   type: string,
 ): "delivered" | "bounced" | "complained" | null {
   return EVENT_STATUS[type] ?? null;
+}
+
+const CAMPAIGN_EVENT_STATUS: Record<string, RecipientEventStatus> = {
+  ...EVENT_STATUS,
+  "email.opened": "opened",
+  "email.clicked": "clicked",
+};
+
+/** Estado que guardamos en el destinatario de campaña: lo mismo que en el lead
+ *  más aperturas y clics, que alimentan el rendimiento de la campaña. */
+export function resendCampaignEventStatus(type: string): RecipientEventStatus | null {
+  return CAMPAIGN_EVENT_STATUS[type] ?? null;
 }

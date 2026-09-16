@@ -28,6 +28,12 @@ export interface CampaignRow {
   concept: string | null;
   sent_at: string | null;
   recipients_total: number | null;
+  /** Hora a la que el cron debe enviarla (status `scheduled`). Opcional en el
+   *  tipo porque su columna se migra a mano (docs/sql). */
+  scheduled_at?: string | null;
+  /** Destinatarios elegidos al programar: el wizard no los guarda en ningún
+   *  otro sitio, y el cron no tiene a nadie delante que los seleccione. */
+  scheduled_lead_ids?: string[] | null;
 }
 
 export interface CampaignRecipientRow {
@@ -144,6 +150,117 @@ export async function listCampaigns(limit = 200): Promise<CampaignRow[]> {
     return [];
   }
   return (data ?? []) as CampaignRow[];
+}
+
+/** Pasa la campaña a `sending` solo si sigue en uno de `fromStatuses`. Es un
+ *  update condicional (una sola sentencia), así que dos envíos simultáneos —un
+ *  doble clic, o el cron solapándose con un envío manual— no pueden reclamar
+ *  la misma campaña: solo uno recibe `true`. */
+export async function claimCampaignForSending(
+  id: string,
+  fromStatuses: string[],
+): Promise<boolean> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return false;
+  const { data, error } = await sb
+    .from(CAMPAIGNS_TABLE)
+    .update({ status: "sending" })
+    .eq("id", id)
+    .in("status", fromStatuses)
+    .select("id");
+  if (error) {
+    console.error("[campaigns] claimCampaignForSending error:", error.message);
+    return false;
+  }
+  return (data?.length ?? 0) > 0;
+}
+
+/** Deja la campaña programada. Solo desde borrador o error: una campaña ya
+ *  enviada, enviándose o programada no se reprograma por aquí. */
+export async function scheduleCampaign(
+  id: string,
+  scheduledAt: string,
+  leadIds: string[],
+): Promise<{ ok: true } | { ok: false; error: "not_schedulable" | "missing_migration" | "db_error" }> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return { ok: false, error: "db_error" };
+  const { data, error } = await sb
+    .from(CAMPAIGNS_TABLE)
+    .update({ status: "scheduled", scheduled_at: scheduledAt, scheduled_lead_ids: leadIds })
+    .eq("id", id)
+    .in("status", ["draft", "failed"])
+    .select("id");
+  if (error) {
+    console.error("[campaigns] scheduleCampaign error:", error.message);
+    return {
+      ok: false,
+      error: error.message.includes("scheduled_") ? "missing_migration" : "db_error",
+    };
+  }
+  return (data?.length ?? 0) > 0 ? { ok: true } : { ok: false, error: "not_schedulable" };
+}
+
+/** Vuelve a borrador una campaña programada. Devuelve false si ya no estaba
+ *  programada (por ejemplo, el cron la acaba de coger). */
+export async function cancelCampaignSchedule(id: string): Promise<boolean> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return false;
+  const { data, error } = await sb
+    .from(CAMPAIGNS_TABLE)
+    .update({ status: "draft", scheduled_at: null, scheduled_lead_ids: null })
+    .eq("id", id)
+    .eq("status", "scheduled")
+    .select("id");
+  if (error) {
+    console.error("[campaigns] cancelCampaignSchedule error:", error.message);
+    return false;
+  }
+  return (data?.length ?? 0) > 0;
+}
+
+/** Campañas programadas cuya hora ya ha llegado. */
+export async function listDueScheduledCampaigns(
+  nowIso: string,
+): Promise<{ id: string; scheduled_lead_ids: string[] | null }[]> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return [];
+  const { data, error } = await sb
+    .from(CAMPAIGNS_TABLE)
+    .select("id,scheduled_lead_ids")
+    .eq("status", "scheduled")
+    .lte("scheduled_at", nowIso)
+    .order("scheduled_at", { ascending: true });
+  if (error) {
+    console.error("[campaigns] listDueScheduledCampaigns error:", error.message);
+    return [];
+  }
+  return (data ?? []) as { id: string; scheduled_lead_ids: string[] | null }[];
+}
+
+/** Email y estado de cada destinatario de una campaña, paginando de 1000 en
+ *  1000 (el máximo que devuelve PostgREST por petición). */
+export async function listCampaignRecipients(
+  campaignId: string,
+): Promise<{ email: string; status: string }[]> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return [];
+  const PAGE = 1000;
+  const out: { email: string; status: string }[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await sb
+      .from(RECIPIENTS_TABLE)
+      .select("email,status")
+      .eq("campaign_id", campaignId)
+      .order("email", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error) {
+      console.error("[campaigns] listCampaignRecipients error:", error.message);
+      return out;
+    }
+    const rows = (data ?? []) as { email: string; status: string }[];
+    out.push(...rows);
+    if (rows.length < PAGE) return out;
+  }
 }
 
 export async function setCampaignStatus(id: string, status: string): Promise<void> {

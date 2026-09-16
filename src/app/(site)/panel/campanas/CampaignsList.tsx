@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { createDraftAction } from "./actions";
 import type { CampaignRow } from "@/lib/campaigns";
+import type { CampaignStats } from "@/lib/campaign-stats";
 
 function fmtDate(iso: string): string {
   try {
@@ -21,6 +22,7 @@ function fmtDate(iso: string): string {
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   draft: { bg: "#e2e8f0", text: "#334155" },
+  scheduled: { bg: "#fef3c7", text: "#92400e" },
   sending: { bg: "#dbeafe", text: "#1e40af" },
   sent: { bg: "#dcfce7", text: "#166534" },
   failed: { bg: "#fee2e2", text: "#b91c1c" },
@@ -28,6 +30,7 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Borrador",
+  scheduled: "Programada",
   sending: "Enviando",
   sent: "Enviada",
   failed: "Error",
@@ -49,7 +52,13 @@ const td = {
   color: "#1e293b",
 };
 
-export function CampaignsList({ campaigns }: { campaigns: CampaignRow[] }) {
+export function CampaignsList({
+  campaigns,
+  stats,
+}: {
+  campaigns: CampaignRow[];
+  stats: Record<string, CampaignStats>;
+}) {
   const router = useRouter();
   const [busy, start] = useTransition();
 
@@ -163,6 +172,8 @@ export function CampaignsList({ campaigns }: { campaigns: CampaignRow[] }) {
               <th style={{ ...th }}>Estado</th>
               <th style={{ ...th }}>Destinatarios</th>
               <th style={{ ...th }}>Enviada</th>
+              <th style={{ ...th, textAlign: "right" }}>Abiertos</th>
+              <th style={{ ...th, textAlign: "right" }}>Clics</th>
             </tr>
           </thead>
           <tbody>
@@ -212,7 +223,17 @@ export function CampaignsList({ campaigns }: { campaigns: CampaignRow[] }) {
                     {campaign.recipients_total ?? 0}
                   </td>
                   <td style={{ ...td }}>
-                    {campaign.sent_at ? fmtDate(campaign.sent_at) : "—"}
+                    {campaign.sent_at
+                      ? fmtDate(campaign.sent_at)
+                      : campaign.status === "scheduled" && campaign.scheduled_at
+                        ? `Programada · ${fmtDate(campaign.scheduled_at)}`
+                        : "—"}
+                  </td>
+                  <td style={{ ...td, textAlign: "right" }}>
+                    <Rate count={stats[campaign.id]?.opened} rate={stats[campaign.id]?.openRate} />
+                  </td>
+                  <td style={{ ...td, textAlign: "right" }}>
+                    <Rate count={stats[campaign.id]?.clicked} rate={stats[campaign.id]?.clickRate} />
                   </td>
                 </tr>
               );
@@ -221,5 +242,17 @@ export function CampaignsList({ campaigns }: { campaigns: CampaignRow[] }) {
         </table>
       </div>
     </div>
+  );
+}
+
+function Rate({ count, rate }: { count?: number; rate?: number | null }) {
+  if (count === undefined) return <span style={{ color: "#94a3b8" }}>—</span>;
+  return (
+    <span>
+      {count}
+      {rate !== null && rate !== undefined && (
+        <span style={{ color: "#64748b", fontSize: 12 }}> · {rate} %</span>
+      )}
+    </span>
   );
 }

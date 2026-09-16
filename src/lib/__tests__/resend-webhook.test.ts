@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, test } from "vitest";
-import { verifyResendSignature, resendEventStatus } from "../resend-webhook";
+import { verifyResendSignature, resendEventStatus, resendCampaignEventStatus } from "../resend-webhook";
 
 // Genera una firma Svix válida para el test (mismo algoritmo que el verificador).
 function sign(secretB64: string, id: string, ts: string, body: string): string {
@@ -52,5 +52,19 @@ describe("resendEventStatus", () => {
   test("otros eventos → null", () => {
     expect(resendEventStatus("email.sent")).toBeNull();
     expect(resendEventStatus("email.opened")).toBeNull();
+  });
+});
+
+describe("resendCampaignEventStatus", () => {
+  test("aperturas y clics cuentan para la campaña", () => {
+    expect(resendCampaignEventStatus("email.opened")).toBe("opened");
+    expect(resendCampaignEventStatus("email.clicked")).toBe("clicked");
+    expect(resendCampaignEventStatus("email.bounced")).toBe("bounced");
+    expect(resendCampaignEventStatus("email.sent")).toBeNull();
+  });
+
+  test("pero no llegan al estado del lead", () => {
+    expect(resendEventStatus("email.opened")).toBeNull();
+    expect(resendEventStatus("email.clicked")).toBeNull();
   });
 });

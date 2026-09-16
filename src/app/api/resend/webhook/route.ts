@@ -1,5 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { verifyResendSignature, resendEventStatus } from "@/lib/resend-webhook";
+import {
+  verifyResendSignature,
+  resendEventStatus,
+  resendCampaignEventStatus,
+} from "@/lib/resend-webhook";
 import { setLeadEmailStatusByMessageId, setCampaignRecipientStatusByMessageId } from "@/lib/imagina-leads";
 
 // Recibe los eventos de entrega de Resend (Svix) y actualiza el estado del email
@@ -35,11 +39,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "invalid_body" }, { status: 400 });
   }
 
-  const status = resendEventStatus(event.type ?? "");
   const messageId = event.data?.email_id ?? event.data?.id ?? null;
-  if (status && messageId) {
-    await setLeadEmailStatusByMessageId(messageId, status);
-    await setCampaignRecipientStatusByMessageId(messageId, status);
+  const leadStatus = resendEventStatus(event.type ?? "");
+  const recipientStatus = resendCampaignEventStatus(event.type ?? "");
+  if (messageId && leadStatus) await setLeadEmailStatusByMessageId(messageId, leadStatus);
+  if (messageId && recipientStatus) {
+    await setCampaignRecipientStatusByMessageId(messageId, recipientStatus);
   }
   // 200 con firma válida aunque no case ninguna fila → evita reintentos de Resend.
   return NextResponse.json({ ok: true });

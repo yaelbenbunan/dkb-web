@@ -8,13 +8,21 @@ import {
   listEmailTemplates,
   getBuiltinTemplates,
   saveEmailTemplate,
+  scheduleCampaign,
+  cancelCampaignSchedule,
 } from "@/lib/campaigns";
 import {
   generateCampaignBlocks,
   editCampaignBlocks,
   type BlocksFailureReason,
 } from "@/lib/campaign-ai";
-import { sendCampaign, sendCampaignTest } from "@/lib/campaign-send";
+import {
+  sendCampaign,
+  sendCampaignTest,
+  validateCampaign,
+  CAMPAIGN_NOT_CLAIMABLE,
+} from "@/lib/campaign-send";
+import { checkScheduleTime } from "@/lib/campaign-schedule";
 import { blocksSchema, sanitizeBlocks, type Block } from "@/lib/campaign-blocks";
 import { uploadCampaignImage } from "@/lib/campaign-images";
 import { sanitizeSenderName } from "@/lib/email-from";
@@ -28,6 +36,27 @@ const AI_FAILURE_MESSAGE: Record<BlocksFailureReason, string> = {
   "invalid-response":
     "La IA devolvió una propuesta que no encaja con los bloques del email. Vuelve a intentarlo o reformula el concepto.",
 };
+
+/** Códigos de error del envío traducidos para quien usa el panel. */
+const SEND_ERROR_MESSAGE: Record<string, string> = {
+  missing_subject: "Falta el asunto.",
+  from_email_not_allowed: "Ese email de envío no está autorizado.",
+  invalid_blocks: "El correo no tiene contenido válido.",
+  campaign_not_found: "Campaña no encontrada.",
+  [CAMPAIGN_NOT_CLAIMABLE]:
+    "La campaña ya se está enviando o está programada. Si está programada, cancela la programación antes de enviarla a mano.",
+};
+
+function sendErrorMessage(code: string | undefined, fallback: string): string {
+  return (code && SEND_ERROR_MESSAGE[code]) || code || fallback;
+}
+
+function parseLeadIds(csv: string): string[] {
+  return csv
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
 
 export async function createDraftAction(): Promise<{ id: string } | { error: string }> {
   const res = await createCampaign({});
@@ -200,18 +229,58 @@ export async function sendCampaignAction(
   campaignId: string,
   leadIdsCsv: string,
 ): Promise<{ ok: boolean; sent?: number; skipped?: number; error?: string }> {
-  const leadIds = leadIdsCsv
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const leadIds = parseLeadIds(leadIdsCsv);
   if (!campaignId || leadIds.length === 0) {
     return { ok: false, error: "Selecciona al menos un destinatario." };
   }
 
   const res = await sendCampaign(campaignId, leadIds);
   revalidatePath("/panel/campanas");
-  if (!res.ok) return { ok: false, error: res.error ?? "No se pudo enviar la campaña." };
+  if (!res.ok) return { ok: false, error: sendErrorMessage(res.error, "No se pudo enviar la campaña.") };
   return { ok: true, sent: res.sent, skipped: res.skipped };
+}
+
+/** Programa el envío. Se valida ya lo mismo que al enviar, para no descubrir a
+ *  la hora programada que faltaba el asunto; el cron lo vuelve a validar con
+ *  la versión que haya entonces. */
+export async function scheduleCampaignAction(
+  campaignId: string,
+  leadIdsCsv: string,
+  scheduledAtIso: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const leadIds = parseLeadIds(leadIdsCsv);
+  if (!campaignId || leadIds.length === 0) {
+    return { ok: false, error: "Selecciona al menos un destinatario." };
+  }
+  const when = checkScheduleTime(scheduledAtIso);
+  if (!when.ok) return { ok: false, error: when.error };
+
+  const campaign = await getCampaign(campaignId);
+  if (!campaign) return { ok: false, error: "Campaña no encontrada." };
+  const validated = validateCampaign(campaign);
+  if (!validated.ok) return { ok: false, error: sendErrorMessage(validated.error, "La campaña no es válida.") };
+
+  const res = await scheduleCampaign(campaignId, when.iso, leadIds);
+  revalidatePath("/panel/campanas");
+  if (res.ok) return { ok: true };
+  const SCHEDULE_ERROR: Record<typeof res.error, string> = {
+    not_schedulable: "Solo se pueden programar campañas en borrador.",
+    missing_migration:
+      "Falta la migración de envíos programados en la base de datos (docs/sql/2026-09-16-campaign-schedule.sql).",
+    db_error: "No se pudo programar la campaña.",
+  };
+  return { ok: false, error: SCHEDULE_ERROR[res.error] };
+}
+
+export async function cancelScheduleAction(
+  campaignId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  if (!campaignId) return { ok: false, error: "Falta el id de campaña." };
+  const ok = await cancelCampaignSchedule(campaignId);
+  revalidatePath("/panel/campanas");
+  return ok
+    ? { ok: true }
+    : { ok: false, error: "Ya no estaba programada: puede que se esté enviando en este momento." };
 }
 
 /** Sube una imagen propia y devuelve su URL pública, lista para pegarla en un

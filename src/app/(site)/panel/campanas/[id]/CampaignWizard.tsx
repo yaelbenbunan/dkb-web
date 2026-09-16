@@ -301,6 +301,11 @@ export function CampaignWizard({
           {step === 4 && (
             <StepSend
               campaignId={campaign.id}
+              status={campaign.status}
+              scheduledAt={campaign.scheduled_at ?? null}
+              scheduledCount={campaign.scheduled_lead_ids?.length ?? 0}
+              sentAt={campaign.sent_at}
+              recipientsTotal={campaign.recipients_total ?? 0}
               subject={subject}
               fromEmail={fromEmail}
               fromName={fromName}

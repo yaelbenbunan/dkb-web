@@ -2,6 +2,7 @@ import "server-only";
 import { getSupabaseAdmin } from "./supabase-admin";
 import { LEAD_STATUSES, type LeadStatus } from "./lead-status";
 import { isFollowupDate } from "./followup-agenda";
+import { statusesBelow, type RecipientEventStatus } from "./campaign-stats";
 import type { PromoQuestionnaireInput } from "./promo-questionnaire";
 import { promoQuestionnaireFields, formatQuestionnaireNotes } from "./promo-questionnaire";
 
@@ -582,18 +583,22 @@ export async function setLeadConsent(leadId: string, consent: boolean): Promise<
  *  evento es un rebote o una queja, propaga también el estado al lead (tabla
  *  `imagina_leads`) para que deje de ser emailable — best-effort, no aborta si
  *  falla. Devuelve el nº de filas de `campaign_recipients` actualizadas (0 si
- *  no rastreamos ese envío). */
+ *  no rastreamos ese envío o el destinatario ya estaba en un estado posterior). */
 export async function setCampaignRecipientStatusByMessageId(
   messageId: string,
-  status: string,
+  status: RecipientEventStatus,
 ): Promise<number> {
   const sb = getSupabaseAdmin();
   if (!sb) return 0;
-  const { data, error } = await sb
+  let query = sb
     .from("campaign_recipients")
     .update({ status, updated_at: new Date().toISOString() })
-    .eq("message_id", messageId)
-    .select("id,lead_id");
+    .eq("message_id", messageId);
+  // Entregado/abierto/clic solo hacen subir el estado: un evento que llega
+  // tarde no puede borrar una apertura ya registrada (ver campaign-stats.ts).
+  const below = statusesBelow(status);
+  if (below) query = query.in("status", below);
+  const { data, error } = await query.select("id,lead_id");
   if (error) {
     console.error(
       "[imagina-leads] setCampaignRecipientStatusByMessageId error:",

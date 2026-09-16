@@ -12,6 +12,7 @@ const state: {
   orCalls: string[];
   returnLeadRows: unknown[];
   updateCalls: { table: string; payload: Record<string, unknown>; eqField: string; eqValue: unknown }[];
+  inCalls: { field: string; values: unknown[] }[];
 } = {
   updatedTable: null,
   updated: null,
@@ -24,6 +25,7 @@ const state: {
   orCalls: [],
   returnLeadRows: [],
   updateCalls: [],
+  inCalls: [],
 };
 
 const { getAdminMock } = vi.hoisted(() => ({ getAdminMock: vi.fn() }));
@@ -46,7 +48,11 @@ function fakeClient() {
               state.eqValue = value;
               state.updateCalls.push({ table, payload, eqField: field, eqValue: value });
               const rowsForThisCall = table === "campaign_recipients" ? state.returnRows : [];
-              return {
+              const chain = {
+                in(inField: string, values: unknown[]) {
+                  state.inCalls.push({ field: inField, values });
+                  return chain;
+                },
                 async select() {
                   return { data: rowsForThisCall, error: null };
                 },
@@ -57,6 +63,7 @@ function fakeClient() {
                   return Promise.resolve({ data: null, error: null }).then(resolve);
                 },
               };
+              return chain;
             },
           };
         },
@@ -104,6 +111,7 @@ describe("campaign helpers en imagina-leads", () => {
     state.orCalls = [];
     state.returnLeadRows = [];
     state.updateCalls = [];
+    state.inCalls = [];
     getAdminMock.mockReset().mockReturnValue(fakeClient());
   });
 
@@ -115,6 +123,20 @@ describe("campaign helpers en imagina-leads", () => {
     expect(state.eqValue).toBe("msg-abc");
     expect(state.updated!.status).toBe("delivered");
     expect(n).toBe(1);
+  });
+
+  test("una apertura solo sube el estado: no pisa un clic ya registrado", async () => {
+    state.returnRows = [{ id: "rec-1", lead_id: "lead-1" }];
+    await setCampaignRecipientStatusByMessageId("msg-abc", "opened");
+    expect(state.updated!.status).toBe("opened");
+    expect(state.inCalls).toEqual([{ field: "status", values: ["pending", "sent", "delivered"] }]);
+    expect(state.updateCalls.some((c) => c.table === "imagina_leads")).toBe(false);
+  });
+
+  test("un rebote se escribe sin condición de estado", async () => {
+    state.returnRows = [{ id: "rec-1", lead_id: "lead-1" }];
+    await setCampaignRecipientStatusByMessageId("msg-abc", "bounced");
+    expect(state.inCalls).toEqual([]);
   });
 
   test("sin match devuelve 0", async () => {

@@ -1,8 +1,15 @@
 import Link from "next/link";
-import { getCampaign, listEmailTemplates, getBuiltinTemplates } from "@/lib/campaigns";
+import {
+  getCampaign,
+  listEmailTemplates,
+  getBuiltinTemplates,
+  listCampaignRecipients,
+} from "@/lib/campaigns";
+import { hasEngagementTracking, summarizeRecipientStatuses } from "@/lib/campaign-stats";
 import type { EmailTemplateRow } from "@/lib/campaigns";
 import { listEmailableLeads } from "@/lib/imagina-leads";
 import { CampaignWizard } from "./CampaignWizard";
+import { CampaignStats } from "./CampaignStats";
 
 export const metadata = {
   title: "Campaña — dinkbit",
@@ -87,6 +94,8 @@ export default async function CampaignPage({
   }
 
   const emailableLeads = await listEmailableLeads();
+  const showStats = campaign.status === "sent" || campaign.status === "sending";
+  const recipients = showStats ? await listCampaignRecipients(campaign.id) : [];
 
   return (
     <div style={containerStyle}>
@@ -114,6 +123,13 @@ export default async function CampaignPage({
       </header>
 
       <div style={{ padding: 22 }}>
+        {showStats && (
+          <CampaignStats
+            stats={summarizeRecipientStatuses(recipients.map((r) => r.status))}
+            recipients={recipients}
+            tracked={hasEngagementTracking(campaign.sent_at)}
+          />
+        )}
         <CampaignWizard campaign={campaign} templates={templates} emailableLeads={emailableLeads} />
       </div>
     </div>

@@ -4,7 +4,9 @@ import {
   getCampaign,
   updateCampaign,
   setCampaignStatus,
+  claimCampaignForSending,
   insertCampaignRecipients,
+  listDueScheduledCampaigns,
 } from "./campaigns";
 import { listEmailableLeads, type LeadRow } from "./imagina-leads";
 import { renderCampaignEmail } from "./campaign-render";
@@ -43,7 +45,7 @@ function chunk<T>(items: T[], size: number): T[][] {
   return out;
 }
 
-function validateCampaign(campaign: {
+export function validateCampaign(campaign: {
   subject: string | null;
   from_email: string | null;
   from_name?: string | null;
@@ -75,12 +77,21 @@ function getResendClient(): Resend {
   return new Resend(process.env.RESEND_API_KEY ?? "");
 }
 
+/** Error de `sendCampaign` cuando otro envío (manual o del cron) ya tiene la
+ *  campaña, o está programada y se intenta mandar a mano. */
+export const CAMPAIGN_NOT_CLAIMABLE = "campaign_not_claimable";
+
 /** Envía una campaña por lotes de 100 a los leads indicados, tras filtrar por
  *  consentimiento/email/no-rebote. Best-effort por lote: un lote que falla se
- *  registra como `failed` sin abortar el resto. */
+ *  registra como `failed` sin abortar el resto.
+ *
+ *  `scheduled: true` es el envío del cron: solo coge campañas programadas. Sin
+ *  él, solo borradores o campañas que fallaron — nunca una programada, que
+ *  saldría dos veces. */
 export async function sendCampaign(
   campaignId: string,
   leadIds: string[],
+  opts: { scheduled?: boolean } = {},
 ): Promise<{ ok: boolean; sent: number; skipped: number; error?: string }> {
   const campaign = await getCampaign(campaignId);
   if (!campaign) return { ok: false, sent: 0, skipped: 0, error: "campaign_not_found" };
@@ -95,12 +106,16 @@ export async function sendCampaign(
     return { ok: false, sent: 0, skipped: 0, error: "La campaña ya fue enviada." };
   }
 
+  const claimed = await claimCampaignForSending(
+    campaignId,
+    opts.scheduled ? ["scheduled"] : ["draft", "failed"],
+  );
+  if (!claimed) return { ok: false, sent: 0, skipped: 0, error: CAMPAIGN_NOT_CLAIMABLE };
+
   const wanted = new Set(leadIds);
   const allEmailable = await listEmailableLeads();
   const emailable = allEmailable.filter((lead) => wanted.has(lead.id) && isEmailableLead(lead));
   const skipped = leadIds.length - emailable.length;
-
-  await setCampaignStatus(campaignId, "sending");
 
   const resend = getResendClient();
   let sent = 0;
@@ -156,6 +171,28 @@ export async function sendCampaign(
   await updateCampaign(campaignId, { recipients_total: sent, sent_at: new Date().toISOString() });
 
   return { ok: true, sent, skipped };
+}
+
+/** Lo que ejecuta el cron: manda, una detrás de otra, las campañas programadas
+ *  cuya hora ya llegó. Si una no se puede enviar (le borraron el asunto, el
+ *  remitente ya no está permitido…) se marca `failed`: así aparece como Error
+ *  en el panel en vez de reintentarse cada cinco minutos. */
+export async function sendDueScheduledCampaigns(
+  now: Date = new Date(),
+): Promise<{ id: string; ok: boolean; sent: number; skipped: number; error?: string }[]> {
+  const due = await listDueScheduledCampaigns(now.toISOString());
+  const results = [];
+  for (const campaign of due) {
+    const res = await sendCampaign(campaign.id, campaign.scheduled_lead_ids ?? [], {
+      scheduled: true,
+    });
+    // Perder la carrera no es un fallo: otra ejecución la está enviando.
+    if (!res.ok && res.error !== CAMPAIGN_NOT_CLAIMABLE) {
+      await setCampaignStatus(campaign.id, "failed");
+    }
+    results.push({ id: campaign.id, ...res });
+  }
+  return results;
 }
 
 /** Envío de prueba a direcciones sueltas (QA de plantilla). No toca el CRM ni
