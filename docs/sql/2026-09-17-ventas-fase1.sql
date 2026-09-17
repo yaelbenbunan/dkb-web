@@ -135,6 +135,12 @@ create trigger ventas_actividad_inmutable
   before update or delete on public.ventas_actividad
   for each row execute function public.ventas_actividad_inmutable();
 
+-- También bloquea TRUNCATE (disparador por sentencia, misma función).
+drop trigger if exists ventas_actividad_no_truncate on public.ventas_actividad;
+create trigger ventas_actividad_no_truncate
+  before truncate on public.ventas_actividad
+  for each statement execute function public.ventas_actividad_inmutable();
+
 -- Importaciones ------------------------------------------------------------
 create table if not exists public.ventas_importaciones (
   id uuid primary key default gen_random_uuid(),
@@ -156,9 +162,26 @@ alter table public.ventas_leads enable row level security;
 alter table public.ventas_actividad enable row level security;
 alter table public.ventas_importaciones enable row level security;
 
+-- Código de cliente aleatorio --------------------------------------------
+-- 8 caracteres de un alfabeto sin 0/O/1/I para que se pueda dictar por teléfono.
+create or replace function public.ventas_codigo_aleatorio()
+returns text
+language plpgsql volatile as $$
+declare
+  v_alfabeto constant text := '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  v_codigo text := '';
+begin
+  for i in 1..8 loop
+    v_codigo := v_codigo || substr(v_alfabeto, 1 + floor(random() * length(v_alfabeto))::integer, 1);
+  end loop;
+  return v_codigo;
+end $$;
+
 -- RPC: crear leads + su entrada «lead_creado», en una sola transacción ----
 -- Los duplicados (email o teléfono ya existentes en la marca) se saltan sin
--- error: devuelve cuántos se crearon de verdad.
+-- error: devuelve cuántos se crearon de verdad. El código de cliente se
+-- regenera si ya existe en la marca, para que una colisión de código nunca
+-- se confunda con un contacto duplicado.
 create or replace function public.ventas_crear_leads(
   p_marca_id uuid,
   p_usuaria_id uuid,
@@ -169,7 +192,10 @@ create or replace function public.ventas_crear_leads(
 language plpgsql as $$
 declare
   v_prefijo text;
-  v_creados integer;
+  v_creados integer := 0;
+  v_lead jsonb;
+  v_codigo text;
+  v_id uuid;
 begin
   select upper(left(replace(slug, '-', ''), 3)) into v_prefijo
     from public.ventas_marcas where id = p_marca_id;
@@ -177,37 +203,45 @@ begin
     raise exception 'marca_no_existe';
   end if;
 
-  with nuevos as (
+  for v_lead in select value from jsonb_array_elements(p_leads) loop
+    loop
+      v_codigo := v_prefijo || '-' || public.ventas_codigo_aleatorio();
+      exit when not exists (
+        select 1 from public.ventas_leads
+        where marca_id = p_marca_id and codigo_cliente = v_codigo
+      );
+    end loop;
+
+    v_id := null;
     insert into public.ventas_leads (
       marca_id, negocio, tipo_negocio, contacto, telefono, email, ciudad, cif, web,
       origen, origen_detalle, codigo_cliente, excluido, created_by
-    )
-    select
+    ) values (
       p_marca_id,
-      l->>'negocio',
-      nullif(l->>'tipo_negocio', ''),
-      nullif(l->>'contacto', ''),
-      nullif(l->>'telefono', ''),
-      nullif(l->>'email', ''),
-      nullif(l->>'ciudad', ''),
-      nullif(l->>'cif', ''),
-      nullif(l->>'web', ''),
+      v_lead->>'negocio',
+      nullif(v_lead->>'tipo_negocio', ''),
+      nullif(v_lead->>'contacto', ''),
+      nullif(v_lead->>'telefono', ''),
+      nullif(v_lead->>'email', ''),
+      nullif(v_lead->>'ciudad', ''),
+      nullif(v_lead->>'cif', ''),
+      nullif(v_lead->>'web', ''),
       p_origen,
       p_origen_detalle,
-      v_prefijo || '-' || upper(substr(md5(gen_random_uuid()::text), 1, 6)),
-      coalesce((l->>'excluido')::boolean, false),
+      v_codigo,
+      coalesce((v_lead->>'excluido')::boolean, false),
       p_usuaria_id
-    from jsonb_array_elements(p_leads) as l
+    )
     on conflict do nothing
-    returning id
-  ), historial as (
-    insert into public.ventas_actividad (lead_id, marca_id, usuaria_id, tipo, datos)
-    select id, p_marca_id, p_usuaria_id, 'lead_creado',
-      jsonb_build_object('origen', p_origen, 'origen_detalle', p_origen_detalle)
-    from nuevos
-    returning 1
-  )
-  select count(*) into v_creados from historial;
+    returning id into v_id;
+
+    if v_id is not null then
+      insert into public.ventas_actividad (lead_id, marca_id, usuaria_id, tipo, datos)
+      values (v_id, p_marca_id, p_usuaria_id, 'lead_creado',
+        jsonb_build_object('origen', p_origen, 'origen_detalle', p_origen_detalle));
+      v_creados := v_creados + 1;
+    end if;
+  end loop;
 
   return v_creados;
 end $$;
@@ -268,3 +302,11 @@ revoke execute on function public.ventas_registrar_actividad(uuid, uuid, text, t
 revoke execute on function public.ventas_actividad_inmutable() from public, anon, authenticated;
 revoke execute on function public.ventas_norm_email(text) from public, anon, authenticated;
 revoke execute on function public.ventas_norm_telefono(text) from public, anon, authenticated;
+revoke execute on function public.ventas_codigo_aleatorio() from public, anon, authenticated;
+
+-- La clave de servicio (servidor) sí las ejecuta.
+grant execute on function public.ventas_norm_email(text) to service_role;
+grant execute on function public.ventas_norm_telefono(text) to service_role;
+grant execute on function public.ventas_codigo_aleatorio() to service_role;
+grant execute on function public.ventas_crear_leads(uuid, uuid, text, text, jsonb) to service_role;
+grant execute on function public.ventas_registrar_actividad(uuid, uuid, text, text, text, text, boolean, date) to service_role;
