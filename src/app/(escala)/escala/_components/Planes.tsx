@@ -45,10 +45,13 @@ const PLANES = [
 
 type Valor = true | false | string;
 
-const INCLUYE: { t: string; basico: Valor; avanzado: Valor; apagado?: boolean }[] = [
+type Fila = { t: string; basico: Valor; avanzado: Valor; apagado?: boolean };
+
+/** `termino` en plural: un centro de estética no tiene «sistema de pacientes». */
+const incluye = (termino: string): Fila[] => [
   { t: "Página web", basico: true, avanzado: true },
   { t: "Campañas de publicidad", basico: "Google o Meta", avanzado: "Google y Meta" },
-  { t: "Sistema de pacientes", basico: true, avanzado: true },
+  { t: `Sistema de ${termino}`, basico: true, avanzado: true },
   { t: "Citas en tu agenda", basico: true, avanzado: true },
   { t: "Panel de rentabilidad", basico: true, avanzado: true },
   { t: "Informe mensual de resultados", basico: true, avanzado: true },
@@ -104,7 +107,8 @@ const CONDICIONES =
   "configuración de las campañas y el alta en el sistema son trabajo real y concentrado, y " +
   "por eso no van dentro de la mensualidad.";
 
-export function Planes() {
+export function Planes({ termino = "pacientes" }: { termino?: string } = {}) {
+  const filas = incluye(termino);
   return (
     <div>
       {/* ── Tabla, de tableta para arriba ── */}
@@ -156,7 +160,7 @@ export function Planes() {
             </tr>
           </thead>
           <tbody>
-            {INCLUYE.map((fila) => (
+            {filas.map((fila) => (
               <tr key={fila.t} style={{ borderTop: `1px solid ${T.line}` }}>
                 <td className="py-4 pl-1 pr-6 text-left">
                   <p
@@ -229,7 +233,7 @@ export function Planes() {
                 ocho renglones centrados no se recorren con la vista, se leen
                 uno a uno buscando dónde empieza cada cual. */}
             <ul className="mt-6 space-y-3 text-left">
-              {INCLUYE.map((fila) => {
+              {filas.map((fila) => {
                 const valor = plan.id === "basico" ? fila.basico : fila.avanzado;
                 const dentro = valor !== false && !fila.apagado;
                 return (

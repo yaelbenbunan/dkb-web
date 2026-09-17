@@ -66,4 +66,34 @@ describe("las landings por sector", () => {
     // Y no lleva eyebrow: no tiene a quién señalar.
     expect(GENERAL.eyebrow).toBeUndefined();
   });
+
+  test("las cuentas de la comparativa cuadran", () => {
+    // **La tabla es el argumento entero de la página**, y quien la lee es dueño
+    // de un negocio: lo primero que hace es multiplicar. Si «el doble de
+    // beneficio» no sale el doble, o la factura no sale de sus propias filas,
+    // deja de creerse la tabla — y con ella todo lo demás. Pasó: fisioterapia y
+    // psicología prometían el doble con 1.500 € frente a 3.600 € y 3.400 €.
+    const euros = (t: string) => Number(t.replace(/[^0-9]/g, ""));
+    for (const s of [GENERAL, ...SECTORES_ESCALA]) {
+      const nombre = s.slug || "general";
+      const porPersona = euros(s.ticket) * Number(s.repite?.veces ?? 1);
+      for (const c of [s.sinEscala, s.conEscala]) {
+        expect(euros(c.factura), `${nombre}: factura`).toBe(Number(c.entran) * porPersona);
+        expect(euros(c.queda), `${nombre}: beneficio`).toBe(euros(c.factura) - euros(c.gasto));
+      }
+      if (s.conEscala.remate.includes("doble")) {
+        expect(euros(s.conEscala.queda), `${nombre}: el doble`).toBe(2 * euros(s.sinEscala.queda));
+      }
+    }
+  });
+
+  test("cada sector dice para quién es, con el nombre de su gremio", () => {
+    // Lo primero que tiene que leer un psicólogo es que esto está hecho para
+    // psicólogos. Un rótulo genérico lo deja en «otra agencia más».
+    for (const s of SECTORES_ESCALA) {
+      expect(s.eyebrow).toMatch(/^Especialistas en captar /);
+      expect(s.eyebrow).toContain(s.termino.plural);
+      expect(s.metaTitulo).toContain(s.termino.plural);
+    }
+  });
 });

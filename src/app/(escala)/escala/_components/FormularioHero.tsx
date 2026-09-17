@@ -43,7 +43,10 @@ const BORDE = "rgba(11, 27, 43, 0.16)";
  *   volvérselo a preguntar es un campo más entre él y el botón. Además el sector
  *   viaja con el lead, así que el aviso llega etiquetado aunque nadie lo toque.
  */
-export function FormularioHero({ sectorPorDefecto }: { sectorPorDefecto?: string } = {}) {
+export function FormularioHero({
+  sectorPorDefecto,
+  termino = "paciente",
+}: { sectorPorDefecto?: string; termino?: string } = {}) {
   const [pendiente, iniciar] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [enviado, setEnviado] = useState(false);
@@ -61,7 +64,7 @@ export function FormularioHero({ sectorPorDefecto }: { sectorPorDefecto?: string
         <p className="text-2xl font-black leading-tight">Recibido.</p>
         <p className="mt-3 text-base leading-relaxed" style={{ color: "rgba(11,27,43,0.65)" }}>
           Te escribimos hoy mismo. Mientras tanto, si quieres ir con los deberes hechos,
-          calcula lo que te cuesta hoy conseguir un paciente.
+          calcula lo que te cuesta hoy conseguir un {termino}.
         </p>
         <Link
           href="/escala/calculadora"

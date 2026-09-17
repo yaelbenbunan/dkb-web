@@ -1,4 +1,5 @@
 import { GROWTH_THEME as T } from "@/lib/growth-config";
+import { GENERAL, type SectorEscala } from "@/lib/escala-sectores";
 
 /**
  * Las preguntas que salen siempre en la primera llamada, contestadas antes.
@@ -17,17 +18,22 @@ import { GROWTH_THEME as T } from "@/lib/growth-config";
  * descubiertas tarde: soltarlas en la llamada, después de haber anunciado
  * "desde 199 €", mata la confianza justo en el momento de cerrar.
  *
+ * **Comunes, pero dichas con las palabras de cada sector.** Estuvieron fijas y la
+ * landing de psicología preguntaba por «el programa que uso en la clínica» y
+ * contestaba con Gesden, que es un gestor dental. La respuesta es la misma para
+ * todos; lo que no puede es delatar para quién se escribió.
+ *
  * Hechas con `<details>` nativo: se abren sin una línea de JavaScript, el
  * teclado y el lector de pantalla las entienden de serie, y el buscador ve el
  * texto de las respuestas aunque estén cerradas.
  */
 
-const PREGUNTAS: { p: string; r: string }[] = [
+const preguntasComunes = (s: SectorEscala): { p: string; r: string }[] => [
   {
     p: "¿Cómo puede costar tan poco?",
     r:
-      "Porque el sistema ya está construido y es el mismo para todas las clínicas. La web, " +
-      "el sistema de pacientes, la agenda y el panel no se hacen otra vez cada vez: lo que " +
+      `Porque el sistema ya está construido y es el mismo para ${s.local.todos}. La web, ` +
+      `el sistema de ${s.termino.plural}, la agenda y el panel no se hacen otra vez cada vez: lo que ` +
       "se prepara para ti son tus textos, tus tratamientos y tus campañas. No estás pagando " +
       "que alguien te desarrolle un sistema, estás pagando por usarlo.",
   },
@@ -65,13 +71,16 @@ const PREGUNTAS: { p: string; r: string }[] = [
       "día de la baja.",
   },
   {
-    p: "¿Tengo que cambiar el programa que uso en la clínica?",
+    p: `¿Tengo que cambiar el programa que uso en ${s.local.uno}?`,
     r:
-      "No. Tu recepción sigue dando hora donde la da hoy. Si tu agenda está en Google " +
+      "No. Se sigue dando hora donde se da hoy. Si tu agenda está en Google " +
       "Calendar o en Outlook, la conectamos y las citas que vengan de campañas se escriben " +
       "en un calendario aparte dentro de tu propia cuenta, para que se vean junto a las " +
-      "demás sin mezclarse. Y si tu agenda vive en Gesden, Clinic Cloud o cualquier otro " +
-      "gestor, el sistema funciona igual: lo que medimos es de dónde viene cada paciente y " +
+      "demás sin mezclarse. " +
+      (s.gestores
+        ? `Y si tu agenda vive en ${s.gestores} o cualquier otro gestor, `
+        : "Y si tu agenda vive en tu programa de gestión, ") +
+      `el sistema funciona igual: lo que medimos es de dónde viene cada ${s.termino.singular} y ` +
       "cuánto factura, no dónde está escrita la cita.",
   },
   {
@@ -81,20 +90,19 @@ const PREGUNTAS: { p: string; r: string }[] = [
       "página de captación, alojada por nosotros, y ahí dirigimos todo el tráfico de las " +
       "campañas. Está lista en días y no hay que tocar nada de lo que ya tienes. Sale " +
       "mejor así: a esa página solo llega gente de anuncios, y por eso los números se " +
-      "pueden atribuir con precisión. Lo que sí conviene saber es que los pacientes que " +
+      `pueden atribuir con precisión. Lo que sí conviene saber es que los ${s.termino.plural} que ` +
       "entren por tu web de siempre no aparecerán en el sistema. Si más adelante quieres " +
       "que la página vaya en un dominio tuyo, se cambia cuando digas.",
   },
 ];
 
 /**
- * @param extra Las preguntas propias de un sector, que van DELANTE de las
- *   comunes. Delante y no detrás: quien entra por una landing de sector llega
+ * @param sector Sus preguntas propias van DELANTE de las comunes. Delante y no detrás: quien entra por una landing de sector llega
  *   con la duda de su gremio —si se puede anunciar terapia, si sirve trabajando
  *   con mutuas—, y enterrada bajo siete preguntas de dinero no la encuentra.
  */
-export function Faqs({ extra = [] }: { extra?: { p: string; r: string }[] } = {}) {
-  const preguntas = [...extra, ...PREGUNTAS];
+export function Faqs({ sector = GENERAL }: { sector?: SectorEscala } = {}) {
+  const preguntas = [...sector.preguntas, ...preguntasComunes(sector)];
   return (
     // Un tercio y dos tercios, en proporción y no en un ancho fijo. La columna
     // del título estaba topada en 22 rem, así que en un monitor ancho se

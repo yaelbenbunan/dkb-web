@@ -1,11 +1,12 @@
 /**
  * Las landings por sector, todas dentro de /escala.
  *
- * **Qué cambia y qué no.** Cambian la cabecera, los números de la comparativa y
- * las preguntas frecuentes. El resto —los tres pasos, los planes, el precio, el
- * compromiso— es el mismo producto y se comparte, porque lo es: montar una copia
- * entera por sector significa que el día que suba el precio hay que acordarse de
- * tocarlo en cinco sitios, y no se acuerda nadie.
+ * **Qué cambia y qué no.** Cambian las palabras y los números: la cabecera, la
+ * foto, cómo se llama a quien entra, la tabla, los pasos y las preguntas. El
+ * producto —los planes, el precio, el compromiso— es el mismo y se comparte,
+ * porque lo es: montar una copia entera por sector significa que el día que
+ * suba el precio hay que acordarse de tocarlo en cinco sitios, y no se acuerda
+ * nadie.
  *
  * **Por qué merecen página propia igualmente.** Dos razones que no son de SEO.
  * La primera: los números. El dueño de un centro de fisioterapia no se reconoce
@@ -64,13 +65,27 @@ export interface SectorEscala {
   metaDescripcion: string;
 
   /**
-   * Encima del titular, y solo en las de sector.
+   * Encima del titular, y solo en las de sector: «Especialistas en captar
+   * pacientes para psicólogos».
+   *
+   * **Dice la especialidad, no solo el destinatario.** Estuvo como «Para
+   * consultas de psicología», que señala a quién va dirigida pero no por qué
+   * nosotros: cualquier agencia puede poner «para psicólogos» encima de su
+   * página. Lo que distingue es que captar pacientes para ese gremio es lo único
+   * que hacemos.
    *
    * La general no lo lleva —no tiene a quién dirigirse— y ponerle uno genérico
    * sería una línea que no dice nada robándole aire al titular.
    */
   eyebrow?: string;
-  /** El titular, en dos frases: la segunda va en lima. */
+  /**
+   * El titular, en dos frases: la segunda va en lima.
+   *
+   * Es el mismo en todas a propósito. Se probó a cambiar la agenda por lo que
+   * llena cada gremio —«la cabina», «la camilla»— y no gustó: es jerga que
+   * suena a haberla buscado, y «tu agenda» la entiende igual un dentista que
+   * una psicóloga. Lo que dice el sector es el rótulo de encima.
+   */
   titular: { primera: string; segunda: string };
   /** El subtítulo. `resaltado` se subraya a mano. */
   subtitulo: { antes: string; resaltado: string; despues: string };
@@ -80,11 +95,26 @@ export interface SectorEscala {
    *
    * Un centro de estética no tiene pacientes y una consulta de psicología no
    * tiene clientes. Es una palabra, y es la que delata si la página está escrita
-   * para ellos o es la de dentistas con el título cambiado.
+   * para ellos o es la de dentistas con el título cambiado — por eso llega a
+   * todas partes: los pasos, los planes y las preguntas comunes.
    */
   termino: { singular: string; plural: string };
   /** Cómo se llama el negocio en la comparativa: «Clínica sin escala», «Centro…». */
   negocio: string;
+  /**
+   * El negocio con artículo, para las preguntas comunes: «¿Tengo que cambiar
+   * el programa que uso en la consulta?». `todos` es el plural: «es el mismo
+   * para todos los centros».
+   */
+  local: { uno: string; todos: string };
+  /**
+   * Los programas de gestión que el lector reconoce como suyos, si los hay.
+   *
+   * Solo donde sabemos cuáles usa el gremio. Nombrar Gesden a una psicóloga
+   * delata que la respuesta se escribió para dentistas; sin nombres, se habla
+   * de «tu programa de gestión» y vale para cualquiera.
+   */
+  gestores?: string;
 
   /**
    * Foto de fondo del hero, muy tenue. Es lo que distingue una landing de otra
@@ -103,9 +133,30 @@ export interface SectorEscala {
 
   /** Titular de la sección del problema. */
   tituloProblema: string;
+  /**
+   * Lo que le queda al profesional: «Tú encárgate de {tuParte}. Nosotros, de
+   * todo lo demás.» Un dentista trata, una psicóloga acompaña.
+   */
+  tuParte: string;
+  /**
+   * Las descripciones de dos de los tres pasos. El trabajo es el mismo en todos
+   * los sectores; lo que cambia es a quién se busca y qué se mide, y decirlo con
+   * las palabras del gremio es lo que hace creíble que lo conocemos.
+   */
+  pasos: { traemos: string; analizamos: string };
 
-  /** El ticket medio que se usa en la tabla. */
+  /**
+   * El ticket que se usa en la tabla.
+   *
+   * Cuando hay `repite`, es el precio de **una** sesión o visita, no lo que deja
+   * el paciente entero. Estuvo al revés —300 € de «ticket medio» en psicología—
+   * y nadie del gremio se lo cree: lee «ticket» como precio de sesión, que ronda
+   * los 60 €. Se enseñan las dos piezas por separado y la factura sale de
+   * multiplicarlas, que es la cuenta que hace el lector de cabeza.
+   */
   ticket: string;
+  /** En los gremios donde se viene varias veces: cuántas, y cómo se rotula. */
+  repite?: { rotuloPrecio: string; rotuloVeces: string; veces: string };
   sinEscala: FilaComparativa;
   conEscala: FilaComparativa;
 
@@ -121,6 +172,17 @@ export interface SectorEscala {
 
 const REMATE_SIN = "Trabaja a tope. Y cobra por trabajar, no por ganar.";
 
+const TITULAR = { primera: "Llenar tu agenda es fácil.", segunda: "Ganar más, no." };
+const PROBLEMA = "Puedes tener la agenda llena y estar perdiendo dinero.";
+
+function subtitulo(plural: string) {
+  return {
+    antes: `Cualquiera te trae ${plural}. Nosotros te hacemos `,
+    resaltado: "ganar más",
+    despues: ".",
+  };
+}
+
 /**
  * La landing de siempre, la de `/escala`.
  *
@@ -135,16 +197,21 @@ export const GENERAL: SectorEscala = {
   metaDescripcion:
     "Un sistema integral que se ocupa de todo el proceso, con un único objetivo: que cada euro invertido genere más. Desde 199 €/mes y sin permanencia.",
 
-  titular: { primera: "Llenar tu agenda es fácil.", segunda: "Ganar más, no." },
-  subtitulo: {
-    antes: "Cualquiera te trae pacientes. Nosotros te hacemos ",
-    resaltado: "ganar más",
-    despues: ".",
-  },
+  titular: TITULAR,
+  subtitulo: subtitulo("pacientes"),
   termino: { singular: "paciente", plural: "pacientes" },
   negocio: "Clínica",
+  local: { uno: "la clínica", todos: "todas las clínicas" },
+  gestores: "Gesden, Clinic Cloud",
 
-  tituloProblema: "Puedes tener la agenda llena y estar perdiendo dinero.",
+  tituloProblema: PROBLEMA,
+  tuParte: "darle un buen servicio a tus pacientes",
+  pasos: {
+    traemos:
+      "Campañas en Google y Meta gestionadas por el mismo equipo. Cada paciente entra en tu sistema con su ficha, su origen y su cita en tu calendario.",
+    analizamos: "Quién acudió, qué se hizo y cuánto facturó. Con eso ajustamos las campañas cada mes.",
+  },
+
   ticket: "250 €",
   sinEscala: {
     entran: "40",
@@ -168,22 +235,30 @@ export const DENTAL: SectorEscala = {
   slug: "dental",
   valorFormulario: "Clínica dental",
 
-  metaTitulo: "Marketing para clínicas dentales — llenar la agenda es fácil, ganar más no",
+  metaTitulo: "Captación de pacientes para clínicas dentales — llenar la agenda es fácil, ganar más no",
   metaDescripcion:
-    "Web, campañas y sistema de pacientes para clínicas dentales, con un único objetivo: que cada euro invertido genere más. Desde 199 €/mes y sin permanencia.",
+    "Especialistas en captar pacientes para clínicas dentales: web, campañas y sistema de pacientes, con un único objetivo: que cada euro invertido genere más. Desde 199 €/mes y sin permanencia.",
 
-  eyebrow: "Para clínicas dentales",
-  titular: { primera: "Llenar tu agenda es fácil.", segunda: "Ganar más, no." },
-  subtitulo: {
-    antes: "Cualquiera te trae pacientes. Nosotros te hacemos ",
-    resaltado: "ganar más",
-    despues: ".",
-  },
+  eyebrow: "Especialistas en captar pacientes para clínicas dentales",
+  titular: TITULAR,
+  subtitulo: subtitulo("pacientes"),
   termino: { singular: "paciente", plural: "pacientes" },
   negocio: "Clínica",
+  local: { uno: "la clínica", todos: "todas las clínicas dentales" },
+  gestores: "Gesden, Clinic Cloud",
   imagen: "/img/landings/escala-dental.jpg",
 
-  tituloProblema: "Puedes tener la agenda llena y estar perdiendo dinero.",
+  tituloProblema: PROBLEMA,
+  tuParte: "tratar a tus pacientes",
+  pasos: {
+    traemos:
+      "Campañas en Google y Meta para quien busca dentista cerca: implantes, ortodoncia, estética dental. Cada paciente entra en tu sistema con su ficha, su origen y su cita.",
+    analizamos:
+      "Quién acudió, qué tratamiento aceptó y cuánto facturó. Con eso ajustamos las campañas cada mes.",
+  },
+
+  // En dental sí vale un ticket medio por paciente: entre la primera visita y el
+  // presupuesto que acepta, es la cifra con la que el sector ya hace cuentas.
   ticket: "250 €",
   sinEscala: {
     entran: "40",
@@ -211,12 +286,12 @@ export const DENTAL: SectorEscala = {
         "ajusta la inversión.",
     },
     {
-      p: "¿Tengo que cambiar Gesden, Clinic Cloud o el programa que uso?",
+      p: "¿No me llenaréis la agenda de gente que solo viene a la primera visita gratis?",
       r:
-        "No. Tu recepción sigue dando hora donde la da hoy. El sistema no sustituye a tu " +
-        "gestor dental: lo que mide es de dónde viene cada paciente nuevo y cuánto factura, " +
-        "no dónde está escrita la cita. Si además tenéis la agenda en Google Calendar, la " +
-        "conectamos y las citas de campañas se escriben solas.",
+        "Es lo que pasa cuando una campaña se mide por citas. Aquí se mide por lo que " +
+        "factura cada paciente, así que si una campaña trae primeras visitas que no acaban " +
+        "en ningún presupuesto aceptado, se ve en el panel ese mismo mes y se corrige. Qué " +
+        "se anuncia lo decides tú, sabiendo ya qué trae cada cosa.",
     },
   ],
 };
@@ -225,27 +300,34 @@ export const ESTETICA: SectorEscala = {
   slug: "estetica",
   valorFormulario: "Centro de estética",
 
-  metaTitulo: "Marketing para centros de estética — llenar la agenda es fácil, ganar más no",
+  metaTitulo: "Captación de clientes para centros de estética — llenar la agenda es fácil, ganar más no",
   metaDescripcion:
-    "Web, campañas y sistema de clientes para centros de estética y medicina estética. Que cada euro invertido genere más. Desde 199 €/mes y sin permanencia.",
+    "Especialistas en captar clientes para centros de estética y medicina estética: web, campañas y sistema de clientes. Que cada euro invertido genere más. Desde 199 €/mes y sin permanencia.",
 
-  eyebrow: "Para centros de estética",
-  titular: { primera: "Llenar la cabina es fácil.", segunda: "Ganar más, no." },
-  subtitulo: {
-    antes: "Cualquiera te trae clientes. Nosotros te hacemos ",
-    resaltado: "ganar más",
-    despues: ".",
-  },
+  eyebrow: "Especialistas en captar clientes para centros de estética",
+  titular: TITULAR,
+  subtitulo: subtitulo("clientes"),
   termino: { singular: "cliente", plural: "clientes" },
   negocio: "Centro",
+  local: { uno: "el centro", todos: "todos los centros de estética" },
+  imagen: "/img/landings/escala-estetica.jpg",
 
-  tituloProblema: "Puedes tener la cabina llena y estar perdiendo dinero.",
-  ticket: "400 €",
+  tituloProblema: PROBLEMA,
+  tuParte: "cuidar a tus clientes",
+  pasos: {
+    traemos:
+      "Campañas en Google y Meta para quien busca tratamientos faciales, corporales o de medicina estética cerca de ti. Cada cliente entra en tu sistema con su ficha, su origen y su cita.",
+    analizamos:
+      "Quién vino, qué tratamientos se hizo y cuánto lleva dejado desde que entró. Con eso ajustamos las campañas cada mes.",
+  },
+
+  ticket: "80 €",
+  repite: { rotuloPrecio: "Precio por visita", rotuloVeces: "Visitas por cliente", veces: "5" },
   sinEscala: {
     entran: "30",
-    gasto: "9.000 €",
+    gasto: "9.600 €",
     factura: "12.000 €",
-    queda: "3.000 €",
+    queda: "2.400 €",
     remate: REMATE_SIN,
   },
   conEscala: {
@@ -282,36 +364,40 @@ export const FISIOTERAPIA: SectorEscala = {
   slug: "fisioterapia",
   valorFormulario: "Fisioterapia",
 
-  metaTitulo: "Marketing para fisioterapia — llenar la agenda es fácil, ganar más no",
+  metaTitulo: "Captación de pacientes para fisioterapeutas — llenar la agenda es fácil, ganar más no",
   metaDescripcion:
-    "Web, campañas y sistema de pacientes para centros de fisioterapia. Que cada euro invertido genere más. Desde 199 €/mes y sin permanencia.",
+    "Especialistas en captar pacientes para centros de fisioterapia: web, campañas y sistema de pacientes. Que cada euro invertido genere más. Desde 199 €/mes y sin permanencia.",
 
-  eyebrow: "Para centros de fisioterapia",
-  titular: { primera: "Llenar la camilla es fácil.", segunda: "Ganar más, no." },
-  subtitulo: {
-    antes: "Cualquiera te trae pacientes. Nosotros te hacemos ",
-    resaltado: "ganar más",
-    despues: ".",
-  },
+  eyebrow: "Especialistas en captar pacientes para fisioterapeutas",
+  titular: TITULAR,
+  subtitulo: subtitulo("pacientes"),
   termino: { singular: "paciente", plural: "pacientes" },
   negocio: "Centro",
+  local: { uno: "el centro", todos: "todos los centros de fisioterapia" },
 
-  tituloProblema: "Puedes tener la agenda llena y estar perdiendo dinero.",
-  // El ticket no es la sesión suelta: es lo que deja un paciente nuevo en el
-  // tratamiento entero, que es la cifra con la que se decide si sale a cuenta.
-  ticket: "180 €",
+  tituloProblema: PROBLEMA,
+  tuParte: "tratar a tus pacientes",
+  pasos: {
+    traemos:
+      "Campañas en Google y Meta para quien busca fisioterapeuta cerca: una lesión, un dolor de espalda, una recuperación. Cada paciente entra en tu sistema con su ficha, su origen y su cita.",
+    analizamos:
+      "Quién vino, cuántas sesiones hizo y cuánto facturó. Con eso ajustamos las campañas cada mes.",
+  },
+
+  ticket: "45 €",
+  repite: { rotuloPrecio: "Precio por sesión", rotuloVeces: "Sesiones por paciente", veces: "5" },
   sinEscala: {
-    entran: "50",
-    gasto: "7.500 €",
+    entran: "40",
+    gasto: "7.000 €",
     factura: "9.000 €",
-    queda: "1.500 €",
+    queda: "2.000 €",
     remate: REMATE_SIN,
   },
   conEscala: {
-    entran: "25",
-    gasto: "900 €",
+    entran: "20",
+    gasto: "500 €",
     factura: "4.500 €",
-    queda: "3.600 €",
+    queda: "4.000 €",
     remate: "La mitad de pacientes. El doble de beneficio.",
   },
 
@@ -339,36 +425,45 @@ export const PSICOLOGIA: SectorEscala = {
   slug: "psicologia",
   valorFormulario: "Psicología",
 
-  metaTitulo: "Marketing para psicólogos — llenar la agenda es fácil, ganar más no",
+  metaTitulo: "Captación de pacientes para psicólogos — llenar la agenda es fácil, ganar más no",
   metaDescripcion:
-    "Web, campañas y sistema de pacientes para consultas de psicología. Que cada euro invertido genere más. Desde 199 €/mes y sin permanencia.",
+    "Especialistas en captar pacientes para psicólogos y consultas de psicología: web, campañas y sistema de pacientes. Que cada euro invertido genere más. Desde 199 €/mes y sin permanencia.",
 
-  eyebrow: "Para consultas de psicología",
-  titular: { primera: "Llenar tu agenda es fácil.", segunda: "Ganar más, no." },
-  subtitulo: {
-    antes: "Cualquiera te trae pacientes. Nosotros te hacemos ",
-    resaltado: "ganar más",
-    despues: ".",
-  },
+  eyebrow: "Especialistas en captar pacientes para psicólogos",
+  titular: TITULAR,
+  subtitulo: subtitulo("pacientes"),
   termino: { singular: "paciente", plural: "pacientes" },
   negocio: "Consulta",
+  local: { uno: "la consulta", todos: "todas las consultas de psicología" },
+  imagen: "/img/landings/escala-psicologia.jpg",
 
-  tituloProblema: "Puedes tener la agenda llena y estar perdiendo dinero.",
-  // Lo que deja un paciente a lo largo del proceso, no la sesión suelta.
-  ticket: "300 €",
+  tituloProblema: PROBLEMA,
+  tuParte: "acompañar a tus pacientes",
+  pasos: {
+    traemos:
+      "Campañas en Google y Meta para quien busca psicólogo: terapia individual, de pareja u online. Cada paciente entra en tu sistema con su ficha, su origen y su primera cita.",
+    analizamos:
+      "Quién vino, cuántas sesiones hizo y cuánto facturó. Con eso ajustamos las campañas cada mes.",
+  },
+
+  // Una consulta privada no capta cuarenta pacientes nuevos al mes: capta unos
+  // pocos que se quedan varias semanas. Por eso aquí son menos y no la mitad
+  // exacta, y lo que sostiene la factura son las sesiones, no el volumen.
+  ticket: "60 €",
+  repite: { rotuloPrecio: "Precio por sesión", rotuloVeces: "Sesiones por paciente", veces: "6" },
   sinEscala: {
-    entran: "25",
-    gasto: "6.000 €",
-    factura: "7.500 €",
-    queda: "1.500 €",
+    entran: "12",
+    gasto: "3.240 €",
+    factura: "4.320 €",
+    queda: "1.080 €",
     remate: REMATE_SIN,
   },
   conEscala: {
-    entran: "14",
-    gasto: "800 €",
-    factura: "4.200 €",
-    queda: "3.400 €",
-    remate: "La mitad de pacientes. El doble de beneficio.",
+    entran: "8",
+    gasto: "720 €",
+    factura: "2.880 €",
+    queda: "2.160 €",
+    remate: "Menos pacientes. El doble de beneficio.",
   },
 
   preguntas: [

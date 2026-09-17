@@ -137,26 +137,22 @@ function Eyebrow({ children, color = T.lime }: { children: React.ReactNode; colo
  * Y ninguno dice "CRM". Lo entiende quien ya sabe lo que es, que no es el
  * dueño de una clínica dental.
  *
- * No cambian por sector: montar la web, traer gente y medir qué dejó es
- * exactamente el mismo trabajo en una consulta de psicología que en una dental.
+ * El trabajo no cambia por sector —montar la web, traer gente y medir qué dejó
+ * es lo mismo en una consulta de psicología que en una dental—, pero sí cómo se
+ * cuenta: a quién se busca y qué se mide. Estuvo fijo, y la landing de estética
+ * prometía «Traemos tus pacientes» a un centro que no tiene pacientes.
  */
-const PASOS = [
-  {
-    n: "01",
-    t: "Hacemos tu web",
-    d: "Montada y alojada por nosotros, pensada para que quien entre pida cita. No hay que tocar nada ni contratar a nadie más.",
-  },
-  {
-    n: "02",
-    t: "Traemos tus pacientes",
-    d: "Campañas en Google y Meta gestionadas por el mismo equipo. Cada paciente entra en tu sistema con su ficha, su origen y su cita en tu calendario.",
-  },
-  {
-    n: "03",
-    t: "Analizamos tu rentabilidad",
-    d: "Quién acudió, qué se hizo y cuánto facturó. Con eso ajustamos las campañas cada mes.",
-  },
-];
+function pasosPara(sector: SectorEscala) {
+  return [
+    {
+      n: "01",
+      t: "Hacemos tu web",
+      d: "Montada y alojada por nosotros, pensada para que quien entre pida cita. No hay que tocar nada ni contratar a nadie más.",
+    },
+    { n: "02", t: `Traemos tus ${sector.termino.plural}`, d: sector.pasos.traemos },
+    { n: "03", t: "Analizamos tu rentabilidad", d: sector.pasos.analizamos },
+  ];
+}
 
 /** «pacientes» → «Pacientes», para el rótulo de la tabla. */
 function enMayuscula(palabra: string): string {
@@ -388,7 +384,10 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
                 Solo desde xl, que es donde hay dos columnas: apiladas, ese
                 margen sería un hueco entre el texto y el formulario. */}
             <div className="xl:mt-12">
-              <FormularioHero sectorPorDefecto={sector.valorFormulario} />
+              <FormularioHero
+                sectorPorDefecto={sector.valorFormulario}
+                termino={sector.termino.singular}
+              />
             </div>
           </div>
         </Wrap>
@@ -448,7 +447,15 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
 
                   <div className="mt-7 space-y-4">
                     {[
-                      { k: "Ticket medio", v: sector.ticket },
+                      // Donde se viene varias veces, precio y veces por
+                      // separado: un «ticket medio» de 300 € en psicología se
+                      // lee como precio de sesión y nadie se lo cree.
+                      ...(sector.repite
+                        ? [
+                            { k: sector.repite.rotuloPrecio, v: sector.ticket },
+                            { k: sector.repite.rotuloVeces, v: sector.repite.veces },
+                          ]
+                        : [{ k: "Ticket medio", v: sector.ticket }]),
                       { k: `${enMayuscula(sector.termino.plural)} nuevos`, v: c.entran },
                       { k: "Se gasta en traerlos", v: c.gasto },
                       { k: "Factura", v: c.factura },
@@ -544,12 +551,12 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
               className="mt-8 font-bold leading-[1.2] tracking-[-0.015em] text-balance"
               style={{ fontSize: "clamp(1.375rem, 2.4vw, 2.25rem)" }}
             >
-              Tú encárgate de darle un buen servicio a tus {sector.termino.plural}.{" "}
+              Tú encárgate de {sector.tuParte}.{" "}
               <span style={{ color: T.lime }}>Nosotros, de todo lo demás.</span>
             </p>
           </AlAparecer>
 
-          <Pasos pasos={PASOS} />
+          <Pasos pasos={pasosPara(sector)} />
         </Wrap>
       </section>
 
@@ -569,7 +576,7 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
               la tabla. Ver el porqué allí: aquí fuera dejaba una banda vacía a
               su derecha y otra entre él y la tabla. */}
           <AlAparecer>
-            <Planes />
+            <Planes termino={sector.termino.plural} />
           </AlAparecer>
         </Wrap>
       </section>
@@ -677,7 +684,7 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
         <Trama motivo="rayas" desde="20% 60%" />
         <Wrap className="relative">
           <AlAparecer>
-            <Faqs extra={sector.preguntas} />
+            <Faqs sector={sector} />
           </AlAparecer>
         </Wrap>
       </section>
