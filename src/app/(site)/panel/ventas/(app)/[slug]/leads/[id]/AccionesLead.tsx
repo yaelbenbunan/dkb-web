@@ -16,11 +16,12 @@ const PESTANAS: { clave: Pestana; texto: string }[] = [
   { clave: "fase", texto: "Cambiar fase" },
 ];
 
-function Seguimiento() {
+function Seguimiento({ actual }: { actual: string | null }) {
   return (
     <label style={etiqueta}>
       Próximo seguimiento
-      <input name="proximo_seguimiento" type="date" style={campo} />
+      <input name="proximo_seguimiento" type="date" defaultValue={actual ?? ""} style={campo} />
+      <span style={{ fontSize: 12, fontWeight: 400, color: "#64748b" }}>Déjala vacía para quitar el seguimiento.</span>
     </label>
   );
 }
@@ -34,7 +35,17 @@ function Nota({ requerida = false }: { requerida?: boolean }) {
   );
 }
 
-export function AccionesLead({ slug, leadId, fase }: { slug: string; leadId: string; fase: Fase }) {
+export function AccionesLead({
+  slug,
+  leadId,
+  fase,
+  proximoSeguimiento,
+}: {
+  slug: string;
+  leadId: string;
+  fase: Fase;
+  proximoSeguimiento: string | null;
+}) {
   const [pestana, setPestana] = useState<Pestana>("llamada");
   const [rLlamada, aLlamada, pLlamada] = useActionState<ResultadoAccion | null, FormData>(registrarLlamadaAction.bind(null, slug, leadId), null);
   const [rMuestras, aMuestras, pMuestras] = useActionState<ResultadoAccion | null, FormData>(muestrasEnviadasAction.bind(null, slug, leadId), null);
@@ -69,7 +80,7 @@ export function AccionesLead({ slug, leadId, fase }: { slug: string; leadId: str
             ))}
           </fieldset>
           <Nota />
-          <Seguimiento />
+          <Seguimiento actual={proximoSeguimiento} />
           <p style={{ margin: 0, fontSize: 12, color: "#64748b" }}>
             «No le interesa» y «Número erróneo» cierran el lead y borran el seguimiento.
           </p>
@@ -83,7 +94,7 @@ export function AccionesLead({ slug, leadId, fase }: { slug: string; leadId: str
       {pestana === "muestras" && (
         <form action={aMuestras} style={formulario}>
           <Nota />
-          <Seguimiento />
+          <Seguimiento actual={proximoSeguimiento} />
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <button type="submit" disabled={pMuestras} style={botonPrimario}>Apuntar envío de muestras</button>
             <Mensaje resultado={rMuestras} />
@@ -94,7 +105,7 @@ export function AccionesLead({ slug, leadId, fase }: { slug: string; leadId: str
       {pestana === "nota" && (
         <form action={aNota} style={formulario}>
           <Nota requerida />
-          <Seguimiento />
+          <Seguimiento actual={proximoSeguimiento} />
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <button type="submit" disabled={pNota} style={botonPrimario}>Añadir nota</button>
             <Mensaje resultado={rNota} />

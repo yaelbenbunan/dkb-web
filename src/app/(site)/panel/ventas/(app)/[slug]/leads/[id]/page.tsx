@@ -48,7 +48,7 @@ export default async function FichaLeadPage({ params }: { params: Promise<{ slug
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <AccionesLead slug={slug} leadId={lead.id} fase={lead.fase} />
+          <AccionesLead slug={slug} leadId={lead.id} fase={lead.fase} proximoSeguimiento={lead.proximo_seguimiento} />
           <section style={tarjeta}>
             <h2 style={titulo}>Historial</h2>
             <ol style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 10 }}>
