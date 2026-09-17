@@ -5,6 +5,7 @@ const m = vi.hoisted(() => ({
   crearUsuariaCompleta: vi.fn(),
   setUsuariaActiva: vi.fn(),
   setPasswordUsuaria: vi.fn(),
+  getUsuaria: vi.fn(),
   revalidatePath: vi.fn(),
 }));
 vi.mock("@/lib/ventas/auth", () => ({ requireUsuaria: m.requireUsuaria }));
@@ -12,6 +13,7 @@ vi.mock("@/lib/ventas/db", () => ({
   crearUsuariaCompleta: m.crearUsuariaCompleta,
   setUsuariaActiva: m.setUsuariaActiva,
   setPasswordUsuaria: m.setPasswordUsuaria,
+  getUsuaria: m.getUsuaria,
 }));
 vi.mock("next/cache", () => ({ revalidatePath: m.revalidatePath }));
 
@@ -32,6 +34,7 @@ describe("acciones de usuarias", () => {
     m.crearUsuariaCompleta.mockResolvedValue({ ok: true, id: "u2" });
     m.setUsuariaActiva.mockResolvedValue({ ok: true });
     m.setPasswordUsuaria.mockResolvedValue({ ok: true });
+    m.getUsuaria.mockResolvedValue({ id: "u2", rol: "comercial", activa: true });
   });
 
   test("todas exigen rol admin y no tocan nada si se deniega", async () => {
@@ -59,5 +62,21 @@ describe("acciones de usuarias", () => {
   test("contraseña corta rechazada antes de llamar a Supabase", async () => {
     expect((await cambiarPasswordAction("u2", "corta")).ok).toBe(false);
     expect(m.setPasswordUsuaria).not.toHaveBeenCalled();
+  });
+
+  test("activar o cambiar contraseña de una usuaria que no existe no llama a Supabase", async () => {
+    m.getUsuaria.mockResolvedValue(null);
+    expect(await setUsuariaActivaAction("nadie", true)).toEqual({ ok: false, error: "Usuaria no encontrada." });
+    expect(await cambiarPasswordAction("nadie", "1234567890")).toEqual({ ok: false, error: "Usuaria no encontrada." });
+    expect(m.getUsuaria).toHaveBeenCalledWith("nadie");
+    expect(m.setUsuariaActiva).not.toHaveBeenCalled();
+    expect(m.setPasswordUsuaria).not.toHaveBeenCalled();
+  });
+
+  test("activa tiene que ser booleano", async () => {
+    expect((await setUsuariaActivaAction("u2", "false" as unknown as boolean)).ok).toBe(false);
+    expect(m.setUsuariaActiva).not.toHaveBeenCalled();
+    expect(await setUsuariaActivaAction("u2", false)).toEqual({ ok: true, mensaje: "Acceso desactivado." });
+    expect(m.setUsuariaActiva).toHaveBeenCalledWith("u2", false);
   });
 });
