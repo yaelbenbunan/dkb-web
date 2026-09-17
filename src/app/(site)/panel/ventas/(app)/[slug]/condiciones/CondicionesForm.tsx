@@ -10,7 +10,7 @@ import type { ResultadoAccion } from "@/lib/ventas/resultado";
 
 const euros = (cts: number) => (cts / 100).toString().replace(".", ",");
 
-export function CondicionesForm({ marca, editable }: { marca: Marca; editable: boolean }) {
+export function CondicionesForm({ marca, editable }: { marca: Omit<Marca, "webhook_secret">; editable: boolean }) {
   const [resultado, accion, pendiente] = useActionState<ResultadoAccion | null, FormData>(actualizarCondicionesAction.bind(null, marca.id), null);
   return (
     <form action={accion} style={{ ...tarjeta, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
