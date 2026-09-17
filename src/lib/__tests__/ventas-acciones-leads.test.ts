@@ -8,6 +8,7 @@ const m = vi.hoisted(() => ({
   actualizarDatosLead: vi.fn(),
   asignarLead: vi.fn(),
   importarLeadsCsv: vi.fn(),
+  previsualizarImportacion: vi.fn(),
   crearLeadManual: vi.fn(),
   registrarLlamada: vi.fn(),
   marcarMuestrasEnviadas: vi.fn(),
@@ -28,6 +29,7 @@ vi.mock("@/lib/ventas/db", () => ({
 }));
 vi.mock("@/lib/ventas/servicios", () => ({
   importarLeadsCsv: m.importarLeadsCsv,
+  previsualizarImportacion: m.previsualizarImportacion,
   crearLeadManual: m.crearLeadManual,
   registrarLlamada: m.registrarLlamada,
   marcarMuestrasEnviadas: m.marcarMuestrasEnviadas,
@@ -39,6 +41,7 @@ vi.mock("next/navigation", () => ({ redirect: m.redirect }));
 
 import {
   importarLeadsAction,
+  previsualizarLeadsAction,
   crearLeadManualAction,
   actualizarLeadAction,
   asignarLeadAction,
@@ -127,5 +130,20 @@ describe("acciones de leads", () => {
     expect((await cambiarFaseAction("hydrup", "l1", null, fd({ fase: "inventada" }))).ok).toBe(false);
     await cambiarFaseAction("hydrup", "l1", null, fd({ fase: "perdido", nota: "" }));
     expect(m.cambiarFaseManual).toHaveBeenCalledWith({ usuaria: USUARIA, leadId: "l1", cambio: { fase: "perdido", nota: "" } });
+  });
+
+  test("previsualizar exige sesión y delega en el servicio con la marca", async () => {
+    const previa = { validas: 1, errores: [], avisos: [], duplicados: [], excluidos: [], cabecerasDesconocidas: [] };
+    m.previsualizarImportacion.mockReset().mockResolvedValue(previa);
+    expect(await previsualizarLeadsAction("hydrup", "negocio\nGym")).toEqual({ ok: true, previa });
+    expect(m.previsualizarImportacion).toHaveBeenCalledWith({ marca: MARCA, csv: "negocio\nGym" });
+
+    m.getMarcaPorSlug.mockResolvedValue(null);
+    expect(await previsualizarLeadsAction("nope", "x")).toEqual({ ok: false, error: "Marca no encontrada." });
+
+    m.previsualizarImportacion.mockClear();
+    m.requireUsuaria.mockRejectedValue(new Error("NEXT_REDIRECT"));
+    await expect(previsualizarLeadsAction("hydrup", "x")).rejects.toThrow();
+    expect(m.previsualizarImportacion).not.toHaveBeenCalled();
   });
 });

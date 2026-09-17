@@ -11,7 +11,9 @@ import {
   crearLeadManual,
   importarLeadsCsv,
   marcarMuestrasEnviadas,
+  previsualizarImportacion,
   registrarLlamada,
+  type PreviaImportacion,
   type ResultadoImportacion,
 } from "@/lib/ventas/servicios";
 import { leerCambioFase, leerDatosLead, leerLlamada, leerNotaSeguimiento } from "@/lib/ventas/validacion";
@@ -27,6 +29,16 @@ async function leadDeMarca(slug: string, leadId: string): Promise<Lead | null> {
 function refrescar(slug: string) {
   revalidatePath(`/panel/ventas/${slug}`, "layout");
   revalidatePath("/panel/ventas/hoy");
+}
+
+export async function previsualizarLeadsAction(
+  slug: string,
+  csv: string,
+): Promise<{ ok: true; previa: PreviaImportacion } | { ok: false; error: string }> {
+  await requireUsuaria();
+  const marca = await getMarcaPorSlug(slug);
+  if (!marca) return { ok: false, error: "Marca no encontrada." };
+  return { ok: true, previa: await previsualizarImportacion({ marca, csv }) };
 }
 
 export async function importarLeadsAction(slug: string, _prev: ResultadoImportacion | null, fd: FormData): Promise<ResultadoImportacion> {

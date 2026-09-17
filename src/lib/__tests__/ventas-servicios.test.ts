@@ -13,6 +13,7 @@ const m = vi.hoisted(() => ({
 vi.mock("../ventas/db", () => m);
 
 import {
+  previsualizarImportacion,
   importarLeadsCsv,
   recibirLeadAnuncio,
   crearLeadManual,
@@ -165,3 +166,22 @@ describe("registro de trabajo sobre un lead", () => {
     expect(m.registrarActividad).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("previsualizarImportacion", () => {
+  test("cuenta válidas y nombra duplicados y excluidos sin guardar nada", async () => {
+    const csv = `${CSV.replace("negocio,telefono,email", "negocio,telefono,email,color")}\n,600999888`;
+    const r = await previsualizarImportacion({ marca: MARCA, csv });
+    expect(m.listContactosLeads).toHaveBeenCalledWith("m1");
+    expect(m.listExclusiones).toHaveBeenCalledWith("m1");
+    expect(r).toMatchObject({ validas: 4, duplicados: ["Ya Existe"], excluidos: ["Cliente"], cabecerasDesconocidas: ["color"] });
+    expect(r.errores.map((e) => e.line)).toEqual([6]);
+    expect(m.crearLeads).not.toHaveBeenCalled();
+    expect(m.registrarImportacion).not.toHaveBeenCalled();
+  });
+
+  test("sin errores ni conflictos: todas válidas", async () => {
+    const r = await previsualizarImportacion({ marca: MARCA, csv: "negocio,telefono\nGym Sol,600111222" });
+    expect(r).toEqual({ validas: 1, errores: [], avisos: [], duplicados: [], excluidos: [], cabecerasDesconocidas: [] });
+  });
+});
+

@@ -1,4 +1,5 @@
 import "server-only";
+import type { CsvRowError } from "../leads-csv";
 import { secretMatches } from "../webhook-auth";
 import { leadDesdeAnuncio } from "./anuncios";
 import {
@@ -21,6 +22,35 @@ import type { CambioFase, Llamada, NotaSeguimiento } from "./validacion";
 export type ResultadoImportacion =
   | { ok: true; creados: number; duplicados: number; excluidos: number }
   | { ok: false; error: string; errores: { line: number; message: string }[] };
+
+export interface PreviaImportacion {
+  validas: number;
+  errores: CsvRowError[];
+  avisos: CsvRowError[];
+  /** Nombres de negocio que ya están como lead de la marca (o repetidos en el fichero). */
+  duplicados: string[];
+  /** Nombres de negocio que están en la lista de exclusión de la marca. */
+  excluidos: string[];
+  cabecerasDesconocidas: string[];
+}
+
+/**
+ * Previsualización de una lista antes de importarla: la misma lectura y
+ * clasificación que la importación, pero sin guardar nada.
+ */
+export async function previsualizarImportacion(input: { marca: Marca; csv: string }): Promise<PreviaImportacion> {
+  const parsed = parseVentasLeadsCsv(input.csv);
+  const [existentes, exclusiones] = await Promise.all([listContactosLeads(input.marca.id), listExclusiones(input.marca.id)]);
+  const clasificacion = clasificarLeads(parsed.filas, existentes, exclusiones);
+  return {
+    validas: parsed.filas.length,
+    errores: parsed.errores,
+    avisos: parsed.avisos,
+    duplicados: clasificacion.duplicados.map((l) => l.negocio),
+    excluidos: clasificacion.excluidos.map((l) => l.negocio),
+    cabecerasDesconocidas: parsed.cabecerasDesconocidas,
+  };
+}
 
 /**
  * Importa una lista de prospección. Todo o nada: con una sola fila errónea no
