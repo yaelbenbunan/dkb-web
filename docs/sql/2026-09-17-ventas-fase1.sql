@@ -6,6 +6,23 @@
 -- desde el servidor. Las funciones revocan execute a anon/authenticated, porque
 -- la clave publicable (que usa el login) podría llamarlas por la API.
 
+-- Normalización de contacto -----------------------------------------------
+-- Funciones compartidas para normalizar email y teléfono.
+-- IMPORTANTE: deben mantenerse idénticas a normalizarEmail/normalizarTelefono
+-- en src/lib/ventas/dominio.ts
+create or replace function public.ventas_norm_email(p text)
+returns text
+language sql immutable as $$
+  select nullif(lower(btrim(p)), '')
+$$;
+
+create or replace function public.ventas_norm_telefono(p text)
+returns text
+language sql immutable as $$
+  select case when length(regexp_replace(coalesce(p, ''), '\D', '', 'g')) >= 6
+    then right(regexp_replace(p, '\D', '', 'g'), 9) end
+$$;
+
 -- Usuarias ---------------------------------------------------------------
 create table if not exists public.ventas_usuarias (
   id uuid primary key references auth.users(id) on delete restrict,
@@ -40,11 +57,8 @@ create table if not exists public.ventas_exclusiones (
   email text,
   telefono text,
   cif text,
-  email_norm text generated always as (nullif(lower(btrim(email)), '')) stored,
-  telefono_norm text generated always as (
-    case when length(regexp_replace(coalesce(telefono, ''), '\D', '', 'g')) >= 6
-      then right(regexp_replace(telefono, '\D', '', 'g'), 9) end
-  ) stored,
+  email_norm text generated always as (public.ventas_norm_email(email)) stored,
+  telefono_norm text generated always as (public.ventas_norm_telefono(telefono)) stored,
   cif_norm text generated always as (
     nullif(upper(regexp_replace(coalesce(cif, ''), '[^A-Za-z0-9]', '', 'g')), '')
   ) stored,
@@ -66,11 +80,8 @@ create table if not exists public.ventas_leads (
   ciudad text,
   cif text,
   web text,
-  email_norm text generated always as (nullif(lower(btrim(email)), '')) stored,
-  telefono_norm text generated always as (
-    case when length(regexp_replace(coalesce(telefono, ''), '\D', '', 'g')) >= 6
-      then right(regexp_replace(telefono, '\D', '', 'g'), 9) end
-  ) stored,
+  email_norm text generated always as (public.ventas_norm_email(email)) stored,
+  telefono_norm text generated always as (public.ventas_norm_telefono(telefono)) stored,
   origen text not null check (origen in ('lista', 'anuncio', 'manual')),
   origen_detalle text,
   fase text not null default 'nuevo' check (fase in (
@@ -255,3 +266,5 @@ end $$;
 revoke execute on function public.ventas_crear_leads(uuid, uuid, text, text, jsonb) from public, anon, authenticated;
 revoke execute on function public.ventas_registrar_actividad(uuid, uuid, text, text, text, text, boolean, date) from public, anon, authenticated;
 revoke execute on function public.ventas_actividad_inmutable() from public, anon, authenticated;
+revoke execute on function public.ventas_norm_email(text) from public, anon, authenticated;
+revoke execute on function public.ventas_norm_telefono(text) from public, anon, authenticated;
