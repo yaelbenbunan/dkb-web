@@ -48,12 +48,12 @@ type Valor = true | false | string;
 type Fila = { t: string; basico: Valor; avanzado: Valor; apagado?: boolean };
 
 /** `termino` en plural: un centro de estética no tiene «sistema de pacientes». */
-const incluye = (termino: string): Fila[] => [
+const incluye = (termino: string, panel: string): Fila[] => [
   { t: "Página web", basico: true, avanzado: true },
   { t: "Campañas de publicidad", basico: "Google o Meta", avanzado: "Google y Meta" },
   { t: `Sistema de ${termino}`, basico: true, avanzado: true },
   { t: "Citas en tu agenda", basico: true, avanzado: true },
-  { t: "Panel de rentabilidad", basico: true, avanzado: true },
+  { t: panel, basico: true, avanzado: true },
   { t: "Informe mensual de resultados", basico: true, avanzado: true },
   { t: "Confirmación de citas por WhatsApp", basico: false, avanzado: true },
   { t: "Reunión mensual online", basico: false, avanzado: true },
@@ -107,8 +107,11 @@ const CONDICIONES =
   "configuración de las campañas y el alta en el sistema son trabajo real y concentrado, y " +
   "por eso no van dentro de la mensualidad.";
 
-export function Planes({ termino = "pacientes" }: { termino?: string } = {}) {
-  const filas = incluye(termino);
+export function Planes({
+  termino = "pacientes",
+  panel = "Panel de rentabilidad",
+}: { termino?: string; panel?: string } = {}) {
+  const filas = incluye(termino, panel);
   return (
     <div>
       {/* ── Tabla, de tableta para arriba ── */}

@@ -40,6 +40,51 @@ export const SECTORES_FORMULARIO = [
   "Otro",
 ] as const;
 
+/**
+ * Sin nosotros y con nosotros, en dinero.
+ *
+ * El ticket, cuando hay `repite`, es el precio de **una** sesión o visita, no lo
+ * que deja el cliente entero. Estuvo al revés —300 € de «ticket medio» en
+ * psicología— y nadie del gremio se lo cree: lee «ticket» como precio de sesión.
+ * Se enseñan las dos piezas por separado y la factura sale de multiplicarlas,
+ * que es la cuenta que hace el lector de cabeza.
+ */
+export interface ComparativaBeneficio {
+  tipo: "beneficio";
+  ticket: string;
+  /** En los gremios donde se viene varias veces: cuántas, y cómo se rotula. */
+  repite?: { rotuloPrecio: string; rotuloVeces: string; veces: string };
+  sin: FilaComparativa;
+  con: FilaComparativa;
+}
+
+/**
+ * Sin nosotros y con nosotros, en agenda.
+ *
+ * Para quien su reto es llenar la semana, no exprimir cada euro. Las cifras son
+ * de una semana tipo y tienen que cuadrar entre sí: huecos = capacidad −
+ * ocupadas, y el porcentaje sale de dividir. Lo comprueba un test.
+ */
+export interface ComparativaAgenda {
+  tipo: "agenda";
+  /** Cuántas sesiones caben en su semana. */
+  capacidad: string;
+  sin: FilaAgenda;
+  con: FilaAgenda;
+}
+
+export interface FilaAgenda {
+  /** Pacientes nuevos al mes. */
+  nuevos: string;
+  /** Sesiones ocupadas a la semana. */
+  ocupadas: string;
+  /** Huecos libres a la semana. */
+  libres: string;
+  /** El porcentaje de agenda ocupada, que es la cifra grande. */
+  ocupacion: string;
+  remate: string;
+}
+
 export interface FilaComparativa {
   /** Cuántos entran al mes. */
   entran: string;
@@ -143,22 +188,29 @@ export interface SectorEscala {
    * los sectores; lo que cambia es a quién se busca y qué se mide, y decirlo con
    * las palabras del gremio es lo que hace creíble que lo conocemos.
    */
-  pasos: { traemos: string; analizamos: string };
+  pasos: {
+    traemos: string;
+    analizamos: string;
+    /**
+     * El título del tercer paso, si no es «Analizamos tu rentabilidad». A quien
+     * le vendemos agenda llena, hablarle de rentabilidad en el paso final le
+     * cambia el argumento a mitad de página.
+     */
+    tituloAnalizamos?: string;
+  };
+  /** Cómo se llama el panel en la tabla de planes. Por defecto, «Panel de rentabilidad». */
+  panel?: string;
 
   /**
-   * El ticket que se usa en la tabla.
+   * La tabla del bloque del problema: qué le pasa a este negocio sin nosotros y
+   * con nosotros.
    *
-   * Cuando hay `repite`, es el precio de **una** sesión o visita, no lo que deja
-   * el paciente entero. Estuvo al revés —300 € de «ticket medio» en psicología—
-   * y nadie del gremio se lo cree: lee «ticket» como precio de sesión, que ronda
-   * los 60 €. Se enseñan las dos piezas por separado y la factura sale de
-   * multiplicarlas, que es la cuenta que hace el lector de cabeza.
+   * **No todos los sectores compran lo mismo.** A una clínica dental le vende el
+   * beneficio: puede tener la agenda llena y perder dinero. A una consulta de
+   * psicología no: su problema es tener huecos, y una tabla de ticket, gasto y
+   * factura le hablaba de un problema que no tiene. Por eso hay dos tablas.
    */
-  ticket: string;
-  /** En los gremios donde se viene varias veces: cuántas, y cómo se rotula. */
-  repite?: { rotuloPrecio: string; rotuloVeces: string; veces: string };
-  sinEscala: FilaComparativa;
-  conEscala: FilaComparativa;
+  comparativa: ComparativaBeneficio | ComparativaAgenda;
 
   /**
    * Las preguntas propias del sector, que van ANTES de las comunes.
@@ -212,20 +264,23 @@ export const GENERAL: SectorEscala = {
     analizamos: "Quién acudió, qué se hizo y cuánto facturó. Con eso ajustamos las campañas cada mes.",
   },
 
-  ticket: "250 €",
-  sinEscala: {
-    entran: "40",
-    gasto: "8.000 €",
-    factura: "10.000 €",
-    queda: "2.000 €",
-    remate: REMATE_SIN,
-  },
-  conEscala: {
-    entran: "20",
-    gasto: "1.000 €",
-    factura: "5.000 €",
-    queda: "4.000 €",
-    remate: "La mitad de pacientes. El doble de beneficio.",
+  comparativa: {
+    tipo: "beneficio",
+    ticket: "250 €",
+    sin: {
+      entran: "40",
+      gasto: "8.000 €",
+      factura: "10.000 €",
+      queda: "2.000 €",
+      remate: REMATE_SIN,
+    },
+    con: {
+      entran: "20",
+      gasto: "1.000 €",
+      factura: "5.000 €",
+      queda: "4.000 €",
+      remate: "La mitad de pacientes. El doble de beneficio.",
+    },
   },
 
   preguntas: [],
@@ -259,20 +314,23 @@ export const DENTAL: SectorEscala = {
 
   // En dental sí vale un ticket medio por paciente: entre la primera visita y el
   // presupuesto que acepta, es la cifra con la que el sector ya hace cuentas.
-  ticket: "250 €",
-  sinEscala: {
-    entran: "40",
-    gasto: "8.000 €",
-    factura: "10.000 €",
-    queda: "2.000 €",
-    remate: REMATE_SIN,
-  },
-  conEscala: {
-    entran: "20",
-    gasto: "1.000 €",
-    factura: "5.000 €",
-    queda: "4.000 €",
-    remate: "La mitad de pacientes. El doble de beneficio.",
+  comparativa: {
+    tipo: "beneficio",
+    ticket: "250 €",
+    sin: {
+      entran: "40",
+      gasto: "8.000 €",
+      factura: "10.000 €",
+      queda: "2.000 €",
+      remate: REMATE_SIN,
+    },
+    con: {
+      entran: "20",
+      gasto: "1.000 €",
+      factura: "5.000 €",
+      queda: "4.000 €",
+      remate: "La mitad de pacientes. El doble de beneficio.",
+    },
   },
 
   preguntas: [
@@ -321,21 +379,24 @@ export const ESTETICA: SectorEscala = {
       "Quién vino, qué tratamientos se hizo y cuánto lleva dejado desde que entró. Con eso ajustamos las campañas cada mes.",
   },
 
-  ticket: "80 €",
-  repite: { rotuloPrecio: "Precio por visita", rotuloVeces: "Visitas por cliente", veces: "5" },
-  sinEscala: {
-    entran: "30",
-    gasto: "9.600 €",
-    factura: "12.000 €",
-    queda: "2.400 €",
-    remate: REMATE_SIN,
-  },
-  conEscala: {
-    entran: "15",
-    gasto: "1.200 €",
-    factura: "6.000 €",
-    queda: "4.800 €",
-    remate: "La mitad de clientes. El doble de beneficio.",
+  comparativa: {
+    tipo: "beneficio",
+    ticket: "80 €",
+    repite: { rotuloPrecio: "Precio por visita", rotuloVeces: "Visitas por cliente", veces: "5" },
+    sin: {
+      entran: "30",
+      gasto: "9.600 €",
+      factura: "12.000 €",
+      queda: "2.400 €",
+      remate: REMATE_SIN,
+    },
+    con: {
+      entran: "15",
+      gasto: "1.200 €",
+      factura: "6.000 €",
+      queda: "4.800 €",
+      remate: "La mitad de clientes. El doble de beneficio.",
+    },
   },
 
   preguntas: [
@@ -384,21 +445,24 @@ export const FISIOTERAPIA: SectorEscala = {
       "Quién vino, cuántas sesiones hizo y cuánto facturó. Con eso ajustamos las campañas cada mes.",
   },
 
-  ticket: "45 €",
-  repite: { rotuloPrecio: "Precio por sesión", rotuloVeces: "Sesiones por paciente", veces: "5" },
-  sinEscala: {
-    entran: "40",
-    gasto: "7.000 €",
-    factura: "9.000 €",
-    queda: "2.000 €",
-    remate: REMATE_SIN,
-  },
-  conEscala: {
-    entran: "20",
-    gasto: "500 €",
-    factura: "4.500 €",
-    queda: "4.000 €",
-    remate: "La mitad de pacientes. El doble de beneficio.",
+  comparativa: {
+    tipo: "beneficio",
+    ticket: "45 €",
+    repite: { rotuloPrecio: "Precio por sesión", rotuloVeces: "Sesiones por paciente", veces: "5" },
+    sin: {
+      entran: "40",
+      gasto: "7.000 €",
+      factura: "9.000 €",
+      queda: "2.000 €",
+      remate: REMATE_SIN,
+    },
+    con: {
+      entran: "20",
+      gasto: "500 €",
+      factura: "4.500 €",
+      queda: "4.000 €",
+      remate: "La mitad de pacientes. El doble de beneficio.",
+    },
   },
 
   preguntas: [
@@ -425,48 +489,70 @@ export const PSICOLOGIA: SectorEscala = {
   slug: "psicologia",
   valorFormulario: "Psicología",
 
-  metaTitulo: "Captación de pacientes para psicólogos — llenar la agenda es fácil, ganar más no",
+  metaTitulo: "Captación de pacientes para psicólogos — llenamos tu agenda",
   metaDescripcion:
-    "Especialistas en captar pacientes para psicólogos y consultas de psicología: web, campañas y sistema de pacientes. Que cada euro invertido genere más. Desde 199 €/mes y sin permanencia.",
+    "Especialistas en captar pacientes para psicólogos: web, campañas y un sistema para que tu agenda esté llena. Desde 199 €/mes y sin permanencia.",
 
   eyebrow: "Especialistas en captar pacientes para psicólogos",
-  titular: TITULAR,
-  subtitulo: subtitulo("pacientes"),
+  /**
+   * **A una consulta de psicología no se le vende «ganar más».** Su reto es
+   * tener la agenda llena: la sesión tiene un precio que no se estira y un
+   * profesional solo puede atender las horas que tiene. Lo que le cambia el mes
+   * son los huecos, así que toda esta landing habla de llenarlos (decidido el
+   * 17 de septiembre de 2026).
+   */
+  titular: { primera: "¿Huecos en tu agenda?", segunda: "Nosotros los llenamos." },
+  subtitulo: {
+    antes: "Te traemos ",
+    resaltado: "pacientes",
+    despues: " nuevos. Tú solo te ocupas de atenderlos.",
+  },
   termino: { singular: "paciente", plural: "pacientes" },
   negocio: "Consulta",
   local: { uno: "la consulta", todos: "todas las consultas de psicología" },
   imagen: "/img/landings/escala-psicologia.jpg",
 
-  tituloProblema: PROBLEMA,
+  tituloProblema: "Puedes ser muy buen profesional y tener la agenda a medias.",
   tuParte: "acompañar a tus pacientes",
   pasos: {
     traemos:
       "Campañas en Google y Meta para quien busca psicólogo: terapia individual, de pareja u online. Cada paciente entra en tu sistema con su ficha, su origen y su primera cita.",
+    tituloAnalizamos: "Medimos qué te trae pacientes",
     analizamos:
-      "Quién vino, cuántas sesiones hizo y cuánto facturó. Con eso ajustamos las campañas cada mes.",
+      "Qué campaña trae a cada paciente y cuántos se quedan a seguir. Con eso ajustamos las campañas cada mes.",
   },
+  panel: "Panel de resultados",
 
-  // Una consulta privada no capta cuarenta pacientes nuevos al mes: capta unos
-  // pocos que se quedan varias semanas. Por eso aquí son menos y no la mitad
-  // exacta, y lo que sostiene la factura son las sesiones, no el volumen.
-  ticket: "60 €",
-  repite: { rotuloPrecio: "Precio por sesión", rotuloVeces: "Sesiones por paciente", veces: "6" },
-  sinEscala: {
-    entran: "12",
-    gasto: "3.240 €",
-    factura: "4.320 €",
-    queda: "1.080 €",
-    remate: REMATE_SIN,
-  },
-  conEscala: {
-    entran: "8",
-    gasto: "720 €",
-    factura: "2.880 €",
-    queda: "2.160 €",
-    remate: "Menos pacientes. El doble de beneficio.",
+  // Una semana tipo de una consulta privada: 25 sesiones de hueco. Sin
+  // captación se llena con el boca a boca y se queda en torno al 60 %.
+  comparativa: {
+    tipo: "agenda",
+    capacidad: "25",
+    sin: {
+      nuevos: "2",
+      ocupadas: "15",
+      libres: "10",
+      ocupacion: "60 %",
+      remate: "Buena consulta. Agenda a medias.",
+    },
+    con: {
+      nuevos: "6",
+      ocupadas: "23",
+      libres: "2",
+      ocupacion: "92 %",
+      remate: "Tú atiendes. Nosotros llenamos la agenda.",
+    },
   },
 
   preguntas: [
+    {
+      p: "¿Cuántos pacientes nuevos me vais a traer?",
+      r:
+        "Depende de tu zona, de lo que ofreces y de lo que inviertas en anuncios, y por eso " +
+        "no damos una cifra antes de mirar tu caso. En la reunión te damos una estimación, y " +
+        "desde el primer mes ves en el panel cuántos han llegado, de qué campaña y cuántos " +
+        "siguen viniendo.",
+    },
     {
       p: "¿Se puede hacer publicidad de terapia sin que la rechacen?",
       r:

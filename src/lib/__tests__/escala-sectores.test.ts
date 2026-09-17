@@ -59,9 +59,12 @@ describe("las landings por sector", () => {
   test("la general conserva las cifras que ya estaban publicadas", () => {
     // Extraer el cuerpo a un componente compartido no podía cambiar la página
     // que ya recibe tráfico. Si alguien toca estos números, que sea a propósito.
-    expect(GENERAL.ticket).toBe("250 €");
-    expect(GENERAL.sinEscala.queda).toBe("2.000 €");
-    expect(GENERAL.conEscala.queda).toBe("4.000 €");
+    const c = GENERAL.comparativa;
+    expect(c.tipo).toBe("beneficio");
+    if (c.tipo !== "beneficio") return;
+    expect(c.ticket).toBe("250 €");
+    expect(c.sin.queda).toBe("2.000 €");
+    expect(c.con.queda).toBe("4.000 €");
     expect(GENERAL.titular.primera).toBe("Llenar tu agenda es fácil.");
     // Y no lleva eyebrow: no tiene a quién señalar.
     expect(GENERAL.eyebrow).toBeUndefined();
@@ -76,15 +79,44 @@ describe("las landings por sector", () => {
     const euros = (t: string) => Number(t.replace(/[^0-9]/g, ""));
     for (const s of [GENERAL, ...SECTORES_ESCALA]) {
       const nombre = s.slug || "general";
-      const porPersona = euros(s.ticket) * Number(s.repite?.veces ?? 1);
-      for (const c of [s.sinEscala, s.conEscala]) {
+      const comp = s.comparativa;
+      if (comp.tipo === "agenda") {
+        const capacidad = Number(comp.capacidad);
+        for (const f of [comp.sin, comp.con]) {
+          expect(Number(f.libres), `${nombre}: huecos`).toBe(capacidad - Number(f.ocupadas));
+          expect(euros(f.ocupacion), `${nombre}: ocupación`).toBe(
+            Math.round((Number(f.ocupadas) / capacidad) * 100),
+          );
+        }
+        continue;
+      }
+      const porPersona = euros(comp.ticket) * Number(comp.repite?.veces ?? 1);
+      for (const c of [comp.sin, comp.con]) {
         expect(euros(c.factura), `${nombre}: factura`).toBe(Number(c.entran) * porPersona);
         expect(euros(c.queda), `${nombre}: beneficio`).toBe(euros(c.factura) - euros(c.gasto));
       }
-      if (s.conEscala.remate.includes("doble")) {
-        expect(euros(s.conEscala.queda), `${nombre}: el doble`).toBe(2 * euros(s.sinEscala.queda));
+      if (comp.con.remate.includes("doble")) {
+        expect(euros(comp.con.queda), `${nombre}: el doble`).toBe(2 * euros(comp.sin.queda));
       }
     }
+  });
+
+  test("a psicología se le vende agenda llena, no dinero", () => {
+    // Decidido el 17 de septiembre de 2026: su reto es llenar huecos, no
+    // exprimir la sesión. Si alguien copia la cabecera de otra landing, esto
+    // lo caza antes de publicarlo.
+    const p = sectorPorSlug("psicologia")!;
+    expect(p.comparativa.tipo).toBe("agenda");
+    const cabecera = JSON.stringify([
+      p.metaTitulo,
+      p.metaDescripcion,
+      p.titular,
+      p.subtitulo,
+      p.tituloProblema,
+      p.pasos,
+      p.panel,
+    ]);
+    expect(cabecera).not.toMatch(/ganar|beneficio|dinero|rentabilidad|factura/i);
   });
 
   test("cada sector dice para quién es, con el nombre de su gremio", () => {

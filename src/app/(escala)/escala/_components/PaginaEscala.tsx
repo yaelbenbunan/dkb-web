@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { GROWTH_THEME as T } from "@/lib/growth-config";
 import { CONTACT_INFO } from "@/lib/contact-info";
-import type { SectorEscala } from "@/lib/escala-sectores";
+import type { FilaAgenda, FilaComparativa, SectorEscala } from "@/lib/escala-sectores";
 import { Pasos } from "./Pasos";
 import { Subrayado } from "./Subrayado";
 import { Circulo } from "./Circulo";
@@ -150,8 +150,58 @@ function pasosPara(sector: SectorEscala) {
       d: "Montada y alojada por nosotros, pensada para que quien entre pida cita. No hay que tocar nada ni contratar a nadie más.",
     },
     { n: "02", t: `Traemos tus ${sector.termino.plural}`, d: sector.pasos.traemos },
-    { n: "03", t: "Analizamos tu rentabilidad", d: sector.pasos.analizamos },
+    {
+      n: "03",
+      t: sector.pasos.tituloAnalizamos ?? "Analizamos tu rentabilidad",
+      d: sector.pasos.analizamos,
+    },
   ];
+}
+
+/**
+ * Lo que pinta cada tarjeta de la tabla del problema, sea cual sea su tipo.
+ *
+ * Las dos tablas —beneficio y agenda— tienen filas distintas, pero la tarjeta
+ * es la misma: unas filas, una cifra grande rodeada y una frase. Traducirlas
+ * aquí deja el JSX de la tarjeta igual para las dos.
+ */
+function columnasDe(sector: SectorEscala) {
+  const c = sector.comparativa;
+  const personas = enMayuscula(sector.termino.plural);
+
+  if (c.tipo === "agenda") {
+    const filas = (f: FilaAgenda) => [
+      { k: "Sesiones que caben a la semana", v: c.capacidad },
+      { k: `${personas} nuevos al mes`, v: f.nuevos },
+      { k: "Sesiones ocupadas", v: f.ocupadas },
+      { k: "Huecos libres", v: f.libres },
+    ];
+    return {
+      rotulo: "Agenda ocupada",
+      sin: { filas: filas(c.sin), destacado: c.sin.ocupacion, remate: c.sin.remate },
+      con: { filas: filas(c.con), destacado: c.con.ocupacion, remate: c.con.remate },
+    };
+  }
+
+  // Donde se viene varias veces, precio y veces por separado: un «ticket
+  // medio» de 300 € se lee como precio de sesión y nadie se lo cree.
+  const precio = c.repite
+    ? [
+        { k: c.repite.rotuloPrecio, v: c.ticket },
+        { k: c.repite.rotuloVeces, v: c.repite.veces },
+      ]
+    : [{ k: "Ticket medio", v: c.ticket }];
+  const filas = (f: FilaComparativa) => [
+    ...precio,
+    { k: `${personas} nuevos`, v: f.entran },
+    { k: "Se gasta en traerlos", v: f.gasto },
+    { k: "Factura", v: f.factura },
+  ];
+  return {
+    rotulo: "Beneficio",
+    sin: { filas: filas(c.sin), destacado: c.sin.queda, remate: c.sin.remate },
+    con: { filas: filas(c.con), destacado: c.con.queda, remate: c.con.remate },
+  };
 }
 
 /** «pacientes» → «Pacientes», para el rótulo de la tabla. */
@@ -173,10 +223,11 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
    * conclusión. La frase de debajo de cada tarjeta sigue diciendo quién es quién,
    * pero después.
    */
+  const columnas = columnasDe(sector);
   const comparativa = [
-    { ...sector.sinEscala, color: T.muted, conLogo: false, rodeado: false },
+    { ...columnas.sin, color: T.muted, conLogo: false, rodeado: false },
     {
-      ...sector.conEscala,
+      ...columnas.con,
       color: T.lime,
       // Solo ésta lleva el logotipo. Es lo que convierte una comparación
       // abstracta en una promesa con nombre: la de la derecha es la que nos
@@ -446,20 +497,7 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
                   </p>
 
                   <div className="mt-7 space-y-4">
-                    {[
-                      // Donde se viene varias veces, precio y veces por
-                      // separado: un «ticket medio» de 300 € en psicología se
-                      // lee como precio de sesión y nadie se lo cree.
-                      ...(sector.repite
-                        ? [
-                            { k: sector.repite.rotuloPrecio, v: sector.ticket },
-                            { k: sector.repite.rotuloVeces, v: sector.repite.veces },
-                          ]
-                        : [{ k: "Ticket medio", v: sector.ticket }]),
-                      { k: `${enMayuscula(sector.termino.plural)} nuevos`, v: c.entran },
-                      { k: "Se gasta en traerlos", v: c.gasto },
-                      { k: "Factura", v: c.factura },
-                    ].map((f) => (
+                    {c.filas.map((f) => (
                       <div key={f.k} className="flex items-baseline justify-between gap-3">
                         <span className="text-base" style={{ color: T.muted }}>
                           {f.k}
@@ -477,7 +515,7 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
                       style={{ borderTop: `1px solid ${T.line}`, paddingTop: "1rem" }}
                     >
                       <span className="text-base font-bold" style={{ color: T.fg }}>
-                        Beneficio
+                        {columnas.rotulo}
                       </span>
                       {c.rodeado ? (
                         <Circulo>
@@ -485,7 +523,7 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
                             className="font-black leading-none tabular-nums"
                             style={{ fontSize: "clamp(2.25rem, 4.5vw, 3.5rem)", color: c.color }}
                           >
-                            {c.queda}
+                            {c.destacado}
                           </span>
                         </Circulo>
                       ) : (
@@ -493,7 +531,7 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
                           className="font-black leading-none tabular-nums"
                           style={{ fontSize: "clamp(2.25rem, 4.5vw, 3.5rem)", color: c.color }}
                         >
-                          {c.queda}
+                          {c.destacado}
                         </span>
                       )}
                     </div>
@@ -576,7 +614,7 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
               la tabla. Ver el porqué allí: aquí fuera dejaba una banda vacía a
               su derecha y otra entre él y la tabla. */}
           <AlAparecer>
-            <Planes termino={sector.termino.plural} />
+            <Planes termino={sector.termino.plural} panel={sector.panel} />
           </AlAparecer>
         </Wrap>
       </section>
