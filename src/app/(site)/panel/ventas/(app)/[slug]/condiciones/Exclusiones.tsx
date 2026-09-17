@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { borrarExclusionAction, crearExclusionAction } from "../../../acciones-marcas";
 import type { Exclusion } from "@/lib/ventas/db";
 import { Mensaje } from "../../../_componentes/Mensaje";
@@ -10,6 +10,7 @@ import type { ResultadoAccion } from "@/lib/ventas/resultado";
 export function Exclusiones({ marcaId, exclusiones, editable }: { marcaId: string; exclusiones: Exclusion[]; editable: boolean }) {
   const [resultado, accion, pendiente] = useActionState<ResultadoAccion | null, FormData>(crearExclusionAction.bind(null, marcaId), null);
   const [borrando, empezar] = useTransition();
+  const [resultadoBorrar, setResultadoBorrar] = useState<ResultadoAccion | null>(null);
 
   return (
     <section style={tarjeta}>
@@ -26,6 +27,11 @@ export function Exclusiones({ marcaId, exclusiones, editable }: { marcaId: strin
           <button type="submit" disabled={pendiente} style={botonPrimario}>Añadir</button>
           <div style={{ flexBasis: "100%" }}><Mensaje resultado={resultado} /></div>
         </form>
+      )}
+      {editable && (
+        <div style={{ marginBottom: 10 }}>
+          <Mensaje resultado={resultadoBorrar} />
+        </div>
       )}
       {exclusiones.length > 0 && (
         <div style={{ overflowX: "auto" }}>
@@ -48,7 +54,16 @@ export function Exclusiones({ marcaId, exclusiones, editable }: { marcaId: strin
                       <button
                         type="button"
                         disabled={borrando}
-                        onClick={() => empezar(async () => void (await borrarExclusionAction(marcaId, e.id)))}
+                        onClick={() =>
+                          empezar(async () => {
+                            setResultadoBorrar(null);
+                            try {
+                              setResultadoBorrar(await borrarExclusionAction(marcaId, e.id));
+                            } catch {
+                              setResultadoBorrar({ ok: false, error: "No se pudo quitar. Inténtalo de nuevo." });
+                            }
+                          })
+                        }
                         style={{ ...botonSecundario, padding: "4px 10px", fontSize: 12 }}
                       >
                         Quitar
