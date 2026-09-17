@@ -177,7 +177,10 @@ antes de implementar (ver «Pendiente antes de construir»).
 - Al subir se pide la marca y el nombre de la lista (se guarda en `origen_detalle`).
 - Previsualización antes de guardar, fila a fila: válidas, con errores,
   duplicadas (ya existen en la marca) y excluidas.
-- Se guarda todo o nada. Se registra en `ventas_importaciones`.
+- Las duplicadas y las excluidas no se importan: una excluida ya es cliente
+  de la marca y no tiene sentido llamarla.
+- Si hay filas con errores no se guarda nada: se corrigen y se vuelve a subir.
+  Se registra en `ventas_importaciones`.
 - Se reutiliza el patrón de `src/lib/leads-csv.ts`: parseo puro compartido y
   repetido en el servidor.
 
@@ -235,8 +238,13 @@ Estilo visual: el del panel actual (estilos en línea, paleta slate y azul
 ## Seguridad
 
 - Supabase Auth con email y contraseña, con sesión en cookies httpOnly
-  mediante `@supabase/ssr`. Sin registro público: la admin crea las cuentas
-  con la API de administración.
+  mediante `@supabase/ssr` (necesita la clave publicable del proyecto en
+  `SUPABASE_PUBLISHABLE_KEY`). Sin registro público: se desactiva el alta de
+  usuarios en Supabase Auth y la admin crea las cuentas con la API de
+  administración. Además, una sesión válida sin perfil activo en
+  `ventas_usuarias` no entra.
+- Las funciones de Postgres (RPC) revocan `execute` a `anon` y
+  `authenticated`: con la clave publicable nadie puede llamarlas.
 - Un middleware protege `/panel/ventas/*`. Además, cada server action
   comprueba de nuevo la sesión, que la usuaria está activa y su rol.
 - Las lecturas y escrituras se hacen desde el servidor con la clave de
