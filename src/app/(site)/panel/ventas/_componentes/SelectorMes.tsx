@@ -6,7 +6,10 @@ export function SelectorMes({ mes, ruta }: { mes: string; ruta: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <Link href={`${ruta}?mes=${mesAnterior(mes)}`} style={boton} aria-label="Mes anterior">←</Link>
-      <strong style={{ minWidth: 150, textAlign: "center", textTransform: "capitalize" }}>{nombreMes(mes)}</strong>
+      {/* Solo la primera letra: `text-transform: capitalize` pondría «Septiembre De 2026». */}
+      <strong style={{ minWidth: 150, textAlign: "center" }}>
+        {nombreMes(mes).charAt(0).toUpperCase() + nombreMes(mes).slice(1)}
+      </strong>
       <Link href={`${ruta}?mes=${mesSiguiente(mes)}`} style={boton} aria-label="Mes siguiente">→</Link>
     </div>
   );
