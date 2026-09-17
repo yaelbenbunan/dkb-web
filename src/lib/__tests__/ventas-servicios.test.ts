@@ -13,6 +13,7 @@ const m = vi.hoisted(() => ({
 vi.mock("../ventas/db", () => m);
 
 import {
+  autenticarWebhook,
   previsualizarImportacion,
   importarLeadsCsv,
   recibirLeadAnuncio,
@@ -185,3 +186,13 @@ describe("previsualizarImportacion", () => {
   });
 });
 
+describe("autenticarWebhook", () => {
+  test("solo acepta la marca existente con su secreto", async () => {
+    m.getMarcaPorSlug.mockResolvedValueOnce(MARCA).mockResolvedValueOnce(MARCA).mockResolvedValueOnce(null).mockResolvedValueOnce(MARCA);
+    expect(await autenticarWebhook("hydrup", "secreto-largo")).toBe(true);
+    expect(await autenticarWebhook("hydrup", "otro")).toBe(false);
+    expect(await autenticarWebhook("nope", "secreto-largo")).toBe(false);
+    expect(await autenticarWebhook("hydrup", null)).toBe(false);
+    expect(m.getMarcaPorSlug).toHaveBeenCalledWith("hydrup");
+  });
+});

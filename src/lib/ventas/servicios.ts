@@ -111,6 +111,15 @@ export async function importarLeadsCsv(input: {
 }
 
 /**
+ * Comprobación previa del webhook, antes de leer el cuerpo: la marca existe y
+ * el secreto coincide. Marca desconocida y secreto incorrecto dan lo mismo.
+ */
+export async function autenticarWebhook(slug: string, secreto: string | null): Promise<boolean> {
+  const marca = await getMarcaPorSlug(slug);
+  return Boolean(marca && secretMatches(secreto, marca.webhook_secret));
+}
+
+/**
  * Webhook de anuncios. Marca desconocida y secreto incorrecto responden igual
  * (401), para no revelar qué marcas existen. Un lead repetido no se duplica:
  * se apunta en su historial que ha vuelto a llegar. Un cliente previo se
