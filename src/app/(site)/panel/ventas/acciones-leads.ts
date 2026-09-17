@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUsuaria } from "@/lib/ventas/auth";
 import { actualizarDatosLead, asignarLead, getLead, getMarcaPorSlug, getUsuaria, type Lead } from "@/lib/ventas/db";
+import { esFase } from "@/lib/ventas/dominio";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
 import {
   anadirNota,
@@ -11,6 +12,7 @@ import {
   crearLeadManual,
   importarLeadsCsv,
   marcarMuestrasEnviadas,
+  moverLead,
   previsualizarImportacion,
   registrarLlamada,
   type PreviaImportacion,
@@ -134,4 +136,15 @@ export async function cambiarFaseAction(slug: string, leadId: string, _prev: Res
   if (!res.ok) return res;
   refrescar(slug);
   return { ok: true, mensaje: "Fase cambiada." };
+}
+
+/** Tablero: arrastrar una tarjeta o pulsar «→». */
+export async function moverLeadAction(slug: string, leadId: string, fase: string): Promise<ResultadoAccion> {
+  const usuaria = await requireUsuaria();
+  if (!(await leadDeMarca(slug, leadId))) return NO_ENCONTRADO;
+  if (!esFase(fase)) return { ok: false, error: "Fase no válida." };
+  const res = await moverLead({ usuaria, leadId, fase });
+  if (!res.ok) return res;
+  refrescar(slug);
+  return { ok: true };
 }

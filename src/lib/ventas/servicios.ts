@@ -15,7 +15,7 @@ import {
   type Marca,
   type Usuaria,
 } from "./db";
-import { faseTrasLlamada, seguimientoTrasLlamada } from "./dominio";
+import { faseTrasLlamada, seguimientoTrasLlamada, type Fase } from "./dominio";
 import { clasificarLeads, parseVentasLeadsCsv, type LeadNuevo } from "./leads-csv";
 import type { CambioFase, Llamada, NotaSeguimiento } from "./validacion";
 
@@ -245,4 +245,19 @@ export async function cambiarFaseManual(input: { usuaria: Usuaria; leadId: strin
     nota: input.cambio.nota,
     faseNueva: input.cambio.fase,
   });
+}
+
+/**
+ * Movimiento desde el tablero (arrastrar o «→»). Pasar a Muestras enviadas se
+ * apunta como envío de muestras, para que cuente en las métricas del mes; no
+ * toca el próximo seguimiento: eso se decide en la ficha.
+ */
+export async function moverLead(input: { usuaria: Usuaria; leadId: string; fase: Fase }): Promise<Escritura> {
+  const lead = await getLead(input.leadId);
+  if (!lead) return { ok: false, error: "Lead no encontrado." };
+  if (lead.fase === input.fase) return { ok: true };
+  if (input.fase === "muestras") {
+    return registrarActividad({ leadId: lead.id, usuariaId: input.usuaria.id, tipo: "muestras_enviadas", faseNueva: "muestras" });
+  }
+  return registrarActividad({ leadId: lead.id, usuariaId: input.usuaria.id, tipo: "cambio_fase", faseNueva: input.fase });
 }
