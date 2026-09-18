@@ -90,6 +90,39 @@ export function ordenarPorUrgencia<T extends { fase: Fase; proximo_seguimiento: 
   });
 }
 
+export interface RectanguloSimple {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+}
+
+/**
+ * Dónde colocar (con `position: fixed`) el menú «⋯» de una tarjeta, anclado
+ * por su borde derecho al botón que lo abre. Se abre hacia abajo si cabe; si
+ * no, hacia arriba. Nunca queda por encima de `limiteSuperior` (el borde
+ * inferior de la cabecera fija del panel) ni se sale del viewport por la
+ * derecha o por abajo.
+ */
+export function calcularPosicionMenu(
+  boton: RectanguloSimple,
+  menu: { width: number; height: number },
+  ventana: { width: number; height: number },
+  limiteSuperior: number,
+  margen = 4,
+): { top: number; left: number } {
+  const cabeDebajo = boton.bottom + margen + menu.height <= ventana.height;
+  let top = cabeDebajo ? boton.bottom + margen : boton.top - margen - menu.height;
+  if (top < limiteSuperior) top = limiteSuperior;
+  if (top + menu.height > ventana.height) top = Math.max(limiteSuperior, ventana.height - menu.height);
+
+  let left = boton.right - menu.width;
+  if (left < 0) left = 0;
+  if (left + menu.width > ventana.width) left = Math.max(0, ventana.width - menu.width);
+
+  return { top, left };
+}
+
 /** «Paula Gómez» → «PG»; un solo nombre → su inicial. */
 export function iniciales(nombre: string): string {
   const palabras = nombre.trim().split(/\s+/).filter(Boolean);

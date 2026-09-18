@@ -1,7 +1,20 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { startTransition, useEffect, useOptimistic, useRef, useState, type CSSProperties, type DragEvent, type KeyboardEvent, type MouseEvent } from "react";
+import {
+  startTransition,
+  useEffect,
+  useLayoutEffect,
+  useOptimistic,
+  useRef,
+  useState,
+  type CSSProperties,
+  type DragEvent,
+  type KeyboardEvent,
+  type MouseEvent,
+  type RefObject,
+} from "react";
+import { createPortal } from "react-dom";
 import { FASE_COLORES, FASE_LABELS, type Fase } from "@/lib/ventas/dominio";
 import { formatoFecha } from "@/lib/ventas/metricas";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
@@ -9,6 +22,7 @@ import {
   COLUMNAS_TABLERO,
   MAX_TARJETAS_COLUMNA,
   agruparEnColumnas,
+  calcularPosicionMenu,
   columnaDeFase,
   estadoSeguimiento,
   fasesDestino,
@@ -21,6 +35,20 @@ import { moverLeadAction } from "../../../acciones-leads";
 import { FaseEtiqueta } from "../../../_componentes/FaseEtiqueta";
 import { Mensaje } from "../../../_componentes/Mensaje";
 import { botonSecundario } from "../../../_componentes/estilos";
+
+/**
+ * z-index del menú «⋯»: por encima de la cabecera fija del panel (10 en
+ * VentasShell) y por debajo del selector de descarte (50). El menú se porta
+ * a `portalRef` (un nodo dentro del propio tablero, no `document.body`):
+ * VentasShell envuelve el panel en un `position: fixed` con z-index altísimo
+ * para tapar el sitio público, así que un portal fuera de ese árbol quedaría
+ * él mismo detrás de la cabecera (o encima de todo, incluido el diálogo).
+ * Portar dentro del tablero evita el recorte de las columnas con scroll y
+ * mantiene el orden cabecera < menú < diálogo.
+ */
+const Z_MENU = 30;
+/** Por debajo de este ancho, el menú se enseña como hoja inferior. */
+const ANCHO_HOJA = 640;
 
 /** Lo único que el tablero sabe de un lead: datos planos, sin nada de la marca. */
 export interface TarjetaLead {
@@ -69,6 +97,9 @@ export function Tablero({
   const [enMarcha, setEnMarcha] = useState<ReadonlySet<string>>(new Set());
   const cardRefs = useRef<Map<string, HTMLElement>>(new Map());
   const focoTrasDescarte = useRef<HTMLElement | null>(null);
+  // Destino del portal del menú «⋯»: un nodo del propio tablero (sin scroll
+  // ni recorte), no document.body — ver el porqué junto a Z_MENU más arriba.
+  const portalRef = useRef<HTMLDivElement>(null);
 
   const grupos = agruparEnColumnas(visibles);
   const origenArrastre = arrastrando ? visibles.find((l) => l.id === arrastrando) : undefined;
@@ -123,7 +154,7 @@ export function Tablero({
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+    <div ref={portalRef} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ minHeight: 20 }} aria-live="polite">
         <Mensaje resultado={aviso} />
       </div>
@@ -201,6 +232,7 @@ export function Tablero({
                     onMover={(fase) => mover(lead, fase)}
                     onDescartar={() => abrirDescarte(lead)}
                     onRegistrarRef={(el) => registrarRef(lead.id, el)}
+                    portalRef={portalRef}
                   />
                 ))}
                 {todas.length > MAX_TARJETAS_COLUMNA && (
@@ -239,6 +271,7 @@ function Tarjeta({
   onMover,
   onDescartar,
   onRegistrarRef,
+  portalRef,
 }: {
   slug: string;
   lead: TarjetaLead;
@@ -251,6 +284,7 @@ function Tarjeta({
   onMover: (fase: Fase) => void;
   onDescartar: () => void;
   onRegistrarRef: (el: HTMLElement | null) => void;
+  portalRef: RefObject<HTMLDivElement | null>;
 }) {
   const router = useRouter();
   const ficha = `/panel/ventas/${slug}/leads/${lead.id}`;
@@ -384,7 +418,14 @@ function Tarjeta({
             →
           </button>
         )}
-        <MenuAcciones negocio={lead.negocio} destinos={fasesDestino(lead.fase)} deshabilitado={moviendo} onMover={onMover} onDescartar={onDescartar} />
+        <MenuAcciones
+          negocio={lead.negocio}
+          destinos={fasesDestino(lead.fase)}
+          deshabilitado={moviendo}
+          onMover={onMover}
+          onDescartar={onDescartar}
+          portalRef={portalRef}
+        />
       </div>
     </article>
   );
@@ -396,41 +437,117 @@ function MenuAcciones({
   deshabilitado,
   onMover,
   onDescartar,
+  portalRef,
 }: {
   negocio: string;
   destinos: Fase[];
   deshabilitado: boolean;
   onMover: (fase: Fase) => void;
   onDescartar: () => void;
+  portalRef: RefObject<HTMLDivElement | null>;
 }) {
   const [abierto, setAbierto] = useState(false);
+  const [modoHoja, setModoHoja] = useState(false);
+  const [posicion, setPosicion] = useState<{ top: number; left: number } | null>(null);
   const raiz = useRef<HTMLDivElement>(null);
   const boton = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  function abrir() {
+    setModoHoja(window.innerWidth < ANCHO_HOJA);
+    setPosicion(null);
+    setAbierto(true);
+  }
+
+  function cerrar() {
+    setAbierto(false);
+    setPosicion(null);
+  }
+
+  // Sitúa el menú (modo escritorio) con el botón ya medido: primero se monta
+  // oculto para poder medirlo con getBoundingClientRect, luego se calcula su
+  // sitio con calcularPosicionMenu y se hace visible ya en su lugar.
+  useLayoutEffect(() => {
+    if (!abierto || modoHoja || !boton.current || !menuRef.current) return;
+    const cabecera = document.querySelector("header");
+    const limiteSuperior = cabecera ? cabecera.getBoundingClientRect().bottom : 0;
+    setPosicion(
+      calcularPosicionMenu(
+        boton.current.getBoundingClientRect(),
+        { width: menuRef.current.offsetWidth, height: menuRef.current.offsetHeight },
+        { width: window.innerWidth, height: window.innerHeight },
+        limiteSuperior,
+      ),
+    );
+  }, [abierto, modoHoja]);
 
   useEffect(() => {
     if (!abierto) return;
     const clicFuera = (e: globalThis.MouseEvent) => {
-      if (raiz.current && !raiz.current.contains(e.target as Node)) setAbierto(false);
+      const dentro = raiz.current?.contains(e.target as Node) || menuRef.current?.contains(e.target as Node);
+      if (!dentro) cerrar();
     };
     const tecla = (e: globalThis.KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      setAbierto(false);
+      cerrar();
       boton.current?.focus();
     };
+    // Un menú de posición fija que no se cierra se despega de su tarjeta en
+    // cuanto algo se desplaza (la columna, la fila o la ventana entera).
+    const cerrarPorDesplazamiento = () => cerrar();
     document.addEventListener("mousedown", clicFuera);
     document.addEventListener("keydown", tecla);
+    window.addEventListener("scroll", cerrarPorDesplazamiento, true);
+    window.addEventListener("resize", cerrarPorDesplazamiento);
     return () => {
       document.removeEventListener("mousedown", clicFuera);
       document.removeEventListener("keydown", tecla);
+      window.removeEventListener("scroll", cerrarPorDesplazamiento, true);
+      window.removeEventListener("resize", cerrarPorDesplazamiento);
     };
   }, [abierto]);
+
+  const items = (
+    <>
+      {destinos.length > 0 && (
+        <span style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", padding: "4px 8px 2px", textTransform: "uppercase" }}>Mover a…</span>
+      )}
+      {destinos.map((fase) => (
+        <button
+          key={fase}
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            cerrar();
+            onMover(fase);
+          }}
+          style={itemMenu}
+        >
+          {FASE_LABELS[fase]}
+        </button>
+      ))}
+      <button
+        type="button"
+        role="menuitem"
+        onClick={() => {
+          cerrar();
+          onDescartar();
+        }}
+        style={{ ...itemMenu, color: "#b91c1c" }}
+      >
+        Descartar…
+      </button>
+    </>
+  );
+
+  const destino = portalRef.current;
 
   return (
     <div ref={raiz} style={{ position: "relative" }}>
       <button
         type="button"
         ref={boton}
-        onClick={() => setAbierto((v) => !v)}
+        onClick={() => (abierto ? cerrar() : abrir())}
         disabled={deshabilitado}
         aria-label={`Más acciones de ${negocio}`}
         aria-haspopup="menu"
@@ -439,56 +556,69 @@ function MenuAcciones({
       >
         ⋯
       </button>
-      {abierto && (
-        <div
-          role="menu"
-          aria-label={`Acciones de ${negocio}`}
-          style={{
-            position: "absolute",
-            right: 0,
-            bottom: "calc(100% + 4px)",
-            background: "#fff",
-            border: "1px solid #e2e8f0",
-            borderRadius: 8,
-            boxShadow: "0 8px 20px rgba(15, 23, 42, 0.18)",
-            padding: 4,
-            display: "flex",
-            flexDirection: "column",
-            gap: 2,
-            minWidth: 175,
-            zIndex: 10,
-          }}
-        >
-          {destinos.length > 0 && (
-            <span style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", padding: "4px 8px 2px", textTransform: "uppercase" }}>Mover a…</span>
-          )}
-          {destinos.map((fase) => (
-            <button
-              key={fase}
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setAbierto(false);
-                onMover(fase);
-              }}
-              style={itemMenu}
-            >
-              {FASE_LABELS[fase]}
-            </button>
-          ))}
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              setAbierto(false);
-              onDescartar();
+
+      {abierto && !modoHoja && destino &&
+        createPortal(
+          <div
+            ref={menuRef}
+            role="menu"
+            aria-label={`Acciones de ${negocio}`}
+            style={{
+              position: "fixed",
+              top: posicion?.top ?? 0,
+              left: posicion?.left ?? 0,
+              visibility: posicion ? "visible" : "hidden",
+              background: "#fff",
+              border: "1px solid #e2e8f0",
+              borderRadius: 8,
+              boxShadow: "0 8px 20px rgba(15, 23, 42, 0.18)",
+              padding: 4,
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
+              width: 190,
+              zIndex: Z_MENU,
             }}
-            style={{ ...itemMenu, color: "#b91c1c" }}
           >
-            Descartar…
-          </button>
-        </div>
-      )}
+            {items}
+          </div>,
+          destino,
+        )}
+
+      {abierto && modoHoja && destino &&
+        createPortal(
+          <>
+            <div onClick={cerrar} style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.35)", zIndex: Z_MENU }} />
+            <div
+              ref={menuRef}
+              role="menu"
+              aria-label={`Acciones de ${negocio}`}
+              style={{
+                position: "fixed",
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: Z_MENU + 1,
+                background: "#fff",
+                borderRadius: "14px 14px 0 0",
+                boxShadow: "0 -8px 24px rgba(15, 23, 42, 0.25)",
+                padding: "14px 14px calc(env(safe-area-inset-bottom, 0px) + 14px)",
+                display: "flex",
+                flexDirection: "column",
+                gap: 4,
+                maxHeight: "70vh",
+                overflowY: "auto",
+              }}
+            >
+              <strong style={{ fontSize: 15, color: "#0f172a", padding: "2px 4px 10px" }}>{negocio}</strong>
+              {items}
+              <button type="button" onClick={cerrar} style={{ ...itemMenu, marginTop: 4, textAlign: "center", fontWeight: 700 }}>
+                Cancelar
+              </button>
+            </div>
+          </>,
+          destino,
+        )}
     </div>
   );
 }

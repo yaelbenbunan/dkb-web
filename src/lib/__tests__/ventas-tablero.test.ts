@@ -5,6 +5,7 @@ import {
   FASES_MOVIBLES,
   MAX_TARJETAS_COLUMNA,
   agruparEnColumnas,
+  calcularPosicionMenu,
   columnaDeFase,
   estadoSeguimiento,
   fasesDestino,
@@ -126,6 +127,49 @@ describe("fasesDestino", () => {
     expect(fasesDestino("perdido")).toEqual(FASES_MOVIBLES);
     expect(fasesDestino("no_interesa")).toEqual(FASES_MOVIBLES);
     expect(fasesDestino("ilocalizable")).toEqual(FASES_MOVIBLES);
+  });
+});
+
+describe("calcularPosicionMenu", () => {
+  const VENTANA = { width: 1400, height: 900 };
+  const LIMITE_SUPERIOR = 56; // borde inferior de la cabecera fija
+
+  test("se abre debajo del botón, alineado a su borde derecho, si cabe", () => {
+    const boton = { top: 200, bottom: 220, left: 300, right: 332 };
+    const menu = { width: 190, height: 180 };
+    expect(calcularPosicionMenu(boton, menu, VENTANA, LIMITE_SUPERIOR)).toEqual({ top: 224, left: 142 });
+  });
+
+  test("se abre hacia arriba si no cabe debajo", () => {
+    const boton = { top: 800, bottom: 820, left: 300, right: 332 };
+    const menu = { width: 190, height: 180 };
+    // 820 + 4 + 180 = 1004 > 900 → no cabe debajo; arriba: 800 - 4 - 180 = 616
+    expect(calcularPosicionMenu(boton, menu, VENTANA, LIMITE_SUPERIOR)).toEqual({ top: 616, left: 142 });
+  });
+
+  test("no sube nunca por encima del borde inferior de la cabecera", () => {
+    const boton = { top: 60, bottom: 900, left: 300, right: 332 };
+    const menu = { width: 190, height: 500 };
+    // Ni cabe debajo (900+4+500) ni arriba (60-4-500 sería negativo): se pega a la cabecera.
+    expect(calcularPosicionMenu(boton, menu, VENTANA, LIMITE_SUPERIOR).top).toBe(LIMITE_SUPERIOR);
+  });
+
+  test("no se sale del viewport por la derecha ni por la izquierda", () => {
+    const menu = { width: 190, height: 180 };
+    // El botón sobresale del viewport por la derecha (p. ej. redondeos de un contenedor con scroll).
+    const cercaDelBordeDerecho = { top: 200, bottom: 220, left: 1260, right: 1450 };
+    expect(calcularPosicionMenu(cercaDelBordeDerecho, menu, VENTANA, LIMITE_SUPERIOR).left).toBe(VENTANA.width - menu.width);
+
+    const cercaDelBordeIzquierdo = { top: 200, bottom: 220, left: 0, right: 20 };
+    expect(calcularPosicionMenu(cercaDelBordeIzquierdo, menu, VENTANA, LIMITE_SUPERIOR).left).toBe(0);
+  });
+
+  test("no se sale del viewport por abajo ni siquiera abriendo hacia arriba", () => {
+    // El botón queda por debajo del viewport (tarjeta a medio desplazar): no cabe debajo
+    // ni, al abrir hacia arriba, deja de sobresalir por abajo. Se pega al borde inferior.
+    const boton = { top: 950, bottom: 970, left: 300, right: 332 };
+    const menu = { width: 190, height: 60 };
+    expect(calcularPosicionMenu(boton, menu, VENTANA, LIMITE_SUPERIOR)).toEqual({ top: 840, left: 142 });
   });
 });
 
