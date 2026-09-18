@@ -14,6 +14,7 @@ const m = vi.hoisted(() => ({
   marcarMuestrasEnviadas: vi.fn(),
   anadirNota: vi.fn(),
   cambiarFaseManual: vi.fn(),
+  moverLead: vi.fn(),
   revalidatePath: vi.fn(),
   redirect: vi.fn((url: string) => {
     throw new Error(`NEXT_REDIRECT:${url}`);
@@ -35,6 +36,7 @@ vi.mock("@/lib/ventas/servicios", () => ({
   marcarMuestrasEnviadas: m.marcarMuestrasEnviadas,
   anadirNota: m.anadirNota,
   cambiarFaseManual: m.cambiarFaseManual,
+  moverLead: m.moverLead,
 }));
 vi.mock("next/cache", () => ({ revalidatePath: m.revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect: m.redirect }));
@@ -49,6 +51,7 @@ import {
   muestrasEnviadasAction,
   notaAction,
   cambiarFaseAction,
+  moverLeadAction,
 } from "@/app/(site)/panel/ventas/acciones-leads";
 
 const USUARIA = { id: "u1", rol: "comercial", activa: true };
@@ -67,7 +70,7 @@ beforeEach(() => {
   m.getMarcaPorSlug.mockReset().mockResolvedValue(MARCA);
   m.getLead.mockReset().mockResolvedValue(LEAD);
   m.getUsuaria.mockReset().mockResolvedValue({ id: "u2", activa: true });
-  for (const f of [m.actualizarDatosLead, m.asignarLead, m.registrarLlamada, m.marcarMuestrasEnviadas, m.anadirNota, m.cambiarFaseManual]) {
+  for (const f of [m.actualizarDatosLead, m.asignarLead, m.registrarLlamada, m.marcarMuestrasEnviadas, m.anadirNota, m.cambiarFaseManual, m.moverLead]) {
     f.mockReset().mockResolvedValue({ ok: true });
   }
   m.importarLeadsCsv.mockReset().mockResolvedValue({ ok: true, creados: 1, duplicados: 0, excluidos: 0 });
@@ -145,5 +148,36 @@ describe("acciones de leads", () => {
     m.requireUsuaria.mockRejectedValue(new Error("NEXT_REDIRECT"));
     await expect(previsualizarLeadsAction("hydrup", "x")).rejects.toThrow();
     expect(m.previsualizarImportacion).not.toHaveBeenCalled();
+  });
+
+  describe("moverLeadAction (tablero)", () => {
+    test("exige sesión", async () => {
+      m.requireUsuaria.mockRejectedValue(new Error("NEXT_REDIRECT"));
+      await expect(moverLeadAction("hydrup", "l1", "contactado")).rejects.toThrow();
+      expect(m.moverLead).not.toHaveBeenCalled();
+    });
+
+    test("un lead de otra marca da no encontrado", async () => {
+      m.getLead.mockResolvedValue({ ...LEAD, marca_id: "otra" });
+      expect(await moverLeadAction("hydrup", "l1", "contactado")).toEqual({ ok: false, error: "Lead no encontrado." });
+      expect(m.moverLead).not.toHaveBeenCalled();
+    });
+
+    test("una fase inventada no llega al servicio", async () => {
+      expect(await moverLeadAction("hydrup", "l1", "inventada")).toEqual({ ok: false, error: "Fase no válida." });
+      expect(m.moverLead).not.toHaveBeenCalled();
+    });
+
+    test("delega con la usuaria de la sesión y refresca la marca", async () => {
+      expect(await moverLeadAction("hydrup", "l1", "muestras")).toEqual({ ok: true });
+      expect(m.moverLead).toHaveBeenCalledWith({ usuaria: USUARIA, leadId: "l1", fase: "muestras" });
+      expect(m.revalidatePath).toHaveBeenCalledWith("/panel/ventas/hydrup", "layout");
+    });
+
+    test("si el servicio falla se devuelve su error y no se refresca", async () => {
+      m.moverLead.mockResolvedValue({ ok: false, error: "No se pudo guardar. Vuelve a intentarlo." });
+      expect(await moverLeadAction("hydrup", "l1", "cliente")).toEqual({ ok: false, error: "No se pudo guardar. Vuelve a intentarlo." });
+      expect(m.revalidatePath).not.toHaveBeenCalled();
+    });
   });
 });

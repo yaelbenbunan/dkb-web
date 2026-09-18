@@ -3,6 +3,7 @@ import type { Marca } from "@/lib/ventas/db";
 
 const PESTANAS = [
   { clave: "resumen", texto: "Resumen", ruta: "" },
+  { clave: "tablero", texto: "Tablero", ruta: "/tablero" },
   { clave: "leads", texto: "Leads", ruta: "/leads" },
   { clave: "condiciones", texto: "Condiciones", ruta: "/condiciones" },
 ] as const;

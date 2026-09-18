@@ -21,6 +21,7 @@ import {
   registrarLlamada,
   marcarMuestrasEnviadas,
   cambiarFaseManual,
+  moverLead,
 } from "../ventas/servicios";
 
 const MARCA = { id: "m1", slug: "hydrup", nombre: "Hydrup", webhook_secret: "secreto-largo" } as never;
@@ -165,6 +166,41 @@ describe("registro de trabajo sobre un lead", () => {
     expect(m.registrarActividad).toHaveBeenCalledWith({ leadId: "l1", usuariaId: "u1", tipo: "cambio_fase", nota: "Cerró", faseNueva: "perdido" });
     expect(await cambiarFaseManual({ usuaria: USUARIA, leadId: "l1", cambio: { fase: "perdido", nota: "" } })).toEqual({ ok: true });
     expect(m.registrarActividad).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("moverLead (tablero)", () => {
+  test("lead inexistente", async () => {
+    m.getLead.mockResolvedValue(null);
+    expect(await moverLead({ usuaria: USUARIA, leadId: "x", fase: "contactado" })).toEqual({ ok: false, error: "Lead no encontrado." });
+    expect(m.registrarActividad).not.toHaveBeenCalled();
+  });
+
+  test("a la misma fase no escribe nada", async () => {
+    m.getLead.mockResolvedValue({ id: "l1", fase: "interesado" });
+    expect(await moverLead({ usuaria: USUARIA, leadId: "l1", fase: "interesado" })).toEqual({ ok: true });
+    expect(m.registrarActividad).not.toHaveBeenCalled();
+  });
+
+  test("a muestras cuenta como envío de muestras y no toca el seguimiento", async () => {
+    m.getLead.mockResolvedValue({ id: "l1", fase: "interesado" });
+    expect(await moverLead({ usuaria: USUARIA, leadId: "l1", fase: "muestras" })).toEqual({ ok: true });
+    expect(m.registrarActividad).toHaveBeenCalledWith({ leadId: "l1", usuariaId: "u1", tipo: "muestras_enviadas", faseNueva: "muestras" });
+    expect(m.registrarActividad.mock.calls[0][0]).not.toHaveProperty("proximoSeguimiento");
+  });
+
+  test("al resto de fases es un cambio de fase sin nota ni seguimiento", async () => {
+    m.getLead.mockResolvedValue({ id: "l1", fase: "nuevo" });
+    await moverLead({ usuaria: USUARIA, leadId: "l1", fase: "contactado" });
+    await moverLead({ usuaria: USUARIA, leadId: "l1", fase: "no_interesa" });
+    expect(m.registrarActividad.mock.calls[0][0]).toEqual({ leadId: "l1", usuariaId: "u1", tipo: "cambio_fase", faseNueva: "contactado" });
+    expect(m.registrarActividad.mock.calls[1][0]).toEqual({ leadId: "l1", usuariaId: "u1", tipo: "cambio_fase", faseNueva: "no_interesa" });
+  });
+
+  test("si la base falla se devuelve el error", async () => {
+    m.getLead.mockResolvedValue({ id: "l1", fase: "nuevo" });
+    m.registrarActividad.mockResolvedValue({ ok: false, error: "No se pudo guardar. Vuelve a intentarlo." });
+    expect(await moverLead({ usuaria: USUARIA, leadId: "l1", fase: "cliente" })).toEqual({ ok: false, error: "No se pudo guardar. Vuelve a intentarlo." });
   });
 });
 
