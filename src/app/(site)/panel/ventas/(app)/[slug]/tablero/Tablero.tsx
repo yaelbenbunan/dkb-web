@@ -452,10 +452,15 @@ function MenuAcciones({
   const raiz = useRef<HTMLDivElement>(null);
   const boton = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  // Momento de apertura: al abrir, el propio gesto (el tap, o el navegador
+  // llevando el botón a la vista) puede disparar un scroll que no debe
+  // confundirse con que el usuario se ha ido a otra parte de la página.
+  const aperturaTs = useRef(0);
 
   function abrir() {
     setModoHoja(window.innerWidth < ANCHO_HOJA);
     setPosicion(null);
+    aperturaTs.current = Date.now();
     setAbierto(true);
   }
 
@@ -464,23 +469,33 @@ function MenuAcciones({
     setPosicion(null);
   }
 
-  // Sitúa el menú (modo escritorio) con el botón ya medido: primero se monta
-  // oculto para poder medirlo con getBoundingClientRect, luego se calcula su
-  // sitio con calcularPosicionMenu y se hace visible ya en su lugar.
-  useLayoutEffect(() => {
-    if (!abierto || modoHoja || !boton.current || !menuRef.current) return;
+  function posicionar() {
+    if (!boton.current || !menuRef.current) return null;
     const cabecera = document.querySelector("header");
     const limiteSuperior = cabecera ? cabecera.getBoundingClientRect().bottom : 0;
-    setPosicion(
-      calcularPosicionMenu(
-        boton.current.getBoundingClientRect(),
+    const rectBoton = boton.current.getBoundingClientRect();
+    return {
+      rectBoton,
+      limiteSuperior,
+      pos: calcularPosicionMenu(
+        rectBoton,
         { width: menuRef.current.offsetWidth, height: menuRef.current.offsetHeight },
         { width: window.innerWidth, height: window.innerHeight },
         limiteSuperior,
       ),
-    );
+    };
+  }
+
+  // Sitúa el menú (modo escritorio) con el botón ya medido: primero se monta
+  // oculto para poder medirlo con getBoundingClientRect, luego se calcula su
+  // sitio con calcularPosicionMenu y se hace visible ya en su lugar.
+  useLayoutEffect(() => {
+    if (!abierto || modoHoja) return;
+    const r = posicionar();
+    if (r) setPosicion(r.pos);
   }, [abierto, modoHoja]);
 
+  // Clic fuera y Escape: para las dos variantes.
   useEffect(() => {
     if (!abierto) return;
     const clicFuera = (e: globalThis.MouseEvent) => {
@@ -492,20 +507,49 @@ function MenuAcciones({
       cerrar();
       boton.current?.focus();
     };
-    // Un menú de posición fija que no se cierra se despega de su tarjeta en
-    // cuanto algo se desplaza (la columna, la fila o la ventana entera).
-    const cerrarPorDesplazamiento = () => cerrar();
     document.addEventListener("mousedown", clicFuera);
     document.addEventListener("keydown", tecla);
-    window.addEventListener("scroll", cerrarPorDesplazamiento, true);
-    window.addEventListener("resize", cerrarPorDesplazamiento);
     return () => {
       document.removeEventListener("mousedown", clicFuera);
       document.removeEventListener("keydown", tecla);
-      window.removeEventListener("scroll", cerrarPorDesplazamiento, true);
-      window.removeEventListener("resize", cerrarPorDesplazamiento);
     };
   }, [abierto]);
+
+  // Solo en modo escritorio: un menú de posición fija se despega de su
+  // tarjeta en cuanto algo se desplaza (la columna, la fila o la ventana),
+  // así que se recalcula sobre la marcha en vez de cerrarse. La hoja móvil
+  // no necesita nada de esto: está anclada al fondo de la pantalla.
+  useEffect(() => {
+    if (!abierto || modoHoja) return;
+    let frame: number | null = null;
+    const recalcular = () => {
+      frame = null;
+      // Ignora el scroll del propio gesto de apertura (el tap, o el navegador
+      // llevando el botón a la vista): si no, el menú se cerraría solo nada
+      // más abrirse.
+      if (Date.now() - aperturaTs.current < 150) return;
+      const r = posicionar();
+      if (!r) return;
+      const fueraDeVista =
+        r.rectBoton.bottom < r.limiteSuperior ||
+        r.rectBoton.top > window.innerHeight ||
+        r.rectBoton.right < 0 ||
+        r.rectBoton.left > window.innerWidth;
+      if (fueraDeVista) cerrar();
+      else setPosicion(r.pos);
+    };
+    const alDesplazar = () => {
+      if (frame !== null) return;
+      frame = requestAnimationFrame(recalcular);
+    };
+    window.addEventListener("scroll", alDesplazar, true);
+    window.addEventListener("resize", alDesplazar);
+    return () => {
+      if (frame !== null) cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", alDesplazar, true);
+      window.removeEventListener("resize", alDesplazar);
+    };
+  }, [abierto, modoHoja]);
 
   const items = (
     <>
