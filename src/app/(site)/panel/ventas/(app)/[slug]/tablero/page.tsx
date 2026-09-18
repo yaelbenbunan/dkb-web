@@ -89,7 +89,7 @@ export default async function TableroPage({
           </form>
         </div>
 
-        <Tablero slug={slug} leads={leads} hoy={hoy} filtrosLista={{ mias, q }} />
+        <Tablero slug={slug} leads={leads} hoy={hoy} filtrosLista={{ mias, atrasados, q }} />
       </div>
     </div>
   );

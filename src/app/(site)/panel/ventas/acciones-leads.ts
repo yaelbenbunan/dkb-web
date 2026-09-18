@@ -143,6 +143,9 @@ export async function moverLeadAction(slug: string, leadId: string, fase: string
   const usuaria = await requireUsuaria();
   if (!(await leadDeMarca(slug, leadId))) return NO_ENCONTRADO;
   if (!esFase(fase)) return { ok: false, error: "Fase no válida." };
+  // moverLead vuelve a leer el lead antes de escribir: es a propósito, no un
+  // descuido, para achicar la ventana en la que dos movimientos simultáneos
+  // podrían duplicarse.
   const res = await moverLead({ usuaria, leadId, fase });
   if (!res.ok) return res;
   refrescar(slug);

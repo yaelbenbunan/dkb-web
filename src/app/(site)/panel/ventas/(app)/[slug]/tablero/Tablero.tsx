@@ -11,6 +11,7 @@ import {
   agruparEnColumnas,
   columnaDeFase,
   estadoSeguimiento,
+  fasesDestino,
   ordenarPorUrgencia,
   siguienteFase,
   type ColumnaId,
@@ -52,7 +53,7 @@ export function Tablero({
   slug: string;
   leads: TarjetaLead[];
   hoy: string;
-  filtrosLista: { mias: boolean; q: string };
+  filtrosLista: { mias: boolean; atrasados: boolean; q: string };
 }) {
   // Mientras la acción está en marcha se enseña la fase nueva; al terminar manda
   // lo que devuelva el servidor: si falló, la tarjeta vuelve sola a su columna.
@@ -63,13 +64,24 @@ export function Tablero({
   const [arrastrando, setArrastrando] = useState<string | null>(null);
   const [sobre, setSobre] = useState<ColumnaId | null>(null);
   const [descartando, setDescartando] = useState<TarjetaLead | null>(null);
+  // Ids con un movimiento en marcha: evita que un doble clic o un segundo
+  // arrastre disparen dos veces la misma acción (y cuenten dos muestras).
+  const [enMarcha, setEnMarcha] = useState<ReadonlySet<string>>(new Set());
+  const cardRefs = useRef<Map<string, HTMLElement>>(new Map());
+  const focoTrasDescarte = useRef<HTMLElement | null>(null);
 
   const grupos = agruparEnColumnas(visibles);
   const origenArrastre = arrastrando ? visibles.find((l) => l.id === arrastrando) : undefined;
 
+  function registrarRef(id: string, el: HTMLElement | null) {
+    if (el) cardRefs.current.set(id, el);
+    else cardRefs.current.delete(id);
+  }
+
   function mover(lead: TarjetaLead, fase: Fase) {
-    if (lead.fase === fase) return;
+    if (lead.fase === fase || enMarcha.has(lead.id)) return;
     setAviso(null);
+    setEnMarcha((s) => new Set(s).add(lead.id));
     startTransition(async () => {
       moverEnPantalla({ id: lead.id, fase });
       let res: ResultadoAccion;
@@ -79,7 +91,24 @@ export function Tablero({
         res = { ok: false, error: "No se pudo mover. Revisa la conexión y vuelve a intentarlo." };
       }
       setAviso(res.ok ? { ok: true, mensaje: `«${lead.negocio}» → ${FASE_LABELS[fase]}` } : { ok: false, error: `«${lead.negocio}» no se ha movido: ${res.error}` });
+      setEnMarcha((s) => {
+        if (!s.has(lead.id)) return s;
+        const n = new Set(s);
+        n.delete(lead.id);
+        return n;
+      });
     });
+  }
+
+  function abrirDescarte(lead: TarjetaLead) {
+    focoTrasDescarte.current = cardRefs.current.get(lead.id) ?? null;
+    setDescartando(lead);
+  }
+
+  function cerrarDescarte() {
+    setDescartando(null);
+    focoTrasDescarte.current?.focus();
+    focoTrasDescarte.current = null;
   }
 
   function soltar(e: DragEvent, columna: ColumnaTablero) {
@@ -89,7 +118,7 @@ export function Tablero({
     setArrastrando(null);
     const lead = visibles.find((l) => l.id === id);
     if (!lead || columnaDeFase(lead.fase) === columna.id) return;
-    if (columna.destino === null) setDescartando(lead);
+    if (columna.destino === null) abrirDescarte(lead);
     else mover(lead, columna.destino);
   }
 
@@ -162,13 +191,16 @@ export function Tablero({
                     lead={lead}
                     hoy={hoy}
                     arrastrandose={arrastrando === lead.id}
+                    moviendo={enMarcha.has(lead.id)}
                     enDescartados={columna.destino === null}
                     onEmpezarArrastre={() => setArrastrando(lead.id)}
                     onTerminarArrastre={() => {
                       setArrastrando(null);
                       setSobre(null);
                     }}
-                    onAvanzar={(fase) => mover(lead, fase)}
+                    onMover={(fase) => mover(lead, fase)}
+                    onDescartar={() => abrirDescarte(lead)}
+                    onRegistrarRef={(el) => registrarRef(lead.id, el)}
                   />
                 ))}
                 {todas.length > MAX_TARJETAS_COLUMNA && (
@@ -185,10 +217,10 @@ export function Tablero({
           negocio={descartando.negocio}
           onElegir={(fase) => {
             const lead = descartando;
-            setDescartando(null);
+            cerrarDescarte();
             mover(lead, fase);
           }}
-          onCancelar={() => setDescartando(null)}
+          onCancelar={cerrarDescarte}
         />
       )}
     </div>
@@ -200,19 +232,25 @@ function Tarjeta({
   lead,
   hoy,
   arrastrandose,
+  moviendo,
   enDescartados,
   onEmpezarArrastre,
   onTerminarArrastre,
-  onAvanzar,
+  onMover,
+  onDescartar,
+  onRegistrarRef,
 }: {
   slug: string;
   lead: TarjetaLead;
   hoy: string;
   arrastrandose: boolean;
+  moviendo: boolean;
   enDescartados: boolean;
   onEmpezarArrastre: () => void;
   onTerminarArrastre: () => void;
-  onAvanzar: (fase: Fase) => void;
+  onMover: (fase: Fase) => void;
+  onDescartar: () => void;
+  onRegistrarRef: (el: HTMLElement | null) => void;
 }) {
   const router = useRouter();
   const ficha = `/panel/ventas/${slug}/leads/${lead.id}`;
@@ -229,16 +267,22 @@ function Tarjeta({
     if (e.key === "Enter") router.push(ficha);
     if (e.key === "ArrowRight" && siguiente) {
       e.preventDefault();
-      onAvanzar(siguiente);
+      onMover(siguiente);
     }
   };
 
   return (
     <article
+      ref={onRegistrarRef}
       tabIndex={0}
-      draggable
-      aria-label={`${lead.negocio}, ${FASE_LABELS[lead.fase]}. Intro abre la ficha${siguiente ? `; flecha derecha pasa a ${FASE_LABELS[siguiente]}` : ""}.`}
+      draggable={!moviendo}
+      aria-label={`${lead.negocio}, ${FASE_LABELS[lead.fase]}${moviendo ? ", moviendo…" : ""}. Intro abre la ficha${siguiente ? `; flecha derecha pasa a ${FASE_LABELS[siguiente]}` : ""}.`}
+      aria-busy={moviendo}
       onDragStart={(e) => {
+        if (moviendo) {
+          e.preventDefault();
+          return;
+        }
         e.dataTransfer.setData("text/plain", lead.id);
         e.dataTransfer.effectAllowed = "move";
         onEmpezarArrastre();
@@ -254,8 +298,8 @@ function Tarjeta({
         borderRadius: 10,
         padding: "9px 10px",
         boxShadow: "0 1px 2px rgba(15, 23, 42, 0.06)",
-        cursor: "grab",
-        opacity: arrastrandose ? 0.45 : 1,
+        cursor: moviendo ? "wait" : "grab",
+        opacity: arrastrandose ? 0.45 : moviendo ? 0.55 : 1,
         display: "flex",
         flexDirection: "column",
         gap: 6,
@@ -311,31 +355,156 @@ function Tarjeta({
         </div>
       )}
 
-      {(lead.telefono || siguiente) && (
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 6 }}>
-          {lead.telefono && (
-            <a href={`tel:${lead.telefono}`} aria-label={`Llamar a ${lead.negocio} (${lead.telefono})`} title={lead.telefono} style={botonTarjeta}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />
-              </svg>
-            </a>
-          )}
-          {siguiente && (
-            <button
-              type="button"
-              onClick={() => onAvanzar(siguiente)}
-              aria-label={`Pasar ${lead.negocio} a ${FASE_LABELS[siguiente]}`}
-              title={`Pasar a ${FASE_LABELS[siguiente]}`}
-              style={{ ...botonTarjeta, background: FASE_COLORES[siguiente].bg, color: FASE_COLORES[siguiente].text, borderColor: "transparent", fontWeight: 700, fontSize: 15 }}
-            >
-              →
-            </button>
-          )}
-        </div>
-      )}
+      <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 6 }}>
+        {lead.telefono && (
+          <a href={`tel:${lead.telefono}`} aria-label={`Llamar a ${lead.negocio} (${lead.telefono})`} title={lead.telefono} style={botonTarjeta}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />
+            </svg>
+          </a>
+        )}
+        {siguiente && (
+          <button
+            type="button"
+            onClick={() => onMover(siguiente)}
+            disabled={moviendo}
+            aria-label={`Pasar ${lead.negocio} a ${FASE_LABELS[siguiente]}`}
+            title={`Pasar a ${FASE_LABELS[siguiente]}`}
+            style={{
+              ...botonTarjeta,
+              background: FASE_COLORES[siguiente].bg,
+              color: FASE_COLORES[siguiente].text,
+              borderColor: "transparent",
+              fontWeight: 700,
+              fontSize: 15,
+              cursor: moviendo ? "not-allowed" : "pointer",
+              opacity: moviendo ? 0.5 : 1,
+            }}
+          >
+            →
+          </button>
+        )}
+        <MenuAcciones negocio={lead.negocio} destinos={fasesDestino(lead.fase)} deshabilitado={moviendo} onMover={onMover} onDescartar={onDescartar} />
+      </div>
     </article>
   );
 }
+
+function MenuAcciones({
+  negocio,
+  destinos,
+  deshabilitado,
+  onMover,
+  onDescartar,
+}: {
+  negocio: string;
+  destinos: Fase[];
+  deshabilitado: boolean;
+  onMover: (fase: Fase) => void;
+  onDescartar: () => void;
+}) {
+  const [abierto, setAbierto] = useState(false);
+  const raiz = useRef<HTMLDivElement>(null);
+  const boton = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!abierto) return;
+    const clicFuera = (e: globalThis.MouseEvent) => {
+      if (raiz.current && !raiz.current.contains(e.target as Node)) setAbierto(false);
+    };
+    const tecla = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setAbierto(false);
+      boton.current?.focus();
+    };
+    document.addEventListener("mousedown", clicFuera);
+    document.addEventListener("keydown", tecla);
+    return () => {
+      document.removeEventListener("mousedown", clicFuera);
+      document.removeEventListener("keydown", tecla);
+    };
+  }, [abierto]);
+
+  return (
+    <div ref={raiz} style={{ position: "relative" }}>
+      <button
+        type="button"
+        ref={boton}
+        onClick={() => setAbierto((v) => !v)}
+        disabled={deshabilitado}
+        aria-label={`Más acciones de ${negocio}`}
+        aria-haspopup="menu"
+        aria-expanded={abierto}
+        style={{ ...botonTarjeta, fontWeight: 700, letterSpacing: 1 }}
+      >
+        ⋯
+      </button>
+      {abierto && (
+        <div
+          role="menu"
+          aria-label={`Acciones de ${negocio}`}
+          style={{
+            position: "absolute",
+            right: 0,
+            bottom: "calc(100% + 4px)",
+            background: "#fff",
+            border: "1px solid #e2e8f0",
+            borderRadius: 8,
+            boxShadow: "0 8px 20px rgba(15, 23, 42, 0.18)",
+            padding: 4,
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+            minWidth: 175,
+            zIndex: 10,
+          }}
+        >
+          {destinos.length > 0 && (
+            <span style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", padding: "4px 8px 2px", textTransform: "uppercase" }}>Mover a…</span>
+          )}
+          {destinos.map((fase) => (
+            <button
+              key={fase}
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setAbierto(false);
+                onMover(fase);
+              }}
+              style={itemMenu}
+            >
+              {FASE_LABELS[fase]}
+            </button>
+          ))}
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setAbierto(false);
+              onDescartar();
+            }}
+            style={{ ...itemMenu, color: "#b91c1c" }}
+          >
+            Descartar…
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const itemMenu: CSSProperties = {
+  display: "block",
+  width: "100%",
+  textAlign: "left",
+  padding: "6px 8px",
+  border: "none",
+  background: "transparent",
+  borderRadius: 6,
+  fontSize: 13,
+  color: "#1e293b",
+  cursor: "pointer",
+};
 
 const botonTarjeta: CSSProperties = {
   display: "inline-flex",
@@ -362,12 +531,13 @@ function VerEnLista({
   slug: string;
   columna: ColumnaTablero;
   leads: TarjetaLead[];
-  filtros: { mias: boolean; q: string };
+  filtros: { mias: boolean; atrasados: boolean; q: string };
 }) {
   // La lista filtra por una sola fase: Descartados enlaza cada una por separado.
   const enlace = (fase: Fase) => {
     const p = new URLSearchParams({ fase });
     if (filtros.mias) p.set("mias", "1");
+    if (filtros.atrasados) p.set("atrasados", "1");
     if (filtros.q) p.set("q", filtros.q);
     return `/panel/ventas/${slug}/leads?${p.toString()}`;
   };
@@ -394,11 +564,31 @@ function VerEnLista({
 
 function SelectorDescarte({ negocio, onElegir, onCancelar }: { negocio: string; onElegir: (fase: Fase) => void; onCancelar: () => void }) {
   const primero = useRef<HTMLButtonElement>(null);
+  const contenedor = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     primero.current?.focus();
-    const escape = (e: globalThis.KeyboardEvent) => e.key === "Escape" && onCancelar();
-    window.addEventListener("keydown", escape);
-    return () => window.removeEventListener("keydown", escape);
+    const tecla = (e: globalThis.KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onCancelar();
+        return;
+      }
+      // Atrapa el foco dentro del diálogo: Tab/Mayús+Tab no deben escaparse a la página de detrás.
+      if (e.key !== "Tab" || !contenedor.current) return;
+      const focales = Array.from(contenedor.current.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"));
+      if (focales.length === 0) return;
+      const primerBoton = focales[0];
+      const ultimoBoton = focales[focales.length - 1];
+      if (e.shiftKey && document.activeElement === primerBoton) {
+        e.preventDefault();
+        ultimoBoton.focus();
+      } else if (!e.shiftKey && document.activeElement === ultimoBoton) {
+        e.preventDefault();
+        primerBoton.focus();
+      }
+    };
+    window.addEventListener("keydown", tecla);
+    return () => window.removeEventListener("keydown", tecla);
   }, [onCancelar]);
 
   return (
@@ -407,6 +597,7 @@ function SelectorDescarte({ negocio, onElegir, onCancelar }: { negocio: string; 
       style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16 }}
     >
       <div
+        ref={contenedor}
         role="dialog"
         aria-modal="true"
         aria-labelledby="titulo-descarte"

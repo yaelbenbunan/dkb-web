@@ -41,6 +41,18 @@ export function siguienteFase(fase: Fase): Fase | null {
   return i >= 0 && i < CAMINO.length - 1 ? CAMINO[i + 1] : null;
 }
 
+/** Fases entre las que se puede mover una tarjeta a mano, en el orden del camino principal. */
+export const FASES_MOVIBLES: readonly Fase[] = CAMINO;
+
+/**
+ * Destinos del menú «Mover a…» de una tarjeta: las fases movibles salvo la
+ * actual. Sirve tanto para leads activos (permite retroceder, algo que el
+ * botón «→» no hace) como para leads descartados (permite recuperarlos).
+ */
+export function fasesDestino(actual: Fase): Fase[] {
+  return FASES_MOVIBLES.filter((f) => f !== actual);
+}
+
 /** Reparte los leads en sus columnas, conservando el orden de entrada. */
 export function agruparEnColumnas<T extends { fase: Fase }>(leads: T[]): Record<ColumnaId, T[]> {
   const grupos = Object.fromEntries(COLUMNAS_TABLERO.map((c) => [c.id, [] as T[]])) as Record<ColumnaId, T[]>;

@@ -2,10 +2,12 @@ import { describe, expect, test } from "vitest";
 import { FASES, type Fase } from "../ventas/dominio";
 import {
   COLUMNAS_TABLERO,
+  FASES_MOVIBLES,
   MAX_TARJETAS_COLUMNA,
   agruparEnColumnas,
   columnaDeFase,
   estadoSeguimiento,
+  fasesDestino,
   iniciales,
   ordenarPorUrgencia,
   siguienteFase,
@@ -110,6 +112,20 @@ describe("ordenarPorUrgencia", () => {
 
   test("límite de tarjetas por columna", () => {
     expect(MAX_TARJETAS_COLUMNA).toBe(50);
+  });
+});
+
+describe("fasesDestino", () => {
+  test("las cinco fases movibles salvo la actual, en el orden del camino principal", () => {
+    expect(fasesDestino("nuevo")).toEqual(["contactado", "interesado", "muestras", "cliente"]);
+    expect(fasesDestino("interesado")).toEqual(["nuevo", "contactado", "muestras", "cliente"]);
+    expect(fasesDestino("cliente")).toEqual(["nuevo", "contactado", "interesado", "muestras"]);
+  });
+
+  test("un lead descartado puede recuperarse a cualquier fase movible", () => {
+    expect(fasesDestino("perdido")).toEqual(FASES_MOVIBLES);
+    expect(fasesDestino("no_interesa")).toEqual(FASES_MOVIBLES);
+    expect(fasesDestino("ilocalizable")).toEqual(FASES_MOVIBLES);
   });
 });
 
