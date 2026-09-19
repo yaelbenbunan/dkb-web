@@ -410,6 +410,63 @@ export async function listSeguimientosUsuaria(usuariaId: string, hasta: string):
   );
 }
 
+/* Secuencias de WhatsApp ------------------------------------------------ */
+
+export interface SecuenciaRow {
+  id: string;
+  marca_id: string;
+  nombre: string;
+  estado: "borrador" | "activa" | "archivada";
+  pasos: unknown;
+  creada_por: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function listSecuencias(marcaId: string): Promise<SecuenciaRow[]> {
+  return todas(
+    (desde, hasta) =>
+      db().from("ventas_secuencias").select("*").eq("marca_id", marcaId).order("created_at", { ascending: false }).range(desde, hasta) as PromiseLike<Respuesta<SecuenciaRow[]>>,
+    "listSecuencias",
+  );
+}
+
+export async function getSecuencia(id: string): Promise<SecuenciaRow | null> {
+  const r = await db().from("ventas_secuencias").select("*").eq("id", id).maybeSingle();
+  return comprobar(r as Respuesta<SecuenciaRow>, "getSecuencia");
+}
+
+export async function crearSecuencia(input: {
+  marcaId: string;
+  nombre: string;
+  pasos: unknown;
+  creadaPor: string;
+}): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const r = await db()
+    .from("ventas_secuencias")
+    .insert({ marca_id: input.marcaId, nombre: input.nombre, pasos: input.pasos, creada_por: input.creadaPor })
+    .select("id")
+    .single();
+  if (r.error) {
+    console.error("[ventas/db] crearSecuencia:", r.error.message);
+    return { ok: false, error: "No se pudo crear la secuencia." };
+  }
+  return { ok: true, id: (r.data as { id: string }).id };
+}
+
+export async function actualizarSecuencia(
+  id: string,
+  patch: { nombre?: string; pasos?: unknown; estado?: string },
+): Promise<Escritura> {
+  return escritura(
+    await db()
+      .from("ventas_secuencias")
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq("id", id),
+    "actualizarSecuencia",
+  );
+}
+
 export async function registrarImportacion(fila: {
   marca_id: string;
   tipo: "leads" | "pedidos";
