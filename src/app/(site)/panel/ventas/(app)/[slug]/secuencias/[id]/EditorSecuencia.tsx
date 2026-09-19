@@ -16,7 +16,9 @@ import {
 } from "@/lib/ventas/secuencias";
 import { Mensaje } from "../../../../_componentes/Mensaje";
 import { botonPrimario, botonSecundario, campo, etiqueta, tarjeta, titulo } from "../../../../_componentes/estilos";
+import { Simulador } from "./Simulador";
 
+type Pestana = "editar" | "simular";
 type EstadoSecuencia = SecuenciaRow["estado"];
 
 const ESTADO_LABELS: Record<EstadoSecuencia, string> = { borrador: "Borrador", activa: "Activa", archivada: "Archivada" };
@@ -165,6 +167,8 @@ export function EditorSecuencia({
   estadoInicial,
   secuenciaInicial,
   editable,
+  marcaNombre,
+  usuariaNombre,
 }: {
   slug: string;
   secuenciaId: string;
@@ -172,10 +176,13 @@ export function EditorSecuencia({
   estadoInicial: EstadoSecuencia;
   secuenciaInicial: Secuencia;
   editable: boolean;
+  marcaNombre: string;
+  usuariaNombre: string;
 }) {
   const [nombre, setNombre] = useState(nombreInicial);
   const [secuencia, setSecuencia] = useState<Secuencia>(secuenciaInicial);
   const [seleccionado, setSeleccionado] = useState<string>(secuenciaInicial.inicio);
+  const [pestana, setPestana] = useState<Pestana>("editar");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [rGuardar, aGuardar, pGuardando] = useActionState<ResultadoAccion | null, FormData>(
@@ -317,7 +324,14 @@ export function EditorSecuencia({
         </p>
       )}
 
-      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
+      <div style={{ display: "flex", gap: 6 }}>
+        <button type="button" onClick={() => setPestana("editar")} style={pestana === "editar" ? botonPrimario : botonSecundario}>Editar</button>
+        <button type="button" onClick={() => setPestana("simular")} style={pestana === "simular" ? botonPrimario : botonSecundario}>Simular</button>
+      </div>
+
+      {pestana === "editar" ? (
+        <>
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
             <section style={{ ...tarjeta, flex: "1 1 260px", maxWidth: 340, display: "flex", flexDirection: "column", gap: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h2 style={{ ...titulo, margin: 0 }}>Pasos</h2>
@@ -532,6 +546,10 @@ export function EditorSecuencia({
               </ul>
             )}
           </section>
+        </>
+      ) : (
+        <Simulador secuencia={secuencia} marcaNombre={marcaNombre} usuariaNombre={usuariaNombre} />
+      )}
     </div>
   );
 }

@@ -38,6 +38,8 @@ export default async function EditorSecuenciaPage({ params }: { params: Promise<
             estadoInicial={fila.estado}
             secuenciaInicial={parseado.secuencia}
             editable={usuaria.rol === "admin"}
+            marcaNombre={marca.nombre}
+            usuariaNombre={usuaria.nombre}
           />
         )}
       </div>
