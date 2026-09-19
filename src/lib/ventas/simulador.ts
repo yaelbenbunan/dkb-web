@@ -120,17 +120,34 @@ export function responderBoton(s: Secuencia, estado: EstadoSimulacion, indiceBot
 }
 
 /**
- * Simula que el negocio contesta algo que no es un botón. Por regla del
- * spec, una respuesta libre siempre para la secuencia y avisa a la
- * comercial: no se sigue ninguna ruta automáticamente.
+ * Simula que el negocio contesta con texto libre (no un botón). Hay dos
+ * casos: si el paso actual no tiene botones es una pregunta abierta (p.ej.
+ * «¿A qué dirección te mandamos las muestras?»): el texto es la respuesta
+ * esperada, se guarda en `datos` si el paso tiene `guardar_respuesta_en` y se
+ * sigue su `ruta` igual que con un botón. Si el paso tiene botones, el texto
+ * libre es salirse del guion: la secuencia se para, se avisa a la comercial
+ * y no se sigue ninguna ruta.
  */
-export function responderTexto(estado: EstadoSimulacion, texto: string): EstadoSimulacion {
+export function responderTexto(s: Secuencia, estado: EstadoSimulacion, texto: string, ctx: ContextoSimulacion): EstadoSimulacion {
   if (estado.terminada) return estado;
-  return {
+  const paso = estado.pasoActual ? s.pasos[estado.pasoActual] : undefined;
+
+  const conRespuesta: EstadoSimulacion = {
     ...estado,
     conversacion: [...estado.conversacion, { de: "negocio", texto }],
+  };
+
+  if (paso && paso.botones.length === 0) {
+    const conDatos: EstadoSimulacion = paso.guardar_respuesta_en
+      ? { ...conRespuesta, datos: { ...conRespuesta.datos, [paso.guardar_respuesta_en]: texto } }
+      : conRespuesta;
+    return paso.ruta ? aplicarRuta(s, conDatos, paso.ruta, ctx) : conDatos;
+  }
+
+  return {
+    ...conRespuesta,
     pasoActual: null,
     terminada: true,
-    avisos: [...estado.avisos, AVISO_RESPUESTA_LIBRE],
+    avisos: [...conRespuesta.avisos, AVISO_RESPUESTA_LIBRE],
   };
 }

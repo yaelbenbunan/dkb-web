@@ -33,10 +33,11 @@ function valoresIniciales(marcaNombre: string, usuariaNombre: string): Record<st
 /**
  * Simulador de la conversación: burbujas al estilo WhatsApp (la marca a la
  * izquierda, el negocio a la derecha), con los botones del paso actual y un
- * campo de texto libre que demuestra que una respuesta que no es un botón
- * para la secuencia. No envía nada ni escribe en la base: usa el motor puro
- * de `@/lib/ventas/simulador` sobre el borrador que se está editando, sin
- * llamar al servidor.
+ * campo de texto libre. Si el paso actual es una pregunta abierta (sin
+ * botones) el texto es la respuesta esperada y sigue el guion; si tiene
+ * botones, el texto libre es salirse del guion y para la secuencia. No envía
+ * nada ni escribe en la base: usa el motor puro de `@/lib/ventas/simulador`
+ * sobre el borrador que se está editando, sin llamar al servidor.
  */
 export function Simulador({ secuencia, marcaNombre, usuariaNombre }: { secuencia: Secuencia; marcaNombre: string; usuariaNombre: string }) {
   const [valores, setValores] = useState<Record<string, string>>(() => valoresIniciales(marcaNombre, usuariaNombre));
@@ -59,12 +60,13 @@ export function Simulador({ secuencia, marcaNombre, usuariaNombre }: { secuencia
     e.preventDefault();
     const limpio = texto.trim();
     if (!limpio) return;
-    setEstado((actual) => responderTexto(actual, limpio));
+    setEstado((actual) => responderTexto(secuencia, actual, limpio, ctx));
     setTexto("");
   }
 
   const pasoActual = estado.pasoActual ? secuencia.pasos[estado.pasoActual] : null;
   const botonesActuales = !estado.terminada && pasoActual ? pasoActual.botones : [];
+  const esPreguntaAbierta = !estado.terminada && pasoActual !== null && pasoActual.botones.length === 0;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -143,7 +145,7 @@ export function Simulador({ secuencia, marcaNombre, usuariaNombre }: { secuencia
             <input
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
-              placeholder="Escribe algo que no sea un botón…"
+              placeholder={esPreguntaAbierta ? "Escribe la respuesta del negocio…" : "Escribe algo que no sea un botón…"}
               disabled={estado.terminada}
               style={{ ...campo, flex: 1 }}
             />

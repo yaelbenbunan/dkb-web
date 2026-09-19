@@ -32,7 +32,14 @@ function secuencia(): Secuencia {
         tipo: "mensaje",
         texto: "¿A qué dirección te las mandamos?",
         botones: [],
-        ruta: { terminar: true },
+        guardar_respuesta_en: "direccion",
+        ruta: { fase: "muestras", terminar: true },
+      },
+      p4: {
+        tipo: "mensaje",
+        texto: "¿Prefieres que te llamemos o seguimos por WhatsApp?",
+        botones: [],
+        ruta: { ir_a: "p2" },
       },
     },
   };
@@ -124,13 +131,61 @@ describe("responderBoton", () => {
 });
 
 describe("responderTexto", () => {
-  test("siempre termina la simulación con el aviso de respuesta libre", () => {
+  test("en un paso CON botones, el texto libre para la secuencia y avisa a la comercial", () => {
     let estado = iniciarSimulacion(secuencia(), ctx);
-    estado = responderTexto(estado, "Quiero saber más antes de nada");
+    estado = responderTexto(secuencia(), estado, "Quiero saber más antes de nada", ctx);
     expect(estado.terminada).toBe(true);
     expect(estado.pasoActual).toBeNull();
     expect(estado.avisos).toContain("Respuesta libre: la secuencia se para y se avisa a la comercial");
     expect(estado.conversacion.at(-1)).toEqual({ de: "negocio", texto: "Quiero saber más antes de nada" });
+    expect(estado.datos).toEqual({});
+  });
+
+  test("en una pregunta abierta, guarda la respuesta en datos y sigue la ruta del paso (fase y terminar)", () => {
+    let estado = iniciarSimulacion(secuencia(), ctx);
+    estado = responderBoton(secuencia(), estado, 0, ctx); // -> p2
+    estado = responderBoton(secuencia(), estado, 0, ctx); // "Quiero muestras" -> p3 (pregunta abierta)
+    expect(estado.pasoActual).toBe("p3");
+
+    estado = responderTexto(secuencia(), estado, "Calle Mayor 3, Madrid", ctx);
+
+    expect(estado.datos.direccion).toBe("Calle Mayor 3, Madrid");
+    expect(estado.fase).toBe("muestras");
+    expect(estado.terminada).toBe(true);
+    expect(estado.pasoActual).toBeNull();
+    expect(estado.avisos).not.toContain("Respuesta libre: la secuencia se para y se avisa a la comercial");
+    expect(estado.conversacion.at(-1)).toEqual({ de: "negocio", texto: "Calle Mayor 3, Madrid" });
+  });
+
+  test("una pregunta abierta sin guardar_respuesta_en no guarda nada, pero sigue aplicando su ruta", () => {
+    const s = secuencia();
+    delete s.pasos.p3.guardar_respuesta_en;
+    let estado = iniciarSimulacion(s, ctx);
+    estado = responderBoton(s, estado, 0, ctx); // -> p2
+    estado = responderBoton(s, estado, 0, ctx); // -> p3
+
+    estado = responderTexto(s, estado, "Calle Mayor 3, Madrid", ctx);
+
+    // "interes" viene del botón de p1; la pregunta abierta no añade "direccion".
+    expect(estado.datos).toEqual({ interes: "Sí, cuéntame" });
+    expect(estado.fase).toBe("muestras");
+    expect(estado.terminada).toBe(true);
+  });
+
+  test("ir_a desde una pregunta abierta avanza al siguiente paso y muestra su mensaje", () => {
+    const s = secuencia();
+    let estado = iniciarSimulacion(s, ctx);
+    estado = { ...estado, pasoActual: "p4", terminada: false };
+
+    estado = responderTexto(s, estado, "Por WhatsApp, mejor", ctx);
+
+    expect(estado.pasoActual).toBe("p2");
+    expect(estado.terminada).toBe(false);
+    expect(estado.conversacion.at(-1)).toEqual({
+      de: "marca",
+      texto: "Cada stick te sale a {{precio_mayorista}}.",
+      botones: ["Quiero muestras", "Que me llaméis"],
+    });
   });
 });
 
