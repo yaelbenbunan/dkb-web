@@ -5,6 +5,7 @@ const PESTANAS = [
   { clave: "resumen", texto: "Resumen", ruta: "" },
   { clave: "tablero", texto: "Tablero", ruta: "/tablero" },
   { clave: "leads", texto: "Leads", ruta: "/leads" },
+  { clave: "secuencias", texto: "Secuencias", ruta: "/secuencias" },
   { clave: "condiciones", texto: "Condiciones", ruta: "/condiciones" },
 ] as const;
 
