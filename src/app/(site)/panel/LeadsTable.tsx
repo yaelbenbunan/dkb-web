@@ -25,7 +25,6 @@ import { isLeadEmailable } from "@/lib/lead-emailable";
 import { ACCOUNT_MANAGERS, AM_COLORS } from "@/lib/account-managers";
 import {
   addDays,
-  dueCount,
   isFollowupDate,
   FOLLOWUP_MIN_DATE,
   FOLLOWUP_MAX_DATE,
@@ -34,9 +33,9 @@ import {
   startOfNextMonth,
   todayInMadrid,
 } from "@/lib/followup-agenda";
-import { Agenda } from "./Agenda";
 import { EditableCell } from "./EditableCell";
 import { ImportLeadsPanel } from "./ImportLeadsPanel";
+import { tarjeta as tarjetaEstilo, th as thBase, td as tdBase } from "./_componentes/estilos";
 
 export interface LeadRowView {
   id: string;
@@ -147,7 +146,7 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
   const [adding, setAdding] = useState(false);
   const [importing, setImporting] = useState(false);
   const [busy, start] = useTransition();
-  const [view, setView] = useState<"tabla" | "agenda">("tabla");
+  const [query, setQuery] = useState("");
   const [hiddenCols, setHiddenCols] = useState<Set<ColKey>>(new Set());
   const [colsOpen, setColsOpen] = useState(false);
 
@@ -182,16 +181,17 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
   const tableMinWidth = 36 + cols.reduce((n, c) => n + c.min, 0);
 
   const today = todayInMadrid();
-  const pendingCalls = dueCount(leads, today);
 
   // Pool for the current view (active vs archived); los filtros se acumulan
   // sobre él, así que se pueden combinar (p. ej. enviables de Meta).
   const pool = leads.filter((l) => (showArchived ? l.archived : !l.archived));
+  const q = query.trim().toLowerCase();
   const visible = pool.filter(
     (l) =>
       (statusFilter === "todos" || l.status === statusFilter) &&
       (channelFilter === "todos" || (l.channel ?? "Sin canal") === channelFilter) &&
-      (!emailableOnly || isLeadEmailable(l)),
+      (!emailableOnly || isLeadEmailable(l)) &&
+      (!q || [l.name, l.phone, l.email, l.campaign].some((v) => v?.toLowerCase().includes(q))),
   );
 
   const archivedCount = leads.filter((l) => l.archived).length;
@@ -246,21 +246,8 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
     runBulk(deleteLeadsAction);
   };
 
-  // La agenda es una vista aparte, no un filtro más: sale con todos los hooks ya
-  // ejecutados, así que el orden de hooks no cambia entre vistas.
-  if (view === "agenda") {
-    return (
-      <>
-        <ViewTabs view={view} onChange={setView} pending={pendingCalls} />
-        <Agenda leads={leads} />
-      </>
-    );
-  }
-
   return (
     <>
-      <ViewTabs view={view} onChange={setView} pending={pendingCalls} />
-
       {/* Toolbar: filtro por estado + archivados */}
       <div
         style={{
@@ -315,6 +302,22 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
         >
           {showArchived ? "← Volver a activos" : `🗄 Archivados (${archivedCount})`}
         </button>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar nombre, teléfono, email, campaña…"
+          aria-label="Buscar leads"
+          style={{
+            border: "1px solid #cbd5e1",
+            borderRadius: 999,
+            padding: "6px 14px",
+            fontSize: 13,
+            fontFamily: "inherit",
+            color: "#0f172a",
+            background: "#fff",
+            minWidth: 220,
+          }}
+        />
       </div>
 
       {/* Segunda fila: enviables + canal. Van aparte del estado porque son
@@ -485,10 +488,14 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
 
       <div
         style={{
-          overflowX: "auto",
-          background: "#fff",
-          borderRadius: 12,
-          border: "1px solid #e2e8f0",
+          ...tarjetaEstilo,
+          padding: 0,
+          overflow: "auto",
+          // Alto acotado para que la cabecera quede fija de verdad (sticky
+          // dentro de este contenedor, no del scroll de toda la página):
+          // los filtros y la barra de acciones de arriba se quedan siempre a
+          // la vista, y solo las filas se desplazan.
+          maxHeight: "calc(100vh - 260px)",
         }}
       >
         <table
@@ -1211,56 +1218,6 @@ function btnStyle(
   };
 }
 
-/** Conmutador Tabla ↔ Agenda. El contador rojo son las llamadas vencidas o de
- *  hoy: es el número que no debe quedarse sin mirar. */
-function ViewTabs({
-  view,
-  onChange,
-  pending,
-}: {
-  view: "tabla" | "agenda";
-  onChange: (v: "tabla" | "agenda") => void;
-  pending: number;
-}) {
-  const tab = (active: boolean): React.CSSProperties => ({
-    border: `1px solid ${active ? "#0b1220" : "#cbd5e1"}`,
-    background: active ? "#0b1220" : "#fff",
-    color: active ? "#fff" : "#475569",
-    borderRadius: 999,
-    padding: "7px 16px",
-    fontSize: 13,
-    fontWeight: 700,
-    cursor: "pointer",
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 8,
-  });
-  return (
-    <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-      <button type="button" onClick={() => onChange("tabla")} style={tab(view === "tabla")}>
-        📋 Tabla
-      </button>
-      <button type="button" onClick={() => onChange("agenda")} style={tab(view === "agenda")}>
-        📅 Agenda
-        {pending > 0 && (
-          <span
-            style={{
-              background: "#dc2626",
-              color: "#fff",
-              borderRadius: 999,
-              padding: "1px 8px",
-              fontSize: 12,
-              fontWeight: 800,
-            }}
-          >
-            {pending}
-          </span>
-        )}
-      </button>
-    </div>
-  );
-}
-
 /** Casillas para esconder columnas que ahora mismo estorban. */
 function ColumnsPanel({
   hidden,
@@ -1517,17 +1474,8 @@ function FollowupDateCell({
   );
 }
 
-const th: React.CSSProperties = {
-  padding: "11px 14px",
-  fontSize: 12,
-  fontWeight: 700,
-  color: "#475569",
-  textTransform: "uppercase",
-  letterSpacing: 0.5,
-  whiteSpace: "nowrap",
-};
-const td: React.CSSProperties = {
-  padding: "11px 14px",
-  verticalAlign: "top",
-  whiteSpace: "nowrap",
-};
+// Estilos nuevos (los mismos de `ventas`, copiados en `_componentes/estilos.ts`)
+// con la cabecera fija encima: sticky dentro del contenedor con scroll de la
+// tabla, no del scroll de la página.
+const th: React.CSSProperties = { ...thBase, position: "sticky", top: 0, zIndex: 1 };
+const td: React.CSSProperties = { ...tdBase, whiteSpace: "nowrap" };
