@@ -2,7 +2,7 @@ import Link from "next/link";
 import { listLeads } from "@/lib/imagina-leads";
 import { dueCount, todayInMadrid } from "@/lib/followup-agenda";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/lead-status";
-import { estadoSeguimiento } from "@/lib/panel-tablero";
+import { ESTADOS_FUERA_DEL_TABLERO, estadoSeguimiento } from "@/lib/panel-tablero";
 import { PanelShell } from "../_componentes/PanelShell";
 import { Tablero, type TarjetaLead } from "./Tablero";
 
@@ -37,6 +37,9 @@ export default async function TableroPage({
     // valor fuera de los 9 conocidos no tiene columna posible, así que se deja
     // fuera del tablero en vez de reventar la página. Sigue viéndose en la lista.
     .filter((l) => esLeadStatus(String(l.status)))
+    // Kit Digital ya no tiene columna en el tablero (se gestiona desde la
+    // lista de /panel): ni tarjeta, ni cuenta en el «N leads» de arriba.
+    .filter((l) => !ESTADOS_FUERA_DEL_TABLERO.includes(l.status as LeadStatus))
     .map((l) => ({
       id: l.id,
       estado: l.status as LeadStatus,

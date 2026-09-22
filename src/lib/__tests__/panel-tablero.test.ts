@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import { LEAD_STATUSES, type LeadStatus } from "../lead-status";
 import {
   COLUMNAS_TABLERO,
+  ESTADOS_FUERA_DEL_TABLERO,
   MAX_TARJETAS_COLUMNA,
   agruparEnColumnas,
   calcularPosicionMenu,
@@ -16,13 +17,12 @@ import {
 const HOY = "2026-09-22";
 
 describe("columnas del tablero", () => {
-  test("seis columnas en orden, con Descartados al final", () => {
+  test("cinco columnas en orden, con Descartados al final y sin Kit Digital", () => {
     expect(COLUMNAS_TABLERO.map((c) => c.id)).toEqual([
       "nuevo",
       "contactado",
       "propuesta",
       "ganado",
-      "kit-digital",
       "descartados",
     ]);
     expect(COLUMNAS_TABLERO.map((c) => c.titulo)).toEqual([
@@ -30,7 +30,6 @@ describe("columnas del tablero", () => {
       "Contactado",
       "Propuesta",
       "Ganado",
-      "Kit Digital",
       "Descartados",
     ]);
   });
@@ -44,31 +43,37 @@ describe("columnas del tablero", () => {
 
     expect(porId("contactado").estados).toEqual(["contactado", "seguimiento"]);
     expect(porId("contactado").destino).toBeNull();
-    expect(porId("kit-digital").estados).toEqual(["kit-digital", "cliente-kit-digital"]);
-    expect(porId("kit-digital").destino).toBeNull();
     expect(porId("descartados").estados).toEqual(["ilocalizable", "perdido"]);
     expect(porId("descartados").destino).toBeNull();
   });
 
-  test("cada uno de los 9 estados de lead-status está en exactamente una columna", () => {
-    for (const estado of LEAD_STATUSES) {
-      expect(COLUMNAS_TABLERO.filter((c) => c.estados.includes(estado))).toHaveLength(1);
+  test("kit-digital y cliente-kit-digital ya no tienen columna en el tablero", () => {
+    expect(ESTADOS_FUERA_DEL_TABLERO).toEqual(["kit-digital", "cliente-kit-digital"]);
+    for (const estado of ESTADOS_FUERA_DEL_TABLERO) {
+      expect(COLUMNAS_TABLERO.some((c) => c.estados.includes(estado))).toBe(false);
     }
   });
 
-  test("columnaDeEstado mapea cada estado a su columna", () => {
+  test("cada uno de los 9 estados de lead-status está en, como mucho, una columna", () => {
+    for (const estado of LEAD_STATUSES) {
+      const enColumnas = COLUMNAS_TABLERO.filter((c) => c.estados.includes(estado));
+      expect(enColumnas).toHaveLength(ESTADOS_FUERA_DEL_TABLERO.includes(estado) ? 0 : 1);
+    }
+  });
+
+  test("columnaDeEstado mapea cada estado a su columna, y null en los que no tienen", () => {
     expect(columnaDeEstado("nuevo")).toBe("nuevo");
     expect(columnaDeEstado("contactado")).toBe("contactado");
     expect(columnaDeEstado("seguimiento")).toBe("contactado");
     expect(columnaDeEstado("propuesta")).toBe("propuesta");
     expect(columnaDeEstado("ganado")).toBe("ganado");
-    expect(columnaDeEstado("kit-digital")).toBe("kit-digital");
-    expect(columnaDeEstado("cliente-kit-digital")).toBe("kit-digital");
     expect(columnaDeEstado("ilocalizable")).toBe("descartados");
     expect(columnaDeEstado("perdido")).toBe("descartados");
+    expect(columnaDeEstado("kit-digital")).toBeNull();
+    expect(columnaDeEstado("cliente-kit-digital")).toBeNull();
   });
 
-  test("agrupar reparte los leads y mantiene el orden de entrada", () => {
+  test("agrupar reparte los leads, descarta los de Kit Digital y mantiene el orden de entrada", () => {
     const leads: { id: string; estado: LeadStatus }[] = [
       { id: "1", estado: "nuevo" },
       { id: "2", estado: "perdido" },
@@ -85,8 +90,11 @@ describe("columnas del tablero", () => {
     expect(g.contactado.map((l) => l.id)).toEqual(["5", "6"]);
     expect(g.propuesta.map((l) => l.id)).toEqual(["3"]);
     expect(g.ganado.map((l) => l.id)).toEqual(["9"]);
-    expect(g["kit-digital"].map((l) => l.id)).toEqual(["7", "8"]);
     expect(g.descartados.map((l) => l.id)).toEqual(["2", "4"]);
+    expect(Object.keys(g)).not.toContain("kit-digital");
+    // Los leads de Kit Digital no aparecen en ninguna columna: la suma de
+    // todas las columnas es de 7, no de los 9 leads de entrada.
+    expect(Object.values(g).reduce((n, arr) => n + arr.length, 0)).toBe(7);
   });
 });
 
@@ -108,10 +116,18 @@ describe("siguienteColumna", () => {
 });
 
 describe("estadosDestino", () => {
-  test("cualquier otro estado, en el orden de LEAD_STATUSES", () => {
-    expect(estadosDestino("nuevo")).toEqual(LEAD_STATUSES.filter((s) => s !== "nuevo"));
-    expect(estadosDestino("perdido")).toEqual(LEAD_STATUSES.filter((s) => s !== "perdido"));
+  test("cualquier otro estado con columna, en el orden de LEAD_STATUSES", () => {
+    const sinFueraDelTablero = (s: LeadStatus) => LEAD_STATUSES.filter((x) => x !== s && !ESTADOS_FUERA_DEL_TABLERO.includes(x));
+    expect(estadosDestino("nuevo")).toEqual(sinFueraDelTablero("nuevo"));
+    expect(estadosDestino("perdido")).toEqual(sinFueraDelTablero("perdido"));
     expect(estadosDestino("nuevo")).not.toContain("nuevo");
+  });
+
+  test("nunca ofrece mover a Kit Digital ni a Cliente Kit Digital", () => {
+    for (const estado of LEAD_STATUSES) {
+      expect(estadosDestino(estado)).not.toContain("kit-digital");
+      expect(estadosDestino(estado)).not.toContain("cliente-kit-digital");
+    }
   });
 });
 

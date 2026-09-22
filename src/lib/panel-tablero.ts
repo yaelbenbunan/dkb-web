@@ -1,9 +1,10 @@
 /**
  * Reglas del tablero kanban del CRM de leads: qué columnas agrupan los 9
- * estados de `lead-status.ts` (que no cambian), a qué columna pertenece un
- * estado, cuál es el siguiente paso del botón «→» y cómo se ordenan las
- * tarjetas. Puro (sin `server-only`): lo usan la página y el componente de
- * cliente.
+ * estados de `lead-status.ts` (que no cambian; dos de ellos, `kit-digital` y
+ * `cliente-kit-digital`, no tienen columna a propósito — ver
+ * `ESTADOS_FUERA_DEL_TABLERO`), a qué columna pertenece un estado, cuál es el
+ * siguiente paso del botón «→» y cómo se ordenan las tarjetas. Puro (sin
+ * `server-only`): lo usan la página y el componente de cliente.
  *
  * Adrede independiente de `panel/ventas/_componentes` y `lib/ventas/tablero`:
  * son módulos de otra app dentro del mismo repo y pueden cambiar sin avisar.
@@ -16,7 +17,7 @@
 
 import { LEAD_STATUSES, type LeadStatus } from "./lead-status";
 
-export type ColumnaId = "nuevo" | "contactado" | "propuesta" | "ganado" | "kit-digital" | "descartados";
+export type ColumnaId = "nuevo" | "contactado" | "propuesta" | "ganado" | "descartados";
 
 export interface ColumnaTablero {
   id: ColumnaId;
@@ -32,49 +33,62 @@ export const COLUMNAS_TABLERO: readonly ColumnaTablero[] = [
   { id: "contactado", titulo: "Contactado", estados: ["contactado", "seguimiento"], destino: null },
   { id: "propuesta", titulo: "Propuesta", estados: ["propuesta"], destino: "propuesta" },
   { id: "ganado", titulo: "Ganado", estados: ["ganado"], destino: "ganado" },
-  { id: "kit-digital", titulo: "Kit Digital", estados: ["kit-digital", "cliente-kit-digital"], destino: null },
   { id: "descartados", titulo: "Descartados", estados: ["ilocalizable", "perdido"], destino: null },
 ];
 
 /** Tarjetas que se pintan como mucho por columna; el resto se ve en la lista. */
 export const MAX_TARJETAS_COLUMNA = 50;
 
-export function columnaDeEstado(estado: LeadStatus): ColumnaId {
-  return COLUMNAS_TABLERO.find((c) => c.estados.includes(estado))!.id;
+/** `kit-digital` y `cliente-kit-digital` ya no tienen columna: ese estado se
+ *  gestiona desde la lista de `/panel`, no desde el tablero. Se usa para
+ *  dejarlos fuera tanto del reparto en columnas como del contador de arriba. */
+export const ESTADOS_FUERA_DEL_TABLERO: readonly LeadStatus[] = ["kit-digital", "cliente-kit-digital"];
+
+/** `null` cuando el estado no tiene columna en el tablero (ver `ESTADOS_FUERA_DEL_TABLERO`). */
+export function columnaDeEstado(estado: LeadStatus): ColumnaId | null {
+  return COLUMNAS_TABLERO.find((c) => c.estados.includes(estado))?.id ?? null;
 }
 
-/** Reparte los leads en sus columnas, conservando el orden de entrada. */
+/** Reparte los leads en sus columnas, conservando el orden de entrada. Los
+ *  leads sin columna (`ESTADOS_FUERA_DEL_TABLERO`) se descartan: no aparecen
+ *  en el tablero. */
 export function agruparEnColumnas<T extends { estado: LeadStatus }>(leads: T[]): Record<ColumnaId, T[]> {
   const grupos = Object.fromEntries(COLUMNAS_TABLERO.map((c) => [c.id, [] as T[]])) as Record<ColumnaId, T[]>;
-  for (const lead of leads) grupos[columnaDeEstado(lead.estado)].push(lead);
+  for (const lead of leads) {
+    const columna = columnaDeEstado(lead.estado);
+    if (columna) grupos[columna].push(lead);
+  }
   return grupos;
 }
 
-/** Camino principal del botón «→»: solo estas cuatro columnas encadenan. Kit
- *  Digital y Descartados son ramas aparte (como "perdido" en ventas): solo se
- *  llega a ellas por el menú «⋯», nunca con «→». */
+/** Camino principal del botón «→»: solo estas cuatro columnas encadenan.
+ *  Descartados es una rama aparte (como "perdido" en ventas): solo se llega
+ *  a ella por el menú «⋯», nunca con «→». Kit Digital ni siquiera es una
+ *  columna: no tiene botón «→» posible. */
 const CAMINO_COLUMNAS: readonly ColumnaId[] = ["nuevo", "contactado", "propuesta", "ganado"];
 
 /**
  * Paso siguiente del botón «→», como estado concreto (no solo columna): en
  * las columnas con un único estado no hay ambigüedad; en «Contactado» (que
  * agrupa `contactado` y `seguimiento`) el destino es su estado por defecto,
- * el primero de la lista. Null en Ganado (última del camino) y en las
- * columnas fuera del camino (Kit Digital, Descartados).
+ * el primero de la lista. Null en Ganado (última del camino), en Descartados
+ * y en los estados sin columna (`kit-digital`, `cliente-kit-digital`).
  */
 export function siguienteColumna(estado: LeadStatus): LeadStatus | null {
   const actual = columnaDeEstado(estado);
-  const i = CAMINO_COLUMNAS.indexOf(actual);
+  const i = actual ? CAMINO_COLUMNAS.indexOf(actual) : -1;
   if (i < 0 || i >= CAMINO_COLUMNAS.length - 1) return null;
   const siguiente = COLUMNAS_TABLERO.find((c) => c.id === CAMINO_COLUMNAS[i + 1])!;
   return siguiente.estados[0];
 }
 
-/** Destinos del menú «⋯ Mover a…»: cualquier otro estado, en el orden de
- *  `LEAD_STATUSES`. A diferencia de soltar en una columna ambigua, el menú ya
- *  deja elegir el estado exacto, así que no hace falta preguntar nada más. */
+/** Destinos del menú «⋯ Mover a…»: cualquier otro estado con columna en el
+ *  tablero, en el orden de `LEAD_STATUSES`. Kit Digital y Cliente Kit Digital
+ *  quedan fuera: ese estado se marca desde la lista de `/panel`, no desde
+ *  aquí. A diferencia de soltar en una columna ambigua, el menú ya deja
+ *  elegir el estado exacto, así que no hace falta preguntar nada más. */
 export function estadosDestino(actual: LeadStatus): LeadStatus[] {
-  return LEAD_STATUSES.filter((s) => s !== actual);
+  return LEAD_STATUSES.filter((s) => s !== actual && !ESTADOS_FUERA_DEL_TABLERO.includes(s));
 }
 
 /** Estados en los que ya no se espera ninguna acción más: no llevan

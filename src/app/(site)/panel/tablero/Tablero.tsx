@@ -58,7 +58,6 @@ const COLOR_COLUMNA: Record<ColumnaId, { bg: string; text: string }> = {
   contactado: { bg: "#dbeafe", text: "#1e40af" },
   propuesta: { bg: "#fef3c7", text: "#92400e" },
   ganado: { bg: "#dcfce7", text: "#166534" },
-  "kit-digital": { bg: "#ede9fe", text: "#5b21b6" },
   descartados: { bg: "#fee2e2", text: "#991b1b" },
 };
 
