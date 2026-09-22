@@ -11,6 +11,7 @@ import {
   buildBreadcrumbSchema,
 } from "@/components/ui/Breadcrumbs";
 import { getAllServices, getServiceBySlug, getAllCaseStudies } from "@/lib/content";
+import { tituloEnFrase } from "@/lib/titulo-en-frase";
 
 const SITE_URL = "https://www.dinkbit.es";
 
@@ -212,7 +213,7 @@ export default async function ServiceDetail({
             <section>
               <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
                 ¿Qué incluye nuestro servicio de{" "}
-                <span className="text-accent">{service.title.toLowerCase()}</span>?
+                <span className="text-accent">{tituloEnFrase(service.title)}</span>?
               </h2>
               {service.intro && (
                 <p className="mt-5 text-lg leading-relaxed text-fg-muted">
@@ -255,7 +256,7 @@ export default async function ServiceDetail({
             <section>
               <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
                 Nuestro enfoque de{" "}
-                <span className="text-accent">{service.title.toLowerCase()}</span>
+                <span className="text-accent">{tituloEnFrase(service.title)}</span>
               </h2>
               <p className="mt-4 text-lg leading-relaxed text-fg-muted">
                 {service.diferenciador}
@@ -268,7 +269,7 @@ export default async function ServiceDetail({
             <section>
               <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
                 Preguntas frecuentes sobre{" "}
-                <span className="text-accent">{service.title.toLowerCase()}</span>
+                <span className="text-accent">{tituloEnFrase(service.title)}</span>
               </h2>
               <div className="mt-6">
                 <ServiceFaqs faqs={service.faqs} />
@@ -284,7 +285,7 @@ export default async function ServiceDetail({
               </h2>
               <p className="mt-2 text-fg-muted">
                 Algunos clientes a los que ayudamos con{" "}
-                {service.title.toLowerCase()}.
+                {tituloEnFrase(service.title)}.
               </p>
               <div className="mt-8 overflow-hidden">
                 <RelatedCasesMarquee cases={relatedCases} />

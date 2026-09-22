@@ -39,6 +39,14 @@ const config: NextConfig = {
       destination: "/escala/:slug*",
       permanent: true,
     },
+    // El servicio de IA y automatización se sustituye por el de anuncios en
+    // ChatGPT y visibilidad en buscadores con IA. La URL vieja estaba indexada
+    // y enlazada desde el menú de servicios, así que 301 y no se quita.
+    {
+      source: "/servicios/inteligencia-artificial",
+      destination: "/servicios/anuncios-chatgpt",
+      permanent: true,
+    },
     // Renombrado del slug por consistencia en plural.
     {
       source: "/casos-de-exito/reforma-servilucas",
