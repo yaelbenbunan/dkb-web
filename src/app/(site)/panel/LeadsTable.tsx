@@ -95,15 +95,22 @@ const CHANNEL_OPTIONS = [
 ];
 
 /** Safe http(s) URL or null — never linkify javascript:/data: values. */
+// Dominio plausible: sin espacios y con al menos un punto. Se comprueba ANTES
+// de construir la URL porque `new URL()` no se porta igual en el servidor que
+// en el navegador con textos como «no tienen», y esa diferencia rompía la
+// hidratación de React (error #418) en los leads con la web escrita a mano.
+const DOMINIO_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i;
+
 function webHref(raw: string | null): string | null {
   const v = (raw ?? "").trim();
-  if (!v) return null;
+  if (!v || /\s/.test(v)) return null;
   const withProto = /^https?:\/\//i.test(v) ? v : `https://${v}`;
   try {
     const u = new URL(withProto);
-    if (u.protocol === "http:" || u.protocol === "https:") return u.toString();
+    if (u.protocol !== "http:" && u.protocol !== "https:") return null;
+    return DOMINIO_RE.test(u.hostname) ? u.toString() : null;
   } catch {
-    /* not a URL */
+    /* no es una URL */
   }
   return null;
 }
