@@ -2,6 +2,7 @@ import "server-only";
 import type { CsvRowError } from "../leads-csv";
 import { secretMatches } from "../webhook-auth";
 import { leadDesdeAnuncio } from "./anuncios";
+import { notaFormulario } from "./formulario-web";
 import {
   actualizarSecuencia,
   buscarLeadPorContacto,
@@ -130,6 +131,49 @@ export async function autenticarWebhook(slug: string, secreto: string | null): P
  * se apunta en su historial que ha vuelto a llegar. Un cliente previo se
  * guarda marcado como excluido, para que se vea que ha pedido información.
  */
+async function guardarLeadEntrante(input: {
+  marca: Marca;
+  lead: LeadNuevo;
+  campana: string;
+  notaInicial: string | null;
+}): Promise<{ status: number; body: Record<string, unknown> }> {
+  const { marca, lead, campana } = input;
+  const [existentes, exclusiones] = await Promise.all([listContactosLeads(marca.id), listExclusiones(marca.id)]);
+  const clasificacion = clasificarLeads([lead], existentes, exclusiones);
+
+  if (clasificacion.duplicados.length > 0) {
+    const existente = await buscarLeadPorContacto(marca.id, lead);
+    if (existente) {
+      const vuelta = `Ha vuelto a llegar desde ${campana === "landing-b2b" ? "la web" : "anuncios"}${campana ? ` (${campana})` : ""}.`;
+      await registrarActividad({
+        leadId: existente.id,
+        usuariaId: null,
+        tipo: "nota",
+        nota: input.notaInicial ? `${vuelta}\n${input.notaInicial}` : vuelta,
+      });
+    }
+    return { status: 200, body: { ok: true, duplicado: true } };
+  }
+
+  const res = await crearLeads({
+    marcaId: marca.id,
+    usuariaId: null,
+    origen: "anuncio",
+    origenDetalle: campana || null,
+    leads: [{ ...lead, excluido: clasificacion.excluidos.length > 0 }],
+  });
+  if (!res.ok) return { status: 500, body: { ok: false, error: "not_saved" } };
+
+  if (input.notaInicial && res.creados > 0) {
+    // Sin que pueda tumbar la respuesta: el lead ya está guardado.
+    const creado = await buscarLeadPorContacto(marca.id, lead);
+    if (creado) {
+      await registrarActividad({ leadId: creado.id, usuariaId: null, tipo: "nota", nota: input.notaInicial });
+    }
+  }
+  return { status: 200, body: { ok: true, duplicado: res.creados === 0 } };
+}
+
 export async function recibirLeadAnuncio(input: {
   slug: string;
   secreto: string | null;
@@ -142,35 +186,25 @@ export async function recibirLeadAnuncio(input: {
   if (typeof input.datos !== "object" || input.datos === null || Array.isArray(input.datos)) {
     return { status: 400, body: { ok: false, error: "invalid_body" } };
   }
-
   const leido = leadDesdeAnuncio(input.datos as Record<string, unknown>);
   if (!leido.ok) return { status: 400, body: { ok: false, error: leido.error } };
+  return guardarLeadEntrante({ marca, lead: leido.lead, campana: leido.campana, notaInicial: null });
+}
 
-  const [existentes, exclusiones] = await Promise.all([listContactosLeads(marca.id), listExclusiones(marca.id)]);
-  const clasificacion = clasificarLeads([leido.lead], existentes, exclusiones);
-
-  if (clasificacion.duplicados.length > 0) {
-    const existente = await buscarLeadPorContacto(marca.id, leido.lead);
-    if (existente) {
-      await registrarActividad({
-        leadId: existente.id,
-        usuariaId: null,
-        tipo: "nota",
-        nota: `Ha vuelto a llegar desde anuncios${leido.campana ? ` (${leido.campana})` : ""}.`,
-      });
-    }
-    return { status: 200, body: { ok: true, duplicado: true } };
+// Formularios web públicos: la ruta ya ha comprobado origen, trampa y límite.
+export async function recibirLeadFormulario(input: {
+  slug: string;
+  datos: unknown;
+}): Promise<{ status: number; body: Record<string, unknown> }> {
+  const marca = await getMarcaPorSlug(input.slug);
+  if (!marca || marca.estado !== "activa") return { status: 404, body: { ok: false, error: "unknown_brand" } };
+  if (typeof input.datos !== "object" || input.datos === null || Array.isArray(input.datos)) {
+    return { status: 400, body: { ok: false, error: "invalid_body" } };
   }
-
-  const res = await crearLeads({
-    marcaId: marca.id,
-    usuariaId: null,
-    origen: "anuncio",
-    origenDetalle: leido.campana || null,
-    leads: [{ ...leido.lead, excluido: clasificacion.excluidos.length > 0 }],
-  });
-  if (!res.ok) return { status: 500, body: { ok: false, error: "not_saved" } };
-  return { status: 200, body: { ok: true, duplicado: res.creados === 0 } };
+  const datos = input.datos as Record<string, unknown>;
+  const leido = leadDesdeAnuncio({ ...datos, campana: "landing-b2b" });
+  if (!leido.ok) return { status: 400, body: { ok: false, error: leido.error } };
+  return guardarLeadEntrante({ marca, lead: leido.lead, campana: "landing-b2b", notaInicial: notaFormulario(datos) });
 }
 
 export async function crearLeadManual(input: {
