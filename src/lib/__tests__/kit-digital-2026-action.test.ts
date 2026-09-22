@@ -69,8 +69,11 @@ describe("requestKitDigital2026", () => {
     expect(row.sector).toContain("Hostelería/restauración");
     expect(row.notes).toContain("Web, SEO");
 
-    // Dos correos: el aviso interno al equipo y el acuse de recibo al lead.
-    const recipients = sendMock.mock.calls.map((c) => c[0].to);
+    // Dos correos: el aviso interno al equipo (to es un array, admite varias
+    // direcciones) y el acuse de recibo al lead.
+    const recipients = sendMock.mock.calls.flatMap((c) =>
+      Array.isArray(c[0].to) ? c[0].to : [c[0].to],
+    );
     expect(recipients).toContain("to@example.com");
     expect(recipients).toContain("nuria@example.com");
   });
@@ -83,7 +86,9 @@ describe("requestKitDigital2026", () => {
     const res = await requestKitDigital2026(formFor(fields, multi));
 
     expect(res.ok).toBe(true);
-    const recipients = sendMock.mock.calls.map((c) => c[0].to);
+    const recipients = sendMock.mock.calls.flatMap((c) =>
+      Array.isArray(c[0].to) ? c[0].to : [c[0].to],
+    );
     expect(recipients).toContain("to@example.com");
     expect(recipients).not.toContain("nuria@example.com");
   });

@@ -7,6 +7,7 @@ import { marketingLandingLead, utmFromFormData } from "./web-lead-origin";
 import { consentFromFormData } from "./consent";
 import { sendLeadAutoresponder } from "./lead-autoresponder";
 import { marketingLandingAutoresponder } from "./lead-emails";
+import { destinatariosAviso } from "./avisos-internos";
 
 /**
  * Lead de las landings de captación (/marketing-clinicas y
@@ -66,9 +67,9 @@ export async function sendMarketingLead(
   );
 
   const apiKey = process.env.RESEND_API_KEY;
-  const to = process.env.CONTACT_EMAIL_TO;
+  const to = destinatariosAviso(process.env.CONTACT_EMAIL_TO);
   const from = process.env.CONTACT_EMAIL_FROM ?? "onboarding@resend.dev";
-  if (!apiKey || !to) {
+  if (!apiKey || to.length === 0) {
     console.error("Missing RESEND_API_KEY or CONTACT_EMAIL_TO");
     return {
       ok: false,

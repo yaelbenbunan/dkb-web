@@ -4,6 +4,7 @@ import { Resend } from "resend";
 import { previewRatingSchema } from "./preview-validation";
 import { getSectorLabel } from "./preview-themes";
 import { updateLeadReview } from "./imagina-leads";
+import { destinatariosAviso } from "./avisos-internos";
 
 interface PreviewRatingResult {
   ok: boolean;
@@ -54,9 +55,9 @@ export async function sendPreviewRating(
   );
 
   const apiKey = process.env.RESEND_API_KEY;
-  const to = process.env.CONTACT_EMAIL_TO;
+  const to = destinatariosAviso(process.env.CONTACT_EMAIL_TO);
   const from = process.env.CONTACT_EMAIL_FROM ?? "onboarding@resend.dev";
-  if (!apiKey || !to) {
+  if (!apiKey || to.length === 0) {
     console.error("Missing RESEND_API_KEY or CONTACT_EMAIL_TO");
     return { ok: false, error: "Servidor mal configurado." };
   }

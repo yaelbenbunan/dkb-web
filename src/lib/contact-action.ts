@@ -12,6 +12,7 @@ import { contactLead, utmFromFormData } from "./web-lead-origin";
 import { consentFromFormData } from "./consent";
 import { sendLeadAutoresponder } from "./lead-autoresponder";
 import { contactAutoresponder } from "./lead-emails";
+import { destinatariosAviso } from "./avisos-internos";
 
 export async function sendContactEmail(
   formData: FormData,
@@ -53,9 +54,9 @@ export async function sendContactEmail(
   );
 
   const apiKey = process.env.RESEND_API_KEY;
-  const to = process.env.CONTACT_EMAIL_TO;
+  const to = destinatariosAviso(process.env.CONTACT_EMAIL_TO);
   const from = process.env.CONTACT_EMAIL_FROM ?? "onboarding@resend.dev";
-  if (!apiKey || !to) {
+  if (!apiKey || to.length === 0) {
     console.error("Missing RESEND_API_KEY or CONTACT_EMAIL_TO");
     return { ok: false, error: "Servidor mal configurado. Inténtalo más tarde." };
   }

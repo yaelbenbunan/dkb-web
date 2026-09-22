@@ -58,7 +58,7 @@ describe("requestWebExpress", () => {
     expect(row.notes).toContain("WhatsApp");
     expect(row.notes).toContain("Sí, decido yo");
 
-    expect(sendMock.mock.calls[0][0].to).toBe("equipo@dinkbit.es");
+    expect(sendMock.mock.calls[0][0].to).toEqual(["equipo@dinkbit.es"]);
     expect(autoresponderMock.mock.calls[0][0].to).toBe("ana@example.com");
   });
 

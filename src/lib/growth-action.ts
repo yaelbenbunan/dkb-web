@@ -9,6 +9,7 @@ import { sendLeadAutoresponder } from "./lead-autoresponder";
 import { growthAutoresponder } from "./lead-emails";
 import { sendMetaLead } from "./meta-capi";
 import { calcular, parseImporte, type CalcResult } from "./growth-calc";
+import { destinatariosAviso } from "./avisos-internos";
 
 /**
  * Los tres importes llegan como cadena. Cadena vacía = la opción "no lo sé" /
@@ -114,9 +115,9 @@ export async function requestGrowth(formData: FormData): Promise<GrowthResult> {
   // porque el usuario ya ha "pagado" con sus datos por ver su resultado.
   try {
     const apiKey = process.env.RESEND_API_KEY;
-    const to = process.env.CONTACT_EMAIL_TO;
+    const to = destinatariosAviso(process.env.CONTACT_EMAIL_TO);
     const from = process.env.CONTACT_EMAIL_FROM ?? "onboarding@resend.dev";
-    if (!apiKey || !to) {
+    if (!apiKey || to.length === 0) {
       console.error("Growth: falta RESEND_API_KEY o CONTACT_EMAIL_TO; no se manda aviso interno");
     } else {
       const resend = new Resend(apiKey);

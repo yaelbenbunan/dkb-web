@@ -13,6 +13,7 @@ import {
   type LeadSummary,
 } from "./preview-lead-summary";
 import { saveLead, uploadPreviewPdf } from "./imagina-leads";
+import { destinatariosAviso } from "./avisos-internos";
 
 const IMAGE_RE = /^data:image\/(jpeg|png);base64,[A-Za-z0-9+/=]+$/;
 
@@ -150,7 +151,7 @@ export async function sendPreviewFollowup(
   }
 
   const apiKey = process.env.RESEND_API_KEY;
-  const internalTo = process.env.CONTACT_EMAIL_TO;
+  const internalTo = destinatariosAviso(process.env.CONTACT_EMAIL_TO);
   const internalFrom = process.env.CONTACT_EMAIL_FROM ?? OFFER.fromEmail;
   if (!apiKey) {
     console.error("[preview-followup] missing RESEND_API_KEY");
@@ -192,7 +193,7 @@ export async function sendPreviewFollowup(
   const resend = new Resend(apiKey);
 
   // 1) Single internal notification: answers + the preview PDF (when available).
-  if (internalTo) {
+  if (internalTo.length > 0) {
     const summary: LeadSummary = {
       leadId: d.leadId,
       name: d.name,

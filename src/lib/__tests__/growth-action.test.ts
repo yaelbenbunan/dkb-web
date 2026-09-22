@@ -133,7 +133,7 @@ describe("requestGrowth", () => {
     await requestGrowth(fd());
     expect(sendMock).toHaveBeenCalledTimes(1);
     const enviado = sendMock.mock.calls[0][0];
-    expect(enviado.to).toBe("equipo@dinkbit.es");
+    expect(enviado.to).toEqual(["equipo@dinkbit.es"]);
     expect(enviado.text).toContain("Ana Ruiz");
     expect(enviado.text).toContain("ana@clinica.com");
     expect(enviado.text).toContain("CRM: guardado correctamente.");
