@@ -17,6 +17,7 @@ import {
   previsualizarImportacion,
   importarLeadsCsv,
   recibirLeadAnuncio,
+  recibirLeadFormulario,
   crearLeadManual,
   registrarLlamada,
   marcarMuestrasEnviadas,
@@ -25,6 +26,7 @@ import {
 } from "../ventas/servicios";
 
 const MARCA = { id: "m1", slug: "hydrup", nombre: "Hydrup", webhook_secret: "secreto-largo" } as never;
+const MARCA_ACTIVA = { id: "m1", slug: "hydrup", nombre: "Hydrup", webhook_secret: "secreto-largo", estado: "activa" } as never;
 const USUARIA = { id: "u1", nombre: "Paula", rol: "comercial", activa: true } as never;
 const CSV = "negocio,telefono,email\nGym Sol,600111222,\nFisio Norte,,fisio@norte.es\nYa Existe,,ya@a.es\nCliente,,cliente@a.es";
 
@@ -103,6 +105,78 @@ describe("recibirLeadAnuncio", () => {
   test("un cuerpo que no es un objeto → 400", async () => {
     m.getMarcaPorSlug.mockResolvedValue(MARCA);
     expect((await recibirLeadAnuncio({ slug: "hydrup", secreto: "secreto-largo", datos: [1, 2] })).status).toBe(400);
+  });
+});
+
+describe("recibirLeadFormulario", () => {
+  test("marca desconocida → 404 unknown_brand", async () => {
+    m.getMarcaPorSlug.mockResolvedValueOnce(null);
+    const r = await recibirLeadFormulario({ slug: "nope", datos: { negocio: "Gym", email: "gym@a.es" } });
+    expect(r).toEqual({ status: 404, body: { ok: false, error: "unknown_brand" } });
+  });
+
+  test("marca no activa → 404 unknown_brand", async () => {
+    m.getMarcaPorSlug.mockResolvedValue({ id: "m1", slug: "hydrup", nombre: "Hydrup", webhook_secret: "secreto-largo", estado: "borrador" });
+    const r = await recibirLeadFormulario({ slug: "hydrup", datos: { negocio: "Gym", email: "gym@a.es" } });
+    expect(r).toEqual({ status: 404, body: { ok: false, error: "unknown_brand" } });
+  });
+
+  test("lead nuevo → se crea con origenDetalle landing-b2b aunque el cuerpo traiga otra campaña", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA_ACTIVA);
+    m.crearLeads.mockResolvedValue({ ok: true, creados: 1 });
+    const r = await recibirLeadFormulario({
+      slug: "hydrup",
+      datos: { negocio: "Box X", email: "box@x.es", campana: "otra-campana" },
+    });
+    expect(r).toEqual({ status: 200, body: { ok: true, duplicado: false } });
+    expect(m.crearLeads.mock.calls[0][0]).toMatchObject({ origen: "anuncio", origenDetalle: "landing-b2b" });
+  });
+
+  test("con socios/reparto/comentarios en el cuerpo, se registra una nota con esos datos", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA_ACTIVA);
+    m.crearLeads.mockResolvedValue({ ok: true, creados: 1 });
+    m.buscarLeadPorContacto.mockResolvedValue({ id: "l-new" });
+    await recibirLeadFormulario({
+      slug: "hydrup",
+      datos: {
+        negocio: "Box X",
+        email: "box@x.es",
+        socios: "3 centros",
+        reparto: "Semanal",
+        comentarios: "Interesados en la caja personalizable",
+      },
+    });
+    expect(m.registrarActividad).toHaveBeenCalledWith(
+      expect.objectContaining({
+        leadId: "l-new",
+        tipo: "nota",
+        nota: expect.stringContaining("Socios: 3 centros"),
+      }),
+    );
+    const nota = m.registrarActividad.mock.calls[0][0].nota as string;
+    expect(nota).toContain("Reparto: Semanal");
+    expect(nota).toContain("Comentarios: Interesados en la caja personalizable");
+  });
+
+  test("lead repetido → 200 duplicado:true y la nota empieza indicando que ha vuelto desde la web", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA_ACTIVA);
+    m.buscarLeadPorContacto.mockResolvedValue({ id: "l7" });
+    const r = await recibirLeadFormulario({ slug: "hydrup", datos: { negocio: "Ya", email: "ya@a.es" } });
+    expect(r).toEqual({ status: 200, body: { ok: true, duplicado: true } });
+    expect(m.crearLeads).not.toHaveBeenCalled();
+    expect(m.registrarActividad).toHaveBeenCalledWith(
+      expect.objectContaining({
+        leadId: "l7",
+        tipo: "nota",
+        nota: expect.stringMatching(/^Ha vuelto a llegar desde la web \(landing-b2b\)\./),
+      }),
+    );
+  });
+
+  test("cuerpo inválido o sin contacto → 400", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA_ACTIVA);
+    expect((await recibirLeadFormulario({ slug: "hydrup", datos: [1, 2] })).status).toBe(400);
+    expect((await recibirLeadFormulario({ slug: "hydrup", datos: { negocio: "Gym" } })).status).toBe(400);
   });
 });
 

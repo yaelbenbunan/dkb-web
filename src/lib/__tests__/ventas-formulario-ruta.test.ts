@@ -13,6 +13,14 @@ function peticion(body: unknown, origin = "https://drinkhydrup.com", ip = "1.1.1
     body: JSON.stringify(body),
   });
 }
+
+function peticionConCabeceras(body: unknown, headers: Record<string, string>) {
+  return new NextRequest("https://www.dinkbit.es/api/ventas/formulario/hydrup", {
+    method: "POST",
+    headers: { "content-type": "application/json", origin: "https://drinkhydrup.com", ...headers },
+    body: JSON.stringify(body),
+  });
+}
 const params = { params: Promise.resolve({ slug: "hydrup" }) };
 const lead = { negocio: "Gym Sol", contacto: "Ana", email: "ana@sol.es", tipo_negocio: "gimnasio" };
 
@@ -44,6 +52,21 @@ describe("POST /api/ventas/formulario/[slug]", () => {
   test("más de 5 envíos por IP en 10 min → 429", async () => {
     for (let i = 0; i < 5; i++) await POST(peticion(lead, undefined, "9.9.9.9"), params);
     const res = await POST(peticion(lead, undefined, "9.9.9.9"), params);
+    expect(res.status).toBe(429);
+  });
+
+  test("x-forwarded-for spoofeado no burla el límite: manda x-real-ip", async () => {
+    for (let i = 0; i < 5; i++) {
+      const res = await POST(
+        peticionConCabeceras(lead, { "x-real-ip": "8.8.8.8", "x-forwarded-for": `1.2.3.${i}` }),
+        params,
+      );
+      expect(res.status).toBe(200);
+    }
+    const res = await POST(
+      peticionConCabeceras(lead, { "x-real-ip": "8.8.8.8", "x-forwarded-for": "9.9.9.9" }),
+      params,
+    );
     expect(res.status).toBe(429);
   });
 

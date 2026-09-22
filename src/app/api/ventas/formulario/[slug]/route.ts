@@ -34,7 +34,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   }
   const headers = cors(origin!);
 
-  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "desconocida";
+  // x-real-ip lo pone Vercel y el cliente no puede tocarlo; x-forwarded-for sí
+  // (un cliente puede mandar cualquier valor), así que solo se usa de respaldo.
+  const ip =
+    req.headers.get("x-real-ip")?.trim() ||
+    (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() ||
+    "desconocida";
   if (!permitir(`${slug}:${ip}`)) {
     return NextResponse.json({ ok: false, error: "rate_limited" }, { status: 429, headers });
   }

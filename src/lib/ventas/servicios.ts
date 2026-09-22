@@ -25,6 +25,8 @@ import { clasificarLeads, parseVentasLeadsCsv, type LeadNuevo } from "./leads-cs
 import { parsearSecuencia, validarSecuencia } from "./secuencias";
 import type { CambioFase, Llamada, NotaSeguimiento } from "./validacion";
 
+const CAMPANA_FORMULARIO_WEB = "landing-b2b";
+
 export type ResultadoImportacion =
   | { ok: true; creados: number; duplicados: number; excluidos: number }
   | { ok: false; error: string; errores: { line: number; message: string }[] };
@@ -144,7 +146,7 @@ async function guardarLeadEntrante(input: {
   if (clasificacion.duplicados.length > 0) {
     const existente = await buscarLeadPorContacto(marca.id, lead);
     if (existente) {
-      const vuelta = `Ha vuelto a llegar desde ${campana === "landing-b2b" ? "la web" : "anuncios"}${campana ? ` (${campana})` : ""}.`;
+      const vuelta = `Ha vuelto a llegar desde ${campana === CAMPANA_FORMULARIO_WEB ? "la web" : "anuncios"}${campana ? ` (${campana})` : ""}.`;
       await registrarActividad({
         leadId: existente.id,
         usuariaId: null,
@@ -202,9 +204,9 @@ export async function recibirLeadFormulario(input: {
     return { status: 400, body: { ok: false, error: "invalid_body" } };
   }
   const datos = input.datos as Record<string, unknown>;
-  const leido = leadDesdeAnuncio({ ...datos, campana: "landing-b2b" });
+  const leido = leadDesdeAnuncio({ ...datos, campana: CAMPANA_FORMULARIO_WEB });
   if (!leido.ok) return { status: 400, body: { ok: false, error: leido.error } };
-  return guardarLeadEntrante({ marca, lead: leido.lead, campana: "landing-b2b", notaInicial: notaFormulario(datos) });
+  return guardarLeadEntrante({ marca, lead: leido.lead, campana: CAMPANA_FORMULARIO_WEB, notaInicial: notaFormulario(datos) });
 }
 
 export async function crearLeadManual(input: {
