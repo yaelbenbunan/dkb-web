@@ -17,12 +17,19 @@ export type PestanaPanel = (typeof PESTANAS)[number]["clave"];
 export function PanelShell({
   activa,
   agendaCount,
+  alturaCompleta,
   children,
 }: {
   activa: PestanaPanel;
   /** Llamadas vencidas o de hoy, para el aviso rojo de la pestaña Agenda. Solo
    *  lo pasan las páginas que ya leen los leads; el resto lo omite. */
   agendaCount?: number;
+  /** El tablero quiere aprovechar todo el alto de la ventana (columnas con
+   *  scroll propio) en vez de que crezca la página entera. Con esto a `true`,
+   *  `<main>` pasa a ser un `flex: 1` que no crece más allá de lo que queda
+   *  bajo la cabecera, y es cosa de `children` repartirse ese alto. El resto
+   *  de pestañas no lo pasa y sigue con el scroll normal de la página. */
+  alturaCompleta?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -31,7 +38,9 @@ export function PanelShell({
         position: "fixed",
         inset: 0,
         zIndex: 2147483647,
-        overflow: "auto",
+        display: "flex",
+        flexDirection: "column",
+        overflow: alturaCompleta ? "hidden" : "auto",
         background: "#f1f5f9",
         color: "#0f172a",
         fontFamily: "system-ui, sans-serif",
@@ -42,6 +51,7 @@ export function PanelShell({
           position: "sticky",
           top: 0,
           zIndex: 10,
+          flexShrink: 0,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -111,7 +121,16 @@ export function PanelShell({
           </button>
         </form>
       </header>
-      <main style={{ padding: 22 }}>{children}</main>
+      <main
+        style={{
+          padding: 22,
+          ...(alturaCompleta
+            ? { flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }
+            : {}),
+        }}
+      >
+        {children}
+      </main>
     </div>
   );
 }

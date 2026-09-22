@@ -164,12 +164,12 @@ export function Tablero({
   }
 
   return (
-    <div ref={portalRef} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <div style={{ minHeight: 20 }} aria-live="polite">
+    <div ref={portalRef} style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1, minHeight: 0 }}>
+      <div style={{ minHeight: 20, flexShrink: 0 }} aria-live="polite">
         <Mensaje resultado={aviso} />
       </div>
 
-      <div style={{ display: "flex", gap: 12, overflowX: "auto", alignItems: "flex-start", paddingBottom: 10 }}>
+      <div style={{ display: "flex", gap: 12, overflowX: "auto", alignItems: "stretch", paddingBottom: 10, flex: 1, minHeight: 0 }}>
         {COLUMNAS_TABLERO.map((columna) => {
           const todas = ordenarPorUrgencia(grupos[columna.id], hoy);
           const destacada = sobre === columna.id;
@@ -194,6 +194,7 @@ export function Tablero({
                 flex: `0 0 ${ancho}px`,
                 display: "flex",
                 flexDirection: "column",
+                minHeight: 0,
                 borderRadius: 12,
                 background: destacada ? "#eff6ff" : "#e9eef5",
                 outline: destacada ? "2px solid #187bef" : aceptaSoltar ? "2px dashed #94a3b8" : "2px solid transparent",
@@ -211,6 +212,7 @@ export function Tablero({
                   borderRadius: "12px 12px 0 0",
                   background: color.bg,
                   color: color.text,
+                  flexShrink: 0,
                 }}
               >
                 <h2 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>{columna.titulo}</h2>
@@ -219,7 +221,10 @@ export function Tablero({
                 </span>
               </header>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 8, minHeight: 120, maxHeight: "calc(100vh - 290px)", overflowY: "auto" }}>
+              {/* Lista de tarjetas con su propio scroll (flex: 1 + min-height:
+                  0 + overflow-y: auto): así la columna llena el alto que le da
+                  el flex de arriba y, al desbordar, no crece la página entera. */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 8, flex: 1, minHeight: 0, overflowY: "auto" }}>
                 {todas.length === 0 && (
                   <p style={{ margin: "18px 0", textAlign: "center", fontSize: 12, color: "#94a3b8" }}>Sin leads</p>
                 )}

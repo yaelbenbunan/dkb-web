@@ -76,9 +76,9 @@ export default async function TableroPage({
     }) as const;
 
   return (
-    <PanelShell activa="tablero" agendaCount={pendingCalls}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+    <PanelShell activa="tablero" agendaCount={pendingCalls} alturaCompleta>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14, flex: 1, minHeight: 0 }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", flexShrink: 0 }}>
           <Link href={filtro({ atrasados: undefined })} style={chip(!atrasados)}>Todos</Link>
           <Link href={filtro({ atrasados: atrasados ? undefined : "1" })} style={chip(atrasados)}>Con seguimiento atrasado</Link>
           <span style={{ fontSize: 13, color: "#64748b", marginLeft: 6 }}>{leads.length} leads</span>
