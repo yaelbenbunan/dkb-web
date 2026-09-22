@@ -25,6 +25,7 @@ import {
 import { ACCOUNT_MANAGERS } from "@/lib/account-managers";
 import { dedupeKey, parseLeadsCsv, type CsvRowError } from "@/lib/leads-csv";
 import { sendKitDigital2026Email } from "@/lib/kit-digital-2026-resend";
+import type { ResultadoAccion } from "@/lib/panel-resultado";
 
 export async function panelLogin(formData: FormData) {
   const user = String(formData.get("user") ?? "");
@@ -60,6 +61,24 @@ export async function setLeadStatus(formData: FormData) {
     await updateLeadStatus(id, status as LeadStatus);
     revalidatePath("/panel");
   }
+}
+
+/**
+ * Cambio de estado desde el tablero (arrastrar o el botón «→»/menú «⋯»): a
+ * diferencia de `setLeadStatus` (pensada para un `<select>` disparado con
+ * `useTransition`, que no necesita respuesta) esta devuelve `ResultadoAccion`
+ * para que la tarjeta pueda deshacer su movimiento optimista si algo falla.
+ * Valida el estado contra `LEAD_STATUSES` igual que `setLeadStatus`.
+ */
+export async function moverLeadEstadoAction(id: string, status: string): Promise<ResultadoAccion> {
+  if (!id) return { ok: false, error: "Falta el id del lead." };
+  if (!LEAD_STATUSES.includes(status as LeadStatus)) return { ok: false, error: "Estado no válido." };
+  const ok = await updateLeadStatus(id, status as LeadStatus);
+  if (!ok) return { ok: false, error: "No se pudo guardar. Revisa la conexión y vuelve a intentarlo." };
+  revalidatePath("/panel");
+  revalidatePath("/panel/tablero");
+  revalidatePath("/panel/agenda");
+  return { ok: true };
 }
 
 export async function setLeadAccountManager(formData: FormData) {
