@@ -27,6 +27,7 @@ import {
   estadosDestino,
   iniciales,
   ordenarPorUrgencia,
+  saleDelTablero,
   siguienteColumna,
   type ColumnaId,
   type ColumnaTablero,
@@ -572,20 +573,34 @@ function MenuAcciones({
     };
   }, [abierto, modoHoja]);
 
-  const items = estadosDestino(actual).map((estado) => (
-    <button
-      key={estado}
-      type="button"
-      role="menuitem"
-      onClick={() => {
-        cerrar();
-        onMover(estado);
-      }}
-      style={{ ...itemMenu, color: estado === "ilocalizable" || estado === "perdido" ? "#b91c1c" : "#1e293b" }}
-    >
-      {statusLabel(estado)}
-    </button>
-  ));
+  const items = estadosDestino(actual).map((estado) => {
+    // Kit Digital no tiene columna: al mandar el lead allí, la tarjeta
+    // desaparece del tablero (sigue en la lista). Se avisa aquí para que no
+    // parezca que se ha perdido.
+    const fuera = saleDelTablero(estado);
+    return (
+      <button
+        key={estado}
+        type="button"
+        role="menuitem"
+        onClick={() => {
+          cerrar();
+          onMover(estado);
+        }}
+        style={{
+          ...itemMenu,
+          color: estado === "ilocalizable" || estado === "perdido" ? "#b91c1c" : "#1e293b",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-start",
+          gap: 1,
+        }}
+      >
+        {statusLabel(estado)}
+        {fuera && <span style={{ fontSize: 11, color: "#64748b" }}>Sale del tablero, sigue en la lista</span>}
+      </button>
+    );
+  });
 
   const destino = portalRef.current;
 

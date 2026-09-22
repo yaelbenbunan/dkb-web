@@ -82,13 +82,19 @@ export function siguienteColumna(estado: LeadStatus): LeadStatus | null {
   return siguiente.estados[0];
 }
 
-/** Destinos del menú «⋯ Mover a…»: cualquier otro estado con columna en el
- *  tablero, en el orden de `LEAD_STATUSES`. Kit Digital y Cliente Kit Digital
- *  quedan fuera: ese estado se marca desde la lista de `/panel`, no desde
- *  aquí. A diferencia de soltar en una columna ambigua, el menú ya deja
- *  elegir el estado exacto, así que no hace falta preguntar nada más. */
+/** Destinos del menú «⋯ Mover a…»: cualquier otro estado, en el orden de
+ *  `LEAD_STATUSES`. Incluye Kit Digital y Cliente Kit Digital aunque no
+ *  tengan columna: hay que poder mandar allí a quien muestre interés, para
+ *  tenerlos localizados cuando vuelva la convocatoria. Al hacerlo, la
+ *  tarjeta desaparece del tablero (sigue en la lista de `/panel`), y el menú
+ *  lo avisa antes de que alguien lo descubra por las malas. */
 export function estadosDestino(actual: LeadStatus): LeadStatus[] {
-  return LEAD_STATUSES.filter((s) => s !== actual && !ESTADOS_FUERA_DEL_TABLERO.includes(s));
+  return LEAD_STATUSES.filter((s) => s !== actual);
+}
+
+/** Si mover a este estado saca la tarjeta del tablero. */
+export function saleDelTablero(estado: LeadStatus): boolean {
+  return ESTADOS_FUERA_DEL_TABLERO.includes(estado);
 }
 
 /** Estados en los que ya no se espera ninguna acción más: no llevan

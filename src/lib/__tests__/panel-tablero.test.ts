@@ -9,6 +9,7 @@ import {
   columnaDeEstado,
   estadoSeguimiento,
   estadosDestino,
+  saleDelTablero,
   iniciales,
   ordenarPorUrgencia,
   siguienteColumna,
@@ -116,18 +117,27 @@ describe("siguienteColumna", () => {
 });
 
 describe("estadosDestino", () => {
-  test("cualquier otro estado con columna, en el orden de LEAD_STATUSES", () => {
-    const sinFueraDelTablero = (s: LeadStatus) => LEAD_STATUSES.filter((x) => x !== s && !ESTADOS_FUERA_DEL_TABLERO.includes(x));
-    expect(estadosDestino("nuevo")).toEqual(sinFueraDelTablero("nuevo"));
-    expect(estadosDestino("perdido")).toEqual(sinFueraDelTablero("perdido"));
+  test("todos los demás estados, en el orden de LEAD_STATUSES", () => {
+    const otros = (s: LeadStatus) => LEAD_STATUSES.filter((x) => x !== s);
+    expect(estadosDestino("nuevo")).toEqual(otros("nuevo"));
+    expect(estadosDestino("perdido")).toEqual(otros("perdido"));
     expect(estadosDestino("nuevo")).not.toContain("nuevo");
   });
 
-  test("nunca ofrece mover a Kit Digital ni a Cliente Kit Digital", () => {
+  test("deja mandar a Kit Digital aunque no tenga columna", () => {
     for (const estado of LEAD_STATUSES) {
-      expect(estadosDestino(estado)).not.toContain("kit-digital");
-      expect(estadosDestino(estado)).not.toContain("cliente-kit-digital");
+      if (estado !== "kit-digital") expect(estadosDestino(estado)).toContain("kit-digital");
+      if (estado !== "cliente-kit-digital") expect(estadosDestino(estado)).toContain("cliente-kit-digital");
     }
+  });
+});
+
+describe("saleDelTablero", () => {
+  test("solo los estados de Kit Digital sacan la tarjeta del tablero", () => {
+    expect(saleDelTablero("kit-digital")).toBe(true);
+    expect(saleDelTablero("cliente-kit-digital")).toBe(true);
+    expect(saleDelTablero("nuevo")).toBe(false);
+    expect(saleDelTablero("perdido")).toBe(false);
   });
 });
 
