@@ -70,6 +70,32 @@ describe("POST /api/ventas/formulario/[slug]", () => {
     expect(res.status).toBe(429);
   });
 
+  test("cf-connecting-ip tiene prioridad sobre x-real-ip y x-forwarded-for", async () => {
+    for (let i = 0; i < 5; i++) {
+      const res = await POST(
+        peticionConCabeceras(lead, { "cf-connecting-ip": "7.7.7.7", "x-real-ip": "8.8.8.8", "x-forwarded-for": `1.2.3.${i}` }),
+        params,
+      );
+      expect(res.status).toBe(200);
+    }
+    const res = await POST(
+      peticionConCabeceras(lead, { "cf-connecting-ip": "7.7.7.7", "x-real-ip": "8.8.8.8", "x-forwarded-for": "9.9.9.9" }),
+      params,
+    );
+    expect(res.status).toBe(429);
+  });
+
+  test("distintas cf-connecting-ip son cubos separados", async () => {
+    for (let i = 0; i < 5; i++) {
+      const res = await POST(peticionConCabeceras(lead, { "cf-connecting-ip": "6.6.6.6" }), params);
+      expect(res.status).toBe(200);
+    }
+    const distinta = await POST(peticionConCabeceras(lead, { "cf-connecting-ip": "6.6.6.7" }), params);
+    expect(distinta.status).toBe(200);
+    const misma = await POST(peticionConCabeceras(lead, { "cf-connecting-ip": "6.6.6.6" }), params);
+    expect(misma.status).toBe(429);
+  });
+
   test("OPTIONS responde el preflight solo a orígenes permitidos", async () => {
     const ok = await OPTIONS(new NextRequest("https://x/api", { method: "OPTIONS", headers: { origin: "https://drinkhydrup.com" } }), params);
     expect(ok.status).toBe(204);

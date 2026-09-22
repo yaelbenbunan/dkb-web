@@ -34,9 +34,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   }
   const headers = cors(origin!);
 
-  // x-real-ip lo pone Vercel y el cliente no puede tocarlo; x-forwarded-for sí
-  // (un cliente puede mandar cualquier valor), así que solo se usa de respaldo.
+  // Producción está detrás de Cloudflare: cf-connecting-ip es la IP real del
+  // cliente que pone el edge de Cloudflare y no se puede falsear. x-real-ip
+  // (Vercel) y el primer salto de x-forwarded-for son respaldo si faltara.
   const ip =
+    req.headers.get("cf-connecting-ip")?.trim() ||
     req.headers.get("x-real-ip")?.trim() ||
     (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() ||
     "desconocida";

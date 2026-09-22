@@ -132,6 +132,18 @@ describe("recibirLeadFormulario", () => {
     expect(m.crearLeads.mock.calls[0][0]).toMatchObject({ origen: "anuncio", origenDetalle: "landing-b2b" });
   });
 
+  test("si registrarActividad falla al apuntar la nota inicial, el lead ya se guardó y responde 200 igual", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA_ACTIVA);
+    m.crearLeads.mockResolvedValue({ ok: true, creados: 1 });
+    m.buscarLeadPorContacto.mockResolvedValue({ id: "l-new" });
+    m.registrarActividad.mockRejectedValueOnce(new Error("db caída"));
+    const r = await recibirLeadFormulario({
+      slug: "hydrup",
+      datos: { negocio: "Box X", email: "box@x.es", comentarios: "Hola" },
+    });
+    expect(r).toEqual({ status: 200, body: { ok: true, duplicado: false } });
+  });
+
   test("con socios/reparto/comentarios en el cuerpo, se registra una nota con esos datos", async () => {
     m.getMarcaPorSlug.mockResolvedValue(MARCA_ACTIVA);
     m.crearLeads.mockResolvedValue({ ok: true, creados: 1 });

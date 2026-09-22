@@ -168,9 +168,13 @@ async function guardarLeadEntrante(input: {
 
   if (input.notaInicial && res.creados > 0) {
     // Sin que pueda tumbar la respuesta: el lead ya está guardado.
-    const creado = await buscarLeadPorContacto(marca.id, lead);
-    if (creado) {
-      await registrarActividad({ leadId: creado.id, usuariaId: null, tipo: "nota", nota: input.notaInicial });
+    try {
+      const creado = await buscarLeadPorContacto(marca.id, lead);
+      if (creado) {
+        await registrarActividad({ leadId: creado.id, usuariaId: null, tipo: "nota", nota: input.notaInicial });
+      }
+    } catch (error) {
+      console.error("guardarLeadEntrante: no se pudo apuntar la nota inicial", error);
     }
   }
   return { status: 200, body: { ok: true, duplicado: res.creados === 0 } };
