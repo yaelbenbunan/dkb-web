@@ -114,8 +114,22 @@ un reintento de Meta provocaría una segunda autorespuesta al mismo mensaje.
 3. Recorrer `entry[].changes[].value`:
    - `statuses[]` → actualizar el estado del mensaje saliente por `wamid`.
    - `messages[]` → clasificar y actuar (abajo).
-4. Devolver **200 siempre que la firma sea válida**, aunque no case nada. Un 500
-   solo provoca reintentos.
+4. La regla de fallos tiene **dos fases**, separadas por el guardado del
+   mensaje entrante (`guardarEntrante` en `procesar.ts`) — no "200 siempre
+   que la firma sea válida" (esa era la regla vieja; se corrigió a propósito
+   tras un fallo grave de mensajes perdidos, ver ronda de arreglos 2,
+   Hallazgo I2, y no debe revertirse):
+   - **Fallo ANTES de persistir** (fase A: buscar la marca, la conversación,
+     el lead, crear la conversación...) → **500**, para que Meta reintente.
+     Es seguro: el `wamid` todavía no existe en `ventas_mensajes`, así que el
+     índice único que hace el webhook idempotente garantiza que el reintento
+     no duplica nada.
+   - **Fallo DESPUÉS de persistir** (fase B: enviar la autorespuesta, guardar
+     el saliente, registrar actividad) → se registra con `console.error` y
+     se responde **200**. Propagarlo aquí sería peor que tragárselo: el
+     mensaje ya está guardado, así que un reintento de Meta chocaría con el
+     gate de idempotencia sin poder reparar nada — solo enmascararía el
+     fallo real detrás de reintentos inútiles.
 
 La clasificación de cada mensaje entrante, en `src/lib/whatsapp/entrante.ts` como
 función pura y testeable:
