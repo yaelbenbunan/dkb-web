@@ -151,12 +151,19 @@ export async function guardarEntrante(input: {
   // Meta del mismo wamid no debe reescribir ultimo_texto/ultimo_mensaje_at,
   // porque eso es justo la señal que otra capa usaría para pensar que ha
   // llegado algo nuevo a lo que responder.
+  //
+  // Este update es BEST-EFFORT: el mensaje ya quedó guardado arriba, que es
+  // lo que importa. Si lanzáramos aquí, un fallo puramente cosmético (el
+  // extracto de la bandeja) tumbaría la petición entera; Meta reintentaría
+  // el webhook, el upsert de más arriba devolvería `nuevo: false` por el
+  // wamid ya insertado, y el resumen desnormalizado quedaría roto para
+  // siempre. Mejor perder el extracto que perder el 200.
   if (nuevo) {
     const conv = await db()
       .from("ventas_conversaciones")
       .update({ ultimo_texto: input.texto, ultimo_mensaje_at: new Date().toISOString() })
       .eq("id", input.conversacionId);
-    if (conv.error) throw new Error(`[whatsapp/db] guardarEntrante (conversación): ${conv.error.message}`);
+    if (conv.error) console.error(`[whatsapp/db] guardarEntrante (conversación): ${conv.error.message}`);
   }
   return { nuevo };
 }
@@ -186,12 +193,14 @@ export async function guardarSaliente(input: {
 
   // Ya hay que tocar la fila de la conversación de todos modos (no añade una
   // escritura nueva): se aprovecha para mantener el resumen desnormalizado
-  // que lee listConversaciones.
+  // que lee listConversaciones. Igual que en guardarEntrante, es BEST-EFFORT:
+  // el mensaje saliente ya quedó guardado, así que un fallo aquí solo debe
+  // registrarse, nunca tumbar la petición que lo disparó (p.ej. el webhook).
   const conv = await db()
     .from("ventas_conversaciones")
     .update({ ultimo_texto: input.texto, ultimo_mensaje_at: new Date().toISOString() })
     .eq("id", input.conversacionId);
-  if (conv.error) throw new Error(`[whatsapp/db] guardarSaliente (conversación): ${conv.error.message}`);
+  if (conv.error) console.error(`[whatsapp/db] guardarSaliente (conversación): ${conv.error.message}`);
 }
 
 export async function listMensajes(conversacionId: string): Promise<Mensaje[]> {
