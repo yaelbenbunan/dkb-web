@@ -30,6 +30,10 @@ export interface MensajeHilo {
 export interface Hilo {
   id: string;
   nombre: string;
+  // `null` cuando todavía no hay lead vinculado (p.ej. alguien que escribe
+  // antes de que la venta lo dé de alta): sin lead no hay ficha a la que
+  // enlazar.
+  leadId: string | null;
   etiquetaVentana: string;
   ventanaAbierta: boolean;
   mensajes: MensajeHilo[];
@@ -141,6 +145,14 @@ function HiloConversacion({ slug, hilo }: { slug: string; hilo: Hilo }) {
       <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
         <h2 style={{ margin: 0, fontSize: 18 }}>{hilo.nombre}</h2>
         <span style={{ fontSize: 13, fontWeight: 600, color: hilo.ventanaAbierta ? "#16a34a" : "#b91c1c" }}>{hilo.etiquetaVentana}</span>
+        {hilo.leadId && (
+          <Link
+            href={`/panel/ventas/${slug}/leads/${hilo.leadId}`}
+            style={{ fontSize: 13, fontWeight: 600, color: "#187bef", textDecoration: "none" }}
+          >
+            Ver ficha del lead →
+          </Link>
+        )}
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1, overflowY: "auto", padding: "4px 2px" }}>

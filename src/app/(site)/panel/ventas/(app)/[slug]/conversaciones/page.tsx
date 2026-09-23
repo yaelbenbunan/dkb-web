@@ -51,6 +51,7 @@ export default async function ConversacionesPage({
     ? {
         id: seleccionada.id,
         nombre: nombreConversacion(seleccionada.wa_id, seleccionada.lead_id, nombres),
+        leadId: seleccionada.lead_id,
         etiquetaVentana: etiquetaVentana(seleccionada.ventana_hasta, ahora),
         ventanaAbierta: ventanaAbierta(seleccionada.ventana_hasta, ahora),
         mensajes: mensajes.map((m) => ({
