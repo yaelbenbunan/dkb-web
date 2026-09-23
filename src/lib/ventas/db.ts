@@ -78,6 +78,11 @@ export interface Lead {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  /** Cuándo se pasó este lead al embudo del CRM principal (botón "Pasar al
+   *  embudo", solo marca dinkbit). null = todavía no. Es la marca real de
+   *  idempotencia de ese botón — a propósito, no el texto de una nota, que
+   *  una comercial podría escribir a mano y crear un falso positivo. */
+  promocionado_at: string | null;
 }
 
 export interface Actividad {
@@ -297,6 +302,16 @@ export async function asignarLead(id: string, usuariaId: string | null): Promise
   return escritura(
     await db().from("ventas_leads").update({ asignada_a: usuariaId, updated_at: new Date().toISOString() }).eq("id", id),
     "asignarLead",
+  );
+}
+
+/** Marca el lead como ya pasado al embudo principal del CRM (botón "Pasar al
+ *  embudo"). No pisa `updated_at`: no es una edición de los datos del lead,
+ *  es un hito aparte que solo mira la comprobación de idempotencia. */
+export async function marcarLeadPromocionado(id: string): Promise<Escritura> {
+  return escritura(
+    await db().from("ventas_leads").update({ promocionado_at: new Date().toISOString() }).eq("id", id),
+    "marcarLeadPromocionado",
   );
 }
 

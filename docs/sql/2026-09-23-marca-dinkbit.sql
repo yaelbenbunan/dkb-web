@@ -3,7 +3,8 @@
 -- que una persona decida pasarlos al embudo del CRM principal.
 --
 -- Ejecutar una vez en el SQL Editor de Supabase (proyecto wnboyesnlrbtwfmhcxmc),
--- después de docs/sql/2026-09-23-whatsapp-canal.sql.
+-- después de docs/sql/2026-09-17-ventas-fase1.sql (esa es la que crea
+-- `ventas_marcas`).
 
 insert into public.ventas_marcas (nombre, slug, estado)
 values ('Dinkbit', 'dinkbit', 'activa')

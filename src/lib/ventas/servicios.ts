@@ -13,10 +13,10 @@ import {
   getLead,
   getMarcaPorSlug,
   getSecuencia,
-  listActividadLead,
   listContactosLeads,
   listExclusiones,
   listSecuencias,
+  marcarLeadPromocionado,
   registrarActividad,
   registrarImportacion,
   type Escritura,
@@ -311,33 +311,29 @@ export async function moverLead(input: { usuaria: Usuaria; leadId: string; fase:
   return registrarActividad({ leadId: lead.id, usuariaId: input.usuaria.id, tipo: "cambio_fase", faseNueva: input.fase });
 }
 
-/** Texto exacto de la nota que deja «Pasar al embudo»: además de rastro en el
- *  historial, es la marca que usamos para saber si un lead ya se promocionó. */
+/** Texto de la nota informativa que deja «Pasar al embudo» en el historial.
+ *  Es solo para que una persona vea qué pasó — la idempotencia la garantiza
+ *  `promocionado_at` en `ventas_leads`, no este texto (una comercial podría
+ *  escribir la misma frase a mano en la pestaña "Nota" y, si comparásemos
+ *  contra el texto, eso crearía un falso positivo que bloquease el botón). */
 const NOTA_PASADO_AL_EMBUDO = "Pasado al embudo principal";
-
-/** ¿Este lead ya se pasó al embudo principal? Se mira el historial en vez de
- *  guardar un flag aparte: la nota que deja la propia acción es la fuente de
- *  verdad, así que no hay dos sitios que puedan desincronizarse. */
-async function yaPasadoAlEmbudo(leadId: string): Promise<boolean> {
-  const actividad = await listActividadLead(leadId);
-  return actividad.some((a) => a.tipo === "nota" && a.nota === NOTA_PASADO_AL_EMBUDO);
-}
 
 /**
  * Pasa un lead de WhatsApp (marca `dinkbit`) al embudo del CRM principal.
  * Siempre a mano, desde un botón: nunca automático. Crea el lead en
- * `imagina_leads` con `channel: "WhatsApp"` y deja una nota en el historial
- * del lead de origen para que quede constancia de quién y cuándo.
+ * `imagina_leads` con `channel: "WhatsApp"`, marca `promocionado_at` en el
+ * lead de origen (fuente de verdad de la idempotencia) y deja además una nota
+ * en su historial para que quede constancia de quién y cuándo.
  *
  * Idempotente: si se pulsa el botón dos veces (doble clic, reintento de red),
- * la segunda vez no crea un lead duplicado en el CRM — se detecta por la nota
- * que dejó la primera vez y se responde `ok` sin volver a escribir nada.
+ * la segunda vez no crea un lead duplicado en el CRM — se detecta por
+ * `promocionado_at` y se responde `ok` sin volver a escribir nada.
  */
 export async function pasarLeadAlEmbudo(input: { usuaria: Usuaria; leadId: string }): Promise<ResultadoAccion> {
   const lead = await getLead(input.leadId);
   if (!lead) return { ok: false, error: "Lead no encontrado." };
 
-  if (await yaPasadoAlEmbudo(lead.id)) {
+  if (lead.promocionado_at) {
     return { ok: true, mensaje: "Este lead ya se había pasado al embudo principal." };
   }
 
@@ -352,6 +348,20 @@ export async function pasarLeadAlEmbudo(input: { usuaria: Usuaria; leadId: strin
   });
   if (!creado.ok) return { ok: false, error: "No se pudo crear el lead en el embudo principal." };
 
+  // A partir de aquí el lead YA existe en el CRM principal: un fallo en
+  // cualquiera de las dos escrituras siguientes no lo deshace (no hay
+  // transacción entre `imagina_leads` y `ventas_leads`, son tablas vecinas en
+  // la misma instancia). Se avisa con un mensaje distinto de "todo ok" para
+  // no mentir sobre lo que pasó, y se deja rastro en el servidor.
+  const marcado = await marcarLeadPromocionado(lead.id);
+  if (!marcado.ok) {
+    console.error("[ventas/servicios] pasarLeadAlEmbudo: lead creado en el CRM pero no se pudo marcar como promocionado:", marcado.error);
+    return {
+      ok: true,
+      mensaje: "Lead creado en el CRM, pero no se pudo guardar la marca de promocionado. Compruébalo en el CRM antes de volver a pulsar.",
+    };
+  }
+
   const actividad = await registrarActividad({
     leadId: lead.id,
     usuariaId: input.usuaria.id,
@@ -359,10 +369,11 @@ export async function pasarLeadAlEmbudo(input: { usuaria: Usuaria; leadId: strin
     nota: NOTA_PASADO_AL_EMBUDO,
   });
   if (!actividad.ok) {
-    // El lead ya está creado en el CRM principal: no deshacemos eso por un
-    // fallo al dejar la nota. Pero sin la nota se pierde la idempotencia y el
-    // rastro, así que se avisa en el servidor para revisarlo a mano.
-    console.error("[ventas/servicios] pasarLeadAlEmbudo: no se pudo registrar la actividad:", actividad.error);
+    console.error("[ventas/servicios] pasarLeadAlEmbudo: no se pudo registrar la nota de actividad:", actividad.error);
+    return {
+      ok: true,
+      mensaje: "Lead creado en el CRM, pero no se pudo dejar la nota en el historial. Compruébalo en el CRM antes de volver a pulsar.",
+    };
   }
 
   return { ok: true, mensaje: "Lead pasado al embudo principal." };
