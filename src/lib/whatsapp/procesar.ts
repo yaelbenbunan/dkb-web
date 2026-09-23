@@ -12,6 +12,7 @@ import { textoAutorespuesta } from "./autorespuesta";
 import { decidir, extraerEstados, extraerMensajes, type MensajeEntrante } from "./entrante";
 import { crearMensajero, type MensajeroWhatsApp } from "./mensajero";
 import { calcularVentana, telefonoDeWaId } from "./ventana";
+import { MARCA_DINKBIT_SLUG } from "../ventas/dominio";
 import { buscarLeadPorContacto, crearLeads, getMarcaPorSlug, registrarActividad } from "../ventas/db";
 
 /**
@@ -28,9 +29,15 @@ import { buscarLeadPorContacto, crearLeads, getMarcaPorSlug, registrarActividad 
  * guardar el mensaje entrante se propaga (es reintentable, la ruta responde
  * 500); lo de DESPUÉS se traga y se registra (es best-effort, nunca debe
  * costar el mensaje ya guardado ni forzar un reintento que no arreglaría
- * nada). `getMarcaPorSlug` sigue la misma regla: si LANZA, se propaga; si
- * devuelve `null` (la marca no existe), es un 200 normal, porque reintentar
- * no la va a crear.
+ * nada). `getMarcaPorSlug` es fase A: si `getMarcaPorSlug("dinkbit")`
+ * devuelve `null` (las migraciones son MANUALES, así que el día del
+ * despliegue es el momento más probable de que la fila todavía no exista) se
+ * LANZA a propósito, no se traga: no se ha persistido nada todavía, así que
+ * el 500 resultante es reintentable sin riesgo de duplicado, y el reintento
+ * recupera el mensaje en cuanto alguien aplique el SQL. Tragárselo aquí
+ * respondería 200, Meta lo daría por entregado y el mensaje —y el anuncio
+ * pagado que lo trajo— se perderían para siempre (Hallazgo I2, ronda de
+ * arreglos 2).
  */
 export interface Deps {
   mensajero: MensajeroWhatsApp;
@@ -49,10 +56,6 @@ export interface Deps {
     anuncio: string | null;
   }) => Promise<{ id: string }>;
 }
-
-// La marca en la que viven los leads/conversaciones de este canal (spec:
-// "como una marca más del módulo de ventas").
-const MARCA_SLUG = "dinkbit";
 
 /**
  * Dependencias reales: `crearMensajero()` se llama SIN argumentos a
@@ -104,6 +107,25 @@ function depsReales(): Deps {
       return { id: creado.id };
     },
   };
+}
+
+/**
+ * La ventana de conversación NUNCA se encoge, solo se extiende.
+ *
+ * Secuencia real que esto evita (Hallazgo I1, ronda de arreglos 2): llega un
+ * mensaje de anuncio en T y la ventana queda en T+72h (correcto para CTWA);
+ * la persona contesta a la pregunta de cualificación en T+2h, ese mensaje ya
+ * NO trae `referral`, así que sin este máximo la ventana se recalcularía a
+ * T+26h — 46 horas de ventana legítima tiradas. Como la bandeja es
+ * fail-safe (campo deshabilitado y `responder()` rechaza el envío cuando la
+ * ventana aparece cerrada), el efecto no es solo "perder tiempo": es que la
+ * comercial no puede contestar a un lead que Meta sí seguiría aceptando.
+ */
+function ventanaExtendida(existente: Conversacion | null, nueva: Date): Date {
+  if (!existente?.ventana_hasta) return nueva;
+  const actual = new Date(existente.ventana_hasta);
+  if (!Number.isFinite(actual.getTime())) return nueva;
+  return actual.getTime() > nueva.getTime() ? actual : nueva;
 }
 
 /** Aplica un cambio a una conversación existente y devuelve la copia ya actualizada. */
@@ -182,9 +204,21 @@ async function procesarMensaje(
   // ---- FASE A: reintentable ----------------------------------------------
   const conversacionExistente = await deps.getConversacion(marcaId, mensaje.waId);
   const telefono = telefonoDeWaId(mensaje.waId);
-  // `recibidoEn` sale de parsear el timestamp de Meta (segundos como texto);
-  // si viniera corrupto sería `Invalid Date`, y `calcularVentana(...).toISOString()`
-  // reventaría al guardar. `ahora` (inyectable en tests) es el respaldo.
+  // `recibidoEn` sale de parsear el timestamp de Meta (segundos como texto).
+  //
+  // Política unificada de timestamps fuera de rango (Minor 4, ronda de
+  // arreglos 2): `entrante.ts` es la ÚNICA autoridad que descarta un mensaje
+  // por timestamp inválido o imposible (con `console.warn` para que quede
+  // rastro, en vez del `continue` mudo de antes). Por construcción, un
+  // `MensajeEntrante` que llega hasta aquí YA pasó ese filtro, así que
+  // `recibidoEn.getTime()` nunca debería ser `NaN`. Este `ahora` (inyectable
+  // en tests) es defensa en profundidad, no una segunda política de
+  // descarte: para cuando se llega aquí, la FASE A ya pudo haber leído
+  // Supabase (`getConversacion`), y añadir aquí un `continue` silencioso
+  // sería un tercer comportamiento inconsistente en mitad del procesado. Si
+  // algún día un refactor de `entrante.ts` dejara pasar una fecha corrupta,
+  // mejor seguir con `ahora` como aproximación razonable que perder el lead
+  // a medio camino.
   const recibidoEn = Number.isFinite(mensaje.recibidoEn.getTime()) ? mensaje.recibidoEn : ahora;
 
   // El lead "actual" prioriza el ya vinculado a la conversación: así un
@@ -213,7 +247,7 @@ async function procesarMensaje(
     // null (así está construida la tabla de decisión de entrante.ts).
     const referral = mensaje.referral;
     if (!referral) throw new Error("[whatsapp] crear_lead_y_responder sin referral: no debería pasar");
-    const ventanaHasta = calcularVentana(recibidoEn, true);
+    const ventanaHasta = ventanaExtendida(conversacionExistente, calcularVentana(recibidoEn, true));
 
     // Orden a propósito (ver crearConversacionOReleer): primero la
     // conversación —que es el mutex real—, el lead después.
@@ -262,7 +296,7 @@ async function procesarMensaje(
         break;
     }
 
-    const ventanaHasta = calcularVentana(recibidoEn, deAnuncio);
+    const ventanaHasta = ventanaExtendida(conversacionExistente, calcularVentana(recibidoEn, deAnuncio));
     conversacion = conversacionExistente
       ? await actualizarYDevolver(deps, conversacionExistente, { estado, leadId, ventanaHasta })
       : await deps.crearConversacion({ marcaId, waId: mensaje.waId, leadId, estado, ventanaHasta });
@@ -345,12 +379,16 @@ export async function procesarWebhook(input: {
 }): Promise<{ procesados: number }> {
   const deps = input.deps ?? depsReales();
 
-  const marca = await getMarcaPorSlug(MARCA_SLUG);
+  const marca = await getMarcaPorSlug(MARCA_DINKBIT_SLUG);
   if (!marca) {
-    // Reintentar no va a crear la marca: se registra y no se procesa nada.
-    // La ruta igualmente responde 200 (reintentar tampoco arreglaría esto).
-    console.error(`[whatsapp] no existe la marca "${MARCA_SLUG}"`);
-    return { procesados: 0 };
+    // Se LANZA a propósito (Hallazgo I2, ronda de arreglos 2): todavía no se
+    // ha persistido nada, así que la ruta responde 500 sin riesgo de
+    // duplicado y Meta reintenta durante horas. Las tres migraciones son
+    // MANUALES, así que "la marca todavía no está insertada" es el estado
+    // más probable el día del despliegue — tragárselo aquí respondería 200,
+    // Meta daría el mensaje por entregado, y el lead (y el anuncio pagado
+    // que lo trajo) se perderían para siempre.
+    throw new Error(`[whatsapp] no existe la marca "${MARCA_DINKBIT_SLUG}"`);
   }
 
   // `statuses[]` primero: son independientes de los mensajes y una entrada

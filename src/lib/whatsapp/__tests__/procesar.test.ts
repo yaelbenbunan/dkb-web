@@ -240,13 +240,16 @@ describe("procesarWebhook", () => {
     );
   });
 
-  it("si la marca no existe, no procesa nada", async () => {
+  // Hallazgo I2 (Important) de la ronda de arreglos 2: si la marca no existe
+  // (las migraciones son manuales, así que es el estado más probable el día
+  // del despliegue) el fallo se PROPAGA para que la ruta responda 500 y Meta
+  // reintente — antes se tragaba con un `{ procesados: 0 }` y un 200, y el
+  // mensaje se perdía para siempre.
+  it("si la marca no existe, propaga el fallo en vez de tragárselo", async () => {
     getMarcaPorSlugMock.mockResolvedValue(null);
     const { deps, salientes } = depsFalsas();
 
-    const resultado = await procesarWebhook({ cuerpo: sobreDeAnuncio, deps });
-
-    expect(resultado).toEqual({ procesados: 0 });
+    await expect(procesarWebhook({ cuerpo: sobreDeAnuncio, deps })).rejects.toThrow('no existe la marca "dinkbit"');
     expect(salientes).toHaveLength(0);
   });
 
@@ -346,5 +349,39 @@ describe("procesarWebhook", () => {
     const conv = conversaciones.get(`${MARCA.id}:34660415514`);
     expect(conv?.id).toBe("conv-ganadora");
     expect(conv?.lead_id).toBeTruthy();
+  });
+
+  // Hallazgo I1 (Important) de la ronda de arreglos 2: la ventana nunca se
+  // encoge. Secuencia exacta del hallazgo: mensaje de anuncio en T (ventana a
+  // T+72h), luego una respuesta en T+2h que ya NO trae `referral` (se
+  // recalcularía a T+26h sin el arreglo). La ventana debe seguir siendo la
+  // de 72h ganada por el anuncio.
+  it("la ventana no se encoge: una respuesta sin referral no reduce la ventana de 72h ganada por el anuncio", async () => {
+    const { deps, conversaciones } = depsFalsas();
+    const inicioSegundos = 1790000000;
+
+    const cuerpoAnuncio = sobreConMensajes([mensajeDeAnuncio({ timestamp: String(inicioSegundos) })]);
+    await procesarWebhook({ cuerpo: cuerpoAnuncio, deps });
+
+    const trasAnuncio = conversaciones.get(`${MARCA.id}:34660415514`);
+    const ventanaTrasAnuncio = new Date(trasAnuncio!.ventana_hasta!).getTime();
+    expect(ventanaTrasAnuncio).toBe((inicioSegundos + 72 * 60 * 60) * 1000);
+
+    // Respuesta 2h más tarde, sin referral: la conversación está en "bot" y
+    // trae texto, así que decidir() la clasifica como "guardar_respuesta".
+    const cuerpoRespuesta = sobreConMensajes([
+      {
+        id: "wamid.RESPUESTA_SIN_REFERRAL",
+        from: "34660415514",
+        timestamp: String(inicioSegundos + 2 * 60 * 60),
+        type: "text",
+        text: { body: "Tengo un gimnasio" },
+      },
+    ]);
+    await procesarWebhook({ cuerpo: cuerpoRespuesta, deps });
+
+    const trasRespuesta = conversaciones.get(`${MARCA.id}:34660415514`);
+    expect(trasRespuesta?.estado).toBe("humana");
+    expect(trasRespuesta?.ventana_hasta).toBe(trasAnuncio!.ventana_hasta);
   });
 });
