@@ -8,6 +8,7 @@ import {
   setEstadoMensaje,
   type Conversacion,
 } from "./db";
+import { textoAutorespuesta } from "./autorespuesta";
 import { decidir, extraerEstados, extraerMensajes, type MensajeEntrante } from "./entrante";
 import { crearMensajero, type MensajeroWhatsApp } from "./mensajero";
 import { calcularVentana, telefonoDeWaId } from "./ventana";
@@ -44,13 +45,6 @@ export interface Deps {
 // La marca en la que viven los leads/conversaciones de este canal (spec:
 // "como una marca más del módulo de ventas").
 const MARCA_SLUG = "dinkbit";
-
-// Autorespuesta provisional y fija del primer turno del bot (acuse de recibo
-// + una pregunta de cualificación). La Tarea 8 la sustituye por un módulo de
-// plantillas propio con ramas y textos por marca; aquí basta con un texto
-// razonable que deje probar el flujo de punta a punta.
-const AUTORESPUESTA_PROVISIONAL =
-  "¡Hola! Gracias por escribirnos. En breve te atiende una persona del equipo. Mientras tanto, ¿qué tipo de negocio tienes?";
 
 /**
  * Dependencias reales: `crearMensajero()` se llama SIN argumentos a
@@ -212,11 +206,12 @@ async function procesarMensaje(
   if (!nuevo) return false;
 
   if (decision.accion === "crear_lead_y_responder" || decision.accion === "responder") {
-    const resultado = await deps.mensajero.enviarTexto(mensaje.waId, AUTORESPUESTA_PROVISIONAL);
+    const texto = textoAutorespuesta({ titularAnuncio: mensaje.referral?.titular ?? null });
+    const resultado = await deps.mensajero.enviarTexto(mensaje.waId, texto);
     await deps.guardarSaliente({
       conversacionId: conversacion.id,
       wamid: resultado.ok ? resultado.wamid : null,
-      texto: AUTORESPUESTA_PROVISIONAL,
+      texto,
       // Un fallo de envío no tumba el procesado: el entrante ya está
       // guardado y el saliente queda con su error para que se vea en la
       // bandeja.
