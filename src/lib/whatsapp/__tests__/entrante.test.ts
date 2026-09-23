@@ -197,6 +197,18 @@ describe("extraerMensajes — casos adversarios", () => {
       extraerMensajes(sobre({ messages: [{ id: "wamid.T3", from: "34660415514", timestamp: "-1", type: "text" }] })),
     ).toEqual([]);
   });
+
+  // Minor 1 (ronda de arreglos 2): el suelo no tenía techo. Un timestamp de
+  // 13 dígitos (milisegundos en vez de segundos, por error) pasaba el suelo
+  // sin problema y producía una fecha del año ~58700, con la que
+  // `ventanaAbierta` daría `true` para siempre.
+  it("un timestamp de 13 dígitos (milisegundos por error) se descarta", () => {
+    expect(
+      extraerMensajes(
+        sobre({ messages: [{ id: "wamid.T4", from: "34660415514", timestamp: "1790000000000", type: "text" }] }),
+      ),
+    ).toEqual([]);
+  });
 });
 
 describe("extraerMensajes — crudo", () => {

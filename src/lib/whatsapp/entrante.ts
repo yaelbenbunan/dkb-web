@@ -81,22 +81,50 @@ function referralDeMensaje(valor: unknown): MensajeEntrante["referral"] {
 // valor sea posterior a este suelo, no solo que sea finito.
 const TIMESTAMP_MINIMO_SEGUNDOS = 946684800;
 
+// Techo de cordura (Minor 1, ronda de arreglos 2): el suelo de arriba no
+// tenía tope superior. Meta manda el timestamp en SEGUNDOS, pero un
+// timestamp mandado en MILISEGUNDOS por error (13 dígitos) pasa el suelo sin
+// problema y produce una fecha del año ~58700 — válida para JS y para
+// Postgres, así que se guarda sin más, y `ventanaAbierta` da `true` para
+// siempre: la bandeja anunciaría "Abierta · quedan 490.000.000 h", la
+// comercial escribiría, y Meta lo rechazaría. Diez años en el futuro desde
+// ahora es un margen de sobra para cualquier reloj real, y descarta de
+// sobra cualquier timestamp en milisegundos.
+const DIEZ_ANIOS_EN_SEGUNDOS = 10 * 365 * 24 * 60 * 60;
+
 export function extraerMensajes(cuerpo: unknown): MensajeEntrante[] {
   const mensajes: MensajeEntrante[] = [];
+  // Techo calculado una vez por llamada, no como constante de módulo: así no
+  // queda congelado al momento en que arrancó el proceso.
+  const techoSegundos = Math.floor(Date.now() / 1000) + DIEZ_ANIOS_EN_SEGUNDOS;
   for (const valor of valoresDeCambios(cuerpo)) {
     if (!Array.isArray(valor.messages)) continue;
     for (const m of valor.messages) {
-      if (!esObjeto(m)) continue;
-      if (typeof m.id !== "string" || typeof m.from !== "string" || typeof m.timestamp !== "string") continue;
+      if (!esObjeto(m)) {
+        // Sin id ni nada que loguear: no hay más rastro posible que dejar.
+        console.warn("[whatsapp] mensaje descartado: no es un objeto");
+        continue;
+      }
+      if (typeof m.id !== "string" || typeof m.from !== "string" || typeof m.timestamp !== "string") {
+        // Minor 4 (ronda de arreglos 2): antes esto descartaba con `continue`
+        // mudo — cero traza, lead perdido en silencio. Se avisa con lo que
+        // haya disponible para que sea diagnosticable.
+        console.warn("[whatsapp] mensaje descartado: falta id/from/timestamp", m.id ?? "(sin id)");
+        continue;
+      }
       // El timestamp de Meta viene en SEGUNDOS desde epoch, como cadena.
       // Un timestamp inválido o imposible descarta el mensaje entero (no se
       // guarda ningún `MensajeEntrante` con un `Date` inválido ni con una
       // fecha imposible): un `Invalid Date` viajaría hasta el guardado y un
       // `.toISOString()` posterior lanzaría, devolviendo 500 y metiendo a
       // Meta en un bucle de reintentos — justo lo que este módulo existe
-      // para evitar.
+      // para evitar. El techo (Minor 1) descarta además un timestamp en
+      // milisegundos por error.
       const segundos = Number(m.timestamp);
-      if (!Number.isFinite(segundos) || segundos <= TIMESTAMP_MINIMO_SEGUNDOS) continue;
+      if (!Number.isFinite(segundos) || segundos <= TIMESTAMP_MINIMO_SEGUNDOS || segundos > techoSegundos) {
+        console.warn("[whatsapp] mensaje descartado: timestamp fuera de rango", m.id, m.timestamp);
+        continue;
+      }
       const tipo = typeof m.type === "string" ? m.type : "desconocido";
       const recibidoEn = new Date(segundos * 1000);
       mensajes.push({
