@@ -29,11 +29,28 @@ export function mensajeroSimulado(): MensajeroWhatsApp & {
 /**
  * Sin token o sin número configurado devuelve el simulado: preferimos no enviar
  * nada a reventar en producción o, peor, escribir a alguien desde una preview.
+ *
+ * Cuando las credenciales SÍ están pero llegan de `process.env` (no las pasó
+ * quien invoca a propósito), exigimos además estar en producción. Esas
+ * variables se heredan con facilidad en una preview de Vercel, un script
+ * local o un entorno de staging sin que nadie lo decida explícitamente, y son
+ * la única barrera que evita escribirle un mensaje real a un cliente real
+ * desde donde no toca. Quien pasa `token`/`phoneNumberId` a mano en la
+ * config sabe lo que hace (tests, envíos deliberados) y no pasa por esta
+ * segunda barrera; para forzar un envío real de verdad sin estar en
+ * producción existe la válvula explícita `WHATSAPP_ENVIO_REAL=1`.
  */
 export function crearMensajero(config: ConfigMensajero = {}): MensajeroWhatsApp {
+  const credencialesExplicitas = config.token !== undefined && config.phoneNumberId !== undefined;
   const token = config.token ?? process.env.WHATSAPP_TOKEN ?? "";
   const phoneNumberId = config.phoneNumberId ?? process.env.WHATSAPP_PHONE_NUMBER_ID ?? "";
   if (!token || !phoneNumberId) return mensajeroSimulado();
+
+  if (!credencialesExplicitas) {
+    const esProduccion = process.env.VERCEL_ENV === "production";
+    const envioRealForzado = process.env.WHATSAPP_ENVIO_REAL === "1";
+    if (!esProduccion && !envioRealForzado) return mensajeroSimulado();
+  }
 
   const hacerFetch = config.fetchImpl ?? fetch;
   const url = `https://graph.facebook.com/${GRAPH_VERSION}/${phoneNumberId}/messages`;

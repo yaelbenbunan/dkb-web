@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { crearMensajero, mensajeroSimulado } from "../mensajero";
 
 describe("mensajeroSimulado", () => {
@@ -11,6 +11,10 @@ describe("mensajeroSimulado", () => {
 });
 
 describe("crearMensajero", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("sin credenciales devuelve el simulado", async () => {
     const m = crearMensajero({ token: "", phoneNumberId: "" });
     const res = await m.enviarTexto("34660415514", "hola");
@@ -57,5 +61,54 @@ describe("crearMensajero", () => {
     const m = crearMensajero({ token: "tok", phoneNumberId: "123", fetchImpl: fetchMock });
 
     expect(await m.enviarTexto("34660415514", "hola")).toEqual({ ok: false, error: "ECONNRESET" });
+  });
+
+  // Review Focus (ronda 1, tarea 4): credenciales heredadas del entorno en una
+  // preview no deben bastar para enviar de verdad — solo producción, o la
+  // válvula explícita, lo autorizan.
+  it("credenciales solo en el entorno y VERCEL_ENV no es 'production': usa el simulado", async () => {
+    vi.stubEnv("WHATSAPP_TOKEN", "tok-env");
+    vi.stubEnv("WHATSAPP_PHONE_NUMBER_ID", "999");
+    vi.stubEnv("VERCEL_ENV", "preview");
+    const fetchMock = vi.fn();
+
+    const m = crearMensajero({ fetchImpl: fetchMock });
+    const res = await m.enviarTexto("34660415514", "hola");
+
+    expect(res).toEqual({ ok: true, wamid: null });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("credenciales solo en el entorno y VERCEL_ENV === 'production': envía de verdad", async () => {
+    vi.stubEnv("WHATSAPP_TOKEN", "tok-env");
+    vi.stubEnv("WHATSAPP_PHONE_NUMBER_ID", "999");
+    vi.stubEnv("VERCEL_ENV", "production");
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ messages: [{ id: "wamid.ENV" }] }),
+    });
+
+    const m = crearMensajero({ fetchImpl: fetchMock });
+    const res = await m.enviarTexto("34660415514", "hola");
+
+    expect(res).toEqual({ ok: true, wamid: "wamid.ENV" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("credenciales solo en el entorno con la válvula WHATSAPP_ENVIO_REAL=1: envía de verdad", async () => {
+    vi.stubEnv("WHATSAPP_TOKEN", "tok-env");
+    vi.stubEnv("WHATSAPP_PHONE_NUMBER_ID", "999");
+    vi.stubEnv("VERCEL_ENV", "preview");
+    vi.stubEnv("WHATSAPP_ENVIO_REAL", "1");
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ messages: [{ id: "wamid.FORZADO" }] }),
+    });
+
+    const m = crearMensajero({ fetchImpl: fetchMock });
+    const res = await m.enviarTexto("34660415514", "hola");
+
+    expect(res).toEqual({ ok: true, wamid: "wamid.FORZADO" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
