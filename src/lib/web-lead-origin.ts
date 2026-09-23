@@ -57,8 +57,13 @@ export function attribution(
           ? "LinkedIn"
           : /tiktok/.test(source)
             ? "TikTok"
-            : // fuente desconocida: se conserva tal cual (capitalizada)
-              source.charAt(0).toUpperCase() + source.slice(1);
+            : // Las visitas desde ChatGPT llegan como "chatgpt", "chatgpt.com"
+              // o "openai"; sin esta regla cada variante abría su propio canal
+              // en el CRM y la campaña se partía en el filtro.
+              /chatgpt|openai/.test(source)
+              ? "ChatGPT"
+              : // fuente desconocida: se conserva tal cual (capitalizada)
+                source.charAt(0).toUpperCase() + source.slice(1);
   return { channel, campaign: campaign || def.campaign };
 }
 

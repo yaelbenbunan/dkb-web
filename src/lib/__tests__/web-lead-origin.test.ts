@@ -31,6 +31,11 @@ describe("attribution (UTMs → canal/campaña)", () => {
       campaign: "leads",
     });
   });
+  test("todas las variantes de ChatGPT caen en el mismo canal", () => {
+    expect(attribution({ utmSource: "chatgpt" }, def).channel).toBe("ChatGPT");
+    expect(attribution({ utmSource: "chatgpt.com" }, def).channel).toBe("ChatGPT");
+    expect(attribution({ utmSource: "openai" }, def).channel).toBe("ChatGPT");
+  });
   test("falls back to the default campaign when utm_campaign is absent", () => {
     expect(attribution({ utmSource: "google" }, { channel: "Web", campaign: "Kit Digital" })).toEqual({
       channel: "google ads",
