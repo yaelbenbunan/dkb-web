@@ -19,6 +19,11 @@ export interface MensajeEntrante {
   tipo: string;
   recibidoEn: Date;
   referral: { campana: string | null; anuncio: string | null; titular: string | null } | null;
+  // El objeto tal cual lo mandó Meta para ESTE mensaje, sin normalizar. La
+  // columna `payload` (jsonb) se creó para poder recuperar más adelante lo
+  // que hoy no se extrae (adjuntos, ids de imagen/audio/ubicación...), así
+  // que hay que guardar esto, no el `MensajeEntrante` ya procesado.
+  crudo: unknown;
 }
 
 export type Decision =
@@ -65,6 +70,17 @@ function referralDeMensaje(valor: unknown): MensajeEntrante["referral"] {
   };
 }
 
+// Suelo de cordura para el timestamp de Meta: 1 de enero de 2000 en
+// segundos desde epoch. Cualquier valor anterior (incluido 0) es basura, no
+// un mensaje real de WhatsApp.
+//
+// OJO con la trampa: `Number("")` y `Number("   ")` devuelven 0, NO NaN.
+// Un `timestamp: ""` pasaría `Number.isFinite` sin problema y produciría
+// `new Date(0)` (1970), desplazando la ventana de conversación cinco
+// décadas en silencio. Por eso el chequeo de abajo exige ADEMÁS que el
+// valor sea posterior a este suelo, no solo que sea finito.
+const TIMESTAMP_MINIMO_SEGUNDOS = 946684800;
+
 export function extraerMensajes(cuerpo: unknown): MensajeEntrante[] {
   const mensajes: MensajeEntrante[] = [];
   for (const valor of valoresDeCambios(cuerpo)) {
@@ -72,10 +88,17 @@ export function extraerMensajes(cuerpo: unknown): MensajeEntrante[] {
     for (const m of valor.messages) {
       if (!esObjeto(m)) continue;
       if (typeof m.id !== "string" || typeof m.from !== "string" || typeof m.timestamp !== "string") continue;
-      const tipo = typeof m.type === "string" ? m.type : "desconocido";
       // El timestamp de Meta viene en SEGUNDOS desde epoch, como cadena.
+      // Un timestamp inválido o imposible descarta el mensaje entero (no se
+      // guarda ningún `MensajeEntrante` con un `Date` inválido ni con una
+      // fecha imposible): un `Invalid Date` viajaría hasta el guardado y un
+      // `.toISOString()` posterior lanzaría, devolviendo 500 y metiendo a
+      // Meta en un bucle de reintentos — justo lo que este módulo existe
+      // para evitar.
       const segundos = Number(m.timestamp);
-      const recibidoEn = new Date(Number.isFinite(segundos) ? segundos * 1000 : NaN);
+      if (!Number.isFinite(segundos) || segundos <= TIMESTAMP_MINIMO_SEGUNDOS) continue;
+      const tipo = typeof m.type === "string" ? m.type : "desconocido";
+      const recibidoEn = new Date(segundos * 1000);
       mensajes.push({
         wamid: m.id,
         waId: m.from,
@@ -85,6 +108,7 @@ export function extraerMensajes(cuerpo: unknown): MensajeEntrante[] {
         tipo,
         recibidoEn,
         referral: referralDeMensaje(m.referral),
+        crudo: m,
       });
     }
   }

@@ -202,7 +202,10 @@ async function procesarMensaje(
     conversacionId: conversacion.id,
     wamid: mensaje.wamid,
     texto: mensaje.texto,
-    payload: mensaje,
+    // `payload` guarda el mensaje CRUDO de Meta (no el `MensajeEntrante` ya
+    // normalizado): la columna jsonb existe para poder recuperar más
+    // adelante lo que `entrante.ts` no extrae, como adjuntos.
+    payload: mensaje.crudo,
   });
   // Reintento de Meta del mismo wamid: ya se procesó la primera vez. Ni se
   // responde de nuevo ni se registra actividad otra vez.

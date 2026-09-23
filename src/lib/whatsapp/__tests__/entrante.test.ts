@@ -74,6 +74,9 @@ describe("decidir", () => {
     texto: "hola",
     tipo: "text",
     recibidoEn: new Date(),
+    // No se usa en `decidir`; se rellena solo para que el fixture cumpla la
+    // interfaz `MensajeEntrante` tras añadir el campo `crudo`.
+    crudo: null,
   };
   const conRef = { ...base, referral: { campana: "c", anuncio: "a", titular: null } };
   const sinRef = { ...base, referral: null };
@@ -106,5 +109,112 @@ describe("decidir", () => {
   it("un mensaje sin texto en conversación bot no cuenta como respuesta", () => {
     expect(decidir({ mensaje: { ...sinRef, texto: null, tipo: "image" }, conversacion: { estado: "bot" }, leadExiste: true }))
       .toEqual({ accion: "solo_guardar" });
+  });
+});
+
+// Ronda de arreglos 1: casos adversarios que hoy funcionan por diseño, no por
+// suerte. Ninguno debe lanzar; todos deben descartar el mensaje afectado (o
+// devolver lista vacía) sin tocar el resto del lote.
+describe("extraerMensajes — casos adversarios", () => {
+  it("entry que no es array no revienta y no produce mensajes", () => {
+    expect(extraerMensajes({ object: "whatsapp_business_account", entry: "no-array" })).toEqual([]);
+  });
+
+  it("changes que no es array no revienta", () => {
+    expect(
+      extraerMensajes({ object: "whatsapp_business_account", entry: [{ id: "1", changes: "no-array" }] }),
+    ).toEqual([]);
+  });
+
+  it("value que es una cadena no revienta", () => {
+    expect(
+      extraerMensajes({
+        object: "whatsapp_business_account",
+        entry: [{ id: "1", changes: [{ field: "messages", value: "no-objeto" }] }],
+      }),
+    ).toEqual([]);
+  });
+
+  it("un null dentro de messages[] se descarta sin romper el resto del lote", () => {
+    const mensajes = extraerMensajes(
+      sobre({
+        messages: [
+          null,
+          { id: "wamid.OK", from: "34660415514", timestamp: "1790000000", type: "text", text: { body: "hola" } },
+        ],
+      }),
+    );
+    expect(mensajes).toHaveLength(1);
+    expect(mensajes[0].wamid).toBe("wamid.OK");
+  });
+
+  it("un mensaje sin id se descarta", () => {
+    expect(
+      extraerMensajes(sobre({ messages: [{ from: "34660415514", timestamp: "1790000000", type: "text" }] })),
+    ).toEqual([]);
+  });
+
+  it("un mensaje sin from se descarta", () => {
+    expect(
+      extraerMensajes(sobre({ messages: [{ id: "wamid.X", timestamp: "1790000000", type: "text" }] })),
+    ).toEqual([]);
+  });
+
+  it("un referral que no es objeto (p.ej. true) se ignora sin romper el mensaje", () => {
+    const [m] = extraerMensajes(
+      sobre({
+        messages: [
+          {
+            id: "wamid.R",
+            from: "34660415514",
+            timestamp: "1790000000",
+            type: "text",
+            text: { body: "hola" },
+            referral: true,
+          },
+        ],
+      }),
+    );
+    expect(m.referral).toBeNull();
+  });
+
+  // Review Focus 1 (Ronda 1, Critical): Number("") vale 0, no NaN. Sin el
+  // suelo de cordura esto colaría como `new Date(0)` (1970) en silencio.
+  it("un timestamp vacío se descarta en vez de convertirse en 1970", () => {
+    expect(
+      extraerMensajes(sobre({ messages: [{ id: "wamid.T1", from: "34660415514", timestamp: "", type: "text" }] })),
+    ).toEqual([]);
+  });
+
+  it("un timestamp no numérico se descarta", () => {
+    expect(
+      extraerMensajes(sobre({ messages: [{ id: "wamid.T2", from: "34660415514", timestamp: "abc", type: "text" }] })),
+    ).toEqual([]);
+  });
+
+  it("un timestamp negativo se descarta", () => {
+    expect(
+      extraerMensajes(sobre({ messages: [{ id: "wamid.T3", from: "34660415514", timestamp: "-1", type: "text" }] })),
+    ).toEqual([]);
+  });
+});
+
+describe("extraerMensajes — crudo", () => {
+  it("crudo conserva un campo que no se extrae, como image.id", () => {
+    const [m] = extraerMensajes(
+      sobre({
+        messages: [
+          {
+            id: "wamid.IMG",
+            from: "34660415514",
+            timestamp: "1790000000",
+            type: "image",
+            image: { id: "img-123", mime_type: "image/jpeg" },
+          },
+        ],
+      }),
+    );
+    expect(m.texto).toBeNull();
+    expect((m.crudo as { image: { id: string } }).image.id).toBe("img-123");
   });
 });
