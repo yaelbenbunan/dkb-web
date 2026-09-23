@@ -23,6 +23,14 @@ import { buscarLeadPorContacto, crearLeads, getMarcaPorSlug, registrarActividad 
  * son wiring sobre `src/lib/ventas/db.ts` (los leads son del dominio de
  * ventas, que ya tiene su propio acceso a datos). Mezclarlos en el módulo del
  * canal crearía dos caminos de escritura a la misma tabla.
+ *
+ * Política de fallos (ver `procesarMensaje` para el detalle): lo de ANTES de
+ * guardar el mensaje entrante se propaga (es reintentable, la ruta responde
+ * 500); lo de DESPUÉS se traga y se registra (es best-effort, nunca debe
+ * costar el mensaje ya guardado ni forzar un reintento que no arreglaría
+ * nada). `getMarcaPorSlug` sigue la misma regla: si LANZA, se propaga; si
+ * devuelve `null` (la marca no existe), es un 200 normal, porque reintentar
+ * no la va a crear.
  */
 export interface Deps {
   mensajero: MensajeroWhatsApp;
@@ -114,8 +122,56 @@ async function actualizarYDevolver(
 }
 
 /**
+ * Crea la conversación SIN lead todavía. El índice único `(marca_id, wa_id)`
+ * de `ventas_conversaciones` es el único mutex real contra dos ENTREGAS
+ * CONCURRENTES del mismo webhook (no un reintento secuencial, que ya cubre
+ * el wamid, sino dos peticiones a la vez de Meta). Por eso se reserva la
+ * conversación antes de crear el lead: si dos entregas llegan a la vez,
+ * como mucho una gana la inserción y, por tanto, como mucho se crea un lead.
+ *
+ * Si la inserción choca con el índice único, la otra entrega ya ganó la
+ * carrera: se relee la conversación existente y se sigue con ella. Si el
+ * fallo no es esa colisión (p.ej. un hipo real de Supabase), se propaga:
+ * sigue siendo un fallo de fase A, reintentable desde cero.
+ */
+async function crearConversacionOReleer(
+  deps: Pick<Deps, "crearConversacion" | "getConversacion">,
+  input: { marcaId: string; waId: string; ventanaHasta: Date },
+): Promise<Conversacion> {
+  try {
+    return await deps.crearConversacion({
+      marcaId: input.marcaId,
+      waId: input.waId,
+      leadId: null,
+      estado: "bot",
+      ventanaHasta: input.ventanaHasta,
+    });
+  } catch (e) {
+    const existente = await deps.getConversacion(input.marcaId, input.waId);
+    if (!existente) throw e;
+    return existente;
+  }
+}
+
+/**
  * Procesa un mensaje entrante ya clasificado. Devuelve `true` si el mensaje
  * era nuevo (no un reintento de Meta del mismo wamid).
+ *
+ * Dos fases con reglas de fallo opuestas, separadas por `guardarEntrante`:
+ *
+ * FASE A (todo lo de antes de `guardarEntrante`): el mensaje TODAVÍA no está
+ * persistido. Un fallo aquí (un hipo transitorio de Supabase en
+ * `getConversacion`, `buscarLeadPorTelefono`, `crearLeadDeAnuncio`,
+ * `crearConversacion`...) se deja propagar a propósito: `procesarWebhook` y
+ * la ruta no lo atrapan, así que la ruta responde 500 y Meta reintenta. Como
+ * el wamid todavía no existe en `ventas_mensajes`, el reintento no duplica
+ * nada — es justo para esto que se construyó la idempotencia por wamid.
+ *
+ * FASE B (todo lo de después): el mensaje YA está guardado. Un fallo aquí
+ * (el envío, el guardado del saliente, la actividad) NUNCA debe tumbar el
+ * procesado: se registra con `console.error` y se sigue. Propagarlo sería
+ * peor que perder el acuse, porque el gate de idempotencia de arriba
+ * impediría que un reintento de Meta lo repare.
  */
 async function procesarMensaje(
   marcaId: string,
@@ -123,6 +179,7 @@ async function procesarMensaje(
   deps: Deps,
   ahora: Date,
 ): Promise<boolean> {
+  // ---- FASE A: reintentable ----------------------------------------------
   const conversacionExistente = await deps.getConversacion(marcaId, mensaje.waId);
   const telefono = telefonoDeWaId(mensaje.waId);
   // `recibidoEn` sale de parsear el timestamp de Meta (segundos como texto);
@@ -149,15 +206,30 @@ async function procesarMensaje(
     leadExiste,
   });
 
-  let estado: Conversacion["estado"];
-  let deAnuncio: boolean;
+  let conversacion: Conversacion;
 
-  switch (decision.accion) {
-    case "crear_lead_y_responder": {
-      // decidir() solo devuelve esta acción cuando mensaje.referral no es
-      // null (así está construida la tabla de decisión de entrante.ts).
-      const referral = mensaje.referral;
-      if (!referral) throw new Error("[whatsapp] crear_lead_y_responder sin referral: no debería pasar");
+  if (decision.accion === "crear_lead_y_responder") {
+    // decidir() solo devuelve esta acción cuando mensaje.referral no es
+    // null (así está construida la tabla de decisión de entrante.ts).
+    const referral = mensaje.referral;
+    if (!referral) throw new Error("[whatsapp] crear_lead_y_responder sin referral: no debería pasar");
+    const ventanaHasta = calcularVentana(recibidoEn, true);
+
+    // Orden a propósito (ver crearConversacionOReleer): primero la
+    // conversación —que es el mutex real—, el lead después.
+    conversacion = conversacionExistente
+      ? await actualizarYDevolver(deps, conversacionExistente, {
+          estado: "bot",
+          leadId: conversacionExistente.lead_id,
+          ventanaHasta,
+        })
+      : await crearConversacionOReleer(deps, { marcaId, waId: mensaje.waId, ventanaHasta });
+
+    if (conversacion.lead_id) {
+      // Ya tenía lead: lo creó la otra entrega concurrente que ganó la
+      // carrera, o ya lo tenía de una conversación previa sin referral.
+      leadId = conversacion.lead_id;
+    } else {
       const creado = await deps.crearLeadDeAnuncio({
         marcaId,
         waId: mensaje.waId,
@@ -166,31 +238,35 @@ async function procesarMensaje(
         anuncio: referral.anuncio,
       });
       leadId = creado.id;
-      estado = "bot";
-      deAnuncio = true;
-      break;
+      conversacion = await actualizarYDevolver(deps, conversacion, { estado: "bot", leadId, ventanaHasta });
     }
-    case "responder":
-      estado = "bot";
-      deAnuncio = true;
-      break;
-    case "guardar_respuesta":
-      estado = "humana";
-      deAnuncio = false;
-      break;
-    case "solo_guardar":
-      // Sin conversación previa (primer contacto sin anuncio) arranca ya en
-      // `humana`: no hay bot que la esté esperando. Si ya existía, conserva
-      // su estado (una conversación `humana` sigue `humana`).
-      estado = conversacionExistente?.estado ?? "humana";
-      deAnuncio = false;
-      break;
-  }
+  } else {
+    let estado: Conversacion["estado"];
+    let deAnuncio: boolean;
 
-  const ventanaHasta = calcularVentana(recibidoEn, deAnuncio);
-  const conversacion = conversacionExistente
-    ? await actualizarYDevolver(deps, conversacionExistente, { estado, leadId, ventanaHasta })
-    : await deps.crearConversacion({ marcaId, waId: mensaje.waId, leadId, estado, ventanaHasta });
+    switch (decision.accion) {
+      case "responder":
+        estado = "bot";
+        deAnuncio = true;
+        break;
+      case "guardar_respuesta":
+        estado = "humana";
+        deAnuncio = false;
+        break;
+      case "solo_guardar":
+        // Sin conversación previa (primer contacto sin anuncio) arranca ya
+        // en `humana`: no hay bot que la esté esperando. Si ya existía,
+        // conserva su estado (una conversación `humana` sigue `humana`).
+        estado = conversacionExistente?.estado ?? "humana";
+        deAnuncio = false;
+        break;
+    }
+
+    const ventanaHasta = calcularVentana(recibidoEn, deAnuncio);
+    conversacion = conversacionExistente
+      ? await actualizarYDevolver(deps, conversacionExistente, { estado, leadId, ventanaHasta })
+      : await deps.crearConversacion({ marcaId, waId: mensaje.waId, leadId, estado, ventanaHasta });
+  }
 
   const { nuevo } = await deps.guardarEntrante({
     conversacionId: conversacion.id,
@@ -205,31 +281,57 @@ async function procesarMensaje(
   // responde de nuevo ni se registra actividad otra vez.
   if (!nuevo) return false;
 
+  // ---- FASE B: best-effort ------------------------------------------------
   if (decision.accion === "crear_lead_y_responder" || decision.accion === "responder") {
-    const texto = textoAutorespuesta({ titularAnuncio: mensaje.referral?.titular ?? null });
-    const resultado = await deps.mensajero.enviarTexto(mensaje.waId, texto);
-    await deps.guardarSaliente({
-      conversacionId: conversacion.id,
-      wamid: resultado.ok ? resultado.wamid : null,
-      texto,
-      // Un fallo de envío no tumba el procesado: el entrante ya está
-      // guardado y el saliente queda con su error para que se vea en la
-      // bandeja.
-      error: resultado.ok ? undefined : resultado.error,
-    });
+    try {
+      const texto = textoAutorespuesta({ titularAnuncio: mensaje.referral?.titular ?? null });
+      const resultado = await deps.mensajero.enviarTexto(mensaje.waId, texto);
+      await deps.guardarSaliente({
+        conversacionId: conversacion.id,
+        wamid: resultado.ok ? resultado.wamid : null,
+        texto,
+        // Un fallo de ENVÍO no tumba el procesado: el saliente queda con su
+        // error para que se vea en la bandeja (esto no lanza, es un
+        // resultado tipado de `enviarTexto`).
+        error: resultado.ok ? undefined : resultado.error,
+      });
+    } catch (e) {
+      // Este catch es para un fallo al GUARDAR el saliente, no al enviarlo.
+      // El envío pudo haber tenido éxito (el cliente ya recibió el mensaje):
+      // no hay nada seguro que reintentar, y el gate de idempotencia de
+      // arriba cortaría igualmente un reintento de Meta. Solo queda
+      // registrarlo para que alguien lo note.
+      console.error("[whatsapp] fallo guardando la autorespuesta (puede que sí se enviara)", mensaje.waId, e);
+    }
   }
 
-  if (decision.accion === "guardar_respuesta" && leadId) {
-    // Best-effort: `registrarActividad` ya devuelve `{ ok, error }` en vez de
-    // lanzar (ver ventas/db.ts), así que basta con registrar el fallo.
-    const resultado = await registrarActividad({
-      leadId,
-      usuariaId: null,
-      tipo: "nota",
-      nota: mensaje.texto,
-    });
-    if (!resultado.ok) {
-      console.error("[whatsapp] fallo registrando la respuesta como actividad del lead", leadId, resultado.error);
+  // Actividad en la ficha del lead: cuando se reutiliza uno ya existente
+  // ("responder"), cuando responde a la pregunta del bot
+  // ("guardar_respuesta"), o cuando escribe por primera vez sin conversación
+  // previa y ya era un lead conocido por teléfono ("solo_guardar" de
+  // primer contacto). Si la conversación YA estaba en marcha (`humana`), no
+  // se anota cada mensaje suelto — eso ensuciaría la ficha sin aportar nada.
+  const teniaConversacionPrevia = conversacionExistente !== null;
+  const registrarNota =
+    leadId !== null &&
+    (decision.accion === "responder" ||
+      decision.accion === "guardar_respuesta" ||
+      (decision.accion === "solo_guardar" && !teniaConversacionPrevia));
+  if (registrarNota) {
+    try {
+      // Best-effort: `registrarActividad` ya devuelve `{ ok, error }` en vez
+      // de lanzar (ver ventas/db.ts); se envuelve igual por si acaso.
+      const resultado = await registrarActividad({
+        leadId: leadId as string,
+        usuariaId: null,
+        tipo: "nota",
+        nota: mensaje.texto,
+      });
+      if (!resultado.ok) {
+        console.error("[whatsapp] fallo registrando la respuesta como actividad del lead", leadId, resultado.error);
+      }
+    } catch (e) {
+      console.error("[whatsapp] fallo registrando la respuesta como actividad del lead", leadId, e);
     }
   }
 
@@ -264,13 +366,13 @@ export async function procesarWebhook(input: {
   const ahora = input.ahora ?? new Date();
   let procesados = 0;
   for (const mensaje of extraerMensajes(input.cuerpo)) {
-    try {
-      if (await procesarMensaje(marca.id, mensaje, deps, ahora)) procesados += 1;
-    } catch (e) {
-      // Un fallo con un mensaje no debe impedir procesar el resto del lote;
-      // como nada se guardó, un reintento de Meta lo repetirá desde cero.
-      console.error("[whatsapp] fallo procesando un mensaje", mensaje.wamid, e);
-    }
+    // NO se atrapa aquí a propósito: por construcción, `procesarMensaje` solo
+    // deja escapar fallos de FASE A (antes de `guardarEntrante`), que son
+    // reintentables — todo lo de fase B ya se atrapa dentro. Se propaga hasta
+    // la ruta para que responda 500 y Meta reintente el lote entero; el resto
+    // de mensajes de este lote que ya se hubieran guardado son idempotentes
+    // por wamid, así que el reintento no los duplica.
+    if (await procesarMensaje(marca.id, mensaje, deps, ahora)) procesados += 1;
   }
 
   return { procesados };
