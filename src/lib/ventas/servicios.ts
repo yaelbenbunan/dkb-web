@@ -1,7 +1,10 @@
 import "server-only";
+import { createManualLead } from "../imagina-leads";
 import type { CsvRowError } from "../leads-csv";
 import { secretMatches } from "../webhook-auth";
+import { datosParaEmbudo } from "../whatsapp/promocion";
 import { leadDesdeAnuncio } from "./anuncios";
+import { notaFormulario } from "./formulario-web";
 import {
   actualizarSecuencia,
   buscarLeadPorContacto,
@@ -13,6 +16,7 @@ import {
   listContactosLeads,
   listExclusiones,
   listSecuencias,
+  marcarLeadPromocionado,
   registrarActividad,
   registrarImportacion,
   type Escritura,
@@ -21,8 +25,11 @@ import {
 } from "./db";
 import { faseTrasLlamada, seguimientoTrasLlamada, type Fase } from "./dominio";
 import { clasificarLeads, parseVentasLeadsCsv, type LeadNuevo } from "./leads-csv";
+import type { ResultadoAccion } from "./resultado";
 import { parsearSecuencia, validarSecuencia } from "./secuencias";
 import type { CambioFase, Llamada, NotaSeguimiento } from "./validacion";
+
+const CAMPANA_FORMULARIO_WEB = "landing-b2b";
 
 export type ResultadoImportacion =
   | { ok: true; creados: number; duplicados: number; excluidos: number }
@@ -130,6 +137,53 @@ export async function autenticarWebhook(slug: string, secreto: string | null): P
  * se apunta en su historial que ha vuelto a llegar. Un cliente previo se
  * guarda marcado como excluido, para que se vea que ha pedido información.
  */
+async function guardarLeadEntrante(input: {
+  marca: Marca;
+  lead: LeadNuevo;
+  campana: string;
+  notaInicial: string | null;
+}): Promise<{ status: number; body: Record<string, unknown> }> {
+  const { marca, lead, campana } = input;
+  const [existentes, exclusiones] = await Promise.all([listContactosLeads(marca.id), listExclusiones(marca.id)]);
+  const clasificacion = clasificarLeads([lead], existentes, exclusiones);
+
+  if (clasificacion.duplicados.length > 0) {
+    const existente = await buscarLeadPorContacto(marca.id, lead);
+    if (existente) {
+      const vuelta = `Ha vuelto a llegar desde ${campana === CAMPANA_FORMULARIO_WEB ? "la web" : "anuncios"}${campana ? ` (${campana})` : ""}.`;
+      await registrarActividad({
+        leadId: existente.id,
+        usuariaId: null,
+        tipo: "nota",
+        nota: input.notaInicial ? `${vuelta}\n${input.notaInicial}` : vuelta,
+      });
+    }
+    return { status: 200, body: { ok: true, duplicado: true } };
+  }
+
+  const res = await crearLeads({
+    marcaId: marca.id,
+    usuariaId: null,
+    origen: "anuncio",
+    origenDetalle: campana || null,
+    leads: [{ ...lead, excluido: clasificacion.excluidos.length > 0 }],
+  });
+  if (!res.ok) return { status: 500, body: { ok: false, error: "not_saved" } };
+
+  if (input.notaInicial && res.creados > 0) {
+    // Sin que pueda tumbar la respuesta: el lead ya está guardado.
+    try {
+      const creado = await buscarLeadPorContacto(marca.id, lead);
+      if (creado) {
+        await registrarActividad({ leadId: creado.id, usuariaId: null, tipo: "nota", nota: input.notaInicial });
+      }
+    } catch (error) {
+      console.error("guardarLeadEntrante: no se pudo apuntar la nota inicial", error);
+    }
+  }
+  return { status: 200, body: { ok: true, duplicado: res.creados === 0 } };
+}
+
 export async function recibirLeadAnuncio(input: {
   slug: string;
   secreto: string | null;
@@ -142,35 +196,25 @@ export async function recibirLeadAnuncio(input: {
   if (typeof input.datos !== "object" || input.datos === null || Array.isArray(input.datos)) {
     return { status: 400, body: { ok: false, error: "invalid_body" } };
   }
-
   const leido = leadDesdeAnuncio(input.datos as Record<string, unknown>);
   if (!leido.ok) return { status: 400, body: { ok: false, error: leido.error } };
+  return guardarLeadEntrante({ marca, lead: leido.lead, campana: leido.campana, notaInicial: null });
+}
 
-  const [existentes, exclusiones] = await Promise.all([listContactosLeads(marca.id), listExclusiones(marca.id)]);
-  const clasificacion = clasificarLeads([leido.lead], existentes, exclusiones);
-
-  if (clasificacion.duplicados.length > 0) {
-    const existente = await buscarLeadPorContacto(marca.id, leido.lead);
-    if (existente) {
-      await registrarActividad({
-        leadId: existente.id,
-        usuariaId: null,
-        tipo: "nota",
-        nota: `Ha vuelto a llegar desde anuncios${leido.campana ? ` (${leido.campana})` : ""}.`,
-      });
-    }
-    return { status: 200, body: { ok: true, duplicado: true } };
+// Formularios web públicos: la ruta ya ha comprobado origen, trampa y límite.
+export async function recibirLeadFormulario(input: {
+  slug: string;
+  datos: unknown;
+}): Promise<{ status: number; body: Record<string, unknown> }> {
+  const marca = await getMarcaPorSlug(input.slug);
+  if (!marca || marca.estado !== "activa") return { status: 404, body: { ok: false, error: "unknown_brand" } };
+  if (typeof input.datos !== "object" || input.datos === null || Array.isArray(input.datos)) {
+    return { status: 400, body: { ok: false, error: "invalid_body" } };
   }
-
-  const res = await crearLeads({
-    marcaId: marca.id,
-    usuariaId: null,
-    origen: "anuncio",
-    origenDetalle: leido.campana || null,
-    leads: [{ ...leido.lead, excluido: clasificacion.excluidos.length > 0 }],
-  });
-  if (!res.ok) return { status: 500, body: { ok: false, error: "not_saved" } };
-  return { status: 200, body: { ok: true, duplicado: res.creados === 0 } };
+  const datos = input.datos as Record<string, unknown>;
+  const leido = leadDesdeAnuncio({ ...datos, campana: CAMPANA_FORMULARIO_WEB });
+  if (!leido.ok) return { status: 400, body: { ok: false, error: leido.error } };
+  return guardarLeadEntrante({ marca, lead: leido.lead, campana: CAMPANA_FORMULARIO_WEB, notaInicial: notaFormulario(datos) });
 }
 
 export async function crearLeadManual(input: {
@@ -265,6 +309,74 @@ export async function moverLead(input: { usuaria: Usuaria; leadId: string; fase:
     return registrarActividad({ leadId: lead.id, usuariaId: input.usuaria.id, tipo: "muestras_enviadas", faseNueva: "muestras" });
   }
   return registrarActividad({ leadId: lead.id, usuariaId: input.usuaria.id, tipo: "cambio_fase", faseNueva: input.fase });
+}
+
+/** Texto de la nota informativa que deja «Pasar al embudo» en el historial.
+ *  Es solo para que una persona vea qué pasó — la idempotencia la garantiza
+ *  `promocionado_at` en `ventas_leads`, no este texto (una comercial podría
+ *  escribir la misma frase a mano en la pestaña "Nota" y, si comparásemos
+ *  contra el texto, eso crearía un falso positivo que bloquease el botón). */
+const NOTA_PASADO_AL_EMBUDO = "Pasado al embudo principal";
+
+/**
+ * Pasa un lead de WhatsApp (marca `dinkbit`) al embudo del CRM principal.
+ * Siempre a mano, desde un botón: nunca automático. Crea el lead en
+ * `imagina_leads` con `channel: "WhatsApp"`, marca `promocionado_at` en el
+ * lead de origen (fuente de verdad de la idempotencia) y deja además una nota
+ * en su historial para que quede constancia de quién y cuándo.
+ *
+ * Idempotente: si se pulsa el botón dos veces (doble clic, reintento de red),
+ * la segunda vez no crea un lead duplicado en el CRM — se detecta por
+ * `promocionado_at` y se responde `ok` sin volver a escribir nada.
+ */
+export async function pasarLeadAlEmbudo(input: { usuaria: Usuaria; leadId: string }): Promise<ResultadoAccion> {
+  const lead = await getLead(input.leadId);
+  if (!lead) return { ok: false, error: "Lead no encontrado." };
+
+  if (lead.promocionado_at) {
+    return { ok: true, mensaje: "Este lead ya se había pasado al embudo principal." };
+  }
+
+  const datos = datosParaEmbudo(lead);
+  const creado = await createManualLead({
+    name: datos.name,
+    phone: datos.phone,
+    channel: datos.channel,
+    campaign: datos.campaign,
+    email: lead.email,
+    website: lead.web,
+  });
+  if (!creado.ok) return { ok: false, error: "No se pudo crear el lead en el embudo principal." };
+
+  // A partir de aquí el lead YA existe en el CRM principal: un fallo en
+  // cualquiera de las dos escrituras siguientes no lo deshace (no hay
+  // transacción entre `imagina_leads` y `ventas_leads`, son tablas vecinas en
+  // la misma instancia). Se avisa con un mensaje distinto de "todo ok" para
+  // no mentir sobre lo que pasó, y se deja rastro en el servidor.
+  const marcado = await marcarLeadPromocionado(lead.id);
+  if (!marcado.ok) {
+    console.error("[ventas/servicios] pasarLeadAlEmbudo: lead creado en el CRM pero no se pudo marcar como promocionado:", marcado.error);
+    return {
+      ok: true,
+      mensaje: "Lead creado en el CRM, pero no se pudo guardar la marca de promocionado. Compruébalo en el CRM antes de volver a pulsar.",
+    };
+  }
+
+  const actividad = await registrarActividad({
+    leadId: lead.id,
+    usuariaId: input.usuaria.id,
+    tipo: "nota",
+    nota: NOTA_PASADO_AL_EMBUDO,
+  });
+  if (!actividad.ok) {
+    console.error("[ventas/servicios] pasarLeadAlEmbudo: no se pudo registrar la nota de actividad:", actividad.error);
+    return {
+      ok: true,
+      mensaje: "Lead creado en el CRM, pero no se pudo dejar la nota en el historial. Compruébalo en el CRM antes de volver a pulsar.",
+    };
+  }
+
+  return { ok: true, mensaje: "Lead pasado al embudo principal." };
 }
 
 /* Secuencias de WhatsApp ----------------------------------------------------- */

@@ -42,4 +42,30 @@ describe("leadDesdeAnuncio", () => {
     const r = leadDesdeAnuncio({ negocio: "Box X", tipo_negocio: "CrossFit", email: "a@b.es" });
     expect(r.ok && r.lead.tipo_negocio).toBe("box_crossfit");
   });
+
+  test("recorta campos demasiado largos en vez de guardarlos enteros", () => {
+    const larguisimo = "x".repeat(500);
+    const telefonoLargo = "6".repeat(100);
+    // 248 + "@bb.es" (6) = 254: lo que sobrevive al recorte de 254 sigue siendo un email válido.
+    const emailLargo = `${"a".repeat(248)}@bb.esxx`;
+    const r = leadDesdeAnuncio({
+      negocio: larguisimo,
+      contacto: larguisimo,
+      ciudad: larguisimo,
+      web: larguisimo,
+      cif: larguisimo,
+      telefono: telefonoLargo,
+      email: emailLargo,
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.lead.negocio.length).toBe(200);
+    expect(r.lead.contacto.length).toBe(200);
+    expect(r.lead.ciudad.length).toBe(200);
+    expect(r.lead.web.length).toBe(200);
+    expect(r.lead.cif.length).toBe(200);
+    expect(r.lead.telefono.length).toBe(40);
+    expect(r.lead.email.length).toBe(254);
+    expect(r.lead.email.endsWith("@bb.es")).toBe(true);
+  });
 });

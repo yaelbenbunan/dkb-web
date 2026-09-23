@@ -15,6 +15,7 @@ const m = vi.hoisted(() => ({
   anadirNota: vi.fn(),
   cambiarFaseManual: vi.fn(),
   moverLead: vi.fn(),
+  pasarLeadAlEmbudo: vi.fn(),
   revalidatePath: vi.fn(),
   redirect: vi.fn((url: string) => {
     throw new Error(`NEXT_REDIRECT:${url}`);
@@ -37,6 +38,7 @@ vi.mock("@/lib/ventas/servicios", () => ({
   anadirNota: m.anadirNota,
   cambiarFaseManual: m.cambiarFaseManual,
   moverLead: m.moverLead,
+  pasarLeadAlEmbudo: m.pasarLeadAlEmbudo,
 }));
 vi.mock("next/cache", () => ({ revalidatePath: m.revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect: m.redirect }));
@@ -52,10 +54,12 @@ import {
   notaAction,
   cambiarFaseAction,
   moverLeadAction,
+  pasarAlEmbudoAction,
 } from "@/app/(site)/panel/ventas/acciones-leads";
 
 const USUARIA = { id: "u1", rol: "comercial", activa: true };
 const MARCA = { id: "m1", slug: "hydrup" };
+const MARCA_DINKBIT = { id: "m2", slug: "dinkbit" };
 const LEAD = { id: "l1", marca_id: "m1", fase: "nuevo" };
 
 function fd(campos: Record<string, string>) {
@@ -70,7 +74,7 @@ beforeEach(() => {
   m.getMarcaPorSlug.mockReset().mockResolvedValue(MARCA);
   m.getLead.mockReset().mockResolvedValue(LEAD);
   m.getUsuaria.mockReset().mockResolvedValue({ id: "u2", activa: true });
-  for (const f of [m.actualizarDatosLead, m.asignarLead, m.registrarLlamada, m.marcarMuestrasEnviadas, m.anadirNota, m.cambiarFaseManual, m.moverLead]) {
+  for (const f of [m.actualizarDatosLead, m.asignarLead, m.registrarLlamada, m.marcarMuestrasEnviadas, m.anadirNota, m.cambiarFaseManual, m.moverLead, m.pasarLeadAlEmbudo]) {
     f.mockReset().mockResolvedValue({ ok: true });
   }
   m.importarLeadsCsv.mockReset().mockResolvedValue({ ok: true, creados: 1, duplicados: 0, excluidos: 0 });
@@ -177,6 +181,45 @@ describe("acciones de leads", () => {
     test("si el servicio falla se devuelve su error y no se refresca", async () => {
       m.moverLead.mockResolvedValue({ ok: false, error: "No se pudo guardar. Vuelve a intentarlo." });
       expect(await moverLeadAction("hydrup", "l1", "cliente")).toEqual({ ok: false, error: "No se pudo guardar. Vuelve a intentarlo." });
+      expect(m.revalidatePath).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("pasarAlEmbudoAction", () => {
+    test("exige sesión", async () => {
+      m.requireUsuaria.mockRejectedValue(new Error("NEXT_REDIRECT"));
+      await expect(pasarAlEmbudoAction("dinkbit", "l1", null, new FormData())).rejects.toThrow();
+      expect(m.pasarLeadAlEmbudo).not.toHaveBeenCalled();
+    });
+
+    test("un slug distinto de dinkbit se rechaza sin mirar el lead", async () => {
+      const r = await pasarAlEmbudoAction("hydrup", "l1", null, new FormData());
+      expect(r.ok).toBe(false);
+      expect(m.getLead).not.toHaveBeenCalled();
+      expect(m.pasarLeadAlEmbudo).not.toHaveBeenCalled();
+    });
+
+    test("un lead de otra marca da no encontrado", async () => {
+      m.getMarcaPorSlug.mockResolvedValue(MARCA_DINKBIT);
+      m.getLead.mockResolvedValue({ ...LEAD, marca_id: "otra" });
+      expect(await pasarAlEmbudoAction("dinkbit", "l1", null, new FormData())).toEqual({ ok: false, error: "Lead no encontrado." });
+      expect(m.pasarLeadAlEmbudo).not.toHaveBeenCalled();
+    });
+
+    test("delega con la usuaria de la sesión y refresca la marca", async () => {
+      m.getMarcaPorSlug.mockResolvedValue(MARCA_DINKBIT);
+      m.getLead.mockResolvedValue({ ...LEAD, marca_id: "m2" });
+      m.pasarLeadAlEmbudo.mockResolvedValue({ ok: true, mensaje: "Lead pasado al embudo principal." });
+      expect(await pasarAlEmbudoAction("dinkbit", "l1", null, new FormData())).toEqual({ ok: true, mensaje: "Lead pasado al embudo principal." });
+      expect(m.pasarLeadAlEmbudo).toHaveBeenCalledWith({ usuaria: USUARIA, leadId: "l1" });
+      expect(m.revalidatePath).toHaveBeenCalledWith("/panel/ventas/dinkbit", "layout");
+    });
+
+    test("si el servicio falla se devuelve su error y no se refresca", async () => {
+      m.getMarcaPorSlug.mockResolvedValue(MARCA_DINKBIT);
+      m.getLead.mockResolvedValue({ ...LEAD, marca_id: "m2" });
+      m.pasarLeadAlEmbudo.mockResolvedValue({ ok: false, error: "No se pudo crear el lead en el embudo principal." });
+      expect(await pasarAlEmbudoAction("dinkbit", "l1", null, new FormData())).toEqual({ ok: false, error: "No se pudo crear el lead en el embudo principal." });
       expect(m.revalidatePath).not.toHaveBeenCalled();
     });
   });

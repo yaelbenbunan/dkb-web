@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUsuaria } from "@/lib/ventas/auth";
 import { actualizarDatosLead, asignarLead, getLead, getMarcaPorSlug, getUsuaria, type Lead } from "@/lib/ventas/db";
-import { esFase } from "@/lib/ventas/dominio";
+import { esFase, MARCA_DINKBIT_SLUG } from "@/lib/ventas/dominio";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
 import {
   anadirNota,
@@ -13,6 +13,7 @@ import {
   importarLeadsCsv,
   marcarMuestrasEnviadas,
   moverLead,
+  pasarLeadAlEmbudo,
   previsualizarImportacion,
   registrarLlamada,
   type PreviaImportacion,
@@ -136,6 +137,18 @@ export async function cambiarFaseAction(slug: string, leadId: string, _prev: Res
   if (!res.ok) return res;
   refrescar(slug);
   return { ok: true, mensaje: "Fase cambiada." };
+}
+
+/** Ficha del lead → botón «Pasar al embudo». Solo para la marca `dinkbit`
+ *  (leads de WhatsApp): es la única con sentido para promocionar al CRM
+ *  principal con `channel: "WhatsApp"`. */
+export async function pasarAlEmbudoAction(slug: string, leadId: string, _prev: ResultadoAccion | null, _fd: FormData): Promise<ResultadoAccion> {
+  const usuaria = await requireUsuaria();
+  if (slug !== MARCA_DINKBIT_SLUG) return { ok: false, error: "Esta acción solo está disponible para la marca Dinkbit." };
+  if (!(await leadDeMarca(slug, leadId))) return NO_ENCONTRADO;
+  const res = await pasarLeadAlEmbudo({ usuaria, leadId });
+  if (res.ok) refrescar(slug);
+  return res;
 }
 
 /** Tablero: arrastrar una tarjeta o pulsar «→». */

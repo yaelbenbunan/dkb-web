@@ -9,22 +9,28 @@ const m = vi.hoisted(() => ({
   buscarLeadPorContacto: vi.fn(),
   getLead: vi.fn(),
   registrarActividad: vi.fn(),
+  marcarLeadPromocionado: vi.fn(),
+  createManualLead: vi.fn(),
 }));
 vi.mock("../ventas/db", () => m);
+vi.mock("../imagina-leads", () => ({ createManualLead: m.createManualLead }));
 
 import {
   autenticarWebhook,
   previsualizarImportacion,
   importarLeadsCsv,
   recibirLeadAnuncio,
+  recibirLeadFormulario,
   crearLeadManual,
   registrarLlamada,
   marcarMuestrasEnviadas,
   cambiarFaseManual,
   moverLead,
+  pasarLeadAlEmbudo,
 } from "../ventas/servicios";
 
 const MARCA = { id: "m1", slug: "hydrup", nombre: "Hydrup", webhook_secret: "secreto-largo" } as never;
+const MARCA_ACTIVA = { id: "m1", slug: "hydrup", nombre: "Hydrup", webhook_secret: "secreto-largo", estado: "activa" } as never;
 const USUARIA = { id: "u1", nombre: "Paula", rol: "comercial", activa: true } as never;
 const CSV = "negocio,telefono,email\nGym Sol,600111222,\nFisio Norte,,fisio@norte.es\nYa Existe,,ya@a.es\nCliente,,cliente@a.es";
 
@@ -103,6 +109,90 @@ describe("recibirLeadAnuncio", () => {
   test("un cuerpo que no es un objeto → 400", async () => {
     m.getMarcaPorSlug.mockResolvedValue(MARCA);
     expect((await recibirLeadAnuncio({ slug: "hydrup", secreto: "secreto-largo", datos: [1, 2] })).status).toBe(400);
+  });
+});
+
+describe("recibirLeadFormulario", () => {
+  test("marca desconocida → 404 unknown_brand", async () => {
+    m.getMarcaPorSlug.mockResolvedValueOnce(null);
+    const r = await recibirLeadFormulario({ slug: "nope", datos: { negocio: "Gym", email: "gym@a.es" } });
+    expect(r).toEqual({ status: 404, body: { ok: false, error: "unknown_brand" } });
+  });
+
+  test("marca no activa → 404 unknown_brand", async () => {
+    m.getMarcaPorSlug.mockResolvedValue({ id: "m1", slug: "hydrup", nombre: "Hydrup", webhook_secret: "secreto-largo", estado: "borrador" });
+    const r = await recibirLeadFormulario({ slug: "hydrup", datos: { negocio: "Gym", email: "gym@a.es" } });
+    expect(r).toEqual({ status: 404, body: { ok: false, error: "unknown_brand" } });
+  });
+
+  test("lead nuevo → se crea con origenDetalle landing-b2b aunque el cuerpo traiga otra campaña", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA_ACTIVA);
+    m.crearLeads.mockResolvedValue({ ok: true, creados: 1 });
+    const r = await recibirLeadFormulario({
+      slug: "hydrup",
+      datos: { negocio: "Box X", email: "box@x.es", campana: "otra-campana" },
+    });
+    expect(r).toEqual({ status: 200, body: { ok: true, duplicado: false } });
+    expect(m.crearLeads.mock.calls[0][0]).toMatchObject({ origen: "anuncio", origenDetalle: "landing-b2b" });
+  });
+
+  test("si registrarActividad falla al apuntar la nota inicial, el lead ya se guardó y responde 200 igual", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA_ACTIVA);
+    m.crearLeads.mockResolvedValue({ ok: true, creados: 1 });
+    m.buscarLeadPorContacto.mockResolvedValue({ id: "l-new" });
+    m.registrarActividad.mockRejectedValueOnce(new Error("db caída"));
+    const r = await recibirLeadFormulario({
+      slug: "hydrup",
+      datos: { negocio: "Box X", email: "box@x.es", comentarios: "Hola" },
+    });
+    expect(r).toEqual({ status: 200, body: { ok: true, duplicado: false } });
+  });
+
+  test("con socios/reparto/comentarios en el cuerpo, se registra una nota con esos datos", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA_ACTIVA);
+    m.crearLeads.mockResolvedValue({ ok: true, creados: 1 });
+    m.buscarLeadPorContacto.mockResolvedValue({ id: "l-new" });
+    await recibirLeadFormulario({
+      slug: "hydrup",
+      datos: {
+        negocio: "Box X",
+        email: "box@x.es",
+        socios: "3 centros",
+        reparto: "Semanal",
+        comentarios: "Interesados en la caja personalizable",
+      },
+    });
+    expect(m.registrarActividad).toHaveBeenCalledWith(
+      expect.objectContaining({
+        leadId: "l-new",
+        tipo: "nota",
+        nota: expect.stringContaining("Socios: 3 centros"),
+      }),
+    );
+    const nota = m.registrarActividad.mock.calls[0][0].nota as string;
+    expect(nota).toContain("Reparto: Semanal");
+    expect(nota).toContain("Comentarios: Interesados en la caja personalizable");
+  });
+
+  test("lead repetido → 200 duplicado:true y la nota empieza indicando que ha vuelto desde la web", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA_ACTIVA);
+    m.buscarLeadPorContacto.mockResolvedValue({ id: "l7" });
+    const r = await recibirLeadFormulario({ slug: "hydrup", datos: { negocio: "Ya", email: "ya@a.es" } });
+    expect(r).toEqual({ status: 200, body: { ok: true, duplicado: true } });
+    expect(m.crearLeads).not.toHaveBeenCalled();
+    expect(m.registrarActividad).toHaveBeenCalledWith(
+      expect.objectContaining({
+        leadId: "l7",
+        tipo: "nota",
+        nota: expect.stringMatching(/^Ha vuelto a llegar desde la web \(landing-b2b\)\./),
+      }),
+    );
+  });
+
+  test("cuerpo inválido o sin contacto → 400", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA_ACTIVA);
+    expect((await recibirLeadFormulario({ slug: "hydrup", datos: [1, 2] })).status).toBe(400);
+    expect((await recibirLeadFormulario({ slug: "hydrup", datos: { negocio: "Gym" } })).status).toBe(400);
   });
 });
 
@@ -201,6 +291,92 @@ describe("moverLead (tablero)", () => {
     m.getLead.mockResolvedValue({ id: "l1", fase: "nuevo" });
     m.registrarActividad.mockResolvedValue({ ok: false, error: "No se pudo guardar. Vuelve a intentarlo." });
     expect(await moverLead({ usuaria: USUARIA, leadId: "l1", fase: "cliente" })).toEqual({ ok: false, error: "No se pudo guardar. Vuelve a intentarlo." });
+  });
+});
+
+describe("pasarLeadAlEmbudo", () => {
+  const LEAD = {
+    id: "l1",
+    negocio: "Panadería Sol",
+    contacto: "Ana",
+    telefono: "660415514",
+    email: "ana@panaderia.es",
+    web: "https://panaderiasol.es",
+    origen_detalle: "campana-web-express",
+    promocionado_at: null,
+  };
+
+  test("lead inexistente", async () => {
+    m.getLead.mockResolvedValue(null);
+    expect(await pasarLeadAlEmbudo({ usuaria: USUARIA, leadId: "x" })).toEqual({ ok: false, error: "Lead no encontrado." });
+    expect(m.createManualLead).not.toHaveBeenCalled();
+  });
+
+  test("un lead ya promocionado no se vuelve a crear en el CRM (idempotencia por promocionado_at, no por el texto de una nota)", async () => {
+    m.getLead.mockResolvedValue({ ...LEAD, promocionado_at: "2026-09-20T10:00:00Z" });
+    const r = await pasarLeadAlEmbudo({ usuaria: USUARIA, leadId: "l1" });
+    expect(r).toEqual({ ok: true, mensaje: "Este lead ya se había pasado al embudo principal." });
+    expect(m.createManualLead).not.toHaveBeenCalled();
+    expect(m.marcarLeadPromocionado).not.toHaveBeenCalled();
+    expect(m.registrarActividad).not.toHaveBeenCalled();
+  });
+
+  test("un lead sin promocionar se crea en el CRM con channel WhatsApp y queda marcado", async () => {
+    m.getLead.mockResolvedValue(LEAD);
+    m.createManualLead.mockResolvedValue({ ok: true, id: "crm1" });
+    m.marcarLeadPromocionado.mockResolvedValue({ ok: true });
+    m.registrarActividad.mockResolvedValue({ ok: true });
+    const r = await pasarLeadAlEmbudo({ usuaria: USUARIA, leadId: "l1" });
+    expect(r).toEqual({ ok: true, mensaje: "Lead pasado al embudo principal." });
+    expect(m.createManualLead).toHaveBeenCalledWith({
+      name: "Ana",
+      phone: "660415514",
+      channel: "WhatsApp",
+      campaign: "campana-web-express",
+      email: "ana@panaderia.es",
+      website: "https://panaderiasol.es",
+    });
+    expect(m.marcarLeadPromocionado).toHaveBeenCalledWith("l1");
+    expect(m.registrarActividad).toHaveBeenCalledWith({ leadId: "l1", usuariaId: "u1", tipo: "nota", nota: "Pasado al embudo principal" });
+  });
+
+  test("cae al negocio cuando no hay contacto", async () => {
+    m.getLead.mockResolvedValue({ ...LEAD, contacto: null });
+    m.createManualLead.mockResolvedValue({ ok: true, id: "crm1" });
+    m.marcarLeadPromocionado.mockResolvedValue({ ok: true });
+    m.registrarActividad.mockResolvedValue({ ok: true });
+    await pasarLeadAlEmbudo({ usuaria: USUARIA, leadId: "l1" });
+    expect(m.createManualLead.mock.calls[0][0].name).toBe("Panadería Sol");
+  });
+
+  test("si createManualLead falla, no se marca el lead ni se registra la nota", async () => {
+    m.getLead.mockResolvedValue(LEAD);
+    m.createManualLead.mockResolvedValue({ ok: false, error: "boom" });
+    const r = await pasarLeadAlEmbudo({ usuaria: USUARIA, leadId: "l1" });
+    expect(r).toEqual({ ok: false, error: "No se pudo crear el lead en el embudo principal." });
+    expect(m.marcarLeadPromocionado).not.toHaveBeenCalled();
+    expect(m.registrarActividad).not.toHaveBeenCalled();
+  });
+
+  test("si falla marcar promocionado, el resultado lo dice en vez de fingir éxito total", async () => {
+    m.getLead.mockResolvedValue(LEAD);
+    m.createManualLead.mockResolvedValue({ ok: true, id: "crm1" });
+    m.marcarLeadPromocionado.mockResolvedValue({ ok: false, error: "boom" });
+    const r = await pasarLeadAlEmbudo({ usuaria: USUARIA, leadId: "l1" });
+    expect(r.ok).toBe(true);
+    expect((r as { mensaje?: string }).mensaje).toMatch(/no se pudo guardar la marca/i);
+    expect(m.registrarActividad).not.toHaveBeenCalled();
+  });
+
+  test("si la nota falla tras crear el lead, el resultado lo dice en vez de fingir éxito total", async () => {
+    m.getLead.mockResolvedValue(LEAD);
+    m.createManualLead.mockResolvedValue({ ok: true, id: "crm1" });
+    m.marcarLeadPromocionado.mockResolvedValue({ ok: true });
+    m.registrarActividad.mockResolvedValue({ ok: false, error: "boom" });
+    const r = await pasarLeadAlEmbudo({ usuaria: USUARIA, leadId: "l1" });
+    expect(r.ok).toBe(true);
+    expect((r as { mensaje?: string }).mensaje).toMatch(/no se pudo dejar la nota/i);
+    expect((r as { mensaje?: string }).mensaje).not.toBe("Lead pasado al embudo principal.");
   });
 });
 
