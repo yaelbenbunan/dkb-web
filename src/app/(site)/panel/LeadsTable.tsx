@@ -36,6 +36,7 @@ import {
 import { EditableCell } from "./EditableCell";
 import { ImportLeadsPanel } from "./ImportLeadsPanel";
 import { tarjeta as tarjetaEstilo, th as thBase, td as tdBase } from "./_componentes/estilos";
+import { TODOS, filtrarLeads, opcionesDeCampana, opcionesDeCanal } from "@/lib/panel-filtros";
 
 export interface LeadRowView {
   id: string;
@@ -147,7 +148,8 @@ const webLabel = (raw: string) =>
 export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<string>("todos");
-  const [channelFilter, setChannelFilter] = useState<string>("todos");
+  const [channelFilter, setChannelFilter] = useState<string>(TODOS);
+  const [campaignFilter, setCampaignFilter] = useState<string>(TODOS);
   const [emailableOnly, setEmailableOnly] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -192,27 +194,31 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
   // Pool for the current view (active vs archived); los filtros se acumulan
   // sobre él, así que se pueden combinar (p. ej. enviables de Meta).
   const pool = leads.filter((l) => (showArchived ? l.archived : !l.archived));
-  const q = query.trim().toLowerCase();
-  const visible = pool.filter(
+  // Estado y "se les puede escribir" son ortogonales a canal/campaña/búsqueda:
+  // se aplican antes para que los recuentos de esos dos chips ya los tengan
+  // en cuenta (ver más abajo).
+  const poolFiltroBase = pool.filter(
     (l) =>
       (statusFilter === "todos" || l.status === statusFilter) &&
-      (channelFilter === "todos" || (l.channel ?? "Sin canal") === channelFilter) &&
-      (!emailableOnly || isLeadEmailable(l)) &&
-      (!q || [l.name, l.phone, l.email, l.campaign].some((v) => v?.toLowerCase().includes(q))),
+      (!emailableOnly || isLeadEmailable(l)),
   );
+  // El recuento de cada chip de canal/campaña es el que se vería si se
+  // pulsara: el resto de leads con los demás filtros activos ya aplicados,
+  // pero sin el propio filtro (canal cuenta sin filtrar por canal, y
+  // viceversa) — así "Meta" no cuenta leads que la campaña ya ha descartado.
+  const poolParaCanal = filtrarLeads(poolFiltroBase, { campana: campaignFilter, query });
+  const poolParaCampana = filtrarLeads(poolFiltroBase, { canal: channelFilter, query });
+  const visible = filtrarLeads(poolParaCanal, { canal: channelFilter });
 
   const archivedCount = leads.filter((l) => l.archived).length;
   const statusCounts = (s: string) =>
     pool.filter((l) => l.status === s).length;
   const emailableCount = pool.filter(isLeadEmailable).length;
 
-  // Los canales salen de los datos, no de una lista fija: cualquier UTM nueva
-  // (Bing, LinkedIn…) aparece sola sin tocar código.
-  const channels = Array.from(
-    new Set(pool.map((l) => l.channel?.trim() || "Sin canal")),
-  ).sort((a, b) => a.localeCompare(b, "es"));
-  const channelCount = (c: string) =>
-    pool.filter((l) => (l.channel?.trim() || "Sin canal") === c).length;
+  // Los canales y campañas salen de los datos, no de una lista fija:
+  // cualquier UTM o campaña nueva aparece sola sin tocar código.
+  const channels = opcionesDeCanal(poolParaCanal);
+  const campaigns = opcionesDeCampana(poolParaCampana);
 
   const clearSel = () => setSelected(new Set());
   const allSelected = visible.length > 0 && visible.every((l) => selected.has(l.id));
@@ -327,66 +333,103 @@ export function LeadsTable({ leads }: { leads: LeadRowView[] }) {
         />
       </div>
 
-      {/* Segunda fila: enviables + canal. Van aparte del estado porque son
-          criterios ortogonales y se combinan entre sí. */}
+      {/* Segunda fila: enviables + canal + campaña. Van aparte del estado
+          porque son criterios ortogonales y se combinan entre sí. La campaña
+          va en su propia línea con scroll horizontal (puede haber muchas más
+          campañas que canales — hoy ya son casi el doble — y así no revientan
+          el ancho de la barra de filtros). */}
       <div
         style={{
           display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          gap: 8,
+          flexDirection: "column",
+          gap: 10,
           marginBottom: 14,
           paddingBottom: 14,
           borderBottom: "1px solid #e2e8f0",
         }}
       >
-        <button
-          type="button"
-          onClick={() => {
-            setEmailableOnly((v) => !v);
-            clearSel();
-          }}
-          title="Con consentimiento, con email y sin rebotes ni quejas"
-          style={{
-            border: `1px solid ${emailableOnly ? "#16a34a" : "#cbd5e1"}`,
-            background: emailableOnly ? "#16a34a" : "#fff",
-            color: emailableOnly ? "#fff" : "#475569",
-            borderRadius: 999,
-            padding: "6px 14px",
-            fontSize: 13,
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
-          ✉ Se les puede escribir ({emailableCount})
-        </button>
-
-        <span style={{ marginLeft: 6, fontSize: 12, fontWeight: 700, color: "#64748b" }}>
-          Canal
-        </span>
-        <FilterChip
-          label="Todos"
-          count={pool.length}
-          active={channelFilter === "todos"}
-          color="#334155"
-          onClick={() => {
-            setChannelFilter("todos");
-            clearSel();
-          }}
-        />
-        {channels.map((c) => (
-          <FilterChip
-            key={c}
-            label={c}
-            count={channelCount(c)}
-            active={channelFilter === c}
-            color={CHANNEL_COLORS[c] ?? "#334155"}
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+          <button
+            type="button"
             onClick={() => {
-              setChannelFilter(c);
+              setEmailableOnly((v) => !v);
+              clearSel();
+            }}
+            title="Con consentimiento, con email y sin rebotes ni quejas"
+            style={{
+              border: `1px solid ${emailableOnly ? "#16a34a" : "#cbd5e1"}`,
+              background: emailableOnly ? "#16a34a" : "#fff",
+              color: emailableOnly ? "#fff" : "#475569",
+              borderRadius: 999,
+              padding: "6px 14px",
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            ✉ Se les puede escribir ({emailableCount})
+          </button>
+
+          <span style={{ marginLeft: 6, fontSize: 12, fontWeight: 700, color: "#64748b" }}>
+            Canal
+          </span>
+          <FilterChip
+            label="Todos"
+            count={poolParaCanal.length}
+            active={channelFilter === TODOS}
+            color="#334155"
+            onClick={() => {
+              setChannelFilter(TODOS);
               clearSel();
             }}
           />
-        ))}
+          {channels.map((op) => (
+            <FilterChip
+              key={op.valor}
+              label={op.valor}
+              count={op.recuento}
+              active={channelFilter === op.valor}
+              color={CHANNEL_COLORS[op.valor] ?? "#334155"}
+              onClick={() => {
+                setChannelFilter(op.valor);
+                clearSel();
+              }}
+            />
+          ))}
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+          <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: "#64748b" }}>
+            Campaña
+          </span>
+          <div style={{ display: "flex", gap: 8, overflowX: "auto", flex: "1 1 auto", minWidth: 0, paddingBottom: 2 }}>
+            <FilterChip
+              label="Todas"
+              count={poolParaCampana.length}
+              active={campaignFilter === TODOS}
+              color="#334155"
+              style={{ flexShrink: 0 }}
+              onClick={() => {
+                setCampaignFilter(TODOS);
+                clearSel();
+              }}
+            />
+            {campaigns.map((op) => (
+              <FilterChip
+                key={op.valor}
+                label={op.valor}
+                count={op.recuento}
+                active={campaignFilter === op.valor}
+                color="#334155"
+                style={{ flexShrink: 0 }}
+                onClick={() => {
+                  setCampaignFilter(op.valor);
+                  clearSel();
+                }}
+              />
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Barra de acciones en lote */}
@@ -853,12 +896,15 @@ function FilterChip({
   active,
   color,
   onClick,
+  style,
 }: {
   label: string;
   count: number;
   active: boolean;
   color: string;
   onClick: () => void;
+  /** Extra styles (p. ej. `flexShrink: 0` en una fila con scroll horizontal). */
+  style?: React.CSSProperties;
 }) {
   return (
     <button
@@ -876,6 +922,8 @@ function FilterChip({
         fontSize: 12,
         padding: "5px 12px",
         cursor: "pointer",
+        whiteSpace: "nowrap",
+        ...style,
       }}
     >
       {label}
