@@ -75,6 +75,22 @@ describe("POST /api/whatsapp/webhook", () => {
     expect(procesarWebhookMock).not.toHaveBeenCalled();
   });
 
+  // Hallazgo de la re-revisión con mutación: los dos tests de 401 usaban
+  // cuerpo JSON válido y el de 400 usaba firma válida, así que ninguno
+  // vigilaba el ORDEN real de las comprobaciones. Si alguien moviera la
+  // verificación de firma a DESPUÉS de `JSON.parse`, este caso (firma
+  // inválida + cuerpo que no es JSON) seguiría respondiendo 401 con el
+  // código actual, pero pasaría a explotar en el `JSON.parse` (o a devolver
+  // 400) con el bug reintroducido. Debe seguir siendo 401 y no se debe
+  // parsear ni procesar nada.
+  it("cuerpo que no es JSON con firma inválida: 401, no 400, y nada se parsea", async () => {
+    const cuerpoRoto = "esto no es json";
+    const res = await POST(postRequest(cuerpoRoto, firmaDe(cuerpoRoto, "otro-secreto")));
+
+    expect(res.status).toBe(401);
+    expect(procesarWebhookMock).not.toHaveBeenCalled();
+  });
+
   it("sin WHATSAPP_APP_SECRET configurado: 500 sin comprobar nada más", async () => {
     vi.unstubAllEnvs();
     const res = await POST(postRequest(CUERPO, firmaDe(CUERPO)));

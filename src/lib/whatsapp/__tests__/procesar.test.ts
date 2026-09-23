@@ -366,6 +366,14 @@ describe("procesarWebhook", () => {
     const trasAnuncio = conversaciones.get(`${MARCA.id}:34660415514`);
     const ventanaTrasAnuncio = new Date(trasAnuncio!.ventana_hasta!).getTime();
     expect(ventanaTrasAnuncio).toBe((inicioSegundos + 72 * 60 * 60) * 1000);
+    // Copia por valor ANTES del segundo webhook: `actualizarConversacion` de
+    // `depsFalsas()` muta el objeto almacenado EN SITIO, así que
+    // `conversaciones.get(...)` tras la segunda llamada devolvería la MISMA
+    // referencia que `trasAnuncio`. Comparar contra esa referencia mutada
+    // haría que la aserción de más abajo compare un campo consigo mismo y
+    // pase siempre, sin vigilar nada. `esperado` congela el string tal como
+    // quedó tras el anuncio.
+    const esperado = trasAnuncio!.ventana_hasta;
 
     // Respuesta 2h más tarde, sin referral: la conversación está en "bot" y
     // trae texto, así que decidir() la clasifica como "guardar_respuesta".
@@ -382,6 +390,6 @@ describe("procesarWebhook", () => {
 
     const trasRespuesta = conversaciones.get(`${MARCA.id}:34660415514`);
     expect(trasRespuesta?.estado).toBe("humana");
-    expect(trasRespuesta?.ventana_hasta).toBe(trasAnuncio!.ventana_hasta);
+    expect(trasRespuesta?.ventana_hasta).toBe(esperado);
   });
 });
