@@ -3,10 +3,12 @@ import { ventanaAbierta } from "./ventana";
 const LARGO_EXTRACTO = 80;
 
 /**
- * Recorta un texto a 80 caracteres para la lista de conversaciones sin partir
- * palabras: busca el último espacio dentro del límite y corta ahí. Los
- * mensajes de imagen o audio no traen texto (`null`), así que se describen
- * en su lugar.
+ * Recorta un texto a 80 caracteres para la lista de conversaciones: busca el
+ * último espacio dentro del límite y corta ahí, para no partir una palabra
+ * por la mitad. Si no hay ningún espacio en los primeros 80 caracteres (una
+ * URL larga, por ejemplo) no hay palabra que respetar, así que corta en seco
+ * a los 80. Los mensajes de imagen o audio no traen texto (`null`), así que
+ * se describen en su lugar.
  */
 export function extracto(texto: string | null): string {
   if (!texto) return "(sin texto)";
@@ -27,7 +29,8 @@ export function etiquetaVentana(ventanaHasta: string | null, ahora: Date): strin
   if (!ventanaAbierta(ventanaHasta, ahora)) return "Cerrada, hace falta plantilla";
 
   const restanteMs = new Date(ventanaHasta as string).getTime() - ahora.getTime();
-  const minutos = Math.round(restanteMs / 60000);
+  const minutos = Math.floor(restanteMs / 60000);
+  if (minutos < 1) return "Abierta · menos de 1 min";
   if (minutos < 60) return `Abierta · quedan ${minutos} min`;
 
   const horas = Math.floor(minutos / 60);

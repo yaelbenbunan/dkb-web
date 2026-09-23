@@ -1,7 +1,7 @@
 import { requireUsuaria } from "@/lib/ventas/auth";
 import { listLeads } from "@/lib/ventas/db";
 import { etiquetaVentana, extracto } from "@/lib/whatsapp/bandeja";
-import { listConversaciones, listMensajes } from "@/lib/whatsapp/db";
+import { getConversacionPorId, listConversaciones, listMensajes } from "@/lib/whatsapp/db";
 import { telefonoDeWaId, ventanaAbierta } from "@/lib/whatsapp/ventana";
 import { cargarMarca } from "../../../_componentes/cargarMarca";
 import { MarcaCabecera } from "../../../_componentes/MarcaCabecera";
@@ -41,7 +41,10 @@ export default async function ConversacionesPage({
     ultimoMensajeAt: c.ultimo_mensaje_at,
   }));
 
-  const seleccionada = sp.c ? conversaciones.find((c) => c.id === sp.c) : undefined;
+  // Búsqueda puntual (no un `.find()` sobre las hasta 500 conversaciones ya
+  // traídas para la lista): solo hace falta releer una fila.
+  const candidata = sp.c ? await getConversacionPorId(sp.c) : null;
+  const seleccionada = candidata && candidata.marca_id === marca.id ? candidata : null;
   const mensajes = seleccionada ? await listMensajes(seleccionada.id) : [];
 
   const hilo: Hilo | null = seleccionada

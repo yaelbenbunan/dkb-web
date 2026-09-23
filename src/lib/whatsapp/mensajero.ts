@@ -1,3 +1,5 @@
+import "server-only";
+
 export const GRAPH_VERSION = "v21.0";
 
 export type ResultadoEnvio = { ok: true; wamid: string | null } | { ok: false; error: string };

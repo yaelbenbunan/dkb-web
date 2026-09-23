@@ -54,6 +54,15 @@ export async function getConversacion(marcaId: string, waId: string): Promise<Co
   return r.data as Conversacion | null;
 }
 
+/** Búsqueda puntual por id: para acciones que ya conocen la conversación
+ *  (p.ej. responder desde la bandeja) y solo necesitan releer su fila para
+ *  comprobar propiedad y ventana, sin traerse las hasta 500 de la marca. */
+export async function getConversacionPorId(id: string): Promise<Conversacion | null> {
+  const r = await db().from("ventas_conversaciones").select("*").eq("id", id).maybeSingle();
+  if (r.error) throw new Error(`[whatsapp/db] getConversacionPorId: ${r.error.message}`);
+  return r.data as Conversacion | null;
+}
+
 export async function crearConversacion(input: {
   marcaId: string;
   waId: string;
