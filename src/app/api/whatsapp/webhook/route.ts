@@ -7,6 +7,12 @@ import { procesarWebhook } from "@/lib/whatsapp/procesar";
 // válida no se parsea el cuerpo ni se toca la base.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Un lote puede traer varios mensajes que se procesan en serie, y cada
+// envío a Graph tiene su propio timeout de 8s (ver mensajero.ts); 60s da
+// margen de sobra sin dejar la función colgada indefinidamente si Graph se
+// cuelga en cada uno (Hallazgo I4, ronda de arreglos 2 — mismo patrón que
+// src/app/api/cron/campaigns/route.ts).
+export const maxDuration = 60;
 
 /** Comparación en tiempo constante, igual criterio que `verificarFirmaMeta` en firma.ts. */
 function coincideToken(recibido: string, esperado: string): boolean {

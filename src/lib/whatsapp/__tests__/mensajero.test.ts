@@ -63,6 +63,28 @@ describe("crearMensajero", () => {
     expect(await m.enviarTexto("34660415514", "hola")).toEqual({ ok: false, error: "ECONNRESET" });
   });
 
+  // Hallazgo I4 (Important) de la ronda de arreglos 2: sin timeout, toda la
+  // política de fallos depende de que Graph RESPONDA. Se comprueba que la
+  // llamada lleva una señal de abort, y que si Graph se cuelga y el fetch
+  // aborta, `enviarTexto` devuelve el error tipado sin lanzar (el `catch` ya
+  // existente absorbe el `AbortError`).
+  it("si el fetch a Graph aborta (timeout), devuelve un error tipado sin lanzar", async () => {
+    const fetchMock = vi.fn().mockImplementation((_url: string, init: RequestInit) => {
+      expect(init.signal).toBeInstanceOf(AbortSignal);
+      // jsdom no garantiza que su `DOMException` sea `instanceof Error`
+      // (el `catch` de `enviarTexto` sí lo exige para devolver el mensaje);
+      // un `Error` a secas basta para ejercitar exactamente esa rama sin
+      // depender de ese detalle del entorno de test.
+      return Promise.reject(new Error("This operation was aborted"));
+    });
+    const m = crearMensajero({ token: "tok", phoneNumberId: "123", fetchImpl: fetchMock });
+
+    await expect(m.enviarTexto("34660415514", "hola")).resolves.toEqual({
+      ok: false,
+      error: "This operation was aborted",
+    });
+  });
+
   // Review Focus (ronda 1, tarea 4): credenciales heredadas del entorno en una
   // preview no deben bastar para enviar de verdad — solo producción, o la
   // válvula explícita, lo autorizan.

@@ -69,6 +69,14 @@ export function crearMensajero(config: ConfigMensajero = {}): MensajeroWhatsApp 
             type: "text",
             text: { body: texto },
           }),
+          // Sin esto, toda la política de fallos depende de que Graph
+          // RESPONDA: si se cuelga, la función muere por timeout de
+          // plataforma DESPUÉS de que el entrante ya se persistió, y
+          // `guardarSaliente` no llega a ejecutarse — no queda ni una fila
+          // `fallido` que explique el intento (Hallazgo I4, ronda de
+          // arreglos 2). El `catch` de abajo convierte el abort en el mismo
+          // error tipado que ya maneja cualquier fallo de red.
+          signal: AbortSignal.timeout(8000),
         });
         const cuerpo = (await res.json()) as {
           messages?: Array<{ id?: string }>;
