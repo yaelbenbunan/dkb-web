@@ -96,32 +96,21 @@ export async function actualizarConversacion(
 export async function listConversaciones(
   marcaId: string,
 ): Promise<Array<Conversacion & { ultimo_texto: string | null }>> {
+  // `ultimo_texto` vive desnormalizado en la propia fila (lo mantienen
+  // guardarEntrante/guardarSaliente en cada mensaje), así que listar la
+  // bandeja es una sola query: sin esto, habría que leer el historial
+  // completo de mensajes de la marca solo para quedarse con uno por
+  // conversación, y eso degrada con el total de mensajes, no con el número
+  // de conversaciones. `.limit(500)`: una bandeja no necesita más, y evita
+  // traerse la tabla entera si algún día la marca acumula muchas.
   const r = await db()
     .from("ventas_conversaciones")
     .select("*")
     .eq("marca_id", marcaId)
-    .order("ultimo_mensaje_at", { ascending: false });
+    .order("ultimo_mensaje_at", { ascending: false })
+    .limit(500);
   if (r.error) throw new Error(`[whatsapp/db] listConversaciones: ${r.error.message}`);
-  const conversaciones = (r.data ?? []) as Conversacion[];
-  if (conversaciones.length === 0) return [];
-
-  // PostgREST no tiene "distinct on": pedir `ventas_mensajes` embebido trae
-  // el hilo entero de cada conversación, no solo el último mensaje. Se pide
-  // aparte, ordenado por fecha descendente, y se toma el primero visto por
-  // conversación — más barato que una vista o una función SQL para esto.
-  const ids = conversaciones.map((c) => c.id);
-  const m = await db()
-    .from("ventas_mensajes")
-    .select("conversacion_id, texto, created_at")
-    .in("conversacion_id", ids)
-    .order("created_at", { ascending: false });
-  if (m.error) throw new Error(`[whatsapp/db] listConversaciones (mensajes): ${m.error.message}`);
-
-  const ultimoTexto = new Map<string, string | null>();
-  for (const fila of (m.data ?? []) as Array<{ conversacion_id: string; texto: string | null }>) {
-    if (!ultimoTexto.has(fila.conversacion_id)) ultimoTexto.set(fila.conversacion_id, fila.texto);
-  }
-  return conversaciones.map((c) => ({ ...c, ultimo_texto: ultimoTexto.get(c.id) ?? null }));
+  return (r.data ?? []) as Array<Conversacion & { ultimo_texto: string | null }>;
 }
 
 /* Mensajes ---------------------------------------------------------------- */
@@ -156,7 +145,20 @@ export async function guardarEntrante(input: {
     )
     .select("id");
   if (error) throw new Error(`[whatsapp/db] guardarEntrante: ${error.message}`);
-  return { nuevo: (data ?? []).length > 0 };
+  const nuevo = (data ?? []).length > 0;
+
+  // Solo se toca la conversación si el mensaje era nuevo: un reintento de
+  // Meta del mismo wamid no debe reescribir ultimo_texto/ultimo_mensaje_at,
+  // porque eso es justo la señal que otra capa usaría para pensar que ha
+  // llegado algo nuevo a lo que responder.
+  if (nuevo) {
+    const conv = await db()
+      .from("ventas_conversaciones")
+      .update({ ultimo_texto: input.texto, ultimo_mensaje_at: new Date().toISOString() })
+      .eq("id", input.conversacionId);
+    if (conv.error) throw new Error(`[whatsapp/db] guardarEntrante (conversación): ${conv.error.message}`);
+  }
+  return { nuevo };
 }
 
 export async function guardarSaliente(input: {
@@ -165,10 +167,11 @@ export async function guardarSaliente(input: {
   texto: string;
   error?: string;
 }): Promise<void> {
-  // `wamid` puede ser null (envío simulado): el índice único es parcial
-  // (`where wamid is not null`) justo para no chocar en ese caso, así que
-  // aquí basta un `insert` normal — no hace falta la idempotencia de arriba
-  // porque cada envío saliente es un mensaje nuevo, nunca un reintento de Meta.
+  // `wamid` puede ser null (envío simulado): el índice único de `wamid` NO es
+  // parcial (los NULL nunca chocan entre sí en un índice único de Postgres),
+  // así que aquí basta un `insert` normal — no hace falta la idempotencia de
+  // arriba porque cada envío saliente es un mensaje nuevo, nunca un reintento
+  // de Meta.
   const { error } = await db()
     .from("ventas_mensajes")
     .insert({
@@ -180,6 +183,15 @@ export async function guardarSaliente(input: {
       error: input.error ?? null,
     });
   if (error) throw new Error(`[whatsapp/db] guardarSaliente: ${error.message}`);
+
+  // Ya hay que tocar la fila de la conversación de todos modos (no añade una
+  // escritura nueva): se aprovecha para mantener el resumen desnormalizado
+  // que lee listConversaciones.
+  const conv = await db()
+    .from("ventas_conversaciones")
+    .update({ ultimo_texto: input.texto, ultimo_mensaje_at: new Date().toISOString() })
+    .eq("id", input.conversacionId);
+  if (conv.error) throw new Error(`[whatsapp/db] guardarSaliente (conversación): ${conv.error.message}`);
 }
 
 export async function listMensajes(conversacionId: string): Promise<Mensaje[]> {
