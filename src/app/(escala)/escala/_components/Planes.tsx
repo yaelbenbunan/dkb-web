@@ -55,7 +55,10 @@ const incluye = (termino: string, panel: string): Fila[] => [
   { t: "Citas en tu agenda", basico: true, avanzado: true },
   { t: panel, basico: true, avanzado: true },
   { t: "Informe mensual de resultados", basico: true, avanzado: true },
-  { t: "Confirmación de citas por WhatsApp", basico: false, avanzado: true },
+  // Por correo y no por WhatsApp desde el 2026-09-23 (§14.1 del documento de
+  // producto): WhatsApp no está construido para las clínicas y no se promete
+  // hasta tenerlo probado.
+  { t: "Recordatorio y confirmación de citas por correo", basico: false, avanzado: true },
   { t: "Reunión mensual online", basico: false, avanzado: true },
   // Las dos van DENTRO de la tabla y no en la letra pequeña. Son las dos
   // preguntas que hace todo el mundo en la primera llamada, y descubrirlas
