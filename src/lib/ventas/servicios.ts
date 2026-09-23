@@ -1,6 +1,8 @@
 import "server-only";
+import { createManualLead } from "../imagina-leads";
 import type { CsvRowError } from "../leads-csv";
 import { secretMatches } from "../webhook-auth";
+import { datosParaEmbudo } from "../whatsapp/promocion";
 import { leadDesdeAnuncio } from "./anuncios";
 import { notaFormulario } from "./formulario-web";
 import {
@@ -11,6 +13,7 @@ import {
   getLead,
   getMarcaPorSlug,
   getSecuencia,
+  listActividadLead,
   listContactosLeads,
   listExclusiones,
   listSecuencias,
@@ -22,6 +25,7 @@ import {
 } from "./db";
 import { faseTrasLlamada, seguimientoTrasLlamada, type Fase } from "./dominio";
 import { clasificarLeads, parseVentasLeadsCsv, type LeadNuevo } from "./leads-csv";
+import type { ResultadoAccion } from "./resultado";
 import { parsearSecuencia, validarSecuencia } from "./secuencias";
 import type { CambioFase, Llamada, NotaSeguimiento } from "./validacion";
 
@@ -305,6 +309,63 @@ export async function moverLead(input: { usuaria: Usuaria; leadId: string; fase:
     return registrarActividad({ leadId: lead.id, usuariaId: input.usuaria.id, tipo: "muestras_enviadas", faseNueva: "muestras" });
   }
   return registrarActividad({ leadId: lead.id, usuariaId: input.usuaria.id, tipo: "cambio_fase", faseNueva: input.fase });
+}
+
+/** Texto exacto de la nota que deja «Pasar al embudo»: además de rastro en el
+ *  historial, es la marca que usamos para saber si un lead ya se promocionó. */
+const NOTA_PASADO_AL_EMBUDO = "Pasado al embudo principal";
+
+/** ¿Este lead ya se pasó al embudo principal? Se mira el historial en vez de
+ *  guardar un flag aparte: la nota que deja la propia acción es la fuente de
+ *  verdad, así que no hay dos sitios que puedan desincronizarse. */
+async function yaPasadoAlEmbudo(leadId: string): Promise<boolean> {
+  const actividad = await listActividadLead(leadId);
+  return actividad.some((a) => a.tipo === "nota" && a.nota === NOTA_PASADO_AL_EMBUDO);
+}
+
+/**
+ * Pasa un lead de WhatsApp (marca `dinkbit`) al embudo del CRM principal.
+ * Siempre a mano, desde un botón: nunca automático. Crea el lead en
+ * `imagina_leads` con `channel: "WhatsApp"` y deja una nota en el historial
+ * del lead de origen para que quede constancia de quién y cuándo.
+ *
+ * Idempotente: si se pulsa el botón dos veces (doble clic, reintento de red),
+ * la segunda vez no crea un lead duplicado en el CRM — se detecta por la nota
+ * que dejó la primera vez y se responde `ok` sin volver a escribir nada.
+ */
+export async function pasarLeadAlEmbudo(input: { usuaria: Usuaria; leadId: string }): Promise<ResultadoAccion> {
+  const lead = await getLead(input.leadId);
+  if (!lead) return { ok: false, error: "Lead no encontrado." };
+
+  if (await yaPasadoAlEmbudo(lead.id)) {
+    return { ok: true, mensaje: "Este lead ya se había pasado al embudo principal." };
+  }
+
+  const datos = datosParaEmbudo(lead);
+  const creado = await createManualLead({
+    name: datos.name,
+    phone: datos.phone,
+    channel: datos.channel,
+    campaign: datos.campaign,
+    email: lead.email,
+    website: lead.web,
+  });
+  if (!creado.ok) return { ok: false, error: "No se pudo crear el lead en el embudo principal." };
+
+  const actividad = await registrarActividad({
+    leadId: lead.id,
+    usuariaId: input.usuaria.id,
+    tipo: "nota",
+    nota: NOTA_PASADO_AL_EMBUDO,
+  });
+  if (!actividad.ok) {
+    // El lead ya está creado en el CRM principal: no deshacemos eso por un
+    // fallo al dejar la nota. Pero sin la nota se pierde la idempotencia y el
+    // rastro, así que se avisa en el servidor para revisarlo a mano.
+    console.error("[ventas/servicios] pasarLeadAlEmbudo: no se pudo registrar la actividad:", actividad.error);
+  }
+
+  return { ok: true, mensaje: "Lead pasado al embudo principal." };
 }
 
 /* Secuencias de WhatsApp ----------------------------------------------------- */

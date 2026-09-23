@@ -125,6 +125,12 @@ export const ORIGEN_LABELS: Record<Origen, string> = {
 export const ESTADOS_MARCA = ["activa", "pausada", "finalizada"] as const;
 export type EstadoMarca = (typeof ESTADOS_MARCA)[number];
 
+/** Slug de la marca de los leads de WhatsApp (anuncios CTWA). Es la única
+ *  marca con botón «Pasar al embudo»: promociona un lead al CRM principal con
+ *  `channel: "WhatsApp"`, así que no tiene sentido para leads de otras marcas
+ *  del módulo de ventas. */
+export const MARCA_DINKBIT_SLUG = "dinkbit";
+
 /* -------------------------------------------------------------------------- */
 /* Reglas de llamada                                                          */
 /* -------------------------------------------------------------------------- */
