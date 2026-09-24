@@ -46,14 +46,46 @@ export function verticalDeAnuncio(anuncio: string | null): Vertical {
   return (anuncio && VERTICAL_POR_ANUNCIO[anuncio]) || "generico";
 }
 
-/** La pregunta que abre la cualificación, por sector. */
-const PREGUNTA: Record<Vertical, string> = {
+/**
+ * Quien firma el mensaje. Aquí arriba para cambiarlo en un sitio si algún día
+ * atiende otra persona.
+ */
+const REMITENTE = "Paula";
+
+/**
+ * Presentación y opciones, por sector.
+ *
+ * Las opciones van NUMERADAS y no como botones de WhatsApp a propósito:
+ * todavía no sabemos procesar una pulsación —llega como mensaje interactivo y
+ * `entrante.ts` la guardaría sin texto, perdiendo la respuesta—, mientras que
+ * un número llega como texto normal y queda en la ficha del lead. Los botones
+ * llegan con la entrega 2.
+ *
+ * Las tres opciones de cada sector son las mismas que las de su secuencia en
+ * `ventas/secuencias-plantilla.ts`, para que el vocabulario no se bifurque.
+ */
+const CUERPO: Record<Vertical, string> = {
   dental:
-    "Para ir adelantando: ¿qué te pasa más, que faltan pacientes nuevos o que entran y se quedan en la primera visita sin empezar el tratamiento?",
+    `Soy ${REMITENTE}, de Escala. Nos ocupamos de todo el camino: desde que alguien busca dentista en Google o Instagram hasta que se sienta en tu sillón.\n\n` +
+    "Para contarte lo que encaja contigo, ¿qué es lo que más te pasa ahora?\n" +
+    "1. Faltan pacientes nuevos\n" +
+    "2. Vienen a la primera visita y no siguen\n" +
+    "3. No vuelven después del tratamiento\n\n" +
+    "Responde con el número y seguimos.",
   psicologia:
-    "Para ir adelantando: ¿cómo tienes la agenda ahora mismo, con huecos que te gustaría llenar o llena pero a base de boca a boca?",
+    `Soy ${REMITENTE}, de Escala. Nos ocupamos de todo el camino: desde que alguien busca psicólogo en Google o Instagram hasta que se sienta en tu consulta.\n\n` +
+    "Para contarte lo que encaja contigo, ¿qué es lo que más te pasa ahora?\n" +
+    "1. Huecos en la agenda\n" +
+    "2. Vienen una vez y no vuelven\n" +
+    "3. Dependo del boca a boca\n\n" +
+    "Responde con el número y seguimos.",
   generico:
-    "Para ir adelantando: ¿qué te urge más ahora mismo, que entren más pacientes nuevos o que los que entran se queden?",
+    `Soy ${REMITENTE}, de Escala. Nos ocupamos de todo el camino: desde que alguien os busca en Google o Instagram hasta que ese paciente llega a tu consulta.\n\n` +
+    "Para contarte lo que encaja contigo, ¿qué es lo que más te pasa ahora?\n" +
+    "1. Faltan pacientes nuevos\n" +
+    "2. Llegan pero no se quedan\n" +
+    "3. Dependo del boca a boca\n\n" +
+    "Responde con el número y seguimos.",
 };
 
 export function textoAutorespuesta({
@@ -67,6 +99,6 @@ export function textoAutorespuesta({
   const entrada = titular
     ? `¡Hola! Gracias por escribirnos desde el anuncio «${titular}».`
     : "¡Hola! Gracias por escribirnos.";
-  const texto = `${entrada} Soy del equipo de Dinkbit y te leo enseguida.\n\n${PREGUNTA[verticalDeAnuncio(anuncio)]}`;
+  const texto = `${entrada}\n\n${CUERPO[verticalDeAnuncio(anuncio)]}`;
   return texto.slice(0, LIMITE_WHATSAPP);
 }

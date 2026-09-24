@@ -28,6 +28,18 @@ describe("textoAutorespuesta", () => {
     expect(texto).not.toContain("«");
   });
 
+  it("se presenta, explica qué es Escala y ofrece opciones numeradas", () => {
+    // Las opciones van numeradas y no como botones de WhatsApp porque todavía
+    // no sabemos procesar una pulsación: llegaría como mensaje interactivo y
+    // se perdería la respuesta. Con números llega como texto y queda guardada.
+    const texto = textoAutorespuesta({ titularAnuncio: null, anuncio: null });
+    expect(texto).toContain("Escala");
+    expect(texto).toContain("1.");
+    expect(texto).toContain("2.");
+    expect(texto).toContain("3.");
+    expect(texto).toMatch(/responde con el número/i);
+  });
+
   it("pregunta por pacientes, no por webs", () => {
     // La autorespuesta solo se dispara con clics de anuncio, y todos los
     // anuncios son de captación de pacientes para clínicas. Preguntar por la
