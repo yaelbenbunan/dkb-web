@@ -102,6 +102,12 @@ function depsFalsas(opts: { enviar?: (waId: string, texto: string) => Promise<Re
         estado,
         ventana_hasta: ventanaHasta.toISOString(),
         ultimo_mensaje_at: new Date().toISOString(),
+        // Campos de la secuencia (tarea 5): sin uso en este test, se dejan en
+        // su estado "todavía no ha empezado".
+        secuencia_id: null,
+        paso_actual: null,
+        datos: {},
+        reanudar_en: null,
       };
       conversaciones.set(clave(marcaId, waId), conv);
       return conv;
@@ -339,6 +345,12 @@ describe("procesarWebhook", () => {
           estado: input.estado,
           ventana_hasta: input.ventanaHasta.toISOString(),
           ultimo_mensaje_at: new Date().toISOString(),
+          // Campos de la secuencia (tarea 5): sin uso en este test, se dejan en
+          // su estado "todavía no ha empezado".
+          secuencia_id: null,
+          paso_actual: null,
+          datos: {},
+          reanudar_en: null,
         };
         conversaciones.set(`${input.marcaId}:${input.waId}`, conv);
         throw new Error("duplicate key value violates unique constraint");

@@ -22,7 +22,7 @@ vi.mock("../../supabase-admin", () => ({
   }),
 }));
 
-import { guardarEntrante, guardarSaliente } from "../db";
+import { actualizarConversacion, guardarEntrante, guardarSaliente } from "../db";
 
 beforeEach(() => {
   upsertMock.mockReset();
@@ -91,5 +91,25 @@ describe("guardarSaliente", () => {
     ).resolves.toBeUndefined();
     expect(errorSpy).toHaveBeenCalled();
     errorSpy.mockRestore();
+  });
+});
+
+describe("actualizarConversacion", () => {
+  // Reutiliza el mismo doble `actualizarConversacionMock` de más arriba: es
+  // el `update(...).eq(...)` de `ventas_conversaciones`, y `actualizarConversacion`
+  // pasa por esa misma llamada.
+  it("guarda el avance de la secuencia sin pisar el resto", async () => {
+    actualizarConversacionMock.mockReturnValue({ error: null });
+    await actualizarConversacion("c1", { pasoActual: "cierre_huecos", datos: { problema_principal: "Huecos" } });
+    const [patch] = actualizarConversacionMock.mock.calls[0];
+    expect(patch).toEqual({ paso_actual: "cierre_huecos", datos: { problema_principal: "Huecos" } });
+  });
+
+  it("distingue «no tocar» de «poner a null» en el paso", async () => {
+    // Terminar una conversación es poner `paso_actual` a null a propósito; no
+    // puede confundirse con «este cambio no toca el paso».
+    actualizarConversacionMock.mockReturnValue({ error: null });
+    await actualizarConversacion("c1", { pasoActual: null });
+    expect(actualizarConversacionMock.mock.calls[0][0]).toEqual({ paso_actual: null });
   });
 });

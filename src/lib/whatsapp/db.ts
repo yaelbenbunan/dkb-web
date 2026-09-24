@@ -20,6 +20,16 @@ export interface Conversacion {
   estado: "bot" | "humana" | "cerrada";
   ventana_hasta: string | null;
   ultimo_mensaje_at: string;
+  /** Por dónde va la conversación dentro de su guion. El hilo de mensajes NO
+   *  se duplica aquí (ya vive en `ventas_mensajes`): solo el puntero. */
+  secuencia_id: string | null;
+  /** `null` puede significar "todavía no ha empezado" o "ya terminó": ambos
+   *  casos se resuelven fuera, mirando `secuencia_id`. */
+  paso_actual: string | null;
+  datos: Record<string, string>;
+  /** Solo tiene valor si un paso usó `esperar_dias`. Sirve para ver, sin
+   *  cron todavía, que una conversación quedó parada esperando. */
+  reanudar_en: string | null;
 }
 
 export interface Mensaje {
@@ -87,15 +97,30 @@ export async function crearConversacion(input: {
 
 export async function actualizarConversacion(
   id: string,
-  cambios: { estado?: Conversacion["estado"]; leadId?: string | null; ventanaHasta?: Date },
+  cambios: {
+    estado?: Conversacion["estado"];
+    leadId?: string | null;
+    ventanaHasta?: Date;
+    secuenciaId?: string | null;
+    pasoActual?: string | null;
+    datos?: Record<string, string>;
+    reanudarEn?: Date | null;
+  },
 ): Promise<void> {
-  // `leadId` puede venir explícitamente a `null` (desvincular el lead), así
-  // que se distingue "no tocar" de "poner a null" mirando si la clave llegó,
-  // no si su valor es falsy.
+  // `leadId`/`pasoActual`/`secuenciaId`/`reanudarEn` pueden venir
+  // explícitamente a `null` (desvincular el lead, o terminar la secuencia a
+  // propósito poniendo el paso a null), así que se distingue "no tocar" de
+  // "poner a null" mirando si la clave llegó, no si su valor es falsy.
   const patch: Record<string, unknown> = {};
   if (cambios.estado !== undefined) patch.estado = cambios.estado;
   if (cambios.leadId !== undefined) patch.lead_id = cambios.leadId;
   if (cambios.ventanaHasta !== undefined) patch.ventana_hasta = cambios.ventanaHasta.toISOString();
+  if (cambios.secuenciaId !== undefined) patch.secuencia_id = cambios.secuenciaId;
+  if (cambios.pasoActual !== undefined) patch.paso_actual = cambios.pasoActual;
+  if (cambios.datos !== undefined) patch.datos = cambios.datos;
+  if (cambios.reanudarEn !== undefined) {
+    patch.reanudar_en = cambios.reanudarEn ? cambios.reanudarEn.toISOString() : null;
+  }
   if (Object.keys(patch).length === 0) return;
 
   const { error } = await db().from("ventas_conversaciones").update(patch).eq("id", id);
