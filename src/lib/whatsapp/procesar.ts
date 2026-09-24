@@ -11,7 +11,7 @@ import {
 import { opcionesAutorespuesta, REMITENTE, textoAutorespuesta } from "./autorespuesta";
 import { decidir, extraerEstados, extraerMensajes, type MensajeEntrante } from "./entrante";
 import { elegirSecuencia } from "./eleccion";
-import { aEstadoGuardado, mensajesAEnviar, type EstadoGuardado } from "./guion";
+import { aEstadoGuardado, desdeEstadoGuardado, indiceDeBoton, mensajesAEnviar, type EstadoGuardado } from "./guion";
 import { crearMensajero, type MensajeroWhatsApp } from "./mensajero";
 import { calcularVentana, telefonoDeWaId } from "./ventana";
 import { MARCA_DINKBIT_SLUG } from "../ventas/dominio";
@@ -24,7 +24,13 @@ import {
   type SecuenciaRow,
 } from "../ventas/db";
 import { parsearSecuencia } from "../ventas/secuencias";
-import { iniciarSimulacion, type ContextoSimulacion, type EntradaConversacion } from "../ventas/simulador";
+import {
+  iniciarSimulacion,
+  responderBoton,
+  responderTexto,
+  type ContextoSimulacion,
+  type EntradaConversacion,
+} from "../ventas/simulador";
 
 /**
  * Orquestador del webhook de WhatsApp Cloud API: clasifica cada mensaje con
@@ -217,6 +223,80 @@ function arrancarSecuencia(
   };
 }
 
+/** Lo que hace falta tras avanzar la secuencia con la respuesta del lead. */
+interface SecuenciaAvanzada {
+  estado: EstadoGuardado;
+  mensajes: EntradaConversacion[];
+  avisos: string[];
+}
+
+/**
+ * Reconstruye el estado del motor desde lo que ya estaba guardado en la
+ * conversación (`guardado`), le aplica la respuesta del lead —un botón si
+ * `indiceDeBoton` traduce el id que mandó Meta, texto libre si no (tarea 8,
+ * decisión 5 la delega a `responderBoton`/`responderTexto`, no a este
+ * módulo)— y devuelve lo que hay que mandar y lo que hay que guardar.
+ *
+ * Devuelve `null` si `secuenciaId` ya no está entre las secuencias de la
+ * marca o su forma ya no parsea (alguien la editó o archivó con esta
+ * conversación en vuelo): el llamador lo trata igual que "nada que avanzar"
+ * y entrega la conversación a una persona, en vez de dejar al lead sin
+ * respuesta o de romper el webhook.
+ */
+function avanzarSecuencia(
+  secuencias: SecuenciaRow[],
+  secuenciaId: string,
+  guardado: EstadoGuardado,
+  mensaje: Pick<MensajeEntrante, "botonId" | "texto">,
+  marcaNombre: string,
+  leadDatos: LeadDatos,
+): SecuenciaAvanzada | null {
+  const fila = secuencias.find((s) => s.id === secuenciaId);
+  if (!fila) {
+    console.error(`[whatsapp] la secuencia "${secuenciaId}" ya no existe entre las de la marca, se pasa a humana`);
+    return null;
+  }
+
+  const parseada = parsearSecuencia(fila.pasos);
+  if (!parseada.ok) {
+    console.error(`[whatsapp] la secuencia "${secuenciaId}" no parsea al avanzarla, se pasa a humana: ${parseada.error}`);
+    return null;
+  }
+
+  const ctx: ContextoSimulacion = {
+    valores: {
+      marca: marcaNombre,
+      remitente: REMITENTE,
+      negocio: leadDatos?.negocio ?? null,
+      contacto: leadDatos?.contacto ?? null,
+      ciudad: leadDatos?.ciudad ?? null,
+    },
+    // La fase del lead no forma parte de `EstadoGuardado` (no se persiste
+    // entre webhooks: no hay hoy dónde leerla/escribirla por conversación),
+    // así que se reconstruye siempre desde "nuevo", igual que al arrancar en
+    // `arrancarSecuencia`. Solo importa para `ruta.fase`, que esta tarea no
+    // usa todavía.
+    faseInicial: "nuevo",
+  };
+
+  // Precondición de `mensajesAEnviar` (ver su JSDoc en guion.ts): `anterior`
+  // tiene que ser EXACTAMENTE el estado que sirvió de base a la transición
+  // que produce `nuevo`. Aquí es el estado reconstruido: el motor no
+  // persiste el suyo propio entre webhooks, así que no hay otro candidato.
+  const anterior = desdeEstadoGuardado(guardado, ctx.faseInicial);
+  const indice = indiceDeBoton(mensaje.botonId);
+  const nuevo =
+    indice !== null
+      ? responderBoton(parseada.secuencia, anterior, indice, ctx)
+      : responderTexto(parseada.secuencia, anterior, mensaje.texto ?? "", ctx);
+
+  return {
+    estado: aEstadoGuardado(nuevo),
+    mensajes: mensajesAEnviar(anterior, nuevo),
+    avisos: nuevo.avisos,
+  };
+}
+
 /** Aplica un cambio a una conversación existente y devuelve la copia ya actualizada. */
 async function actualizarYDevolver(
   deps: Pick<Deps, "actualizarConversacion">,
@@ -382,7 +462,13 @@ async function procesarMensaje(
         deAnuncio = true;
         break;
       case "guardar_respuesta":
-        estado = "humana";
+        // Si hay una secuencia en marcha (secuencia_id Y paso_actual), la
+        // conversación se queda en "bot" aquí: FASE B (abajo) intenta
+        // avanzarla y decide el estado final —sigue en "bot" si el motor no
+        // levanta ningún aviso, pasa a "humana" si lo hace o si algo falla.
+        // Sin secuencia en marcha no hay bot que interprete la respuesta:
+        // se comporta como siempre, directo a una persona.
+        estado = conversacionExistente?.secuencia_id && conversacionExistente?.paso_actual ? "bot" : "humana";
         deAnuncio = false;
         break;
       case "solo_guardar":
@@ -513,6 +599,110 @@ async function procesarMensaje(
       // arriba cortaría igualmente un reintento de Meta. Solo queda
       // registrarlo para que alguien lo note.
       console.error("[whatsapp] fallo mandando el primer mensaje de la conversación (puede que sí se enviara)", mensaje.waId, e);
+    }
+  } else if (decision.accion === "guardar_respuesta") {
+    // Solo se avanza si la conversación sigue en `bot` y tiene un paso
+    // guardado (decisión 2 del brief de la tarea 8): una conversación en
+    // `humana` ya la lleva una persona, y sin `paso_actual` no hay de dónde
+    // partir. `desdeEstadoGuardado` ya se protege sola derivando `terminada`
+    // de que no haya paso, pero no basta apoyarse solo en eso — se comprueba
+    // aquí también antes de tocar nada.
+    // Capturados en `const` (no releídos de `conversacion` tras el `await`
+    // de abajo): así el estrechado de tipos de este `if` (de `string | null`
+    // a `string`) sigue siendo válido después del punto de suspensión.
+    const secuenciaId = conversacion.secuencia_id;
+    const pasoGuardado = conversacion.paso_actual;
+    if (conversacion.estado === "bot" && secuenciaId && pasoGuardado) {
+      try {
+        const secuencias = await deps.listSecuencias(marcaId);
+        const avanzada = avanzarSecuencia(
+          secuencias,
+          secuenciaId,
+          { pasoActual: pasoGuardado, datos: conversacion.datos },
+          mensaje,
+          marcaNombre,
+          leadDatos,
+        );
+
+        if (avanzada) {
+          // Igual que al arrancar: un paso con botones se manda con
+          // `enviarBotones`, uno sin botones con `enviarTexto` (decisión 5).
+          for (const entrada of avanzada.mensajes) {
+            const resultado =
+              entrada.botones && entrada.botones.length > 0
+                ? await deps.mensajero.enviarBotones(mensaje.waId, entrada.texto, entrada.botones)
+                : await deps.mensajero.enviarTexto(mensaje.waId, entrada.texto);
+            await deps.guardarSaliente({
+              conversacionId: conversacion.id,
+              wamid: resultado.ok ? resultado.wamid : null,
+              texto: entrada.texto,
+              error: resultado.ok ? undefined : resultado.error,
+            });
+          }
+
+          // Cualquier aviso del motor (`avisar: true` de una ruta, la
+          // respuesta libre que se sale del guion, o el destino de una ruta
+          // que ya no existe) significa que el bot no debe seguir solo: se
+          // entrega la conversación a una persona.
+          const pasaAHumana = avanzada.avisos.length > 0;
+          try {
+            await deps.actualizarConversacion(conversacion.id, {
+              pasoActual: avanzada.estado.pasoActual,
+              datos: avanzada.estado.datos,
+              ...(pasaAHumana ? { estado: "humana" as const } : {}),
+            });
+            if (pasaAHumana) conversacion = { ...conversacion, estado: "humana" };
+          } catch (e) {
+            // El mensaje YA se mandó (y ya se guardó como saliente, arriba).
+            // Igual que al arrancar (Hallazgo 2, ronda de arreglos 1): si
+            // este guardado falla, nadie vuelve a intentarlo —la idempotencia
+            // por wamid lo impide—, así que se pasa a `humana` para que la
+            // conversación no se quede muda sin que nadie lo note.
+            console.error(
+              "[whatsapp] fallo guardando el avance de la secuencia, se pasa a humana",
+              mensaje.waId,
+              e,
+            );
+            try {
+              await deps.actualizarConversacion(conversacion.id, { estado: "humana" });
+              conversacion = { ...conversacion, estado: "humana" };
+            } catch (e2) {
+              console.error(
+                "[whatsapp] fallo también pasando la conversación a humana tras el error anterior",
+                mensaje.waId,
+                e2,
+              );
+            }
+          }
+
+          if (pasaAHumana && leadId) {
+            try {
+              const resultado = await registrarActividad({
+                leadId,
+                usuariaId: null,
+                tipo: "nota",
+                nota: `Avisar a la comercial: ${avanzada.avisos.join("; ")}`,
+              });
+              if (!resultado.ok) {
+                console.error("[whatsapp] fallo registrando el aviso de la secuencia", leadId, resultado.error);
+              }
+            } catch (e) {
+              console.error("[whatsapp] fallo registrando el aviso de la secuencia", leadId, e);
+            }
+          }
+        } else {
+          // La secuencia ya no está entre las de la marca o no parsea
+          // (avanzarSecuencia ya lo registró con console.error): no hay nada
+          // que avanzar, se entrega a una persona en vez de dejar al lead
+          // sin respuesta.
+          await deps.actualizarConversacion(conversacion.id, { estado: "humana" });
+          conversacion = { ...conversacion, estado: "humana" };
+        }
+      } catch (e) {
+        // Best-effort (fase B): un fallo aquí (p.ej. `listSecuencias` cae)
+        // nunca debe tumbar el procesado, solo queda registrado.
+        console.error("[whatsapp] fallo avanzando la secuencia con la respuesta del lead", mensaje.waId, e);
+      }
     }
   }
 

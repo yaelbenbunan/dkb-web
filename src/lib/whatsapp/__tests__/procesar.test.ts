@@ -74,6 +74,30 @@ const mensajeDeAnuncio = (overrides: Record<string, unknown> = {}) => ({
 const sobreDeAnuncio = (anuncio = "120200000000") =>
   sobreConMensajes([mensajeDeAnuncio({ referral: { source_id: anuncio, headline: "Tu web en 7 días" } })]);
 
+/* Sobres de respuesta del lead (tarea 8) ------------------------------------ */
+
+// Sin `referral`: `decidir()` los clasifica como "guardar_respuesta" cuando
+// la conversación ya está en "bot" (que es justo el caso que arranca la
+// secuencia). `wamid` incorpora el id del botón y el texto para que dos
+// llamadas a `sobrePulsacion`/`sobreTexto` con distinto contenido no choquen
+// por idempotencia sin querer, y para que reusar la MISMA llamada (el test
+// del reintento) sí produzca el mismo wamid a propósito.
+const sobrePulsacion = (botonId: string, tituloTexto: string, waId = "34660415514") =>
+  sobreConMensajes([
+    {
+      id: `wamid.BOTON.${botonId}.${tituloTexto}`,
+      from: waId,
+      timestamp: "1790000100",
+      type: "interactive",
+      interactive: { type: "button_reply", button_reply: { id: botonId, title: tituloTexto } },
+    },
+  ]);
+
+const sobreTexto = (texto: string, waId = "34660415514") =>
+  sobreConMensajes([
+    { id: `wamid.TEXTO.${texto}`, from: waId, timestamp: "1790000100", type: "text", text: { body: texto } },
+  ]);
+
 /* Secuencias de prueba (tarea 7) --------------------------------------------- */
 
 /** Un paso con tres botones que cierran la conversación: basta para
@@ -133,6 +157,57 @@ const SECUENCIA_CON_CONTACTO: Secuencia = {
  *  sin obligar a cada test a escribirlas. */
 type SecuenciaFalsa = Pick<SecuenciaRow, "id" | "estado" | "anuncios" | "pasos">;
 
+/* Secuencias de prueba (tarea 8) --------------------------------------------- */
+
+/** Un paso inicial con dos botones que llevan cada uno a su propio cierre:
+ *  sirve para comprobar que el botón pulsado lleva a SU rama y no a otra. */
+const SECUENCIA_ACTIVA_PASOS: Secuencia = {
+  version: 1,
+  inicio: "inicio",
+  pasos: {
+    inicio: {
+      tipo: "mensaje",
+      texto: "¿Cuántas veces vienen tus clientes?",
+      botones: [
+        { texto: "Vienen bastante", ruta: { ir_a: "cierre_uno" } },
+        { texto: "Vienen 1 vez y ya", ruta: { ir_a: "cierre_dos" } },
+      ],
+    },
+    cierre_uno: {
+      tipo: "mensaje",
+      texto: "Vale, aquí el mensaje del cierre uno",
+      botones: [],
+      ruta: { terminar: true },
+    },
+    cierre_dos: {
+      tipo: "mensaje",
+      texto: "Vale, aquí el mensaje del cierre dos",
+      botones: [],
+      ruta: { terminar: true },
+    },
+  },
+};
+
+const SECUENCIA_ACTIVA: SecuenciaFalsa = {
+  id: "s1",
+  estado: "activa",
+  anuncios: ["AD1"],
+  pasos: SECUENCIA_ACTIVA_PASOS,
+};
+
+/** Igual que `SECUENCIA_ACTIVA_PASOS` pero sin el paso «cierre_uno»: simula
+ *  que alguien editó la secuencia con esta conversación en vuelo, así que su
+ *  `paso_actual` guardado ("inicio") sigue existiendo pero la ruta de uno de
+ *  sus botones ya no lleva a ningún sitio. */
+const SECUENCIA_SIN_ESE_PASO: Secuencia = {
+  version: 1,
+  inicio: "inicio",
+  pasos: {
+    inicio: SECUENCIA_ACTIVA_PASOS.pasos.inicio,
+    cierre_dos: SECUENCIA_ACTIVA_PASOS.pasos.cierre_dos,
+  },
+};
+
 /** Lo que un lead falso puede traer para rellenar `ContextoSimulacion`. Todo
  *  opcional: la mayoría de tests no necesitan estos datos, así que
  *  `depsFalsas` los rellena con relleno neutro (negocio genérico, sin
@@ -160,6 +235,17 @@ function depsFalsas(
   }));
   let contadorConv = 0;
   let contadorLead = 0;
+
+  // `registrarActividad` no vive en `Deps` (es wiring de dominio, ver la
+  // cabecera del fichero): se mockea a nivel de módulo. Aquí se le da una
+  // implementación que además deja rastro en `actividades`, para que los
+  // tests de la tarea 8 puedan comprobar que se avisó a la comercial sin
+  // acoplarse a cuántas veces se llama ni en qué orden.
+  const actividades: Array<{ leadId: string; tipo: string; nota: string }> = [];
+  registrarActividadMock.mockReset().mockImplementation(async (input: { leadId: string; tipo: string; nota: string }) => {
+    actividades.push({ leadId: input.leadId, tipo: input.tipo, nota: input.nota });
+    return { ok: true };
+  });
 
   const clave = (marcaId: string, waId: string) => `${marcaId}:${waId}`;
   /** Completa un `LeadFalso` con relleno neutro, para que el resto del
@@ -251,7 +337,7 @@ function depsFalsas(
     },
   };
 
-  return { deps, conversaciones, salientes, leadsPorTelefono, estadosSeteados, enviosMensajero };
+  return { deps, conversaciones, salientes, leadsPorTelefono, estadosSeteados, enviosMensajero, secuencias, actividades };
 }
 
 /* Tests ------------------------------------------------------------------ */
@@ -607,5 +693,51 @@ describe("procesarWebhook", () => {
     expect(conv.estado).toBe("humana");
     expect(errorSpy).toHaveBeenCalled();
     errorSpy.mockRestore();
+  });
+
+  /* Tarea 8: la respuesta del lead avanza la secuencia --------------------- */
+
+  it("el botón pulsado lleva a su rama", async () => {
+    const { deps, salientes } = depsFalsas({ secuencias: [SECUENCIA_ACTIVA] });
+
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+    await procesarWebhook({ cuerpo: sobrePulsacion("opcion_2", "Vienen 1 vez y ya"), deps });
+
+    expect(salientes[1].texto).toContain("cierre dos");
+  });
+
+  it("un reintento de Meta no avanza la secuencia dos veces", async () => {
+    const { deps, salientes } = depsFalsas({ secuencias: [SECUENCIA_ACTIVA] });
+
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+    const pulsacion = sobrePulsacion("opcion_2", "Vienen 1 vez y ya");
+    await procesarWebhook({ cuerpo: pulsacion, deps });
+    await procesarWebhook({ cuerpo: pulsacion, deps });
+
+    expect(salientes).toHaveLength(2);
+  });
+
+  it("texto libre con botones delante para la secuencia y avisa", async () => {
+    const { deps, conversaciones, actividades } = depsFalsas({ secuencias: [SECUENCIA_ACTIVA] });
+
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+    await procesarWebhook({ cuerpo: sobreTexto("prefiero que me llaméis"), deps });
+
+    const conv = [...conversaciones.values()][0];
+    expect(conv.estado).toBe("humana");
+    expect(actividades.some((a) => a.nota.includes("Avisar"))).toBe(true);
+  });
+
+  it("si el paso guardado ya no existe, termina con aviso en vez de romper", async () => {
+    // Pasa cuando alguien edita la secuencia con conversaciones en vuelo.
+    const { deps, conversaciones, secuencias } = depsFalsas({ secuencias: [SECUENCIA_ACTIVA] });
+
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+    secuencias[0].pasos = SECUENCIA_SIN_ESE_PASO;
+
+    await expect(
+      procesarWebhook({ cuerpo: sobrePulsacion("opcion_1", "Huecos en la agenda"), deps }),
+    ).resolves.toBeDefined();
+    expect([...conversaciones.values()][0].estado).toBe("humana");
   });
 });
