@@ -35,9 +35,15 @@ export type Decision =
   | { accion: "guardar_respuesta" }
   | { accion: "solo_guardar" };
 
-/** Guarda genérica de "objeto no nulo", para no repetir el chequeo en cada paso. */
+/**
+ * Guarda genérica de "objeto no nulo", para no repetir el chequeo en cada
+ * paso. Excluye arrays a propósito (ronda de arreglos 1, minor): `typeof []`
+ * también da `"object"`, así que sin este descarte un `interactive: []` o un
+ * `button_reply: []` colaría como objeto válido y el `.id`/`.title` leído
+ * encima sería `undefined` en vez de descartarse limpiamente por forma.
+ */
 function esObjeto(valor: unknown): valor is Record<string, unknown> {
-  return typeof valor === "object" && valor !== null;
+  return typeof valor === "object" && valor !== null && !Array.isArray(valor);
 }
 
 /**
@@ -96,37 +102,39 @@ const TIMESTAMP_MINIMO_SEGUNDOS = 946684800;
 const DIEZ_ANIOS_EN_SEGUNDOS = 10 * 365 * 24 * 60 * 60;
 
 /**
- * Texto aprovechable de un mensaje entrante. Cubre el texto normal y las dos
+ * Texto e id de botón del mensaje entrante, extraídos JUNTOS en una sola
+ * pasada sobre el mismo objeto de respuesta. Cubre el texto normal y las dos
  * formas en que WhatsApp devuelve una opción pulsada (botón y lista); lo demás
  * —imagen, audio, ubicación, o cualquier `interactive` que Meta añada en el
- * futuro— queda en `null`, que es lo que hace que no cuente como respuesta.
+ * futuro— deja ambos en `null`, que es lo que hace que no cuente como
+ * respuesta.
+ *
+ * Ronda de arreglos 1 (tarea 2): antes `texto` y su `botonId` se sacaban con
+ * dos funciones que recorrían por separado el mismo `button_reply` /
+ * `list_reply`, cada una mirando un campo distinto (`title` una, `id` la
+ * otra). Si el payload traía uno sin el otro —p. ej. un `id` numérico junto
+ * a un `title` válido—, el mensaje se guardaba CON rótulo pero SIN id. El
+ * motor de secuencias avanza por ÍNDICE traducido a través del id: sin él,
+ * el lead pulsa un botón y la conversación se va por el camino de "texto
+ * libre", que la para — un fallo silencioso, porque `texto` sigue viéndose
+ * bien en la bandeja. Por eso ahora los dos salen de la MISMA comprobación:
+ * o `id` y `title` son ambos string y se devuelven los dos, o no se cuenta
+ * ninguno.
  */
-function textoDelMensaje(tipo: string, m: Record<string, unknown>): string | null {
+function respuestaDelMensaje(tipo: string, m: Record<string, unknown>): { texto: string | null; botonId: string | null } {
   if (tipo === "text") {
-    return esObjeto(m.text) && typeof m.text.body === "string" ? m.text.body : null;
+    const texto = esObjeto(m.text) && typeof m.text.body === "string" ? m.text.body : null;
+    return { texto, botonId: null };
   }
   if (tipo === "interactive" && esObjeto(m.interactive)) {
     for (const clave of ["button_reply", "list_reply"] as const) {
       const respuesta = m.interactive[clave];
-      if (esObjeto(respuesta) && typeof respuesta.title === "string") return respuesta.title;
+      if (esObjeto(respuesta) && typeof respuesta.id === "string" && typeof respuesta.title === "string") {
+        return { texto: respuesta.title, botonId: respuesta.id };
+      }
     }
   }
-  return null;
-}
-
-/**
- * Id del botón o de la opción de lista que pulsó el lead. El motor de
- * secuencias avanza por ÍNDICE, y el id (`opcion_1`, `opcion_2`…) es lo que
- * permite traducirlo sin comparar rótulos: comparar textos se rompería en
- * cuanto alguien edite el texto de un botón en el panel.
- */
-function botonDelMensaje(tipo: string, m: Record<string, unknown>): string | null {
-  if (tipo !== "interactive" || !esObjeto(m.interactive)) return null;
-  for (const clave of ["button_reply", "list_reply"] as const) {
-    const respuesta = m.interactive[clave];
-    if (esObjeto(respuesta) && typeof respuesta.id === "string") return respuesta.id;
-  }
-  return null;
+  return { texto: null, botonId: null };
 }
 
 export function extraerMensajes(cuerpo: unknown): MensajeEntrante[] {
@@ -164,16 +172,17 @@ export function extraerMensajes(cuerpo: unknown): MensajeEntrante[] {
       }
       const tipo = typeof m.type === "string" ? m.type : "desconocido";
       const recibidoEn = new Date(segundos * 1000);
+      // Texto del mensaje y, si aplica, el id del botón pulsado: el cuerpo
+      // si es de texto, o el rótulo + id del botón/opción de lista si el
+      // lead respondió pulsando. Salen juntos de `respuestaDelMensaje` para
+      // que no pueda haber uno sin el otro (ver su comentario). El resto
+      // (imagen, audio, ubicación) no se puede guardar como respuesta.
+      const { texto, botonId } = respuestaDelMensaje(tipo, m);
       mensajes.push({
         wamid: m.id,
         waId: m.from,
-        // Texto del mensaje: el cuerpo si es de texto, o el rótulo del botón
-        // o de la opción de lista si el lead respondió pulsando. Sin esto
-        // último la pulsación se guardaría vacía y se perdería la respuesta
-        // —justo la que cualifica al lead—. El resto (imagen, audio,
-        // ubicación o pulsación de botón no se puede guardar como respuesta.
-        texto: textoDelMensaje(tipo, m),
-        botonId: botonDelMensaje(tipo, m),
+        texto,
+        botonId,
         tipo,
         recibidoEn,
         referral: referralDeMensaje(m.referral),

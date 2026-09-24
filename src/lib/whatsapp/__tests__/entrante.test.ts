@@ -277,7 +277,11 @@ describe("extraerMensajes — botones", () => {
 
   it("no revienta con un interactive de forma desconocida", () => {
     const [m] = extraerMensajes(sobreBoton({ type: "algo_nuevo_de_meta" }));
+    // Comprueba también `botonId`: antes de la ronda de arreglos 1 solo se
+    // comprobaba `texto`, así que un `botonId` colado no lo habría pillado
+    // ningún test.
     expect(m.texto).toBeNull();
+    expect(m.botonId).toBeNull();
   });
 
   it("conserva el id del botón pulsado, no solo su rótulo", () => {
@@ -296,6 +300,56 @@ describe("extraerMensajes — botones", () => {
         ],
       }),
     );
+    expect(m.botonId).toBeNull();
+  });
+
+  // Ronda de arreglos 1 (Important 2): formas hostiles de `interactive` y de
+  // la respuesta dentro de él. Ninguna puede lanzar, y ninguna puede dejar
+  // `texto` con valor si `botonId` se descarta (o viceversa) — es justo lo
+  // que arregla que ambos salgan de la misma comprobación en
+  // `respuestaDelMensaje`.
+  it("interactive como cadena no revienta y deja texto/botonId a null", () => {
+    const [m] = extraerMensajes({
+      object: "whatsapp_business_account",
+      entry: [
+        {
+          id: "1",
+          changes: [
+            {
+              field: "messages",
+              value: {
+                messages: [
+                  { id: "wamid.I1", from: "34660415514", timestamp: "1790000000", type: "interactive", interactive: "no-objeto" },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    });
+    expect(m.texto).toBeNull();
+    expect(m.botonId).toBeNull();
+  });
+
+  it("interactive como array no revienta y deja texto/botonId a null", () => {
+    const [m] = extraerMensajes(sobreBoton([]));
+    expect(m.texto).toBeNull();
+    expect(m.botonId).toBeNull();
+  });
+
+  it("interactive como null no revienta y deja texto/botonId a null", () => {
+    const [m] = extraerMensajes(sobreBoton(null));
+    expect(m.texto).toBeNull();
+    expect(m.botonId).toBeNull();
+  });
+
+  it("button_reply.id numérico con title válido no cuenta ni el id ni el texto", () => {
+    // Caso del Important 1: si `id` y `title` no son AMBOS string, no se
+    // guarda ninguno de los dos — nunca un rótulo sin su id.
+    const [m] = extraerMensajes(
+      sobreBoton({ type: "button_reply", button_reply: { id: 2, title: "Vienen 1 vez y ya" } }),
+    );
+    expect(m.texto).toBeNull();
     expect(m.botonId).toBeNull();
   });
 });
