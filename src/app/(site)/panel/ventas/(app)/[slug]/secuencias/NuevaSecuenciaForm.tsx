@@ -16,7 +16,7 @@ export function NuevaSecuenciaForm({ slug }: { slug: string }) {
       <h2 style={{ ...titulo, margin: 0 }}>Nueva secuencia</h2>
       <label style={etiqueta}>
         Nombre
-        <input name="nombre" required placeholder="Captación gimnasios" style={campo} />
+        <input name="nombre" required placeholder="Captación octubre" style={campo} />
       </label>
       <label style={etiqueta}>
         Empezar desde

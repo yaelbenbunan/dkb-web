@@ -76,7 +76,7 @@ export function ImportarLeads({ slug }: { slug: string }) {
         </label>
         <label style={{ ...etiqueta, flex: "1 1 220px" }}>
           Nombre de la lista
-          <input name="nombre_lista" placeholder="Gimnasios Madrid septiembre" required style={campo} />
+          <input name="nombre_lista" placeholder="Madrid septiembre" required style={campo} />
         </label>
         <button type="button" onClick={descargarPlantilla} style={botonSecundario}>Descargar plantilla</button>
       </div>

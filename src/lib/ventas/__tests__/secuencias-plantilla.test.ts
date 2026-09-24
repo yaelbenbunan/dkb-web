@@ -24,11 +24,15 @@ describe.each([
     expect(graves).toEqual([]);
   });
 
-  it("solo marca como plantilla el paso de inicio", () => {
+  it("no necesita ninguna plantilla aprobada", () => {
+    // La conversación la arranca el lead pulsando un anuncio Click-to-WhatsApp:
+    // es él quien abre la ventana, así que nuestro primer mensaje es una
+    // respuesta y va en texto libre. Marcarlo como plantilla obligaría a
+    // esperar la aprobación de Meta sin ninguna necesidad.
     const conPlantilla = Object.entries(secuencia.pasos)
       .filter(([, p]) => p.plantilla)
       .map(([id]) => id);
-    expect(conPlantilla).toEqual([secuencia.inicio]);
+    expect(conPlantilla).toEqual([]);
   });
 
   it("avisa a la comercial en algún camino", () => {

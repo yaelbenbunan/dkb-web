@@ -23,10 +23,17 @@
  * Límites del canal que condicionan el copy: 3 botones por mensaje y 20
  * caracteres por botón. Por eso se eligen tres problemas, no cinco.
  *
- * LIMITACIÓN CONOCIDA: el paso de reintento tras la espera de 7 días llega con
- * la ventana de 24 horas ya cerrada, así que en la práctica necesitaría ser
- * una plantilla aprobada por Meta. El motor de la fase 1 solo admite plantilla
- * en el paso de inicio, de modo que esto queda pendiente de la entrega 2.
+ * NINGÚN PASO ES PLANTILLA, y es deliberado: la conversación la arranca el
+ * lead pulsando un anuncio Click-to-WhatsApp, o sea que es él quien abre la
+ * ventana. Nuestro primer mensaje es una respuesta y va en texto libre, sin
+ * pasar por la aprobación de Meta. Si algún día estas secuencias se lanzan en
+ * frío desde el tablero, el primer paso sí tendría que marcarse como
+ * plantilla.
+ *
+ * LIMITACIÓN CONOCIDA: el reintento tras la espera de 7 días llega con la
+ * ventana ya cerrada, así que ese sí necesitaría plantilla aprobada. El motor
+ * de la fase 1 solo la admite en el paso de inicio, de modo que queda
+ * pendiente de la entrega 2.
  */
 
 import { secuenciaVacia, type Secuencia } from "./secuencias";
@@ -49,7 +56,6 @@ export const SECUENCIA_DENTAL: Secuencia = {
   pasos: {
     inicio: {
       tipo: "mensaje",
-      plantilla: true,
       texto:
         "Hola {{contacto}}, soy {{remitente}} de {{marca}}. Trabajamos con clínicas dentales en captación de pacientes.\n\n" +
         "En dental lo caro no suele ser llenar la agenda, sino llenarla de primeras visitas que no acaban en tratamiento. ¿Te cuento en dos minutos cómo lo medimos?",
@@ -126,7 +132,6 @@ export const SECUENCIA_PSICOLOGIA: Secuencia = {
   pasos: {
     inicio: {
       tipo: "mensaje",
-      plantilla: true,
       texto:
         "Hola {{contacto}}, soy {{remitente}} de {{marca}}. Ayudamos a consultas de psicología a llenar los huecos de la agenda.\n\n" +
         "Se puede ser muy buen profesional y tener la agenda a medias: son dos cosas distintas. ¿Te cuento en dos minutos cómo lo trabajamos?",

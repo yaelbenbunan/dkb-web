@@ -15,7 +15,7 @@ import { botonSecundario, campo, etiqueta, tarjeta, titulo } from "../../../../_
 
 /** Valores de ejemplo razonables para las variables que no dependen de la marca ni de quien simula. */
 const EJEMPLOS_POR_DEFECTO: Record<string, string> = {
-  negocio: "Gimnasio Ejemplo",
+  negocio: "Negocio Ejemplo",
   contacto: "Ana",
   ciudad: "Madrid",
 };
