@@ -14,7 +14,7 @@ import { elegirSecuencia } from "./eleccion";
 import { aEstadoGuardado, desdeEstadoGuardado, indiceDeBoton, mensajesAEnviar, type EstadoGuardado } from "./guion";
 import { crearMensajero, type MensajeroWhatsApp } from "./mensajero";
 import { calcularVentana, telefonoDeWaId } from "./ventana";
-import { MARCA_DINKBIT_SLUG } from "../ventas/dominio";
+import { MARCA_DINKBIT_SLUG, type Fase } from "../ventas/dominio";
 import {
   buscarLeadPorContacto,
   crearLeads,
@@ -171,6 +171,17 @@ interface SecuenciaArrancada {
 type LeadDatos = { negocio: string; contacto: string | null; ciudad: string | null } | null;
 
 /**
+ * Fase con la que se reconstruye el estado del motor en cada webhook (ver
+ * `faseInicial` en `arrancarSecuencia`/`avanzarSecuencia`): no es la fase
+ * real del lead, es solo el punto de partida neutro — la fase real no se
+ * persiste entre webhooks (comentario en `avanzarSecuencia`), así que no hay
+ * de dónde leerla. Sirve para detectar si LA RUTA que se acaba de aplicar
+ * asignó una fase: si `estado.fase` ya no es esta, es porque una `ruta.fase`
+ * la cambió en esta misma vuelta (tarea 9), no porque ya viniera así.
+ */
+const FASE_RECONSTRUIDA: Fase = "nuevo";
+
+/**
  * Elige la secuencia que sirve al anuncio del lead, la arranca y devuelve su
  * primer mensaje. Devuelve `null` si ninguna secuencia activa sirve a este
  * anuncio o si la que sirve no parsea (forma inválida en la base, p.ej. tras
@@ -211,7 +222,7 @@ function arrancarSecuencia(
       contacto: leadDatos?.contacto ?? null,
       ciudad: leadDatos?.ciudad ?? null,
     },
-    faseInicial: "nuevo",
+    faseInicial: FASE_RECONSTRUIDA,
   };
   // Al arrancar no hay estado previo: es justo la precondición que documenta
   // el JSDoc de `mensajesAEnviar` (ver guion.ts) para su parámetro `anterior`.
@@ -230,7 +241,16 @@ function arrancarSecuencia(
  * una conversación del bot tiene que verse ahí, no solo en un `console.error`.
  */
 type ResultadoAvance =
-  | { ok: true; estado: EstadoGuardado; mensajes: EntradaConversacion[]; avisos: string[] }
+  | {
+      ok: true;
+      estado: EstadoGuardado;
+      mensajes: EntradaConversacion[];
+      avisos: string[];
+      /** La fase con la que quedó el motor tras esta transición. Comparar
+       *  contra `FASE_RECONSTRUIDA` (el llamador lo hace) es cómo se sabe si
+       *  la ruta aplicada la cambió — ver el JSDoc de esa constante. */
+      fase: Fase;
+    }
   | { ok: false; motivo: string };
 
 /**
@@ -299,10 +319,11 @@ function avanzarSecuencia(
     },
     // La fase del lead no forma parte de `EstadoGuardado` (no se persiste
     // entre webhooks: no hay hoy dónde leerla/escribirla por conversación),
-    // así que se reconstruye siempre desde "nuevo", igual que al arrancar en
-    // `arrancarSecuencia`. Solo importa para `ruta.fase`, que esta tarea no
-    // usa todavía.
-    faseInicial: "nuevo",
+    // así que se reconstruye siempre desde `FASE_RECONSTRUIDA`, igual que al
+    // arrancar en `arrancarSecuencia`. El llamador (tarea 9) compara
+    // `nuevo.fase` contra esta misma constante para saber si `ruta.fase`
+    // cambió algo en esta vuelta.
+    faseInicial: FASE_RECONSTRUIDA,
   };
 
   // Precondición de `mensajesAEnviar` (ver su JSDoc en guion.ts): `anterior`
@@ -328,27 +349,35 @@ function avanzarSecuencia(
     estado: aEstadoGuardado(nuevo),
     mensajes: mensajesAEnviar(anterior, nuevo),
     avisos: nuevo.avisos,
+    fase: nuevo.fase,
   };
 }
 
-/** Deja rastro en la ficha del lead de que la conversación pasó a manos de
- *  una persona y por qué (Hallazgo 2, ronda de arreglos 1 de la tarea 8):
- *  todo lo que saca a un lead del bot tiene que verse en su ficha, no solo
- *  en un log que nadie mira salvo cuando ya hay una queja. Best-effort, como
- *  el resto de FASE B: un fallo aquí solo se registra. */
-async function avisarComercial(leadId: string, motivo: string): Promise<void> {
+/**
+ * Deja rastro en la ficha del lead de lo que decidió el guion: por qué la
+ * conversación pasó a manos de una persona (`motivo`, Hallazgo 2, ronda de
+ * arreglos 1 de la tarea 8) y/o a qué fase se movió el lead (`faseNueva`,
+ * tarea 9). Las dos cosas van en la MISMA llamada a `registrarActividad`
+ * a propósito: `registrarActividad` ya admite `faseNueva` (lo usa
+ * `ventas/servicios.ts` para lo mismo desde el panel), así que separar esto
+ * en dos llamadas solo conseguiría que la comercial viera dos notas para un
+ * único cierre de guion — justo la duplicación que se quiere evitar.
+ * Best-effort, como el resto de FASE B: un fallo aquí solo se registra.
+ */
+async function avisarComercial(leadId: string, cambios: { motivo?: string; faseNueva?: Fase }): Promise<void> {
   try {
     const resultado = await registrarActividad({
       leadId,
       usuariaId: null,
       tipo: "nota",
-      nota: `Avisar a la comercial: ${motivo}`,
+      nota: cambios.motivo ? `Avisar a la comercial: ${cambios.motivo}` : null,
+      faseNueva: cambios.faseNueva ?? null,
     });
     if (!resultado.ok) {
-      console.error("[whatsapp] fallo registrando el aviso a la comercial", leadId, resultado.error);
+      console.error("[whatsapp] fallo registrando el aviso/cambio de fase del lead", leadId, resultado.error);
     }
   } catch (e) {
-    console.error("[whatsapp] fallo registrando el aviso a la comercial", leadId, e);
+    console.error("[whatsapp] fallo registrando el aviso/cambio de fase del lead", leadId, e);
   }
 }
 
@@ -473,6 +502,12 @@ async function procesarMensaje(
   });
 
   let conversacion: Conversacion;
+  // Ver el bloque de `guardar_respuesta` más abajo: se pone a `false` cuando
+  // el motor de la secuencia llega a decidir algo sobre este mensaje (avance
+  // u ok:false), porque en ese caso ya queda su propia nota, más concreta,
+  // vía `avisarComercial`. Se queda en `true` para el resto de casos y para
+  // cuando el motor ni siquiera llega a decidir (p.ej. `listSecuencias` lanza).
+  let notaGenerica = true;
 
   if (decision.accion === "crear_lead_y_responder") {
     // decidir() solo devuelve esta acción cuando mensaje.referral no es
@@ -678,6 +713,18 @@ async function procesarMensaje(
           marcaNombre,
           leadDatos,
         );
+        // El motor llegó a decidir algo (avanzó o no): a partir de aquí, la
+        // nota genérica de más abajo (el texto crudo del lead) se salta —
+        // si hay algo que contar, ya queda dicho en la nota de
+        // `avisarComercial`, más concreta (por qué se avisa, a qué fase se
+        // movió); si no hay nada que avisar, es un paso normal del guion y
+        // anotarlo ensuciaría la ficha sin aportar nada (mismo criterio que
+        // ya usa esta función para una conversación ya en `humana`, ver el
+        // comentario de `registrarNota` más abajo). Si en cambio el motor NI
+        // SIQUIERA llega a decidir (el `catch` de más abajo, p.ej.
+        // `listSecuencias` lanza), `notaGenerica` se queda en `true`: hace
+        // falta el rastro mínimo de que el lead escribió algo.
+        notaGenerica = false;
 
         if (avanzada.ok) {
           // Igual que al arrancar: un paso con botones se manda con
@@ -700,9 +747,25 @@ async function procesarMensaje(
           // que ya no existe) significa que el bot no debe seguir solo: se
           // entrega la conversación a una persona.
           const pasaAHumana = avanzada.avisos.length > 0;
+          // `ruta.fase` cambió en esta vuelta si el motor ya no está en la
+          // fase con la que se reconstruyó el estado (tarea 9: hasta ahora
+          // nadie leía `estado.fase`, así que un cierre que movía la fase del
+          // lead en el guion no se veía reflejado en el CRM).
+          const faseNueva = avanzada.fase !== FASE_RECONSTRUIDA ? avanzada.fase : null;
           try {
             await deps.actualizarConversacion(conversacion.id, {
-              pasoActual: avanzada.estado.pasoActual,
+              // Cuando se pasa a humana, el paso se limpia a `null` A
+              // PROPÓSITO en vez de dejar el que devolvió el motor (tarea 9):
+              // una ruta con `ir_a` a un mensaje de cierre que también avisa
+              // deja `pasoActual` apuntando a ESE mensaje, no a `null` (el
+              // motor solo termina de verdad cuando el lead vuelve a
+              // escribir sobre un paso sin botones, ver `simulador.ts`). Sin
+              // este `null` explícito, un mensaje suelto posterior del lead
+              // volvería a ver `secuencia_id && paso_actual` como verdaderos
+              // (el switch de más arriba en esta función solo mira eso) y
+              // reactivaría el camino del bot sobre una conversación que ya
+              // se entregó a una persona.
+              pasoActual: pasaAHumana ? null : avanzada.estado.pasoActual,
               datos: avanzada.estado.datos,
               ...(pasaAHumana ? { estado: "humana" as const } : {}),
             });
@@ -719,7 +782,11 @@ async function procesarMensaje(
               e,
             );
             try {
-              await deps.actualizarConversacion(conversacion.id, { estado: "humana" });
+              // También aquí se limpia el paso (mismo motivo que arriba): el
+              // guardado normal falló a medias, pero la conversación va a
+              // quedar en `humana` igualmente, y con el mismo riesgo de
+              // reactivarse sola si `paso_actual` se queda con un valor.
+              await deps.actualizarConversacion(conversacion.id, { estado: "humana", pasoActual: null });
               conversacion = { ...conversacion, estado: "humana" };
             } catch (e2) {
               console.error(
@@ -730,18 +797,24 @@ async function procesarMensaje(
             }
           }
 
-          if (pasaAHumana && leadId) {
-            await avisarComercial(leadId, avanzada.avisos.join("; "));
+          if ((pasaAHumana || faseNueva) && leadId) {
+            await avisarComercial(leadId, {
+              motivo: pasaAHumana ? avanzada.avisos.join("; ") : undefined,
+              faseNueva: faseNueva ?? undefined,
+            });
           }
         } else {
           // Nada que avanzar (secuencia borrada/rota, botón u opción que ya
           // no existe — ver el JSDoc de `avanzarSecuencia`): se entrega a una
           // persona en vez de dejar al lead sin respuesta, y se deja el
           // motivo en su ficha (Hallazgo 2, ronda de arreglos 1), no solo en
-          // el `console.error` que ya dejó `avanzarSecuencia`.
-          await deps.actualizarConversacion(conversacion.id, { estado: "humana" });
+          // el `console.error` que ya dejó `avanzarSecuencia`. El paso se
+          // limpia a `null` por el mismo motivo que arriba (tarea 9): sin
+          // esto, un segundo mensaje suelto del lead volvería a intentar
+          // avanzar la MISMA secuencia rota y duplicaría este aviso.
+          await deps.actualizarConversacion(conversacion.id, { estado: "humana", pasoActual: null });
           conversacion = { ...conversacion, estado: "humana" };
-          if (leadId) await avisarComercial(leadId, avanzada.motivo);
+          if (leadId) await avisarComercial(leadId, { motivo: avanzada.motivo });
         }
       } catch (e) {
         // Best-effort (fase B): un fallo aquí (p.ej. `listSecuencias` cae)
@@ -757,9 +830,16 @@ async function procesarMensaje(
   // previa y ya era un lead conocido por teléfono ("solo_guardar" de
   // primer contacto). Si la conversación YA estaba en marcha (`humana`), no
   // se anota cada mensaje suelto — eso ensuciaría la ficha sin aportar nada.
+  //
+  // `notaGenerica` (tarea 9): cuando el motor de la secuencia llegó a
+  // decidir algo sobre este mensaje, ya deja su propia nota vía
+  // `avisarComercial` (con el motivo del aviso y/o la fase nueva) — anotar
+  // ADEMÁS el texto crudo aquí duplicaría la nota para el mismo mensaje
+  // (Avisar a la comercial: X / X), que es justo lo que no debe pasar.
   const teniaConversacionPrevia = conversacionExistente !== null;
   const registrarNota =
     leadId !== null &&
+    notaGenerica &&
     (decision.accion === "responder" ||
       decision.accion === "guardar_respuesta" ||
       (decision.accion === "solo_guardar" && !teniaConversacionPrevia));

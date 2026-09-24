@@ -169,7 +169,13 @@ const SECUENCIA_ACTIVA_PASOS: Secuencia = {
       tipo: "mensaje",
       texto: "¿Cuántas veces vienen tus clientes?",
       botones: [
-        { texto: "Vienen bastante", ruta: { ir_a: "cierre_uno" } },
+        // Como en una secuencia real (tarea 9): el botón que lleva al cierre
+        // también avisa a la comercial y mueve la fase del lead a
+        // "interesado", además de entrar en el mensaje de cierre con `ir_a`.
+        // El SEGUNDO botón (abajo) se deja SIN avisar/fase a propósito: sirve
+        // para comprobar, en los tests de la tarea 8 que ya usan esta
+        // secuencia, que un cierre sin aviso no dispara nada de esto.
+        { texto: "Vienen bastante", ruta: { avisar: true, fase: "interesado", ir_a: "cierre_uno" } },
         { texto: "Vienen 1 vez y ya", ruta: { ir_a: "cierre_dos" } },
       ],
     },
@@ -260,10 +266,20 @@ function depsFalsas(
   // tests de la tarea 8 puedan comprobar que se avisó a la comercial sin
   // acoplarse a cuántas veces se llama ni en qué orden.
   const actividades: Array<{ leadId: string; tipo: string; nota: string }> = [];
-  registrarActividadMock.mockReset().mockImplementation(async (input: { leadId: string; tipo: string; nota: string }) => {
-    actividades.push({ leadId: input.leadId, tipo: input.tipo, nota: input.nota });
-    return { ok: true };
-  });
+  // Tarea 9: mover la fase del lead va en la MISMA llamada a
+  // `registrarActividad` que el aviso (pasa `faseNueva`), no en una llamada
+  // aparte — así un cierre que avisa Y cambia de fase deja una sola nota en
+  // la ficha, no dos (ver el comentario sobre duplicar actividad en el brief).
+  // `fases` deja rastro de esas llamadas por separado de `actividades` para
+  // que los tests puedan comprobar el movimiento sin acoplarse al texto de la nota.
+  const fases: Array<{ leadId: string; fase: string }> = [];
+  registrarActividadMock.mockReset().mockImplementation(
+    async (input: { leadId: string; tipo: string; nota: string; faseNueva?: string | null }) => {
+      actividades.push({ leadId: input.leadId, tipo: input.tipo, nota: input.nota });
+      if (input.faseNueva) fases.push({ leadId: input.leadId, fase: input.faseNueva });
+      return { ok: true };
+    },
+  );
 
   const clave = (marcaId: string, waId: string) => `${marcaId}:${waId}`;
   /** Completa un `LeadFalso` con relleno neutro, para que el resto del
@@ -355,7 +371,7 @@ function depsFalsas(
     },
   };
 
-  return { deps, conversaciones, salientes, leadsPorTelefono, estadosSeteados, enviosMensajero, secuencias, actividades };
+  return { deps, conversaciones, salientes, leadsPorTelefono, estadosSeteados, enviosMensajero, secuencias, actividades, fases };
 }
 
 /* Tests ------------------------------------------------------------------ */
@@ -815,5 +831,52 @@ describe("procesarWebhook", () => {
 
     expect([...conversaciones.values()][0].estado).toBe("humana");
     expect(actividades.some((a) => a.nota.includes("Avisar"))).toBe(true);
+  });
+
+  /* Tarea 9: avisos, fases y fin de conversación --------------------------- */
+
+  it("un aviso del guion registra actividad y pasa la conversación a humana", async () => {
+    const { deps, conversaciones, actividades } = depsFalsas({ secuencias: [SECUENCIA_ACTIVA] });
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+    await procesarWebhook({ cuerpo: sobrePulsacion("opcion_1", "Huecos en la agenda"), deps });
+    expect(actividades).toHaveLength(1);
+    expect([...conversaciones.values()][0].estado).toBe("humana");
+  });
+
+  it("una ruta que cambia de fase mueve el lead", async () => {
+    const { deps, fases } = depsFalsas({ secuencias: [SECUENCIA_ACTIVA] });
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+    await procesarWebhook({ cuerpo: sobrePulsacion("opcion_1", "Huecos en la agenda"), deps });
+    expect(fases).toContainEqual({ leadId: "lead-1", fase: "interesado" });
+  });
+
+  it("una conversación terminada no vuelve a responder", async () => {
+    const { deps, salientes } = depsFalsas({ secuencias: [SECUENCIA_ACTIVA] });
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+    await procesarWebhook({ cuerpo: sobrePulsacion("opcion_1", "Huecos en la agenda"), deps });
+    const antes = salientes.length;
+    await procesarWebhook({ cuerpo: sobreTexto("¿hola?"), deps });
+    expect(salientes).toHaveLength(antes);
+  });
+
+  // Cobertura extra (no está en el brief, pero es el mismo bug con otra
+  // causa): igual que un aviso, una secuencia rota/borrada también deja la
+  // conversación en "humana" con `paso_actual` sin limpiar antes de esta
+  // tarea. Sin limpiarlo, un segundo mensaje suelto del lead volvía a
+  // clasificar la conversación como "bot" (el switch de `procesarMensaje`
+  // solo mira `secuencia_id && paso_actual`) y volvía a intentar avanzar la
+  // MISMA secuencia rota, duplicando el aviso en la ficha del lead.
+  it("una secuencia rota no reintenta ni duplica el aviso en un segundo mensaje suelto", async () => {
+    const { deps, conversaciones, secuencias, actividades } = depsFalsas({ secuencias: [SECUENCIA_ACTIVA] });
+
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+    secuencias.length = 0;
+    await procesarWebhook({ cuerpo: sobrePulsacion("opcion_1", "Vienen bastante"), deps });
+    expect(actividades.filter((a) => a.nota.includes("Avisar")).length).toBe(1);
+
+    await procesarWebhook({ cuerpo: sobreTexto("¿hola?"), deps });
+
+    expect([...conversaciones.values()][0].estado).toBe("humana");
+    expect(actividades.filter((a) => a.nota.includes("Avisar")).length).toBe(1);
   });
 });
