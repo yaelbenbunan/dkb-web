@@ -2,10 +2,11 @@
  * Texto de la autorespuesta del canal de WhatsApp: vive en un único sitio
  * para poder cambiar la redacción sin tocar la lógica de `procesar.ts`.
  *
- * Hace tres cosas: saluda, explica en una línea qué es Escala, y pregunta el
- * problema con opciones. No repite el titular del anuncio —se probó y quedaba
- * pesado—, así que el titular puede escribirse libre en Meta sin pensar en
- * cómo suena dentro de una frase.
+ * Saluda, dice a qué viene en una frase y pregunta el problema con botones.
+ * Deliberadamente corto: cada línea de más antes de la pregunta es una línea
+ * en la que el lead puede abandonar. Tampoco repite el titular del anuncio
+ * —se probó y quedaba pesado—, así que el titular puede escribirse libre en
+ * Meta sin pensar en cómo suena dentro de una frase.
  *
  * El argumento cambia según el anuncio del que venga: a una clínica dental se
  * le habla de ganar más con cada paciente, y a una consulta de psicología de
@@ -50,13 +51,13 @@ const PREGUNTA = "Para poder ofrecerte la mejor solución, cuéntanos: ¿cuál e
 /** Cuerpo del mensaje, por sector. Las opciones van aparte, como botones. */
 const CUERPO: Record<Vertical, string> = {
   dental:
-    `¡Hola! Soy ${REMITENTE}, de Escala. Gracias por interesarte en nuestro proceso para que ganes más con cada paciente: nos ocupamos desde que alguien busca dentista en Google o Instagram hasta que se sienta en tu sillón.\n\n` +
+    `¡Hola! Soy ${REMITENTE}, de Escala. Gracias por interesarte en nuestro proceso para que ganes más con cada paciente.\n\n` +
     PREGUNTA,
   psicologia:
-    `¡Hola! Soy ${REMITENTE}, de Escala. Gracias por interesarte en nuestro proceso para llenar la agenda de tu consulta: nos ocupamos desde que alguien busca psicólogo en Google o Instagram hasta que llega a tu puerta.\n\n` +
+    `¡Hola! Soy ${REMITENTE}, de Escala. Gracias por interesarte en nuestro proceso para llenar la agenda de tu consulta.\n\n` +
     PREGUNTA,
   generico:
-    `¡Hola! Soy ${REMITENTE}, de Escala. Gracias por interesarte en nuestro proceso para conseguir que ganes más: nos ocupamos desde que alguien os busca en Google o Instagram hasta que ese paciente llega a tu consulta.\n\n` +
+    `¡Hola! Soy ${REMITENTE}, de Escala. Gracias por interesarte en nuestro proceso para conseguir que ganes más pacientes.\n\n` +
     PREGUNTA,
 };
 
