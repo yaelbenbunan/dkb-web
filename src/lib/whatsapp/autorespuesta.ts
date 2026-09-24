@@ -39,7 +39,8 @@ export type Vertical = "dental" | "psicologia" | "generico";
  * ese mes.
  */
 export const VERTICAL_POR_ANUNCIO: Record<string, Vertical> = {
-  // Pendiente: añadir aquí los identificadores en cuanto existan los anuncios.
+  // Campaña de captación de consultas de psicología (24-09-2026).
+  "120252112386740343": "psicologia",
 };
 
 export function verticalDeAnuncio(anuncio: string | null): Vertical {

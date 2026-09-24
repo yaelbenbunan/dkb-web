@@ -13,6 +13,13 @@ describe("verticalDeAnuncio", () => {
     }
   });
 
+  it("el anuncio de la campaña de psicología manda el texto de psicología", () => {
+    const anuncio = "120252112386740343";
+    expect(verticalDeAnuncio(anuncio)).toBe("psicologia");
+    expect(textoAutorespuesta({ anuncio })).toContain("llenar la agenda de tu consulta");
+    expect(opcionesAutorespuesta(anuncio)).toContain("Huecos en la agenda");
+  });
+
   it("cae a la pregunta común con un anuncio que no conocemos", () => {
     // Lo normal al estrenar una campaña: el anuncio existe antes de que nadie
     // lo haya mapeado aquí. No puede costar el primer impacto.
