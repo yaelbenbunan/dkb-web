@@ -17,22 +17,23 @@ describe("verticalDeAnuncio", () => {
 });
 
 describe("textoAutorespuesta", () => {
-  it("menciona el anuncio cuando Meta manda el titular", () => {
-    const texto = textoAutorespuesta({ titularAnuncio: "Llenamos los huecos de tu agenda", anuncio: null });
-    expect(texto).toContain("«Llenamos los huecos de tu agenda»");
+  it("no repite el titular del anuncio: quedaba pesado", () => {
+    const texto = textoAutorespuesta({ anuncio: null });
+    expect(texto).not.toContain("Llenamos los huecos de tu agenda");
+    expect(texto).toMatch(/gracias por interesarte/i);
+    expect(texto).toContain("Escala");
   });
 
-  it("funciona sin titular", () => {
-    const texto = textoAutorespuesta({ titularAnuncio: null, anuncio: null });
-    expect(texto).toContain("Gracias por escribirnos.");
-    expect(texto).not.toContain("«");
+  it("va directo a la pregunta, sin presentación larga", () => {
+    const texto = textoAutorespuesta({ anuncio: null });
+    expect(texto).toMatch(/para poder ofrecerte la mejor solución/i);
   });
 
   it("se presenta, explica qué es Escala y ofrece opciones numeradas", () => {
     // Las opciones van numeradas y no como botones de WhatsApp porque todavía
     // no sabemos procesar una pulsación: llegaría como mensaje interactivo y
     // se perdería la respuesta. Con números llega como texto y queda guardada.
-    const texto = textoAutorespuesta({ titularAnuncio: null, anuncio: null });
+    const texto = textoAutorespuesta({ anuncio: null });
     expect(texto).toContain("Escala");
     expect(texto).toContain("1.");
     expect(texto).toContain("2.");
@@ -44,13 +45,13 @@ describe("textoAutorespuesta", () => {
     // La autorespuesta solo se dispara con clics de anuncio, y todos los
     // anuncios son de captación de pacientes para clínicas. Preguntar por la
     // web —como hacía la primera versión— descolocaba al lead.
-    const texto = textoAutorespuesta({ titularAnuncio: null, anuncio: null }).toLowerCase();
+    const texto = textoAutorespuesta({ anuncio: null }).toLowerCase();
     expect(texto).toContain("pacientes");
     expect(texto).not.toContain("web");
   });
 
   it("nunca pasa del límite de WhatsApp", () => {
-    const largo = "x".repeat(2000);
-    expect(textoAutorespuesta({ titularAnuncio: largo, anuncio: null }).length).toBeLessThanOrEqual(1024);
+    
+    expect(textoAutorespuesta({ anuncio: null }).length).toBeLessThanOrEqual(1024);
   });
 });

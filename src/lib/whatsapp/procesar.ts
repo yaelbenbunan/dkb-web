@@ -318,10 +318,7 @@ async function procesarMensaje(
   // ---- FASE B: best-effort ------------------------------------------------
   if (decision.accion === "crear_lead_y_responder" || decision.accion === "responder") {
     try {
-      const texto = textoAutorespuesta({
-        titularAnuncio: mensaje.referral?.titular ?? null,
-        anuncio: mensaje.referral?.anuncio ?? null,
-      });
+      const texto = textoAutorespuesta({ anuncio: mensaje.referral?.anuncio ?? null });
       const resultado = await deps.mensajero.enviarTexto(mensaje.waId, texto);
       await deps.guardarSaliente({
         conversacionId: conversacion.id,
