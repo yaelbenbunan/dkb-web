@@ -16,6 +16,9 @@ export interface MensajeEntrante {
   wamid: string;
   waId: string;
   texto: string | null;
+  // Id del botón o de la opción de lista que pulsó el lead (`opcion_1`,
+  // `opcion_2`...), o `null` si escribió a mano. Ver `botonDelMensaje`.
+  botonId: string | null;
   tipo: string;
   recibidoEn: Date;
   referral: { campana: string | null; anuncio: string | null; titular: string | null } | null;
@@ -111,6 +114,21 @@ function textoDelMensaje(tipo: string, m: Record<string, unknown>): string | nul
   return null;
 }
 
+/**
+ * Id del botón o de la opción de lista que pulsó el lead. El motor de
+ * secuencias avanza por ÍNDICE, y el id (`opcion_1`, `opcion_2`…) es lo que
+ * permite traducirlo sin comparar rótulos: comparar textos se rompería en
+ * cuanto alguien edite el texto de un botón en el panel.
+ */
+function botonDelMensaje(tipo: string, m: Record<string, unknown>): string | null {
+  if (tipo !== "interactive" || !esObjeto(m.interactive)) return null;
+  for (const clave of ["button_reply", "list_reply"] as const) {
+    const respuesta = m.interactive[clave];
+    if (esObjeto(respuesta) && typeof respuesta.id === "string") return respuesta.id;
+  }
+  return null;
+}
+
 export function extraerMensajes(cuerpo: unknown): MensajeEntrante[] {
   const mensajes: MensajeEntrante[] = [];
   // Techo calculado una vez por llamada, no como constante de módulo: así no
@@ -155,6 +173,7 @@ export function extraerMensajes(cuerpo: unknown): MensajeEntrante[] {
         // —justo la que cualifica al lead—. El resto (imagen, audio,
         // ubicación o pulsación de botón no se puede guardar como respuesta.
         texto: textoDelMensaje(tipo, m),
+        botonId: botonDelMensaje(tipo, m),
         tipo,
         recibidoEn,
         referral: referralDeMensaje(m.referral),

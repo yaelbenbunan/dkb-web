@@ -72,10 +72,11 @@ describe("decidir", () => {
     wamid: "w",
     waId: "34660415514",
     texto: "hola",
+    // No se usa en `decidir`; se rellena solo para que el fixture cumpla la
+    // interfaz `MensajeEntrante` tras añadir los campos `crudo` y `botonId`.
+    botonId: null,
     tipo: "text",
     recibidoEn: new Date(),
-    // No se usa en `decidir`; se rellena solo para que el fixture cumpla la
-    // interfaz `MensajeEntrante` tras añadir el campo `crudo`.
     crudo: null,
   };
   const conRef = { ...base, referral: { campana: "c", anuncio: "a", titular: null } };
@@ -277,5 +278,24 @@ describe("extraerMensajes — botones", () => {
   it("no revienta con un interactive de forma desconocida", () => {
     const [m] = extraerMensajes(sobreBoton({ type: "algo_nuevo_de_meta" }));
     expect(m.texto).toBeNull();
+  });
+
+  it("conserva el id del botón pulsado, no solo su rótulo", () => {
+    const [m] = extraerMensajes(
+      sobreBoton({ type: "button_reply", button_reply: { id: "opcion_2", title: "Vienen 1 vez y ya" } }),
+    );
+    expect(m.botonId).toBe("opcion_2");
+    expect(m.texto).toBe("Vienen 1 vez y ya");
+  });
+
+  it("deja el id a null cuando el lead escribe a mano", () => {
+    const [m] = extraerMensajes(
+      sobre({
+        messages: [
+          { id: "wamid.T", from: "34660415514", timestamp: "1790000000", type: "text", text: { body: "hola" } },
+        ],
+      }),
+    );
+    expect(m.botonId).toBeNull();
   });
 });
