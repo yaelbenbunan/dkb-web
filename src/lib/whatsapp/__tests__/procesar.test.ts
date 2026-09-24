@@ -1,6 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { Conversacion } from "../db";
 import type { MensajeroWhatsApp, ResultadoEnvio } from "../mensajero";
+import type { SecuenciaRow } from "../../ventas/db";
+import type { Secuencia } from "../../ventas/secuencias";
 
 // `procesar.ts` llama directamente (fuera de `Deps`) a `getMarcaPorSlug` y
 // `registrarActividad` de `ventas/db.ts` — son wiring de dominio, no del
@@ -64,16 +66,76 @@ const mensajeDeAnuncio = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-const sobreDeAnuncio = sobreConMensajes([mensajeDeAnuncio()]);
+// Función (no constante) para poder variar el anuncio: la elección de
+// secuencia (`elegirSecuencia`) decide por `referral.anuncio`, así que los
+// tests de la tarea 7 necesitan poder fijarlo. El valor por defecto conserva
+// el que usaban las llamadas antiguas de este fichero (`sobreDeAnuncio`, sin
+// argumento) para no tener que tocar sus aserciones.
+const sobreDeAnuncio = (anuncio = "120200000000") =>
+  sobreConMensajes([mensajeDeAnuncio({ referral: { source_id: anuncio, headline: "Tu web en 7 días" } })]);
+
+/* Secuencias de prueba (tarea 7) --------------------------------------------- */
+
+/** Un paso con tres botones que cierran la conversación: basta para
+ *  comprobar que `mensajesAEnviar(null, estado)` manda el primer paso. */
+const SECUENCIA_MINIMA: Secuencia = {
+  version: 1,
+  inicio: "problemas",
+  pasos: {
+    problemas: {
+      tipo: "mensaje",
+      texto: "¿Qué te pasa?",
+      botones: [
+        { texto: "Faltan pacientes", ruta: { terminar: true } },
+        { texto: "No vuelven", ruta: { terminar: true } },
+        { texto: "Boca a boca", ruta: { terminar: true } },
+      ],
+    },
+  },
+};
+
+/** Usa `{{ciudad}}`, variable que un lead de WhatsApp nunca trae: sirve para
+ *  comprobar que el hueco se deja visible y el envío no se bloquea. */
+const SECUENCIA_CON_CIUDAD: Secuencia = {
+  version: 1,
+  inicio: "saludo",
+  pasos: {
+    saludo: {
+      tipo: "mensaje",
+      texto: "Hola desde {{ciudad}}",
+      botones: [],
+      ruta: { terminar: true },
+    },
+  },
+};
 
 /* Deps falsas ---------------------------------------------------------------- */
 
-function depsFalsas(opts: { enviar?: (waId: string, texto: string) => Promise<ResultadoEnvio> } = {}) {
+/** Lo mínimo que le importa a `elegirSecuencia`/`parsearSecuencia`; el resto
+ *  de columnas de `SecuenciaRow` no influyen en este módulo, así que
+ *  `depsFalsas` las rellena con valores de relleno para que el tipo cuadre
+ *  sin obligar a cada test a escribirlas. */
+type SecuenciaFalsa = Pick<SecuenciaRow, "id" | "estado" | "anuncios" | "pasos">;
+
+function depsFalsas(
+  opts: {
+    enviar?: (waId: string, texto: string) => Promise<ResultadoEnvio>;
+    secuencias?: SecuenciaFalsa[];
+  } = {},
+) {
   const conversaciones = new Map<string, Conversacion>();
   const wamidsGuardados = new Set<string>();
   const salientes: Array<{ conversacionId: string; wamid: string | null; texto: string; error?: string }> = [];
   const leadsPorTelefono = new Map<string, { id: string }>();
   const estadosSeteados: Array<{ wamid: string; estado: string }> = [];
+  const secuencias: SecuenciaRow[] = (opts.secuencias ?? []).map((s) => ({
+    marca_id: MARCA.id,
+    nombre: s.id,
+    creada_por: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    ...s,
+  }));
   let contadorConv = 0;
   let contadorLead = 0;
 
@@ -118,6 +180,9 @@ function depsFalsas(opts: { enviar?: (waId: string, texto: string) => Promise<Re
         if (cambios.estado !== undefined) conv.estado = cambios.estado;
         if (cambios.leadId !== undefined) conv.lead_id = cambios.leadId;
         if (cambios.ventanaHasta !== undefined) conv.ventana_hasta = cambios.ventanaHasta.toISOString();
+        if (cambios.secuenciaId !== undefined) conv.secuencia_id = cambios.secuenciaId;
+        if (cambios.pasoActual !== undefined) conv.paso_actual = cambios.pasoActual;
+        if (cambios.datos !== undefined) conv.datos = cambios.datos;
       }
     },
     async guardarEntrante({ wamid }) {
@@ -140,6 +205,9 @@ function depsFalsas(opts: { enviar?: (waId: string, texto: string) => Promise<Re
       leadsPorTelefono.set(telefono ?? waId, lead);
       return lead;
     },
+    async listSecuencias() {
+      return secuencias;
+    },
   };
 
   return { deps, conversaciones, salientes, leadsPorTelefono, estadosSeteados };
@@ -151,7 +219,7 @@ describe("procesarWebhook", () => {
   it("un mensaje de anuncio crea lead, deja la conversación en bot y envía un texto", async () => {
     const { deps, conversaciones, salientes } = depsFalsas();
 
-    const resultado = await procesarWebhook({ cuerpo: sobreDeAnuncio, deps });
+    const resultado = await procesarWebhook({ cuerpo: sobreDeAnuncio(), deps });
 
     expect(resultado).toEqual({ procesados: 1 });
     const conv = conversaciones.get(`${MARCA.id}:34660415514`);
@@ -165,8 +233,8 @@ describe("procesarWebhook", () => {
   it("un reintento con el mismo wamid no envía una segunda vez", async () => {
     const { deps, salientes } = depsFalsas();
 
-    await procesarWebhook({ cuerpo: sobreDeAnuncio, deps });
-    const segundo = await procesarWebhook({ cuerpo: sobreDeAnuncio, deps });
+    await procesarWebhook({ cuerpo: sobreDeAnuncio(), deps });
+    const segundo = await procesarWebhook({ cuerpo: sobreDeAnuncio(), deps });
 
     expect(segundo).toEqual({ procesados: 0 });
     expect(salientes).toHaveLength(1);
@@ -187,7 +255,7 @@ describe("procesarWebhook", () => {
   it("un fallo de envío no rompe el procesado", async () => {
     const { deps, salientes } = depsFalsas({ enviar: async () => ({ ok: false, error: "Authorization Error" }) });
 
-    await expect(procesarWebhook({ cuerpo: sobreDeAnuncio, deps })).resolves.toEqual({ procesados: 1 });
+    await expect(procesarWebhook({ cuerpo: sobreDeAnuncio(), deps })).resolves.toEqual({ procesados: 1 });
     expect(salientes[0].error).toBe("Authorization Error");
   });
 
@@ -214,7 +282,7 @@ describe("procesarWebhook", () => {
     leadsPorTelefono.set("660415514", { id: "lead-preexistente" });
     const crearLeadDeAnuncioSpy = vi.spyOn(deps, "crearLeadDeAnuncio");
 
-    await procesarWebhook({ cuerpo: sobreDeAnuncio, deps });
+    await procesarWebhook({ cuerpo: sobreDeAnuncio(), deps });
 
     expect(crearLeadDeAnuncioSpy).not.toHaveBeenCalled();
     const conv = conversaciones.get(`${MARCA.id}:34660415514`);
@@ -259,7 +327,7 @@ describe("procesarWebhook", () => {
     getMarcaPorSlugMock.mockResolvedValue(null);
     const { deps, salientes } = depsFalsas();
 
-    await expect(procesarWebhook({ cuerpo: sobreDeAnuncio, deps })).rejects.toThrow('no existe la marca "dinkbit"');
+    await expect(procesarWebhook({ cuerpo: sobreDeAnuncio(), deps })).rejects.toThrow('no existe la marca "dinkbit"');
     expect(salientes).toHaveLength(0);
   });
 
@@ -306,7 +374,7 @@ describe("procesarWebhook", () => {
       throw new Error("timeout de Supabase");
     };
 
-    await expect(procesarWebhook({ cuerpo: sobreDeAnuncio, deps })).rejects.toThrow("timeout de Supabase");
+    await expect(procesarWebhook({ cuerpo: sobreDeAnuncio(), deps })).rejects.toThrow("timeout de Supabase");
   });
 
   // Hallazgo 3 (Important): un fallo DESPUÉS de haber persistido el mensaje
@@ -319,7 +387,7 @@ describe("procesarWebhook", () => {
     };
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    await expect(procesarWebhook({ cuerpo: sobreDeAnuncio, deps })).resolves.toEqual({ procesados: 1 });
+    await expect(procesarWebhook({ cuerpo: sobreDeAnuncio(), deps })).resolves.toEqual({ procesados: 1 });
     expect(errorSpy).toHaveBeenCalled();
     errorSpy.mockRestore();
   });
@@ -358,7 +426,7 @@ describe("procesarWebhook", () => {
       return crearConversacionOriginal(input);
     };
 
-    const resultado = await procesarWebhook({ cuerpo: sobreDeAnuncio, deps });
+    const resultado = await procesarWebhook({ cuerpo: sobreDeAnuncio(), deps });
 
     expect(resultado).toEqual({ procesados: 1 });
     expect(leadsPorTelefono.size).toBe(1);
@@ -407,5 +475,40 @@ describe("procesarWebhook", () => {
     const trasRespuesta = conversaciones.get(`${MARCA.id}:34660415514`);
     expect(trasRespuesta?.estado).toBe("humana");
     expect(trasRespuesta?.ventana_hasta).toBe(esperado);
+  });
+
+  /* Tarea 7: arrancar la secuencia con un lead de anuncio ------------------ */
+
+  it("arranca la secuencia que sirve al anuncio y manda su primer paso", async () => {
+    const { deps, salientes, conversaciones } = depsFalsas({
+      secuencias: [{ id: "s1", estado: "activa", anuncios: ["AD1"], pasos: SECUENCIA_MINIMA }],
+    });
+
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+
+    expect(salientes[0].texto).toContain("¿Qué te pasa?");
+    const conv = [...conversaciones.values()][0];
+    expect(conv.secuencia_id).toBe("s1");
+    expect(conv.paso_actual).toBe("problemas");
+  });
+
+  it("cae en la autorespuesta en código si ninguna secuencia sirve", async () => {
+    // Nunca mudo: si alguien archiva la secuencia, el lead sigue recibiendo algo.
+    const { deps, salientes } = depsFalsas({ secuencias: [] });
+
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+
+    expect(salientes[0].texto).toContain("Escala");
+  });
+
+  it("una variable sin valor deja el hueco visible y sigue", async () => {
+    // El lead de WhatsApp no trae ciudad. El mensaje debe salir igual.
+    const { deps, salientes } = depsFalsas({
+      secuencias: [{ id: "s1", estado: "activa", anuncios: [], pasos: SECUENCIA_CON_CIUDAD }],
+    });
+
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+
+    expect(salientes).toHaveLength(1);
   });
 });

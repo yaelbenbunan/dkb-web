@@ -10,10 +10,21 @@ import {
 } from "./db";
 import { opcionesAutorespuesta, textoAutorespuesta } from "./autorespuesta";
 import { decidir, extraerEstados, extraerMensajes, type MensajeEntrante } from "./entrante";
+import { elegirSecuencia } from "./eleccion";
+import { aEstadoGuardado, mensajesAEnviar, type EstadoGuardado } from "./guion";
 import { crearMensajero, type MensajeroWhatsApp } from "./mensajero";
 import { calcularVentana, telefonoDeWaId } from "./ventana";
 import { MARCA_DINKBIT_SLUG } from "../ventas/dominio";
-import { buscarLeadPorContacto, crearLeads, getMarcaPorSlug, registrarActividad } from "../ventas/db";
+import {
+  buscarLeadPorContacto,
+  crearLeads,
+  getMarcaPorSlug,
+  listSecuencias,
+  registrarActividad,
+  type SecuenciaRow,
+} from "../ventas/db";
+import { parsearSecuencia } from "../ventas/secuencias";
+import { iniciarSimulacion, type ContextoSimulacion, type EntradaConversacion } from "../ventas/simulador";
 
 /**
  * Orquestador del webhook de WhatsApp Cloud API: clasifica cada mensaje con
@@ -55,6 +66,10 @@ export interface Deps {
     campana: string | null;
     anuncio: string | null;
   }) => Promise<{ id: string }>;
+  /** Las secuencias activas de la marca, para elegir la que sirve al anuncio
+   *  del lead (task-7-brief.md). Ya existe en `ventas/db.ts`: no es un dato
+   *  nuevo, solo entra en `Deps` para poder sustituirla en los tests. */
+  listSecuencias: (marcaId: string) => Promise<SecuenciaRow[]>;
 }
 
 /**
@@ -106,6 +121,7 @@ function depsReales(): Deps {
       if (!creado) throw new Error("[whatsapp] crearLeadDeAnuncio: no se encontró el lead recién creado");
       return { id: creado.id };
     },
+    listSecuencias,
   };
 }
 
@@ -126,6 +142,59 @@ function ventanaExtendida(existente: Conversacion | null, nueva: Date): Date {
   const actual = new Date(existente.ventana_hasta);
   if (!Number.isFinite(actual.getTime())) return nueva;
   return actual.getTime() > nueva.getTime() ? actual : nueva;
+}
+
+/** Quien firma el primer mensaje del canal. Nombre fijo (no viene del lead
+ *  ni de la marca): un único sitio para poder cambiarlo. */
+const REMITENTE_CANAL = "Paula";
+
+/** Lo que hace falta para mandar el primer paso de una secuencia arrancada. */
+interface SecuenciaArrancada {
+  secuenciaId: string;
+  estado: EstadoGuardado;
+  mensajes: EntradaConversacion[];
+}
+
+/**
+ * Elige la secuencia que sirve al anuncio del lead, la arranca y devuelve su
+ * primer mensaje. Devuelve `null` si ninguna secuencia activa sirve a este
+ * anuncio o si la que sirve no parsea (forma inválida en la base, p.ej. tras
+ * un cambio manual): en ambos casos el llamador cae al RESPALDO de
+ * `autorespuesta.ts`, que NO es la fuente — es la garantía de que el canal
+ * nunca se queda mudo si alguien archiva o rompe una secuencia por error.
+ *
+ * `marca` y `remitente` son los únicos valores del contexto que este canal
+ * puede rellenar con certeza; `negocio`, `contacto` y `ciudad` se dejan sin
+ * valor porque Meta no los manda en un mensaje de WhatsApp. No pasa nada:
+ * `renderizarTexto` (dentro de `iniciarSimulacion`) deja el hueco visible en
+ * vez de bloquear el envío.
+ */
+function arrancarSecuencia(
+  secuencias: SecuenciaRow[],
+  anuncio: string | null,
+  marcaNombre: string,
+): SecuenciaArrancada | null {
+  const elegida = elegirSecuencia(secuencias, anuncio);
+  if (!elegida) return null;
+
+  const parseada = parsearSecuencia(elegida.pasos);
+  if (!parseada.ok) {
+    console.error(`[whatsapp] la secuencia "${elegida.id}" no parsea, se usa el respaldo: ${parseada.error}`);
+    return null;
+  }
+
+  const ctx: ContextoSimulacion = {
+    valores: { marca: marcaNombre, remitente: REMITENTE_CANAL },
+    faseInicial: "nuevo",
+  };
+  // Al arrancar no hay estado previo: es justo la precondición que documenta
+  // el JSDoc de `mensajesAEnviar` (ver guion.ts) para su parámetro `anterior`.
+  const estadoSimulacion = iniciarSimulacion(parseada.secuencia, ctx);
+  return {
+    secuenciaId: elegida.id,
+    estado: aEstadoGuardado(estadoSimulacion),
+    mensajes: mensajesAEnviar(null, estadoSimulacion),
+  };
 }
 
 /** Aplica un cambio a una conversación existente y devuelve la copia ya actualizada. */
@@ -197,6 +266,7 @@ async function crearConversacionOReleer(
  */
 async function procesarMensaje(
   marcaId: string,
+  marcaNombre: string,
   mensaje: MensajeEntrante,
   deps: Deps,
   ahora: Date,
@@ -317,33 +387,75 @@ async function procesarMensaje(
 
   // ---- FASE B: best-effort ------------------------------------------------
   if (decision.accion === "crear_lead_y_responder" || decision.accion === "responder") {
+    const anuncio = mensaje.referral?.anuncio ?? null;
+
+    // Cargar y arrancar la secuencia va en su propio try: un fallo aquí
+    // (Supabase, una fila con forma inválida) no debe impedir el RESPALDO de
+    // abajo — deja `arrancada` en null y cae a la autorespuesta en código,
+    // igual que si ninguna secuencia sirviera al anuncio.
+    let arrancada: SecuenciaArrancada | null = null;
     try {
-      const anuncio = mensaje.referral?.anuncio ?? null;
-      const texto = textoAutorespuesta({ anuncio });
-      // Con botones en vez de texto: la respuesta del lead vuelve como
-      // `button_reply` y `entrante.ts` la guarda igual que un texto, así que
-      // queda en su ficha. Es además lo que más sube la tasa de respuesta.
-      const resultado = await deps.mensajero.enviarBotones(
-        mensaje.waId,
-        texto,
-        opcionesAutorespuesta(anuncio),
-      );
-      await deps.guardarSaliente({
-        conversacionId: conversacion.id,
-        wamid: resultado.ok ? resultado.wamid : null,
-        texto,
-        // Un fallo de ENVÍO no tumba el procesado: el saliente queda con su
-        // error para que se vea en la bandeja (esto no lanza, es un
-        // resultado tipado de `enviarTexto`).
-        error: resultado.ok ? undefined : resultado.error,
-      });
+      const secuencias = await deps.listSecuencias(marcaId);
+      arrancada = arrancarSecuencia(secuencias, anuncio, marcaNombre);
     } catch (e) {
-      // Este catch es para un fallo al GUARDAR el saliente, no al enviarlo.
+      console.error("[whatsapp] fallo cargando las secuencias de la marca, se usa el respaldo", mensaje.waId, e);
+    }
+
+    try {
+      if (arrancada && arrancada.mensajes.length > 0) {
+        // La FUENTE: el primer paso de la secuencia que sirve a este anuncio.
+        // Un paso con botones se manda con `enviarBotones`; uno sin botones,
+        // con `enviarTexto` (decisión 5 del brief).
+        for (const entrada of arrancada.mensajes) {
+          const resultado =
+            entrada.botones && entrada.botones.length > 0
+              ? await deps.mensajero.enviarBotones(mensaje.waId, entrada.texto, entrada.botones)
+              : await deps.mensajero.enviarTexto(mensaje.waId, entrada.texto);
+          await deps.guardarSaliente({
+            conversacionId: conversacion.id,
+            wamid: resultado.ok ? resultado.wamid : null,
+            texto: entrada.texto,
+            error: resultado.ok ? undefined : resultado.error,
+          });
+        }
+        // Puntero de por dónde va el guion: sin esto, el próximo mensaje del
+        // lead no tendría con qué estado continuar la secuencia.
+        await deps.actualizarConversacion(conversacion.id, {
+          secuenciaId: arrancada.secuenciaId,
+          pasoActual: arrancada.estado.pasoActual,
+          datos: arrancada.estado.datos,
+        });
+      } else {
+        // RESPALDO, NO la fuente: solo se manda si ninguna secuencia activa
+        // sirve a este anuncio, si la que sirve no parsea, o si arrancarla
+        // falló (capturado arriba). El canal no puede quedarse mudo porque
+        // alguien archive una secuencia por error.
+        const texto = textoAutorespuesta({ anuncio });
+        // Con botones en vez de texto: la respuesta del lead vuelve como
+        // `button_reply` y `entrante.ts` la guarda igual que un texto, así que
+        // queda en su ficha. Es además lo que más sube la tasa de respuesta.
+        const resultado = await deps.mensajero.enviarBotones(
+          mensaje.waId,
+          texto,
+          opcionesAutorespuesta(anuncio),
+        );
+        await deps.guardarSaliente({
+          conversacionId: conversacion.id,
+          wamid: resultado.ok ? resultado.wamid : null,
+          texto,
+          // Un fallo de ENVÍO no tumba el procesado: el saliente queda con su
+          // error para que se vea en la bandeja (esto no lanza, es un
+          // resultado tipado de `enviarTexto`/`enviarBotones`).
+          error: resultado.ok ? undefined : resultado.error,
+        });
+      }
+    } catch (e) {
+      // Este catch es para un fallo al ENVIAR o GUARDAR el primer mensaje.
       // El envío pudo haber tenido éxito (el cliente ya recibió el mensaje):
       // no hay nada seguro que reintentar, y el gate de idempotencia de
       // arriba cortaría igualmente un reintento de Meta. Solo queda
       // registrarlo para que alguien lo note.
-      console.error("[whatsapp] fallo guardando la autorespuesta (puede que sí se enviara)", mensaje.waId, e);
+      console.error("[whatsapp] fallo mandando el primer mensaje de la conversación (puede que sí se enviara)", mensaje.waId, e);
     }
   }
 
@@ -418,7 +530,7 @@ export async function procesarWebhook(input: {
     // la ruta para que responda 500 y Meta reintente el lote entero; el resto
     // de mensajes de este lote que ya se hubieran guardado son idempotentes
     // por wamid, así que el reintento no los duplica.
-    if (await procesarMensaje(marca.id, mensaje, deps, ahora)) procesados += 1;
+    if (await procesarMensaje(marca.id, marca.nombre, mensaje, deps, ahora)) procesados += 1;
   }
 
   return { procesados };
