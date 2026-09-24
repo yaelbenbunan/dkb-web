@@ -436,6 +436,11 @@ export interface SecuenciaRow {
   creada_por: string | null;
   created_at: string;
   updated_at: string;
+  /** A qué anuncios de Meta sirve esta secuencia. Hace falta porque
+   *  `activarSecuencia` archiva las demás activas de la marca: sin esto, dos
+   *  campañas vivas de la misma marca no podrían tener cada una su guion. El
+   *  `select("*")` de abajo ya la trae; no hace falta tocar la consulta. */
+  anuncios: string[];
 }
 
 export async function listSecuencias(marcaId: string): Promise<SecuenciaRow[]> {

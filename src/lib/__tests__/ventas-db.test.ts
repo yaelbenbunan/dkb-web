@@ -10,7 +10,7 @@ vi.mock("../supabase-admin", () => ({
   getSupabaseAdmin: () => ({ rpc: rpcMock, from: fromMock, auth: { admin: authAdmin } }),
 }));
 
-import { crearLeads, registrarActividad, crearUsuariaCompleta, listLeads } from "../ventas/db";
+import { crearLeads, registrarActividad, crearUsuariaCompleta, listLeads, listSecuencias } from "../ventas/db";
 
 const LEAD = { negocio: "Gym", tipo_negocio: null, contacto: "", telefono: "600111222", email: "", ciudad: "", cif: "", web: "", excluido: false };
 
@@ -95,5 +95,20 @@ describe("listLeads", () => {
     const leads = await listLeads("m1");
     expect(leads).toHaveLength(1003);
     expect(range).toHaveBeenNthCalledWith(2, 1000, 1999);
+  });
+});
+
+describe("listSecuencias", () => {
+  test("trae los anuncios que sirve cada secuencia", async () => {
+    // Sin esta columna, elegirSecuencia no puede distinguir la campaña de
+    // psicología de la de dental y todos los leads caerían en la misma.
+    const range = vi.fn().mockResolvedValueOnce({ data: [{ id: "s1", anuncios: ["120252112386740343"] }], error: null });
+    const builder: Record<string, unknown> = {};
+    builder.select = vi.fn(() => builder);
+    builder.eq = vi.fn(() => builder);
+    builder.order = vi.fn(() => ({ range }));
+    fromMock.mockReset().mockReturnValue(builder);
+    const filas = await listSecuencias("m1");
+    expect(filas[0].anuncios).toEqual(["120252112386740343"]);
   });
 });
