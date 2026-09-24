@@ -6,7 +6,14 @@
 
 import { esFaseActiva, type Fase } from "./dominio";
 
-export type ColumnaId = "nuevo" | "contactado" | "interesado" | "muestras" | "cliente" | "descartados";
+export type ColumnaId =
+  | "nuevo"
+  | "contactado"
+  | "volver_a_llamar"
+  | "interesado"
+  | "muestras"
+  | "cliente"
+  | "descartados";
 
 export interface ColumnaTablero {
   id: ColumnaId;
@@ -20,6 +27,7 @@ export interface ColumnaTablero {
 export const COLUMNAS_TABLERO: readonly ColumnaTablero[] = [
   { id: "nuevo", titulo: "Nuevo", fases: ["nuevo"], destino: "nuevo" },
   { id: "contactado", titulo: "Contactado", fases: ["contactado"], destino: "contactado" },
+  { id: "volver_a_llamar", titulo: "Volver a llamar", fases: ["volver_a_llamar"], destino: "volver_a_llamar" },
   { id: "interesado", titulo: "Interesado", fases: ["interesado"], destino: "interesado" },
   { id: "muestras", titulo: "Muestras enviadas", fases: ["muestras"], destino: "muestras" },
   { id: "cliente", titulo: "Cliente", fases: ["cliente"], destino: "cliente" },
@@ -29,8 +37,13 @@ export const COLUMNAS_TABLERO: readonly ColumnaTablero[] = [
 /** Tarjetas que se pintan como mucho por columna; el resto se ve en la lista. */
 export const MAX_TARJETAS_COLUMNA = 50;
 
-export function columnaDeFase(fase: Fase): ColumnaId {
-  return COLUMNAS_TABLERO.find((c) => c.fases.includes(fase))!.id;
+/**
+ * Columna donde se pinta un lead, o `null` si su fase está archivada y no se
+ * enseña en el tablero (hoy, «Fuera de perfil»). Quien llame a esto tiene que
+ * contemplar el nulo: antes se daba por hecho que toda fase tenía columna.
+ */
+export function columnaDeFase(fase: Fase): ColumnaId | null {
+  return COLUMNAS_TABLERO.find((c) => c.fases.includes(fase))?.id ?? null;
 }
 
 const CAMINO: readonly Fase[] = ["nuevo", "contactado", "interesado", "muestras", "cliente"];
@@ -53,10 +66,17 @@ export function fasesDestino(actual: Fase): Fase[] {
   return FASES_MOVIBLES.filter((f) => f !== actual);
 }
 
-/** Reparte los leads en sus columnas, conservando el orden de entrada. */
+/**
+ * Reparte los leads en sus columnas, conservando el orden de entrada. Los de
+ * fases archivadas se quedan fuera del tablero a propósito: se ven en la lista
+ * de leads, no aquí.
+ */
 export function agruparEnColumnas<T extends { fase: Fase }>(leads: T[]): Record<ColumnaId, T[]> {
   const grupos = Object.fromEntries(COLUMNAS_TABLERO.map((c) => [c.id, [] as T[]])) as Record<ColumnaId, T[]>;
-  for (const lead of leads) grupos[columnaDeFase(lead.fase)].push(lead);
+  for (const lead of leads) {
+    const columna = columnaDeFase(lead.fase);
+    if (columna) grupos[columna].push(lead);
+  }
   return grupos;
 }
 

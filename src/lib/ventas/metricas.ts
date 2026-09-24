@@ -83,7 +83,9 @@ export type EtapaEmbudo = (typeof ETAPAS_EMBUDO)[number];
  *  «contactado»: para cerrar un lead alguien tuvo que hablar (o intentarlo). */
 const RANGO: Record<Fase, number> = {
   nuevo: 0,
+  fuera_de_perfil: 0,
   contactado: 1,
+  volver_a_llamar: 1,
   perdido: 1,
   no_interesa: 1,
   ilocalizable: 1,
@@ -110,9 +112,13 @@ export function calcularEmbudo(
 ): Embudo {
   const maximo = new Map<string, number>();
   const porFase = Object.fromEntries(FASES.map((f) => [f, 0])) as Record<Fase, number>;
+  // Los «fuera de perfil» se cuentan por fase (para saber cuánta lista se está
+  // desperdiciando) pero quedan fuera del embudo: no eran nuestro público, así
+  // que meterlos en el denominador hundiría la conversión sin decir nada útil.
   for (const lead of leads) {
-    maximo.set(lead.id, RANGO[lead.fase]);
     porFase[lead.fase]++;
+    if (lead.fase === "fuera_de_perfil") continue;
+    maximo.set(lead.id, RANGO[lead.fase]);
   }
   for (const cambio of cambios) {
     const fase = cambio.datos?.fase_nueva;
@@ -123,7 +129,7 @@ export function calcularEmbudo(
   for (const rango of maximo.values()) {
     for (const etapa of ETAPAS_EMBUDO) if (rango >= RANGO_ETAPA[etapa]) alcanzaron[etapa]++;
   }
-  return { total: leads.length, alcanzaron, porFase };
+  return { total: maximo.size, alcanzaron, porFase };
 }
 
 export function pctPaso(parte: number, total: number): number | null {

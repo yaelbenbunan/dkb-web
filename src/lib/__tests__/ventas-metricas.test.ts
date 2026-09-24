@@ -41,6 +41,26 @@ describe("fechas en hora de Madrid", () => {
 });
 
 describe("calcularEmbudo", () => {
+  test("los «fuera de perfil» no cuentan: nunca fueron una oportunidad", () => {
+    // Si contaran, la tasa de conversión se hundiría por leads que no eran
+    // nuestro público y que además están archivados fuera del embudo.
+    const leads = [
+      { id: "a", fase: "cliente" as const },
+      { id: "b", fase: "fuera_de_perfil" as const },
+      { id: "c", fase: "fuera_de_perfil" as const },
+    ];
+    const embudo = calcularEmbudo(leads, []);
+    expect(embudo.total).toBe(1);
+    expect(embudo.alcanzaron.contactado).toBe(1);
+    expect(embudo.porFase.fuera_de_perfil).toBe(2);
+  });
+
+  test("«volver a llamar» cuenta como contactado: alguien lo intentó", () => {
+    const embudo = calcularEmbudo([{ id: "a", fase: "volver_a_llamar" as const }], []);
+    expect(embudo.alcanzaron.contactado).toBe(1);
+    expect(embudo.alcanzaron.interesado).toBe(0);
+  });
+
   test("cuenta a cada lead en todas las etapas que alcanzó, aunque luego se cerrara", () => {
     const leads = [
       { id: "a", fase: "nuevo" as const },

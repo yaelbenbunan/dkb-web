@@ -14,12 +14,16 @@ import { normalizeKey } from "../leads-csv";
 export const FASES = [
   "nuevo",
   "contactado",
+  "volver_a_llamar",
   "interesado",
   "muestras",
   "cliente",
   "perdido",
   "no_interesa",
   "ilocalizable",
+  /** Nunca fue un lead válido: no es nuestro público. Se archiva y sale del
+   *  embudo, a diferencia de `no_interesa`, que sí entendió y dijo que no. */
+  "fuera_de_perfil",
 ] as const;
 export type Fase = (typeof FASES)[number];
 
@@ -29,6 +33,8 @@ export const FASE_LABELS: Record<Fase, string> = {
   interesado: "Interesado",
   muestras: "Muestras enviadas",
   cliente: "Cliente",
+  volver_a_llamar: "Volver a llamar",
+  fuera_de_perfil: "Fuera de perfil",
   perdido: "Perdido",
   no_interesa: "No le interesa",
   ilocalizable: "Ilocalizable",
@@ -40,13 +46,21 @@ export const FASE_COLORES: Record<Fase, { bg: string; text: string }> = {
   interesado: { bg: "#fef3c7", text: "#92400e" },
   muestras: { bg: "#ede9fe", text: "#5b21b6" },
   cliente: { bg: "#dcfce7", text: "#166534" },
+  volver_a_llamar: { bg: "#ffedd5", text: "#9a3412" },
+  fuera_de_perfil: { bg: "#f1f5f9", text: "#64748b" },
   perdido: { bg: "#fee2e2", text: "#991b1b" },
   no_interesa: { bg: "#fee2e2", text: "#991b1b" },
   ilocalizable: { bg: "#f1f5f9", text: "#64748b" },
 };
 
 /** Fases en las que todavía se trabaja el lead: solo estas llevan seguimiento. */
-export const FASES_ACTIVAS: readonly Fase[] = ["nuevo", "contactado", "interesado", "muestras"];
+export const FASES_ACTIVAS: readonly Fase[] = [
+  "nuevo",
+  "contactado",
+  "volver_a_llamar",
+  "interesado",
+  "muestras",
+];
 
 export function esFaseActiva(fase: string): boolean {
   return (FASES_ACTIVAS as readonly string[]).includes(fase);
@@ -161,11 +175,17 @@ export const MARCA_DINKBIT_SLUG = "dinkbit";
 /* Reglas de llamada                                                          */
 /* -------------------------------------------------------------------------- */
 
-const RANGO_ACTIVO: Record<string, number> = { nuevo: 0, contactado: 1, interesado: 2, muestras: 3 };
+const RANGO_ACTIVO: Record<string, number> = {
+  nuevo: 0,
+  contactado: 1,
+  volver_a_llamar: 1,
+  interesado: 2,
+  muestras: 3,
+};
 
 const DESTINO_LLAMADA: Record<ResultadoLlamada, Fase> = {
   no_contesta: "contactado",
-  volver_a_llamar: "contactado",
+  volver_a_llamar: "volver_a_llamar",
   interesado: "interesado",
   pide_muestras: "interesado",
   no_interesa: "no_interesa",
@@ -182,6 +202,10 @@ const DESTINO_LLAMADA: Record<ResultadoLlamada, Fase> = {
 export function faseTrasLlamada(actual: Fase, resultado: ResultadoLlamada): Fase {
   if (actual === "cliente") return "cliente";
   const destino = DESTINO_LLAMADA[resultado];
+  // «Volver a llamar» es un estado lateral, no un paso del embudo: gana
+  // también sobre fases más avanzadas, para que el lead aparezca en su columna
+  // pendiente de llamar. Sacarlo de ahí lo decide la comercial a mano.
+  if (destino === "volver_a_llamar") return destino;
   if (!esFaseActiva(destino)) return destino;
   if (!esFaseActiva(actual)) return destino;
   return RANGO_ACTIVO[destino] > RANGO_ACTIVO[actual] ? destino : actual;

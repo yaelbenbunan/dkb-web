@@ -17,24 +17,34 @@ import {
 const HOY = "2026-09-17";
 
 describe("columnas del tablero", () => {
-  test("seis columnas en orden, con Descartados al final y sin destino único", () => {
-    expect(COLUMNAS_TABLERO.map((c) => c.id)).toEqual(["nuevo", "contactado", "interesado", "muestras", "cliente", "descartados"]);
-    expect(COLUMNAS_TABLERO.map((c) => c.titulo)).toEqual(["Nuevo", "Contactado", "Interesado", "Muestras enviadas", "Cliente", "Descartados"]);
+  test("las columnas van en orden, con Descartados al final y sin destino único", () => {
+    expect(COLUMNAS_TABLERO.map((c) => c.id)).toEqual(["nuevo", "contactado", "volver_a_llamar", "interesado", "muestras", "cliente", "descartados"]);
+    expect(COLUMNAS_TABLERO.map((c) => c.titulo)).toEqual(["Nuevo", "Contactado", "Volver a llamar", "Interesado", "Muestras enviadas", "Cliente", "Descartados"]);
     const descartados = COLUMNAS_TABLERO.find((c) => c.id === "descartados")!;
     expect(descartados.fases).toEqual(["perdido", "no_interesa", "ilocalizable"]);
     expect(descartados.destino).toBeNull();
     expect(COLUMNAS_TABLERO.find((c) => c.id === "muestras")!.destino).toBe("muestras");
   });
 
-  test("cada fase está en exactamente una columna", () => {
+  test("cada fase está en una columna como mucho, y las archivadas en ninguna", () => {
+    // «Fuera de perfil» se archiva: es la única que no se pinta en el tablero.
+    const ARCHIVADAS: readonly string[] = ["fuera_de_perfil"];
     for (const fase of FASES) {
-      expect(COLUMNAS_TABLERO.filter((c) => c.fases.includes(fase))).toHaveLength(1);
+      const columnas = COLUMNAS_TABLERO.filter((c) => c.fases.includes(fase));
+      expect(columnas).toHaveLength(ARCHIVADAS.includes(fase) ? 0 : 1);
     }
     expect(columnaDeFase("nuevo")).toBe("nuevo");
     expect(columnaDeFase("cliente")).toBe("cliente");
     expect(columnaDeFase("perdido")).toBe("descartados");
     expect(columnaDeFase("no_interesa")).toBe("descartados");
     expect(columnaDeFase("ilocalizable")).toBe("descartados");
+    expect(columnaDeFase("volver_a_llamar")).toBe("volver_a_llamar");
+  });
+
+  test("una fase archivada no tiene columna: desaparece del tablero", () => {
+    // «Fuera de perfil» es el lead que nunca fue válido. No se arrastra a
+    // ningún sitio ni ocupa espacio en el embudo; sigue en la lista de leads.
+    expect(columnaDeFase("fuera_de_perfil")).toBeNull();
   });
 
   test("agrupar reparte los leads y Descartados junta las tres fases cerradas, manteniendo el orden", () => {
