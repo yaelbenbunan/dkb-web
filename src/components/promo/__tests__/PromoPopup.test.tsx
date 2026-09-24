@@ -6,12 +6,22 @@ vi.mock("@/lib/promo-subscribe-action", () => ({ subscribePromo: subscribeMock }
 vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
 
 import { PromoPopup } from "@/components/promo/PromoPopup";
+import { PROMO } from "@/lib/promo-config";
+
+/**
+ * El popup solo aparece dentro de la ventana de la promo, así que los tests
+ * fijan el reloj dentro de ella. Sin esto dependían de la fecha real y se
+ * rompieron solos el día que la promo caducó: pasaban en agosto y fallaban en
+ * septiembre sin que nadie hubiera tocado el código.
+ */
+const DENTRO_DE_LA_PROMO = Date.parse(PROMO.deadlineISO) - 24 * 60 * 60 * 1000;
 
 describe("PromoPopup", () => {
   beforeEach(() => {
     subscribeMock.mockReset().mockResolvedValue({ ok: true });
     localStorage.clear();
     vi.useFakeTimers();
+    vi.setSystemTime(DENTRO_DE_LA_PROMO);
   });
   afterEach(() => { vi.useRealTimers(); cleanup(); });
 
@@ -48,5 +58,11 @@ describe("PromoPopup", () => {
     fireEvent.click(screen.getByRole("button", { name: /quiero mi 50% de descuento/i }));
     await waitFor(() => expect(subscribeMock).toHaveBeenCalledTimes(1));
     expect(await screen.findByText(/revisa tu correo/i)).toBeInTheDocument();
+  });
+
+  test("no aparece cuando la promo ya ha caducado", () => {
+    vi.setSystemTime(Date.parse(PROMO.deadlineISO) + 1000);
+    showPopup();
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
