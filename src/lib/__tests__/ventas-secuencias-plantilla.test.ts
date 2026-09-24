@@ -6,10 +6,6 @@ import { PLANTILLAS, SECUENCIA_DENTAL, SECUENCIA_PSICOLOGIA, secuenciaDePlantill
 const destinosDeBotones = (s: Secuencia, id: string): string[] =>
   s.pasos[id].botones.map((b) => b.ruta.ir_a).filter((d): d is string => Boolean(d));
 
-/** Las dos plantillas comparten esqueleto: el paso donde se elige el problema
- *  del sector se llama siempre «problemas», y de ahí salen las tres ramas. */
-const PASO_PROBLEMAS = "problemas";
-
 describe.each([
   ["dental", SECUENCIA_DENTAL],
   ["psicología", SECUENCIA_PSICOLOGIA],
@@ -42,17 +38,23 @@ describe.each([
     expect(avisa).toBe(true);
   });
 
-  it("reintenta una sola vez tras una espera a quien dice que ahora no", () => {
+  it("empieza preguntando, sin pasos de presentación", () => {
+    // El saludo y la pregunta van juntos: cada mensaje antes de cualificar es
+    // uno en el que el lead puede abandonar.
+    const inicio = secuencia.pasos[secuencia.inicio];
+    expect(inicio.botones).toHaveLength(3);
+    expect(inicio.texto).toContain("Escala");
+  });
+
+  it("no tiene esperas: todos los cierres terminan", () => {
     const esperas = Object.values(secuencia.pasos).flatMap((p) =>
-      [...p.botones.map((b) => b.ruta), ...(p.ruta ? [p.ruta] : [])]
-        .map((r) => r.esperar_dias)
-        .filter((d): d is number => d !== undefined),
+      [...p.botones.map((b) => b.ruta), ...(p.ruta ? [p.ruta] : [])].map((r) => r.esperar_dias),
     );
-    expect(esperas).toEqual([7]);
+    expect(esperas.filter((d) => d !== undefined)).toEqual([]);
   });
 
   it("lleva cada problema a un cierre distinto", () => {
-    const destinos = destinosDeBotones(secuencia, PASO_PROBLEMAS);
+    const destinos = destinosDeBotones(secuencia, secuencia.inicio);
     expect(destinos).toHaveLength(3);
     expect(new Set(destinos).size).toBe(3);
   });

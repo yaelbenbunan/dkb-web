@@ -8,7 +8,16 @@
  * que siguen siendo válidas: una secuencia rota no se descubre al guardarla,
  * se descubre cuando un lead real se queda a medias.
  *
- * Las dos comparten esqueleto —inicio, publicidad, problemas, tres cierres— y
+ * El paso `inicio` de cada una es, palabra por palabra, el texto que hoy
+ * manda `whatsapp/autorespuesta.ts` para ese sector (`CUERPO`/`OPCIONES`):
+ * saluda, dice a qué viene en una frase y pregunta el problema con tres
+ * botones. Antes había dos mensajes de presentación —uno con espera de
+ * 7 días— antes de llegar a la pregunta; se han eliminado porque cada
+ * mensaje antes de cualificar es uno en el que el lead puede abandonar, y
+ * ahora es la secuencia, no `autorespuesta.ts`, la que manda el primer
+ * mensaje real (ese fichero se queda como respaldo, ver su cabecera).
+ *
+ * Las dos comparten esqueleto —inicio con la pregunta, tres cierres— y
  * cambia el argumento, porque el argumento de cada sector ya está decidido en
  * `escala-sectores.ts` y no es el mismo:
  *
@@ -29,26 +38,9 @@
  * pasar por la aprobación de Meta. Si algún día estas secuencias se lanzan en
  * frío desde el tablero, el primer paso sí tendría que marcarse como
  * plantilla.
- *
- * LIMITACIÓN CONOCIDA: el reintento tras la espera de 7 días llega con la
- * ventana ya cerrada, así que ese sí necesitaría plantilla aprobada. El motor
- * de la fase 1 solo la admite en el paso de inicio, de modo que queda
- * pendiente de la entrega 2.
  */
 
 import { secuenciaVacia, type Secuencia } from "./secuencias";
-
-/** Pregunta compartida: saber si ya invierte separa al que hay que convencer
- *  del canal, del que solo hay que convencer de nosotros. */
-const PASO_PUBLICIDAD = {
-  tipo: "mensaje" as const,
-  texto: "Antes de nada, para no contarte lo que ya sabes: ¿inviertes ahora mismo en publicidad para traer pacientes?",
-  botones: [
-    { texto: "Sí, cada mes", ruta: { ir_a: "problemas" } },
-    { texto: "Todavía no", ruta: { ir_a: "problemas" } },
-    { texto: "Lo probé y lo dejé", ruta: { ir_a: "problemas" } },
-  ],
-};
 
 export const SECUENCIA_DENTAL: Secuencia = {
   version: 1,
@@ -57,36 +49,8 @@ export const SECUENCIA_DENTAL: Secuencia = {
     inicio: {
       tipo: "mensaje",
       texto:
-        "Hola {{contacto}}, soy {{remitente}} de {{marca}}. Trabajamos con clínicas dentales en captación de pacientes.\n\n" +
-        "En dental lo caro no suele ser llenar la agenda, sino llenarla de primeras visitas que no acaban en tratamiento. ¿Te cuento en dos minutos cómo lo medimos?",
-      botones: [
-        { texto: "Sí, cuéntame", ruta: { ir_a: "publicidad" } },
-        { texto: "Ahora no", ruta: { ir_a: "ahora_no" } },
-      ],
-    },
-
-    ahora_no: {
-      tipo: "mensaje",
-      texto: "Sin problema, {{contacto}}. Te escribo en unos días por si entonces te viene mejor.",
-      botones: [],
-      ruta: { esperar_dias: 7, ir_a: "reintento" },
-    },
-
-    reintento: {
-      tipo: "mensaje",
-      texto:
-        "Hola {{contacto}}, retomo aquello de la captación de pacientes para {{negocio}}. ¿Le echamos un vistazo ahora?",
-      botones: [
-        { texto: "Va, cuéntame", ruta: { ir_a: "publicidad" } },
-        { texto: "Mejor no", ruta: { terminar: true } },
-      ],
-    },
-
-    publicidad: PASO_PUBLICIDAD,
-
-    problemas: {
-      tipo: "mensaje",
-      texto: "¿Qué se parece más a lo que te pasa hoy en la clínica?",
+        "¡Hola! Soy Paula, de Escala. Gracias por interesarte en nuestro proceso para que ganes más con cada paciente.\n\n" +
+        "Para poder ofrecerte la mejor solución, cuéntanos: ¿cuál es el principal problema que estás teniendo?",
       botones: [
         { texto: "Faltan pacientes", ruta: { ir_a: "cierre_faltan" } },
         { texto: "Primera visita y ya", ruta: { ir_a: "cierre_no_arrancan" } },
@@ -133,35 +97,8 @@ export const SECUENCIA_PSICOLOGIA: Secuencia = {
     inicio: {
       tipo: "mensaje",
       texto:
-        "Hola {{contacto}}, soy {{remitente}} de {{marca}}. Ayudamos a consultas de psicología a llenar los huecos de la agenda.\n\n" +
-        "Se puede ser muy buen profesional y tener la agenda a medias: son dos cosas distintas. ¿Te cuento en dos minutos cómo lo trabajamos?",
-      botones: [
-        { texto: "Sí, cuéntame", ruta: { ir_a: "publicidad" } },
-        { texto: "Ahora no", ruta: { ir_a: "ahora_no" } },
-      ],
-    },
-
-    ahora_no: {
-      tipo: "mensaje",
-      texto: "Sin problema, {{contacto}}. Te escribo en unos días por si entonces te viene mejor.",
-      botones: [],
-      ruta: { esperar_dias: 7, ir_a: "reintento" },
-    },
-
-    reintento: {
-      tipo: "mensaje",
-      texto: "Hola {{contacto}}, retomo aquello de llenar la agenda de {{negocio}}. ¿Lo vemos ahora?",
-      botones: [
-        { texto: "Va, cuéntame", ruta: { ir_a: "publicidad" } },
-        { texto: "Mejor no", ruta: { terminar: true } },
-      ],
-    },
-
-    publicidad: PASO_PUBLICIDAD,
-
-    problemas: {
-      tipo: "mensaje",
-      texto: "¿Qué se parece más a lo que te pasa hoy en la consulta?",
+        "¡Hola! Soy Paula, de Escala. Gracias por interesarte en nuestro proceso para llenar la agenda de tu consulta.\n\n" +
+        "Para poder ofrecerte la mejor solución, cuéntanos: ¿cuál es el principal problema que estás teniendo?",
       botones: [
         { texto: "Huecos en la agenda", ruta: { ir_a: "cierre_huecos" } },
         { texto: "Vienen 1 vez y ya", ruta: { ir_a: "cierre_abandono" } },
