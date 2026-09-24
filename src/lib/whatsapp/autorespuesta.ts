@@ -52,8 +52,16 @@ export function verticalDeAnuncio(anuncio: string | null): Vertical {
 
 const PREGUNTA = "Para poder ofrecerte la mejor solución, cuéntanos: ¿cuál es el principal problema que estás teniendo?";
 
-/** Cuerpo del mensaje, por sector. Las opciones van aparte, como botones. */
-const CUERPO: Record<Vertical, string> = {
+/**
+ * Cuerpo del mensaje, por sector. Las opciones van aparte, como botones.
+ *
+ * Exportado (además de usarse aquí dentro) para que
+ * `ventas/secuencias-plantilla.ts` pueda comparar contra él en un test: el
+ * paso de inicio de cada secuencia es, palabra por palabra, este texto, y sin
+ * ese test los dos podrían divergir en silencio si alguien retoca uno sin el
+ * otro.
+ */
+export const CUERPO: Record<Vertical, string> = {
   dental:
     `¡Hola! Soy ${REMITENTE}, de Escala. Gracias por interesarte en nuestro proceso para que ganes más con cada paciente.\n\n` +
     PREGUNTA,
@@ -73,8 +81,12 @@ const CUERPO: Record<Vertical, string> = {
  * entre el primer mensaje y el resto de la conversación. Y caben en los 20
  * caracteres que admite un botón de WhatsApp, que es lo que obliga a decir
  * «Vienen 1 vez y ya» en vez de «Vienen una vez y no vuelven».
+ *
+ * Exportada por el mismo motivo que `CUERPO`: para que un test en
+ * `ventas/secuencias-plantilla.ts` compruebe que los rótulos no se
+ * bifurcaron.
  */
-const OPCIONES: Record<Vertical, readonly string[]> = {
+export const OPCIONES: Record<Vertical, readonly string[]> = {
   dental: ["Faltan pacientes", "Primera visita y ya", "Vienen y no vuelven"],
   psicologia: ["Huecos en la agenda", "Vienen 1 vez y ya", "Solo boca a boca"],
   generico: ["Faltan pacientes", "No se quedan", "Solo boca a boca"],

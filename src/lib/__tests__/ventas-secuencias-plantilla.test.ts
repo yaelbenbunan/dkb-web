@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CUERPO, OPCIONES, type Vertical } from "../whatsapp/autorespuesta";
 import { parsearSecuencia, validarSecuencia, type Secuencia } from "../ventas/secuencias";
 import { PLANTILLAS, SECUENCIA_DENTAL, SECUENCIA_PSICOLOGIA, secuenciaDePlantilla } from "../ventas/secuencias-plantilla";
 
@@ -6,10 +7,10 @@ import { PLANTILLAS, SECUENCIA_DENTAL, SECUENCIA_PSICOLOGIA, secuenciaDePlantill
 const destinosDeBotones = (s: Secuencia, id: string): string[] =>
   s.pasos[id].botones.map((b) => b.ruta.ir_a).filter((d): d is string => Boolean(d));
 
-describe.each([
-  ["dental", SECUENCIA_DENTAL],
-  ["psicología", SECUENCIA_PSICOLOGIA],
-])("plantilla de %s", (_nombre, secuencia) => {
+describe.each<[string, Vertical, Secuencia]>([
+  ["dental", "dental", SECUENCIA_DENTAL],
+  ["psicología", "psicologia", SECUENCIA_PSICOLOGIA],
+])("plantilla de %s", (_nombre, vertical, secuencia) => {
   it("cumple la forma que exige el motor", () => {
     const res = parsearSecuencia(secuencia);
     expect(res.ok).toBe(true);
@@ -44,6 +45,15 @@ describe.each([
     const inicio = secuencia.pasos[secuencia.inicio];
     expect(inicio.botones).toHaveLength(3);
     expect(inicio.texto).toContain("Escala");
+  });
+
+  it("el inicio es, palabra por palabra, el de autorespuesta.ts", () => {
+    // Ata las dos fuentes: si alguien retoca el copy en un sitio sin el otro,
+    // este test lo saca a la luz en vez de que lo descubra un lead viendo un
+    // mensaje distinto según lo mande la secuencia o el respaldo.
+    const inicio = secuencia.pasos[secuencia.inicio];
+    expect(inicio.texto).toBe(CUERPO[vertical]);
+    expect(inicio.botones.map((b) => b.texto)).toEqual([...OPCIONES[vertical]]);
   });
 
   it("no tiene esperas: todos los cierres terminan", () => {
