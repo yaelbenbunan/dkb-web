@@ -208,6 +208,24 @@ const SECUENCIA_SIN_ESE_PASO: Secuencia = {
   },
 };
 
+/** Igual que `SECUENCIA_ACTIVA_PASOS` pero el paso «inicio» se quedó con un
+ *  solo botón: simula editar la secuencia con la conversación en vuelo de
+ *  forma que el botón que el lead ya tiene delante (el segundo) deja de
+ *  existir. `indiceDeBoton` sigue traduciendo su id igual (el formato no
+ *  cambia), así que `responderBoton` recibe un índice fuera de rango
+ *  (ronda de arreglos 1, Hallazgo 1 Critical). */
+const SECUENCIA_MENOS_BOTONES: Secuencia = {
+  version: 1,
+  inicio: "inicio",
+  pasos: {
+    inicio: {
+      ...SECUENCIA_ACTIVA_PASOS.pasos.inicio,
+      botones: [SECUENCIA_ACTIVA_PASOS.pasos.inicio.botones[0]],
+    },
+    cierre_uno: SECUENCIA_ACTIVA_PASOS.pasos.cierre_uno,
+  },
+};
+
 /** Lo que un lead falso puede traer para rellenar `ContextoSimulacion`. Todo
  *  opcional: la mayoría de tests no necesitan estos datos, así que
  *  `depsFalsas` los rellena con relleno neutro (negocio genérico, sin
@@ -739,5 +757,63 @@ describe("procesarWebhook", () => {
       procesarWebhook({ cuerpo: sobrePulsacion("opcion_1", "Huecos en la agenda"), deps }),
     ).resolves.toBeDefined();
     expect([...conversaciones.values()][0].estado).toBe("humana");
+  });
+
+  /* Ronda de arreglos 1 de la tarea 8 ---------------------------------------- */
+
+  // Hallazgo 1 (Critical): un botón fuera de rango (la secuencia se editó
+  // con menos botones que los que el lead tiene delante) dejaba la
+  // conversación en "bot" para siempre, sin mensaje, sin aviso y sin ni un
+  // log — el lead se quedaba esperando una respuesta que no iba a llegar.
+  it("un botón fuera de rango pasa a humana y avisa en la ficha, no deja la conversación muda", async () => {
+    const { deps, conversaciones, secuencias, actividades } = depsFalsas({ secuencias: [SECUENCIA_ACTIVA] });
+
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+    // La secuencia se edita con menos botones mientras la conversación sigue
+    // en vuelo: el lead tiene delante un mensaje con dos botones, pero ahora
+    // el paso solo tiene uno.
+    secuencias[0].pasos = SECUENCIA_MENOS_BOTONES;
+
+    await expect(
+      procesarWebhook({ cuerpo: sobrePulsacion("opcion_2", "Vienen 1 vez y ya"), deps }),
+    ).resolves.toBeDefined();
+
+    expect([...conversaciones.values()][0].estado).toBe("humana");
+    expect(actividades.some((a) => a.nota.includes("Avisar"))).toBe(true);
+  });
+
+  // Hallazgo 2 (Important): cuando no hay nada que avanzar porque la
+  // secuencia ya no existe o no parsea, antes solo quedaba un
+  // `console.error` — la comercial abría la ficha sin saber qué había
+  // pasado. Ahora tiene que quedar una nota.
+  it("si la secuencia ya no está entre las de la marca, pasa a humana y deja el motivo en la ficha", async () => {
+    const { deps, conversaciones, secuencias, actividades } = depsFalsas({ secuencias: [SECUENCIA_ACTIVA] });
+
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+    // La fila desaparece de la lista de secuencias de la marca (borrada),
+    // como si `listSecuencias` ya no la trajera.
+    secuencias.length = 0;
+
+    await expect(
+      procesarWebhook({ cuerpo: sobrePulsacion("opcion_1", "Vienen bastante"), deps }),
+    ).resolves.toBeDefined();
+
+    expect([...conversaciones.values()][0].estado).toBe("humana");
+    expect(actividades.some((a) => a.nota.includes("Avisar"))).toBe(true);
+  });
+
+  it("si la secuencia guardada no parsea, pasa a humana y deja el motivo en la ficha", async () => {
+    const { deps, conversaciones, secuencias, actividades } = depsFalsas({ secuencias: [SECUENCIA_ACTIVA] });
+
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+    // Forma inválida: le falta "pasos". `parsearSecuencia` la rechaza.
+    secuencias[0].pasos = { version: 1, inicio: "inicio" };
+
+    await expect(
+      procesarWebhook({ cuerpo: sobrePulsacion("opcion_1", "Vienen bastante"), deps }),
+    ).resolves.toBeDefined();
+
+    expect([...conversaciones.values()][0].estado).toBe("humana");
+    expect(actividades.some((a) => a.nota.includes("Avisar"))).toBe(true);
   });
 });

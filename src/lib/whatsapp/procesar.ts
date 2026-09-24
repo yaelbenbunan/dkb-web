@@ -223,12 +223,15 @@ function arrancarSecuencia(
   };
 }
 
-/** Lo que hace falta tras avanzar la secuencia con la respuesta del lead. */
-interface SecuenciaAvanzada {
-  estado: EstadoGuardado;
-  mensajes: EntradaConversacion[];
-  avisos: string[];
-}
+/**
+ * Lo que hace falta tras avanzar la secuencia con la respuesta del lead, o
+ * el motivo por el que no hubo nada que avanzar. `motivo` es texto pensado
+ * para la ficha del lead (ronda de arreglos 1, Hallazgo 2): todo lo que saca
+ * una conversación del bot tiene que verse ahí, no solo en un `console.error`.
+ */
+type ResultadoAvance =
+  | { ok: true; estado: EstadoGuardado; mensajes: EntradaConversacion[]; avisos: string[] }
+  | { ok: false; motivo: string };
 
 /**
  * Reconstruye el estado del motor desde lo que ya estaba guardado en la
@@ -237,11 +240,32 @@ interface SecuenciaAvanzada {
  * decisión 5 la delega a `responderBoton`/`responderTexto`, no a este
  * módulo)— y devuelve lo que hay que mandar y lo que hay que guardar.
  *
- * Devuelve `null` si `secuenciaId` ya no está entre las secuencias de la
- * marca o su forma ya no parsea (alguien la editó o archivó con esta
- * conversación en vuelo): el llamador lo trata igual que "nada que avanzar"
- * y entrega la conversación a una persona, en vez de dejar al lead sin
- * respuesta o de romper el webhook.
+ * Devuelve `{ ok: false }` cuando no hay nada que avanzar:
+ * - La fila de `secuenciaId` ya no está en `secuencias`, o su forma no
+ *   parsea (alguien la borró o la rompió con esta conversación en vuelo).
+ * - `responderBoton` no encontró nada que hacer con la respuesta: el botón
+ *   pulsado ya no existe en el paso actual (`indiceDeBoton` tradujo un
+ *   índice, pero el paso tiene menos botones ahora), o el propio paso
+ *   actual ya no existe en la secuencia. Ninguno de los dos casos levanta
+ *   aviso por sí solo dentro del motor —a diferencia de un `ir_a` roto, que
+ *   sí lo hace en `entrarEnPaso`— así que sin este chequeo la conversación
+ *   se quedaría en `bot`, con el mismo paso, esperando una respuesta que
+ *   nunca llegaría, y nadie se enteraría (Hallazgo 1 Critical, ronda de
+ *   arreglos 1). Se detecta comparando por referencia: `responderBoton`
+ *   devuelve el MISMO objeto `anterior` sin tocar nada en sus dos ramas
+ *   tempranas (paso sin botón que encaje, o paso que ya no existe); en
+ *   cualquier avance real construye un objeto nuevo, aunque el resultado
+ *   final no tenga mensajes ni avisos (p.ej. una ruta que termina sin
+ *   `avisar`).
+ *
+ * OJO con `secuencias`: viene de `listSecuencias`, que trae TODAS las filas
+ * de la marca, archivadas incluidas — aquí no se filtra por `estado`, a
+ * propósito y a diferencia de `elegirSecuencia` (que sí filtra por
+ * "activa", porque esa función decide qué secuencia EMPEZAR para un anuncio
+ * nuevo). Archivar una secuencia significa "no empieces conversaciones
+ * nuevas con esta", no "abandona a quien ya está hablando contigo": una
+ * conversación en marcha con una secuencia archivada tiene que poder seguir
+ * avanzando hasta que termine.
  */
 function avanzarSecuencia(
   secuencias: SecuenciaRow[],
@@ -250,17 +274,19 @@ function avanzarSecuencia(
   mensaje: Pick<MensajeEntrante, "botonId" | "texto">,
   marcaNombre: string,
   leadDatos: LeadDatos,
-): SecuenciaAvanzada | null {
+): ResultadoAvance {
   const fila = secuencias.find((s) => s.id === secuenciaId);
   if (!fila) {
-    console.error(`[whatsapp] la secuencia "${secuenciaId}" ya no existe entre las de la marca, se pasa a humana`);
-    return null;
+    const motivo = `la secuencia "${secuenciaId}" ya no existe entre las de la marca`;
+    console.error(`[whatsapp] ${motivo}, se pasa a humana`);
+    return { ok: false, motivo };
   }
 
   const parseada = parsearSecuencia(fila.pasos);
   if (!parseada.ok) {
-    console.error(`[whatsapp] la secuencia "${secuenciaId}" no parsea al avanzarla, se pasa a humana: ${parseada.error}`);
-    return null;
+    const motivo = `la secuencia "${secuenciaId}" tiene una forma inválida (${parseada.error})`;
+    console.error(`[whatsapp] ${motivo}, se pasa a humana`);
+    return { ok: false, motivo };
   }
 
   const ctx: ContextoSimulacion = {
@@ -290,11 +316,40 @@ function avanzarSecuencia(
       ? responderBoton(parseada.secuencia, anterior, indice, ctx)
       : responderTexto(parseada.secuencia, anterior, mensaje.texto ?? "", ctx);
 
+  if (nuevo === anterior) {
+    return {
+      ok: false,
+      motivo: "el lead pulsó una opción que ya no existe en el paso actual de la secuencia",
+    };
+  }
+
   return {
+    ok: true,
     estado: aEstadoGuardado(nuevo),
     mensajes: mensajesAEnviar(anterior, nuevo),
     avisos: nuevo.avisos,
   };
+}
+
+/** Deja rastro en la ficha del lead de que la conversación pasó a manos de
+ *  una persona y por qué (Hallazgo 2, ronda de arreglos 1 de la tarea 8):
+ *  todo lo que saca a un lead del bot tiene que verse en su ficha, no solo
+ *  en un log que nadie mira salvo cuando ya hay una queja. Best-effort, como
+ *  el resto de FASE B: un fallo aquí solo se registra. */
+async function avisarComercial(leadId: string, motivo: string): Promise<void> {
+  try {
+    const resultado = await registrarActividad({
+      leadId,
+      usuariaId: null,
+      tipo: "nota",
+      nota: `Avisar a la comercial: ${motivo}`,
+    });
+    if (!resultado.ok) {
+      console.error("[whatsapp] fallo registrando el aviso a la comercial", leadId, resultado.error);
+    }
+  } catch (e) {
+    console.error("[whatsapp] fallo registrando el aviso a la comercial", leadId, e);
+  }
 }
 
 /** Aplica un cambio a una conversación existente y devuelve la copia ya actualizada. */
@@ -624,7 +679,7 @@ async function procesarMensaje(
           leadDatos,
         );
 
-        if (avanzada) {
+        if (avanzada.ok) {
           // Igual que al arrancar: un paso con botones se manda con
           // `enviarBotones`, uno sin botones con `enviarTexto` (decisión 5).
           for (const entrada of avanzada.mensajes) {
@@ -676,27 +731,17 @@ async function procesarMensaje(
           }
 
           if (pasaAHumana && leadId) {
-            try {
-              const resultado = await registrarActividad({
-                leadId,
-                usuariaId: null,
-                tipo: "nota",
-                nota: `Avisar a la comercial: ${avanzada.avisos.join("; ")}`,
-              });
-              if (!resultado.ok) {
-                console.error("[whatsapp] fallo registrando el aviso de la secuencia", leadId, resultado.error);
-              }
-            } catch (e) {
-              console.error("[whatsapp] fallo registrando el aviso de la secuencia", leadId, e);
-            }
+            await avisarComercial(leadId, avanzada.avisos.join("; "));
           }
         } else {
-          // La secuencia ya no está entre las de la marca o no parsea
-          // (avanzarSecuencia ya lo registró con console.error): no hay nada
-          // que avanzar, se entrega a una persona en vez de dejar al lead
-          // sin respuesta.
+          // Nada que avanzar (secuencia borrada/rota, botón u opción que ya
+          // no existe — ver el JSDoc de `avanzarSecuencia`): se entrega a una
+          // persona en vez de dejar al lead sin respuesta, y se deja el
+          // motivo en su ficha (Hallazgo 2, ronda de arreglos 1), no solo en
+          // el `console.error` que ya dejó `avanzarSecuencia`.
           await deps.actualizarConversacion(conversacion.id, { estado: "humana" });
           conversacion = { ...conversacion, estado: "humana" };
+          if (leadId) await avisarComercial(leadId, avanzada.motivo);
         }
       } catch (e) {
         // Best-effort (fase B): un fallo aquí (p.ej. `listSecuencias` cae)
