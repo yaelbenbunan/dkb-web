@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { VERTICAL_POR_ANUNCIO, textoAutorespuesta, verticalDeAnuncio } from "../autorespuesta";
+import {
+  VERTICAL_POR_ANUNCIO,
+  opcionesAutorespuesta,
+  textoAutorespuesta,
+  verticalDeAnuncio,
+} from "../autorespuesta";
 
 describe("verticalDeAnuncio", () => {
   it("reconoce los anuncios mapeados", () => {
@@ -29,25 +34,29 @@ describe("textoAutorespuesta", () => {
     expect(texto).toMatch(/para poder ofrecerte la mejor solución/i);
   });
 
-  it("se presenta, explica qué es Escala y ofrece opciones numeradas", () => {
-    // Las opciones van numeradas y no como botones de WhatsApp porque todavía
-    // no sabemos procesar una pulsación: llegaría como mensaje interactivo y
-    // se perdería la respuesta. Con números llega como texto y queda guardada.
+  it("se presenta y explica qué es Escala", () => {
     const texto = textoAutorespuesta({ anuncio: null });
     expect(texto).toContain("Escala");
-    expect(texto).toContain("1.");
-    expect(texto).toContain("2.");
-    expect(texto).toContain("3.");
-    expect(texto).toMatch(/responde con el número/i);
+    expect(texto).toContain("Paula");
   });
 
-  it("pregunta por pacientes, no por webs", () => {
+  it("habla de pacientes, no de webs", () => {
     // La autorespuesta solo se dispara con clics de anuncio, y todos los
     // anuncios son de captación de pacientes para clínicas. Preguntar por la
     // web —como hacía la primera versión— descolocaba al lead.
     const texto = textoAutorespuesta({ anuncio: null }).toLowerCase();
-    expect(texto).toContain("pacientes");
+    expect(texto).toContain("paciente");
     expect(texto).not.toContain("web");
+  });
+
+  it("las opciones caben en un botón de WhatsApp", () => {
+    // 20 caracteres es el límite duro. Pasarse no da un error bonito: Meta
+    // rechaza el mensaje entero y el lead no recibe nada.
+    for (const anuncio of [null, "120200000000000"]) {
+      const opciones = opcionesAutorespuesta(anuncio);
+      expect(opciones).toHaveLength(3);
+      for (const o of opciones) expect(o.length).toBeLessThanOrEqual(20);
+    }
   });
 
   it("nunca pasa del límite de WhatsApp", () => {

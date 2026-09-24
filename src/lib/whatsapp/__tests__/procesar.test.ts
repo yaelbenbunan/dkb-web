@@ -79,8 +79,12 @@ function depsFalsas(opts: { enviar?: (waId: string, texto: string) => Promise<Re
 
   const clave = (marcaId: string, waId: string) => `${marcaId}:${waId}`;
 
+  const enviar = opts.enviar ?? (async () => ({ ok: true, wamid: `wamid.saliente.${salientes.length + 1}` }));
   const mensajero: MensajeroWhatsApp = {
-    enviarTexto: opts.enviar ?? (async () => ({ ok: true, wamid: `wamid.saliente.${salientes.length + 1}` })),
+    enviarTexto: enviar,
+    // La autorespuesta se manda con botones; el doble comparte comportamiento
+    // con `enviarTexto` para que los tests de fallo de envío sigan valiendo.
+    enviarBotones: (waId, texto) => enviar(waId, texto),
   };
 
   const deps: Deps = {

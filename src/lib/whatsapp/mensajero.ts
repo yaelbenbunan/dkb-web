@@ -6,6 +6,27 @@ export type ResultadoEnvio = { ok: true; wamid: string | null } | { ok: false; e
 
 export interface MensajeroWhatsApp {
   enviarTexto(waId: string, texto: string): Promise<ResultadoEnvio>;
+  /** Texto con hasta 3 botones de respuesta rápida, de 20 caracteres cada uno. */
+  enviarBotones(waId: string, texto: string, opciones: readonly string[]): Promise<ResultadoEnvio>;
+}
+
+/** Límites de los botones de respuesta rápida de WhatsApp. */
+export const MAX_BOTONES = 3;
+export const MAX_CARACTERES_BOTON = 20;
+
+/**
+ * Comprueba los límites ANTES de llamar a Graph. Meta rechaza estos casos con
+ * un error genérico difícil de atribuir; fallar aquí, con el motivo delante,
+ * convierte un misterio de producción en un test rojo.
+ */
+function comprobarBotones(opciones: readonly string[]): void {
+  if (opciones.length === 0 || opciones.length > MAX_BOTONES) {
+    throw new Error(`WhatsApp admite entre 1 y ${MAX_BOTONES} botones, y se han pasado ${opciones.length}.`);
+  }
+  const larga = opciones.find((o) => o.length > MAX_CARACTERES_BOTON);
+  if (larga) {
+    throw new Error(`Un botón no puede pasar de ${MAX_CARACTERES_BOTON} caracteres: «${larga}».`);
+  }
 }
 
 export interface ConfigMensajero {
@@ -16,13 +37,18 @@ export interface ConfigMensajero {
 
 /** Guarda lo que se habría enviado. Para tests y para entornos sin credenciales. */
 export function mensajeroSimulado(): MensajeroWhatsApp & {
-  enviados: Array<{ waId: string; texto: string }>;
+  enviados: Array<{ waId: string; texto: string; opciones?: readonly string[] }>;
 } {
-  const enviados: Array<{ waId: string; texto: string }> = [];
+  const enviados: Array<{ waId: string; texto: string; opciones?: readonly string[] }> = [];
   return {
     enviados,
     async enviarTexto(waId, texto) {
       enviados.push({ waId, texto });
+      return { ok: true, wamid: null };
+    },
+    async enviarBotones(waId, texto, opciones) {
+      comprobarBotones(opciones);
+      enviados.push({ waId, texto, opciones });
       return { ok: true, wamid: null };
     },
   };
@@ -57,18 +83,13 @@ export function crearMensajero(config: ConfigMensajero = {}): MensajeroWhatsApp 
   const hacerFetch = config.fetchImpl ?? fetch;
   const url = `https://graph.facebook.com/${GRAPH_VERSION}/${phoneNumberId}/messages`;
 
-  return {
-    async enviarTexto(waId, texto) {
+  /** Un único camino de salida a Graph: mismo timeout, mismo manejo de errores. */
+  async function enviar(payload: Record<string, unknown>): Promise<ResultadoEnvio> {
       try {
         const res = await hacerFetch(url, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            messaging_product: "whatsapp",
-            to: waId,
-            type: "text",
-            text: { body: texto },
-          }),
+          body: JSON.stringify(payload),
           // Sin esto, toda la política de fallos depende de que Graph
           // RESPONDA: si se cuelga, la función muere por timeout de
           // plataforma DESPUÉS de que el entrante ya se persistió, y
@@ -87,6 +108,31 @@ export function crearMensajero(config: ConfigMensajero = {}): MensajeroWhatsApp 
       } catch (e) {
         return { ok: false, error: e instanceof Error ? e.message : "error de red" };
       }
+  }
+
+  return {
+    enviarTexto(waId, texto) {
+      return enviar({ messaging_product: "whatsapp", to: waId, type: "text", text: { body: texto } });
+    },
+    enviarBotones(waId, texto, opciones) {
+      comprobarBotones(opciones);
+      return enviar({
+        messaging_product: "whatsapp",
+        to: waId,
+        type: "interactive",
+        interactive: {
+          type: "button",
+          body: { text: texto },
+          action: {
+            buttons: opciones.map((titulo, i) => ({
+              type: "reply",
+              // El id vuelve en el webhook junto al rótulo; se numera para que
+              // cambiar el texto de un botón no rompa nada que dependa del id.
+              reply: { id: `opcion_${i + 1}`, title: titulo },
+            })),
+          },
+        },
+      });
     },
   };
 }

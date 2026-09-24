@@ -45,46 +45,40 @@ export function verticalDeAnuncio(anuncio: string | null): Vertical {
   return (anuncio && VERTICAL_POR_ANUNCIO[anuncio]) || "generico";
 }
 
-const PREGUNTA = "Para poder ofrecerte la mejor solución, cuéntanos qué es lo que más te pasa ahora:";
-const CIERRE = "Responde con el número y seguimos.";
+const PREGUNTA = "Para poder ofrecerte la mejor solución, cuéntanos: ¿cuál es el principal problema que estás teniendo?";
 
-/**
- * Presentación y opciones, por sector.
- *
- * Las opciones van NUMERADAS y no como botones de WhatsApp a propósito:
- * todavía no sabemos procesar una pulsación —llega como mensaje interactivo y
- * `entrante.ts` la guardaría sin texto, perdiendo la respuesta del lead—,
- * mientras que un número llega como texto normal y queda en su ficha. Los
- * botones llegan con la entrega 2.
- *
- * Las tres opciones de cada sector son las mismas que las de su secuencia en
- * `ventas/secuencias-plantilla.ts`, para que el vocabulario no se bifurque
- * entre el primer mensaje y el resto de la conversación.
- */
+/** Cuerpo del mensaje, por sector. Las opciones van aparte, como botones. */
 const CUERPO: Record<Vertical, string> = {
   dental:
     `¡Hola! Soy ${REMITENTE}, de Escala. Gracias por interesarte en nuestro proceso para que ganes más con cada paciente: nos ocupamos desde que alguien busca dentista en Google o Instagram hasta que se sienta en tu sillón.\n\n` +
-    `${PREGUNTA}\n` +
-    "1. Faltan pacientes nuevos\n" +
-    "2. Vienen a la primera visita y no siguen\n" +
-    "3. No vuelven después del tratamiento\n\n" +
-    CIERRE,
+    PREGUNTA,
   psicologia:
     `¡Hola! Soy ${REMITENTE}, de Escala. Gracias por interesarte en nuestro proceso para llenar la agenda de tu consulta: nos ocupamos desde que alguien busca psicólogo en Google o Instagram hasta que llega a tu puerta.\n\n` +
-    `${PREGUNTA}\n` +
-    "1. Huecos en la agenda\n" +
-    "2. Vienen una vez y no vuelven\n" +
-    "3. Dependo del boca a boca\n\n" +
-    CIERRE,
+    PREGUNTA,
   generico:
     `¡Hola! Soy ${REMITENTE}, de Escala. Gracias por interesarte en nuestro proceso para conseguir que ganes más: nos ocupamos desde que alguien os busca en Google o Instagram hasta que ese paciente llega a tu consulta.\n\n` +
-    `${PREGUNTA}\n` +
-    "1. Faltan pacientes nuevos\n" +
-    "2. Llegan pero no se quedan\n" +
-    "3. Dependo del boca a boca\n\n" +
-    CIERRE,
+    PREGUNTA,
+};
+
+/**
+ * Las tres opciones que se mandan como botones de respuesta rápida.
+ *
+ * Son las mismas que las de la secuencia del sector en
+ * `ventas/secuencias-plantilla.ts`, para que el vocabulario no se bifurque
+ * entre el primer mensaje y el resto de la conversación. Y caben en los 20
+ * caracteres que admite un botón de WhatsApp, que es lo que obliga a decir
+ * «Vienen 1 vez y ya» en vez de «Vienen una vez y no vuelven».
+ */
+const OPCIONES: Record<Vertical, readonly string[]> = {
+  dental: ["Faltan pacientes", "Primera visita y ya", "Vienen y no vuelven"],
+  psicologia: ["Huecos en la agenda", "Vienen 1 vez y ya", "Solo boca a boca"],
+  generico: ["Faltan pacientes", "No se quedan", "Solo boca a boca"],
 };
 
 export function textoAutorespuesta({ anuncio }: { anuncio: string | null }): string {
   return CUERPO[verticalDeAnuncio(anuncio)].slice(0, LIMITE_WHATSAPP);
+}
+
+export function opcionesAutorespuesta(anuncio: string | null): readonly string[] {
+  return OPCIONES[verticalDeAnuncio(anuncio)];
 }

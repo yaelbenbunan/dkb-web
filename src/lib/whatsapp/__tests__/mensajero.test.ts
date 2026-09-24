@@ -134,3 +134,39 @@ describe("crearMensajero", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("enviarBotones", () => {
+  const OPCIONES = ["Huecos en la agenda", "Vienen 1 vez y ya", "Solo boca a boca"];
+
+  it("manda un mensaje interactivo con los botones", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ messages: [{ id: "wamid.BTN" }] }),
+    });
+    const m = crearMensajero({ token: "tok", phoneNumberId: "123", fetchImpl: fetchMock });
+
+    const res = await m.enviarBotones("34660415514", "¿Qué te pasa?", OPCIONES);
+
+    expect(res).toEqual({ ok: true, wamid: "wamid.BTN" });
+    const cuerpo = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(cuerpo.type).toBe("interactive");
+    expect(cuerpo.interactive.type).toBe("button");
+    expect(cuerpo.interactive.body.text).toBe("¿Qué te pasa?");
+    expect(cuerpo.interactive.action.buttons).toHaveLength(3);
+    expect(cuerpo.interactive.action.buttons[0].reply.title).toBe("Huecos en la agenda");
+  });
+
+  it("el simulado registra el texto y las opciones", async () => {
+    const m = mensajeroSimulado();
+    await m.enviarBotones("34660415514", "¿Qué te pasa?", OPCIONES);
+    expect(m.enviados).toEqual([{ waId: "34660415514", texto: "¿Qué te pasa?", opciones: OPCIONES }]);
+  });
+
+  it("rechaza lo que WhatsApp no admite en vez de dejar que falle Meta", async () => {
+    // Máximo 3 botones y 20 caracteres por botón. Enterarse aquí, con un error
+    // claro, es mucho mejor que recibir un rechazo opaco de Graph en producción.
+    const m = mensajeroSimulado();
+    await expect(m.enviarBotones("34660415514", "t", [...OPCIONES, "Uno de más"])).rejects.toThrow(/3 botones/);
+    await expect(m.enviarBotones("34660415514", "t", ["Esta opción se pasa de largo"])).rejects.toThrow(/20 caracteres/);
+  });
+});

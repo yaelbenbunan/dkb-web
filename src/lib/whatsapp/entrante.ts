@@ -92,6 +92,25 @@ const TIMESTAMP_MINIMO_SEGUNDOS = 946684800;
 // sobra cualquier timestamp en milisegundos.
 const DIEZ_ANIOS_EN_SEGUNDOS = 10 * 365 * 24 * 60 * 60;
 
+/**
+ * Texto aprovechable de un mensaje entrante. Cubre el texto normal y las dos
+ * formas en que WhatsApp devuelve una opción pulsada (botón y lista); lo demás
+ * —imagen, audio, ubicación, o cualquier `interactive` que Meta añada en el
+ * futuro— queda en `null`, que es lo que hace que no cuente como respuesta.
+ */
+function textoDelMensaje(tipo: string, m: Record<string, unknown>): string | null {
+  if (tipo === "text") {
+    return esObjeto(m.text) && typeof m.text.body === "string" ? m.text.body : null;
+  }
+  if (tipo === "interactive" && esObjeto(m.interactive)) {
+    for (const clave of ["button_reply", "list_reply"] as const) {
+      const respuesta = m.interactive[clave];
+      if (esObjeto(respuesta) && typeof respuesta.title === "string") return respuesta.title;
+    }
+  }
+  return null;
+}
+
 export function extraerMensajes(cuerpo: unknown): MensajeEntrante[] {
   const mensajes: MensajeEntrante[] = [];
   // Techo calculado una vez por llamada, no como constante de módulo: así no
@@ -130,9 +149,12 @@ export function extraerMensajes(cuerpo: unknown): MensajeEntrante[] {
       mensajes.push({
         wamid: m.id,
         waId: m.from,
-        // Solo los mensajes de texto tienen texto: uno con imagen, audio,
+        // Texto del mensaje: el cuerpo si es de texto, o el rótulo del botón
+        // o de la opción de lista si el lead respondió pulsando. Sin esto
+        // último la pulsación se guardaría vacía y se perdería la respuesta
+        // —justo la que cualifica al lead—. El resto (imagen, audio,
         // ubicación o pulsación de botón no se puede guardar como respuesta.
-        texto: tipo === "text" && esObjeto(m.text) && typeof m.text.body === "string" ? m.text.body : null,
+        texto: textoDelMensaje(tipo, m),
         tipo,
         recibidoEn,
         referral: referralDeMensaje(m.referral),

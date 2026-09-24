@@ -8,7 +8,7 @@ import {
   setEstadoMensaje,
   type Conversacion,
 } from "./db";
-import { textoAutorespuesta } from "./autorespuesta";
+import { opcionesAutorespuesta, textoAutorespuesta } from "./autorespuesta";
 import { decidir, extraerEstados, extraerMensajes, type MensajeEntrante } from "./entrante";
 import { crearMensajero, type MensajeroWhatsApp } from "./mensajero";
 import { calcularVentana, telefonoDeWaId } from "./ventana";
@@ -318,8 +318,16 @@ async function procesarMensaje(
   // ---- FASE B: best-effort ------------------------------------------------
   if (decision.accion === "crear_lead_y_responder" || decision.accion === "responder") {
     try {
-      const texto = textoAutorespuesta({ anuncio: mensaje.referral?.anuncio ?? null });
-      const resultado = await deps.mensajero.enviarTexto(mensaje.waId, texto);
+      const anuncio = mensaje.referral?.anuncio ?? null;
+      const texto = textoAutorespuesta({ anuncio });
+      // Con botones en vez de texto: la respuesta del lead vuelve como
+      // `button_reply` y `entrante.ts` la guarda igual que un texto, así que
+      // queda en su ficha. Es además lo que más sube la tasa de respuesta.
+      const resultado = await deps.mensajero.enviarBotones(
+        mensaje.waId,
+        texto,
+        opcionesAutorespuesta(anuncio),
+      );
       await deps.guardarSaliente({
         conversacionId: conversacion.id,
         wamid: resultado.ok ? resultado.wamid : null,

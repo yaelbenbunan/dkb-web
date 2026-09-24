@@ -230,3 +230,52 @@ describe("extraerMensajes — crudo", () => {
     expect((m.crudo as { image: { id: string } }).image.id).toBe("img-123");
   });
 });
+
+describe("extraerMensajes — botones", () => {
+  const sobreBoton = (interactive: unknown) => ({
+    object: "whatsapp_business_account",
+    entry: [
+      {
+        id: "1058918150452294",
+        changes: [
+          {
+            field: "messages",
+            value: {
+              messages: [
+                {
+                  id: "wamid.BTN",
+                  from: "34660415514",
+                  timestamp: "1790000000",
+                  type: "interactive",
+                  interactive,
+                },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  });
+
+  it("guarda el texto del botón pulsado como respuesta del lead", () => {
+    // Sin esto la pulsación se guardaba sin texto y la respuesta se perdía:
+    // el lead contestaba y en su ficha no quedaba qué había elegido.
+    const [m] = extraerMensajes(
+      sobreBoton({ type: "button_reply", button_reply: { id: "opt_1", title: "Huecos en la agenda" } }),
+    );
+    expect(m.texto).toBe("Huecos en la agenda");
+    expect(m.tipo).toBe("interactive");
+  });
+
+  it("también recoge la opción elegida en una lista", () => {
+    const [m] = extraerMensajes(
+      sobreBoton({ type: "list_reply", list_reply: { id: "opt_2", title: "Solo boca a boca" } }),
+    );
+    expect(m.texto).toBe("Solo boca a boca");
+  });
+
+  it("no revienta con un interactive de forma desconocida", () => {
+    const [m] = extraerMensajes(sobreBoton({ type: "algo_nuevo_de_meta" }));
+    expect(m.texto).toBeNull();
+  });
+});
