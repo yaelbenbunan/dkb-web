@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { parsearSecuencia, validarSecuencia, type Secuencia } from "../secuencias";
-import { PLANTILLAS, SECUENCIA_DENTAL, SECUENCIA_PSICOLOGIA, secuenciaDePlantilla } from "../secuencias-plantilla";
+import { parsearSecuencia, validarSecuencia, type Secuencia } from "../ventas/secuencias";
+import { PLANTILLAS, SECUENCIA_DENTAL, SECUENCIA_PSICOLOGIA, secuenciaDePlantilla } from "../ventas/secuencias-plantilla";
 
 /** Pasos a los que se puede llegar pulsando un botón del paso dado. */
 const destinosDeBotones = (s: Secuencia, id: string): string[] =>

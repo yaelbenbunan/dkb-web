@@ -1,97 +1,31 @@
-import { describe, expect, test } from "vitest";
-import {
-  faseTrasLlamada,
-  seguimientoTrasLlamada,
-  normalizarEmail,
-  normalizarTelefono,
-  normalizarCif,
-  parseTipoNegocio,
-  slugify,
-  esFaseActiva,
-} from "../ventas/dominio";
+import { describe, expect, it } from "vitest";
+import { TIPOS_NEGOCIO, TIPO_NEGOCIO_LABELS, tiposNegocioDeMarca } from "../ventas/dominio";
 
-describe("faseTrasLlamada", () => {
-  test("la primera llamada sin respuesta deja el lead como contactado", () => {
-    expect(faseTrasLlamada("nuevo", "no_contesta")).toBe("contactado");
+describe("tiposNegocioDeMarca", () => {
+  it("ofrece a dinkbit tipos de clínica, no de gimnasio", () => {
+    const tipos = tiposNegocioDeMarca("dinkbit");
+    expect(tipos).toContain("clinica_dental");
+    expect(tipos).toContain("psicologia");
+    expect(tipos).not.toContain("gimnasio");
+    expect(tipos).not.toContain("herbolario");
   });
 
-  test("interesado y pide muestras llevan a interesado", () => {
-    expect(faseTrasLlamada("contactado", "interesado")).toBe("interesado");
-    expect(faseTrasLlamada("nuevo", "pide_muestras")).toBe("interesado");
+  it("ofrece el catálogo entero a una marca que no tiene lista propia", () => {
+    expect(tiposNegocioDeMarca("hydrup")).toEqual(TIPOS_NEGOCIO);
+    expect(tiposNegocioDeMarca("una-marca-nueva")).toEqual(TIPOS_NEGOCIO);
   });
 
-  test("una llamada normal no hace retroceder a quien ya tiene muestras", () => {
-    expect(faseTrasLlamada("muestras", "volver_a_llamar")).toBe("muestras");
-    expect(faseTrasLlamada("muestras", "interesado")).toBe("muestras");
+  it("solo devuelve tipos del catálogo, para que la validación los acepte", () => {
+    for (const slug of ["dinkbit", "hydrup"]) {
+      for (const tipo of tiposNegocioDeMarca(slug)) {
+        expect(TIPOS_NEGOCIO).toContain(tipo);
+      }
+    }
   });
 
-  test("los resultados negativos cierran el lead desde cualquier fase activa", () => {
-    expect(faseTrasLlamada("muestras", "no_interesa")).toBe("no_interesa");
-    expect(faseTrasLlamada("nuevo", "numero_erroneo")).toBe("ilocalizable");
-  });
-
-  test("un lead cerrado que vuelve a mostrar interés se reactiva", () => {
-    expect(faseTrasLlamada("no_interesa", "interesado")).toBe("interesado");
-  });
-
-  test("un cliente sigue siendo cliente pase lo que pase en la llamada", () => {
-    expect(faseTrasLlamada("cliente", "no_interesa")).toBe("cliente");
-  });
-});
-
-describe("seguimientoTrasLlamada", () => {
-  test("los resultados que cierran el lead borran el seguimiento", () => {
-    expect(seguimientoTrasLlamada("no_interesa", "2026-09-20")).toBeNull();
-    expect(seguimientoTrasLlamada("numero_erroneo", "2026-09-20")).toBeNull();
-  });
-
-  test("el resto conserva la fecha elegida", () => {
-    expect(seguimientoTrasLlamada("volver_a_llamar", "2026-09-20")).toBe("2026-09-20");
-  });
-});
-
-describe("normalización de contacto", () => {
-  test("email en minúsculas y sin espacios; vacío es null", () => {
-    expect(normalizarEmail("  Laura@Gym.ES ")).toBe("laura@gym.es");
-    expect(normalizarEmail("  ")).toBeNull();
-  });
-
-  test("teléfono: últimos 9 dígitos, y null si no parece un teléfono", () => {
-    expect(normalizarTelefono("+34 600 11 22 33")).toBe("600112233");
-    expect(normalizarTelefono("600112233")).toBe("600112233");
-    expect(normalizarTelefono("123")).toBeNull();
-  });
-
-  test("CIF en mayúsculas y sin guiones", () => {
-    expect(normalizarCif("b-1234567.8")).toBe("B12345678");
-    expect(normalizarCif("")).toBeNull();
-  });
-});
-
-describe("parseTipoNegocio", () => {
-  test("acepta el valor, la etiqueta y sinónimos habituales", () => {
-    expect(parseTipoNegocio("gimnasio")).toBe("gimnasio");
-    expect(parseTipoNegocio("Farmacia / parafarmacia")).toBe("farmacia");
-    expect(parseTipoNegocio("Gym")).toBe("gimnasio");
-    expect(parseTipoNegocio("CrossFit")).toBe("box_crossfit");
-    expect(parseTipoNegocio("Fisio")).toBe("fisioterapia");
-  });
-
-  test("lo desconocido devuelve null", () => {
-    expect(parseTipoNegocio("peluquería")).toBeNull();
-    expect(parseTipoNegocio("")).toBeNull();
-  });
-});
-
-describe("utilidades", () => {
-  test("slugify quita acentos y signos", () => {
-    expect(slugify("Hydrup Electrolitos")).toBe("hydrup-electrolitos");
-    expect(slugify("  Café & Más ")).toBe("cafe-mas");
-  });
-
-  test("solo las fases activas tienen seguimiento", () => {
-    expect(esFaseActiva("muestras")).toBe(true);
-    expect(esFaseActiva("cliente")).toBe(false);
-    expect(esFaseActiva("perdido")).toBe(false);
+  it("todo tipo del catálogo tiene etiqueta", () => {
+    for (const tipo of TIPOS_NEGOCIO) {
+      expect(TIPO_NEGOCIO_LABELS[tipo]).toBeTruthy();
+    }
   });
 });

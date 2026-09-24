@@ -86,6 +86,9 @@ export const TIPOS_ACTIVIDAD = [
 export type TipoActividad = (typeof TIPOS_ACTIVIDAD)[number];
 
 export const TIPOS_NEGOCIO = [
+  "clinica_dental",
+  "psicologia",
+  "estetica",
   "gimnasio",
   "box_crossfit",
   "club_deportivo",
@@ -99,6 +102,9 @@ export const TIPOS_NEGOCIO = [
 export type TipoNegocio = (typeof TIPOS_NEGOCIO)[number];
 
 export const TIPO_NEGOCIO_LABELS: Record<TipoNegocio, string> = {
+  clinica_dental: "Clínica dental",
+  psicologia: "Psicología",
+  estetica: "Centro de estética",
   gimnasio: "Gimnasio",
   box_crossfit: "Box / CrossFit",
   club_deportivo: "Club deportivo",
@@ -109,6 +115,26 @@ export const TIPO_NEGOCIO_LABELS: Record<TipoNegocio, string> = {
   empresa: "Empresa",
   otro: "Otro",
 };
+
+/**
+ * Tipos que se ofrecen al crear un lead, por marca.
+ *
+ * El catálogo `TIPOS_NEGOCIO` es común —la validación acepta cualquiera de
+ * ellos y las etiquetas los cubren todos—, pero ofrecerlos todos en el
+ * formulario no tiene sentido: a la marca de captación de clínicas no se le
+ * pregunta si el lead es un herbolario. Una marca sin lista propia recibe el
+ * catálogo entero, que es el comportamiento de siempre.
+ *
+ * Vive en código y no en la fila de la marca porque hoy son dos marcas. Cuando
+ * sean muchas, esto quiere ser una columna configurable desde el panel.
+ */
+const TIPOS_POR_MARCA: Record<string, readonly TipoNegocio[]> = {
+  dinkbit: ["clinica_dental", "psicologia", "estetica", "fisioterapia", "empresa", "otro"],
+};
+
+export function tiposNegocioDeMarca(slug: string): readonly TipoNegocio[] {
+  return TIPOS_POR_MARCA[slug] ?? TIPOS_NEGOCIO;
+}
 
 export const ROLES = ["admin", "comercial"] as const;
 export type Rol = (typeof ROLES)[number];

@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { crearLeadManualAction } from "../../../acciones-leads";
-import { TIPOS_NEGOCIO, TIPO_NEGOCIO_LABELS } from "@/lib/ventas/dominio";
+import { TIPO_NEGOCIO_LABELS, tiposNegocioDeMarca } from "@/lib/ventas/dominio";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
 import { Mensaje } from "../../../_componentes/Mensaje";
 import { botonPrimario, campo, etiqueta, tarjeta, titulo } from "../../../_componentes/estilos";
@@ -17,7 +17,7 @@ export function NuevoLeadForm({ slug }: { slug: string }) {
         Tipo
         <select name="tipo_negocio" defaultValue="" style={campo}>
           <option value="">—</option>
-          {TIPOS_NEGOCIO.map((t) => (
+          {tiposNegocioDeMarca(slug).map((t) => (
             <option key={t} value={t}>{TIPO_NEGOCIO_LABELS[t]}</option>
           ))}
         </select>
