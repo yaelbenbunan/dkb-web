@@ -56,11 +56,26 @@ describe("estado guardado", () => {
     expect(recuperado.pasoActual).toBe("problemas");
     expect(recuperado.datos).toEqual({ problema_principal: "Huecos en la agenda" });
     expect(recuperado.fase).toBe("contactado");
+    // Con paso actual, la conversación sigue viva: no debe reconstruirse
+    // como terminada (ver el test de abajo para el caso contrario).
+    expect(recuperado.terminada).toBe(false);
   });
 
   it("el estado recuperado arranca sin hilo: el hilo vive en ventas_mensajes", () => {
     const recuperado = desdeEstadoGuardado({ pasoActual: "p1", datos: {} }, "nuevo");
     expect(recuperado.conversacion).toEqual([]);
     expect(recuperado.terminada).toBe(false);
+  });
+
+  it("sin paso actual, se reconstruye como terminada", () => {
+    // responderBoton guarda con `estado.terminada || !estado.pasoActual`,
+    // pero responderTexto solo mira `estado.terminada`. Si aquí dejáramos
+    // `terminada` fija a false, un lead sin paso actual (cerrado, o parado
+    // esperando el cron) que vuelve a escribir texto libre caería en la rama
+    // final de responderTexto y repetiría el aviso de respuesta libre en
+    // cada mensaje. Derivar terminada de pasoActual === null iguala las dos
+    // guardas del motor.
+    const recuperado = desdeEstadoGuardado({ pasoActual: null, datos: {} }, "cliente");
+    expect(recuperado.terminada).toBe(true);
   });
 });

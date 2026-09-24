@@ -9,6 +9,11 @@
  *
  * Genérica a propósito: recibe las secuencias ya cargadas (de eso se encarga
  * otra tarea) y solo decide, sin tocar Supabase ni red.
+ *
+ * Si dos secuencias activas declaran el mismo anuncio —no debería pasar si
+ * `activarSecuencia` hace bien su trabajo, pero esta función no lo puede
+ * comprobar— gana la primera del array. El orden lo decide quien cargue las
+ * filas (la tarea 6), no esta función.
  */
 export function elegirSecuencia<T extends { estado: string; anuncios: string[] }>(
   secuencias: T[],

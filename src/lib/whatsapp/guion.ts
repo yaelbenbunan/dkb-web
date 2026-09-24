@@ -29,6 +29,14 @@ export function indiceDeBoton(botonId: string | null): number | null {
  * mensajes que la marca añadió al hilo desde el estado anterior. Los del
  * lado `negocio` ya los escribió el lead, no hay que reenviarlos; y lo que ya
  * estaba en `anterior` ya se mandó en una vuelta previa.
+ *
+ * Precondición que ningún tipo obliga, así que queda aquí escrita: `anterior`
+ * tiene que ser exactamente el estado que sirvió de base a la transición que
+ * produjo `nuevo` (el que se le pasó a `responderBoton`/`responderTexto`), no
+ * uno más viejo ni uno de otra conversación. Si no lo es, la comparación de
+ * longitudes de `conversacion` queda descuadrada: con un `anterior` más corto
+ * de la cuenta se reenvía un mensaje que ya se mandó; con uno más largo (o de
+ * otro lead) se omite uno nuevo.
  */
 export function mensajesAEnviar(
   anterior: EstadoSimulacion | null,
@@ -53,6 +61,16 @@ export function aEstadoGuardado(estado: EstadoSimulacion): EstadoGuardado {
  * va vacío a propósito: no se persiste aquí, vive en `ventas_mensajes`, y así
  * `mensajesAEnviar` compara contra un hilo vacío y devuelve exactamente lo
  * que el motor añada en esta vuelta.
+ *
+ * `terminada` se deriva de `pasoActual`, no se guarda fija a false: el motor
+ * tiene dos guardas distintas para no seguir avanzando solo, y no son
+ * simétricas. `responderBoton` mira `estado.terminada || !estado.pasoActual`,
+ * pero `responderTexto` mira SOLO `estado.terminada`. Si aquí `terminada`
+ * fuera siempre false, un lead sin paso actual (cerrado, o parado esperando
+ * el cron) que escribiera texto libre caería en la rama final de
+ * `responderTexto` y repetiría el aviso de «respuesta libre» en cada mensaje.
+ * `pasoActual === null` es la condición que ya usa la otra guarda, así que
+ * reconstruir `terminada` con ella iguala el comportamiento de las dos.
  */
 export function desdeEstadoGuardado(guardado: EstadoGuardado, fase: Fase): EstadoSimulacion {
   return {
@@ -62,7 +80,7 @@ export function desdeEstadoGuardado(guardado: EstadoGuardado, fase: Fase): Estad
     datos: guardado.datos,
     avisos: [],
     esperaDias: null,
-    terminada: false,
+    terminada: guardado.pasoActual === null,
     faltanVariables: [],
   };
 }
