@@ -112,4 +112,37 @@ describe("actualizarConversacion", () => {
     await actualizarConversacion("c1", { pasoActual: null });
     expect(actualizarConversacionMock.mock.calls[0][0]).toEqual({ paso_actual: null });
   });
+
+  // `secuenciaId` y `reanudarEn` pasan por el mismo patrón «la clave llegó»
+  // que `pasoActual`, pero con su propio riesgo: un chequeo falsy sobre
+  // `secuenciaId` trataría `null` como «no venía», y `secuencia_id: null` es
+  // un valor legítimo («esta conversación ya no sigue ningún guion»). Sin un
+  // test que fije el `null` explícito, ese fallo pasaría desapercibido.
+  it("guarda el id de la secuencia, incluido a propósito a null", async () => {
+    actualizarConversacionMock.mockReturnValue({ error: null });
+    await actualizarConversacion("c1", { secuenciaId: "s1" });
+    expect(actualizarConversacionMock.mock.calls[0][0]).toEqual({ secuencia_id: "s1" });
+
+    actualizarConversacionMock.mockClear().mockReturnValue({ error: null });
+    // Desvincular la secuencia (p.ej. al terminarla) es tan real como
+    // asignarla: si se confundiera con «no tocar», la conversación se
+    // quedaría enganchada a un guion que ya no le corresponde sin que nadie
+    // lo note.
+    await actualizarConversacion("c1", { secuenciaId: null });
+    expect(actualizarConversacionMock.mock.calls[0][0]).toEqual({ secuencia_id: null });
+  });
+
+  // Igual que con `pasoActual`/`secuenciaId`: `reanudarEn: null` es «ya no
+  // hay que esperar» (se limpia la marca de espera), no «no toques este
+  // campo». Se comprueba también la conversión a ISO, que es lo único no
+  // trivial de este campo.
+  it("convierte reanudarEn a ISO, incluido a propósito a null", async () => {
+    actualizarConversacionMock.mockReturnValue({ error: null });
+    await actualizarConversacion("c1", { reanudarEn: new Date("2026-10-01T09:00:00Z") });
+    expect(actualizarConversacionMock.mock.calls[0][0]).toEqual({ reanudar_en: "2026-10-01T09:00:00.000Z" });
+
+    actualizarConversacionMock.mockClear().mockReturnValue({ error: null });
+    await actualizarConversacion("c1", { reanudarEn: null });
+    expect(actualizarConversacionMock.mock.calls[0][0]).toEqual({ reanudar_en: null });
+  });
 });
