@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { requireUsuaria } from "@/lib/ventas/auth";
 import { actualizarSecuencia, crearSecuencia, getMarcaPorSlug, getSecuencia } from "@/lib/ventas/db";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
-import { secuenciaVacia } from "@/lib/ventas/secuencias";
+import { secuenciaDePlantilla } from "@/lib/ventas/secuencias-plantilla";
 import { activarSecuencia, duplicarSecuencia, guardarSecuencia } from "@/lib/ventas/servicios";
 
 const MARCA_NO_ENCONTRADA = { ok: false, error: "Marca no encontrada." } as const;
@@ -23,14 +23,15 @@ function leerNombre(fd: FormData): { ok: true; nombre: string } | { ok: false; e
   return { ok: true, nombre };
 }
 
-/** Crea una secuencia vacía (Task 2: `secuenciaVacia()`) y abre el editor. Solo admin. */
+/** Crea la secuencia y abre el editor. Arranca de la plantilla elegida, o
+ *  vacía si no se eligió ninguna. Solo admin. */
 export async function crearSecuenciaAction(slug: string, _prev: ResultadoAccion | null, fd: FormData): Promise<ResultadoAccion> {
   const usuaria = await requireUsuaria("admin");
   const marca = await getMarcaPorSlug(slug);
   if (!marca) return MARCA_NO_ENCONTRADA;
   const leido = leerNombre(fd);
   if (!leido.ok) return leido;
-  const res = await crearSecuencia({ marcaId: marca.id, nombre: leido.nombre, pasos: secuenciaVacia(), creadaPor: usuaria.id });
+  const res = await crearSecuencia({ marcaId: marca.id, nombre: leido.nombre, pasos: secuenciaDePlantilla(String(fd.get("plantilla") ?? "")), creadaPor: usuaria.id });
   if (!res.ok) return res;
   refrescar(slug, res.id);
   redirect(`/panel/ventas/${slug}/secuencias/${res.id}`);
