@@ -25,8 +25,11 @@
 // Límite duro de WhatsApp Cloud API para un mensaje de texto.
 const LIMITE_WHATSAPP = 1024;
 
-/** Quien firma. Aquí arriba para cambiarlo en un solo sitio. */
-const REMITENTE = "Paula";
+/** Quien firma. Aquí arriba para cambiarlo en un solo sitio: exportado
+ *  porque `procesar.ts` reutiliza el mismo nombre como remitente del primer
+ *  paso de una secuencia (ronda de arreglos 1, tarea 7) — duplicar el
+ *  literal en los dos sitios lo habría dejado desincronizable. */
+export const REMITENTE = "Paula";
 
 export type Vertical = "dental" | "psicologia" | "generico";
 

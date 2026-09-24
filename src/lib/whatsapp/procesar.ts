@@ -8,7 +8,7 @@ import {
   setEstadoMensaje,
   type Conversacion,
 } from "./db";
-import { opcionesAutorespuesta, textoAutorespuesta } from "./autorespuesta";
+import { opcionesAutorespuesta, REMITENTE, textoAutorespuesta } from "./autorespuesta";
 import { decidir, extraerEstados, extraerMensajes, type MensajeEntrante } from "./entrante";
 import { elegirSecuencia } from "./eleccion";
 import { aEstadoGuardado, mensajesAEnviar, type EstadoGuardado } from "./guion";
@@ -58,14 +58,21 @@ export interface Deps {
   guardarEntrante: typeof guardarEntrante;
   guardarSaliente: typeof guardarSaliente;
   setEstadoMensaje: typeof setEstadoMensaje;
-  buscarLeadPorTelefono: (marcaId: string, telefono: string) => Promise<{ id: string } | null>;
+  /** `negocio`/`contacto`/`ciudad` van aquí (ronda de arreglos 1, tarea 7)
+   *  para poder rellenar `ContextoSimulacion.valores` con los datos reales
+   *  del lead cuando existen: sin esto, `{{contacto}}` saldría en blanco
+   *  para siempre incluso para un lead que ya tiene su nombre en la base. */
+  buscarLeadPorTelefono: (
+    marcaId: string,
+    telefono: string,
+  ) => Promise<{ id: string; negocio: string; contacto: string | null; ciudad: string | null } | null>;
   crearLeadDeAnuncio: (input: {
     marcaId: string;
     waId: string;
     telefono: string | null;
     campana: string | null;
     anuncio: string | null;
-  }) => Promise<{ id: string }>;
+  }) => Promise<{ id: string; negocio: string; contacto: string | null; ciudad: string | null }>;
   /** Las secuencias activas de la marca, para elegir la que sirve al anuncio
    *  del lead (task-7-brief.md). Ya existe en `ventas/db.ts`: no es un dato
    *  nuevo, solo entra en `Deps` para poder sustituirla en los tests. */
@@ -89,7 +96,7 @@ function depsReales(): Deps {
     setEstadoMensaje,
     async buscarLeadPorTelefono(marcaId, telefono) {
       const lead = await buscarLeadPorContacto(marcaId, { telefono });
-      return lead ? { id: lead.id } : null;
+      return lead ? { id: lead.id, negocio: lead.negocio, contacto: lead.contacto, ciudad: lead.ciudad } : null;
     },
     async crearLeadDeAnuncio({ marcaId, waId, telefono, anuncio }) {
       // Meta no manda nombre de negocio en un mensaje de WhatsApp: no hay
@@ -119,7 +126,7 @@ function depsReales(): Deps {
       // buscando por el mismo teléfono con el que se acaba de crear.
       const creado = await buscarLeadPorContacto(marcaId, { telefono: telefono ?? waId });
       if (!creado) throw new Error("[whatsapp] crearLeadDeAnuncio: no se encontró el lead recién creado");
-      return { id: creado.id };
+      return { id: creado.id, negocio: creado.negocio, contacto: creado.contacto, ciudad: creado.ciudad };
     },
     listSecuencias,
   };
@@ -144,16 +151,18 @@ function ventanaExtendida(existente: Conversacion | null, nueva: Date): Date {
   return actual.getTime() > nueva.getTime() ? actual : nueva;
 }
 
-/** Quien firma el primer mensaje del canal. Nombre fijo (no viene del lead
- *  ni de la marca): un único sitio para poder cambiarlo. */
-const REMITENTE_CANAL = "Paula";
-
 /** Lo que hace falta para mandar el primer paso de una secuencia arrancada. */
 interface SecuenciaArrancada {
   secuenciaId: string;
   estado: EstadoGuardado;
   mensajes: EntradaConversacion[];
 }
+
+/** Lo que se conoce del lead para rellenar variables del guion (`{{negocio}}`,
+ *  `{{contacto}}`, `{{ciudad}}`). `null` cuando el lead no se ha resuelto en
+ *  esta vuelta (ver `procesarMensaje`): en ese caso el hueco se deja visible,
+ *  no se bloquea el envío (decisión 4 del brief de la tarea 7). */
+type LeadDatos = { negocio: string; contacto: string | null; ciudad: string | null } | null;
 
 /**
  * Elige la secuencia que sirve al anuncio del lead, la arranca y devuelve su
@@ -163,16 +172,21 @@ interface SecuenciaArrancada {
  * `autorespuesta.ts`, que NO es la fuente — es la garantía de que el canal
  * nunca se queda mudo si alguien archiva o rompe una secuencia por error.
  *
- * `marca` y `remitente` son los únicos valores del contexto que este canal
- * puede rellenar con certeza; `negocio`, `contacto` y `ciudad` se dejan sin
- * valor porque Meta no los manda en un mensaje de WhatsApp. No pasa nada:
- * `renderizarTexto` (dentro de `iniciarSimulacion`) deja el hueco visible en
- * vez de bloquear el envío.
+ * `marca` y `remitente` siempre tienen valor. `negocio`/`contacto`/`ciudad`
+ * salen de `leadDatos` cuando el lead se resolvió en esta vuelta (ronda de
+ * arreglos 1, Hallazgo 1: antes se dejaban siempre vacíos, así que
+ * `{{contacto}}` nunca se rellenaba ni para un lead que ya existía con su
+ * nombre en la base). Cuando `leadDatos` es `null` (Meta no manda estos
+ * datos en un mensaje, o el lead venía ya vinculado a una conversación
+ * previa sin volver a leerse), el hueco se deja visible: `renderizarTexto`
+ * (dentro de `iniciarSimulacion`) no bloquea el envío por una variable que
+ * falta.
  */
 function arrancarSecuencia(
   secuencias: SecuenciaRow[],
   anuncio: string | null,
   marcaNombre: string,
+  leadDatos: LeadDatos,
 ): SecuenciaArrancada | null {
   const elegida = elegirSecuencia(secuencias, anuncio);
   if (!elegida) return null;
@@ -184,7 +198,13 @@ function arrancarSecuencia(
   }
 
   const ctx: ContextoSimulacion = {
-    valores: { marca: marcaNombre, remitente: REMITENTE_CANAL },
+    valores: {
+      marca: marcaNombre,
+      remitente: REMITENTE,
+      negocio: leadDatos?.negocio ?? null,
+      contacto: leadDatos?.contacto ?? null,
+      ciudad: leadDatos?.ciudad ?? null,
+    },
     faseInicial: "nuevo",
   };
   // Al arrancar no hay estado previo: es justo la precondición que documenta
@@ -296,11 +316,18 @@ async function procesarMensaje(
   // a buscar —ni, sobre todo, a CREAR— el lead.
   let leadId: string | null = conversacionExistente?.lead_id ?? null;
   let leadExiste = leadId !== null;
+  // Solo se rellena cuando este mensaje resuelve el lead de verdad (lo
+  // encuentra por teléfono o lo crea): si venía ya vinculado a una
+  // conversación previa (`conversacionExistente.lead_id`), no se vuelve a
+  // leer aquí y se deja en `null` — el hueco de `{{contacto}}` queda visible
+  // en vez de inventar un valor o forzar una lectura extra de Supabase.
+  let leadDatos: LeadDatos = null;
   if (!leadExiste && telefono) {
     const encontrado = await deps.buscarLeadPorTelefono(marcaId, telefono);
     if (encontrado) {
       leadId = encontrado.id;
       leadExiste = true;
+      leadDatos = { negocio: encontrado.negocio, contacto: encontrado.contacto, ciudad: encontrado.ciudad };
     }
   }
 
@@ -342,6 +369,7 @@ async function procesarMensaje(
         anuncio: referral.anuncio,
       });
       leadId = creado.id;
+      leadDatos = { negocio: creado.negocio, contacto: creado.contacto, ciudad: creado.ciudad };
       conversacion = await actualizarYDevolver(deps, conversacion, { estado: "bot", leadId, ventanaHasta });
     }
   } else {
@@ -389,16 +417,17 @@ async function procesarMensaje(
   if (decision.accion === "crear_lead_y_responder" || decision.accion === "responder") {
     const anuncio = mensaje.referral?.anuncio ?? null;
 
-    // Cargar y arrancar la secuencia va en su propio try: un fallo aquí
-    // (Supabase, una fila con forma inválida) no debe impedir el RESPALDO de
-    // abajo — deja `arrancada` en null y cae a la autorespuesta en código,
-    // igual que si ninguna secuencia sirviera al anuncio.
+    // Cargar, elegir Y arrancar la secuencia van en su propio try: un fallo
+    // en cualquiera de los tres (Supabase al listar, una fila con forma
+    // inválida al parsear, o el propio motor al arrancar) no debe impedir el
+    // RESPALDO de abajo — deja `arrancada` en null y cae a la autorespuesta
+    // en código, igual que si ninguna secuencia sirviera al anuncio.
     let arrancada: SecuenciaArrancada | null = null;
     try {
       const secuencias = await deps.listSecuencias(marcaId);
-      arrancada = arrancarSecuencia(secuencias, anuncio, marcaNombre);
+      arrancada = arrancarSecuencia(secuencias, anuncio, marcaNombre, leadDatos);
     } catch (e) {
-      console.error("[whatsapp] fallo cargando las secuencias de la marca, se usa el respaldo", mensaje.waId, e);
+      console.error("[whatsapp] fallo cargando o arrancando la secuencia de la marca, se usa el respaldo", mensaje.waId, e);
     }
 
     try {
@@ -420,11 +449,39 @@ async function procesarMensaje(
         }
         // Puntero de por dónde va el guion: sin esto, el próximo mensaje del
         // lead no tendría con qué estado continuar la secuencia.
-        await deps.actualizarConversacion(conversacion.id, {
-          secuenciaId: arrancada.secuenciaId,
-          pasoActual: arrancada.estado.pasoActual,
-          datos: arrancada.estado.datos,
-        });
+        try {
+          await deps.actualizarConversacion(conversacion.id, {
+            secuenciaId: arrancada.secuenciaId,
+            pasoActual: arrancada.estado.pasoActual,
+            datos: arrancada.estado.datos,
+          });
+        } catch (e) {
+          // El mensaje YA se mandó (y ya se guardó como saliente, arriba).
+          // Si este guardado falla, la conversación se queda con
+          // `paso_actual` en `null` — que es EXACTAMENTE lo que significa
+          // "secuencia terminada" (ver `desdeEstadoGuardado` en guion.ts) — y
+          // la idempotencia por wamid impide que un reintento de Meta lo
+          // repare: nadie volverá a intentar guardar este estado. No podemos
+          // garantizar que este segundo intento tenga más suerte que el
+          // primero (best-effort, en su propio try), pero sí evitar que el
+          // lead se quede mudo SIN QUE NADIE LO NOTE: se pasa la conversación
+          // a `humana` para que aparezca en la bandeja y una persona pueda
+          // retomarla a mano (Hallazgo 2, ronda de arreglos 1).
+          console.error(
+            "[whatsapp] fallo guardando el estado de la secuencia tras enviar su primer paso, se pasa a humana",
+            mensaje.waId,
+            e,
+          );
+          try {
+            await deps.actualizarConversacion(conversacion.id, { estado: "humana" });
+          } catch (e2) {
+            console.error(
+              "[whatsapp] fallo también pasando la conversación a humana tras el error anterior",
+              mensaje.waId,
+              e2,
+            );
+          }
+        }
       } else {
         // RESPALDO, NO la fuente: solo se manda si ninguna secuencia activa
         // sirve a este anuncio, si la que sirve no parsea, o si arrancarla
