@@ -232,6 +232,28 @@ const SECUENCIA_MENOS_BOTONES: Secuencia = {
   },
 };
 
+/** Ronda de arreglos 1 de la tarea 9, Hallazgo 1: una ruta que SOLO cambia de
+ *  fase, sin `avisar` — a diferencia del botón "Vienen bastante" de
+ *  `SECUENCIA_ACTIVA_PASOS`, que lleva avisar y fase juntos. Sirve para
+ *  comprobar que `avisarComercial` no llama con `tipo: "nota"` cuando no hay
+ *  motivo que contar. */
+const SECUENCIA_SOLO_FASE: SecuenciaFalsa = {
+  id: "s-solo-fase",
+  estado: "activa",
+  anuncios: ["AD1"],
+  pasos: {
+    version: 1,
+    inicio: "inicio",
+    pasos: {
+      inicio: {
+        tipo: "mensaje",
+        texto: "¿Cuántas veces vienen tus clientes?",
+        botones: [{ texto: "Vienen bastante", ruta: { fase: "interesado", terminar: true } }],
+      },
+    },
+  },
+};
+
 /** Lo que un lead falso puede traer para rellenar `ContextoSimulacion`. Todo
  *  opcional: la mayoría de tests no necesitan estos datos, así que
  *  `depsFalsas` los rellena con relleno neutro (negocio genérico, sin
@@ -878,5 +900,48 @@ describe("procesarWebhook", () => {
 
     expect([...conversaciones.values()][0].estado).toBe("humana");
     expect(actividades.filter((a) => a.nota.includes("Avisar")).length).toBe(1);
+  });
+
+  /* Ronda de arreglos 1 de la tarea 9 --------------------------------------- */
+
+  // Hallazgo 1 (Important): una ruta que SOLO cambia de fase (sin `avisar`)
+  // llamaba a `avisarComercial` con `tipo: "nota"` y `nota: null` — la RPC
+  // (`ventas_registrar_actividad`) inserta esa nota vacía Y, por separado, la
+  // entrada `cambio_fase` que le corresponde por la fase, así que la ficha
+  // del lead acababa con dos apuntes para un único cambio. Con `tipo:
+  // "cambio_fase"` la RPC deja solo una entrada.
+  it("una ruta que solo cambia de fase registra tipo cambio_fase, no nota", async () => {
+    const { deps, actividades } = depsFalsas({ secuencias: [SECUENCIA_SOLO_FASE] });
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+    await procesarWebhook({ cuerpo: sobrePulsacion("opcion_1", "Vienen bastante"), deps });
+
+    expect(actividades).toHaveLength(1);
+    expect(registrarActividadMock).toHaveBeenCalledWith(
+      expect.objectContaining({ tipo: "cambio_fase", faseNueva: "interesado" }),
+    );
+  });
+
+  // Hallazgo 2 (Important): la nota de `avisarComercial` explicaba POR QUÉ
+  // se avisa o a qué fase se movió el lead, pero no QUÉ contestó — el dato
+  // que más le importa a una comercial que abre la ficha para llamar.
+  it("la nota que avisa a la comercial incluye qué respondió el lead", async () => {
+    const { deps, actividades } = depsFalsas({ secuencias: [SECUENCIA_ACTIVA] });
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+    await procesarWebhook({ cuerpo: sobrePulsacion("opcion_1", "Huecos en la agenda"), deps });
+
+    const nota = actividades.find((a) => a.nota.includes("Avisar"))?.nota;
+    expect(nota).toContain("Huecos en la agenda");
+  });
+
+  // Mismo hallazgo, pero para una ruta que solo mueve la fase: aunque no hay
+  // motivo que avisar, la nota de `cambio_fase` tiene que dejar igualmente
+  // constancia de qué contestó el lead (decisión del brief: el hallazgo 2 se
+  // cierra también para "solo se mueve la fase", no solo para "se avisa").
+  it("la nota de un cambio de fase sin aviso también incluye qué respondió el lead", async () => {
+    const { deps, actividades } = depsFalsas({ secuencias: [SECUENCIA_SOLO_FASE] });
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+    await procesarWebhook({ cuerpo: sobrePulsacion("opcion_1", "Vienen bastante"), deps });
+
+    expect(actividades[0]?.nota).toContain("Vienen bastante");
   });
 });

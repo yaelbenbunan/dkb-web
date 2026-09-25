@@ -354,6 +354,24 @@ function avanzarSecuencia(
 }
 
 /**
+ * Redacta la nota de `avisarComercial`: qué contestó el lead (`respuestaLead`,
+ * Hallazgo 2, ronda de arreglos 1 de la tarea 9) y, si lo hay, por qué se
+ * avisa (`motivo`, Hallazgo 2 de la ronda de arreglos 1 de la tarea 8). Antes
+ * de este arreglo la nota solo llevaba el motivo —o a qué fase se movió el
+ * lead, en `console.error`— pero nunca lo que el lead había respondido: para
+ * una comercial que abre la ficha para llamar, qué botón pulsó (o qué
+ * escribió) es justo el dato que cambia la llamada entera. Sin motivo (una
+ * ruta que SOLO cambia de fase) se deja solo la respuesta, sin inventar un
+ * "avisar" que no aplica.
+ */
+function notaAvisoComercial(motivo: string | undefined, respuestaLead: string | null | undefined): string | null {
+  const dijoElLead = respuestaLead ? `El lead respondió: «${respuestaLead}».` : null;
+  if (!motivo) return dijoElLead;
+  const aviso = `Avisar a la comercial: ${motivo}`;
+  return dijoElLead ? `${dijoElLead} ${aviso}` : aviso;
+}
+
+/**
  * Deja rastro en la ficha del lead de lo que decidió el guion: por qué la
  * conversación pasó a manos de una persona (`motivo`, Hallazgo 2, ronda de
  * arreglos 1 de la tarea 8) y/o a qué fase se movió el lead (`faseNueva`,
@@ -362,15 +380,29 @@ function avanzarSecuencia(
  * `ventas/servicios.ts` para lo mismo desde el panel), así que separar esto
  * en dos llamadas solo conseguiría que la comercial viera dos notas para un
  * único cierre de guion — justo la duplicación que se quiere evitar.
+ *
+ * `tipo` se elige según lo que haya de verdad (Hallazgo 1, ronda de arreglos
+ * 1 de la tarea 9): `"cambio_fase"` cuando no hay `motivo` (una ruta que SOLO
+ * mueve la fase), `"nota"` cuando sí lo hay. Antes se llamaba siempre con
+ * `"nota"`, así que una ruta sin `avisar` dejaba `nota: null` con tipo
+ * "nota" — la RPC (`ventas_registrar_actividad`, ver
+ * docs/sql/2026-09-17-ventas-fase1.sql) inserta esa nota vacía Y, aparte, la
+ * entrada `cambio_fase` que le corresponde por la fase: dos apuntes para un
+ * único cambio, uno de ellos en blanco. Con `"cambio_fase"` la nota (si la
+ * hay) viaja DENTRO de esa misma entrada, igual que hace el panel
+ * (`cambiarFaseManual`/`moverLead` en `ventas/servicios.ts`) para lo mismo.
  * Best-effort, como el resto de FASE B: un fallo aquí solo se registra.
  */
-async function avisarComercial(leadId: string, cambios: { motivo?: string; faseNueva?: Fase }): Promise<void> {
+async function avisarComercial(
+  leadId: string,
+  cambios: { motivo?: string; faseNueva?: Fase; respuestaLead?: string | null },
+): Promise<void> {
   try {
     const resultado = await registrarActividad({
       leadId,
       usuariaId: null,
-      tipo: "nota",
-      nota: cambios.motivo ? `Avisar a la comercial: ${cambios.motivo}` : null,
+      tipo: cambios.motivo ? "nota" : "cambio_fase",
+      nota: notaAvisoComercial(cambios.motivo, cambios.respuestaLead),
       faseNueva: cambios.faseNueva ?? null,
     });
     if (!resultado.ok) {
@@ -798,9 +830,13 @@ async function procesarMensaje(
           }
 
           if ((pasaAHumana || faseNueva) && leadId) {
+            // `mensaje.texto` (Hallazgo 2, ronda de arreglos 1 de la tarea 9):
+            // para un botón ya trae el rótulo que pulsó el lead, no solo el
+            // texto libre — ver `respuestaDelMensaje` en entrante.ts.
             await avisarComercial(leadId, {
               motivo: pasaAHumana ? avanzada.avisos.join("; ") : undefined,
               faseNueva: faseNueva ?? undefined,
+              respuestaLead: mensaje.texto,
             });
           }
         } else {
@@ -814,7 +850,7 @@ async function procesarMensaje(
           // avanzar la MISMA secuencia rota y duplicaría este aviso.
           await deps.actualizarConversacion(conversacion.id, { estado: "humana", pasoActual: null });
           conversacion = { ...conversacion, estado: "humana" };
-          if (leadId) await avisarComercial(leadId, { motivo: avanzada.motivo });
+          if (leadId) await avisarComercial(leadId, { motivo: avanzada.motivo, respuestaLead: mensaje.texto });
         }
       } catch (e) {
         // Best-effort (fase B): un fallo aquí (p.ej. `listSecuencias` cae)
