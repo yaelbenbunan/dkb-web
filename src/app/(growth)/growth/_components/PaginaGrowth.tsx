@@ -161,15 +161,23 @@ export function PaginaGrowth({ sector }: { sector: SectorGrowth }) {
           <Logotipo />
 
           <div className="mt-10 grid items-center gap-10 lg:mt-14 lg:grid-cols-[minmax(0,1fr)_25rem] lg:gap-14">
-            <div>
+            {/* **Una frase por renglón, siempre.** El tamaño se mide contra la
+                columna (`cqw`) y no contra la ventana, así que cada frase cabe
+                entera en su línea a cualquier ancho, del móvil al monitor. El
+                coeficiente está medido en el navegador: la frase más larga,
+                «¿Huecos en tu agenda?», mide 10,89 veces su cuerpo en Plus Jakarta
+                Sans, y 8,8 la deja al 96 % de la columna. Si cambia el titular o la
+                letra, hay que volver a
+                medirlo. */}
+            <div style={{ containerType: "inline-size" }}>
               {sector.eyebrow && <Rotulo>{sector.eyebrow}</Rotulo>}
 
               <h1
-                className="mt-5 font-extrabold leading-[1.05] tracking-[-0.025em] text-balance"
-                style={{ fontSize: "clamp(2.5rem, 5.6vw, 4.5rem)" }}
+                className="mt-5 font-extrabold leading-[1.08] tracking-[-0.025em]"
+                style={{ fontSize: "clamp(1.5rem, 8.8cqw, 5.5rem)" }}
               >
-                {sector.titular.primera}{" "}
-                <span className="block" style={{ color: T.accentText }}>
+                <span className="block whitespace-nowrap">{sector.titular.primera}</span>
+                <span className="block whitespace-nowrap" style={{ color: T.accentText }}>
                   {sector.titular.segunda}
                 </span>
               </h1>

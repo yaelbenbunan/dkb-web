@@ -31,7 +31,21 @@ export default function GrowthLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <div className={jakarta.className} style={{ background: T.bg, color: T.fg, minHeight: "100svh" }}>
+    <div
+      className={jakarta.className}
+      style={
+        {
+          background: T.bg,
+          color: T.fg,
+          minHeight: "100svh",
+          // El CSS global pone `font-display` en todos los h1–h4, y Tailwind lo
+          // compila ya resuelto a `var(--font-source-sans)`: la letra de
+          // dinkbit y de Escala. Sin esto, los titulares de Growth salían en
+          // ella aunque el resto de la página no. Solo afecta dentro de Growth.
+          "--font-source-sans": jakarta.style.fontFamily,
+        } as React.CSSProperties
+      }
+    >
       <main id="main-content">{children}</main>
 
       <footer
