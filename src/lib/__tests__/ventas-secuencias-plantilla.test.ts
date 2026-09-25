@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CUERPO, OPCIONES, type Vertical } from "../whatsapp/autorespuesta";
 import { parsearSecuencia, validarSecuencia, type Secuencia } from "../ventas/secuencias";
@@ -142,5 +144,49 @@ describe("PLANTILLAS", () => {
     for (const plantilla of PLANTILLAS) {
       expect(plantilla.nombre.length).toBeGreaterThan(0);
     }
+  });
+});
+
+/* Los ficheros SQL no pueden divergir de las plantillas ---------------------- */
+
+// Ninguna otra cosa del repo lee `docs/sql/`, así que hasta ahora el siguiente
+// retoque de copy en `secuencias-plantilla.ts` habría divergido en silencio de
+// lo que se siembra y se corrige en Supabase. Esa es exactamente la clase de
+// fallo que costó la ronda de arreglos del CRITICAL de esta rama: el SQL llevaba
+// una forma de ruta que el código ya no tenía.
+describe("los literales jsonb de docs/sql/ cuadran con las plantillas", () => {
+  /** Los literales `'...'::jsonb` de un fichero SQL, ya parseados. Postgres
+   *  desescapa `''` como una comilla simple; el `\n` de dentro de la cadena lo
+   *  convierte el parser de jsonb en un salto de línea, que es lo que hace
+   *  `JSON.parse` por su cuenta. */
+  const literalesDe = (ruta: string): unknown[] => {
+    const sql = readFileSync(resolve(import.meta.dirname, "../../../", ruta), "utf8");
+    return [...sql.matchAll(/'((?:[^']|'')*)'::jsonb/g)].map((m) => JSON.parse(m[1].replaceAll("''", "'")));
+  };
+
+  it("el seed siembra exactamente las dos plantillas", () => {
+    expect(literalesDe("docs/sql/2026-09-24-secuencias-dinkbit.sql")).toEqual([
+      JSON.parse(JSON.stringify(SECUENCIA_DENTAL)),
+      JSON.parse(JSON.stringify(SECUENCIA_PSICOLOGIA)),
+    ]);
+  });
+
+  it("el correctivo deja exactamente las dos plantillas", () => {
+    // Cuatro literales: el `set` y el `where` de cada secuencia. Los `set` (los
+    // pares) son los que tienen que cuadrar; los `where` son la forma VIEJA, a
+    // propósito, y por eso se comprueba que NO cuadran.
+    const literales = literalesDe("docs/sql/2026-09-25-corregir-rutas-de-botones.sql");
+    expect(literales).toHaveLength(4);
+    expect(literales[0]).toEqual(JSON.parse(JSON.stringify(SECUENCIA_DENTAL)));
+    expect(literales[2]).toEqual(JSON.parse(JSON.stringify(SECUENCIA_PSICOLOGIA)));
+    expect(literales[1]).not.toEqual(literales[0]);
+    expect(literales[3]).not.toEqual(literales[2]);
+  });
+
+  it("el refundido deja exactamente las dos plantillas", () => {
+    expect(literalesDe("docs/sql/2026-09-24-refundir-secuencias-dinkbit.sql")).toEqual([
+      JSON.parse(JSON.stringify(SECUENCIA_DENTAL)),
+      JSON.parse(JSON.stringify(SECUENCIA_PSICOLOGIA)),
+    ]);
   });
 });
