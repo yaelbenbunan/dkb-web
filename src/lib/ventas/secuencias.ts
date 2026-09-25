@@ -296,25 +296,45 @@ export function validarSecuencia(s: Secuencia, variablesExtra: string[] = []): A
     const rutasTomables = (paso: Paso): Ruta[] =>
       paso.botones.length > 0 ? paso.botones.map((b) => b.ruta) : paso.ruta ? [paso.ruta] : [];
 
-    // Un `paso` puede recorrerse con el aviso ya levantado o sin él, y el
-    // resultado es distinto, así que el visitado lleva las dos cosas. Sin eso,
-    // un ciclo entre pasos colgaría la validación.
+    // Dos banderas separadas, y la distinción entre ellas es todo el asunto:
+    //
+    // - `avisado`: por este camino ya se pidió que avisen a una persona. Se
+    //   HEREDA sin más: una vez que alguien va a llamar, va a llamar.
+    // - `descartado`: por este camino el lead quedó en una fase de descarte. Se
+    //   hereda SOLO mientras los pasos no vuelvan a ofrecer botones. Un paso con
+    //   botones reabre la conversación, y lo que el lead elija ahí es una
+    //   decisión nueva que el descarte anterior ya no cubre.
+    //
+    // Meterlas en una sola bandera fue un fallo de verdad: heredar el descarte
+    // por todo el subárbol dejaba de marcar un camino que SÍ promete llamada.
+    // Un paso de despedida que ofrece una puerta de vuelta («Bueno, llamadme»
+    // → «¡Perfecto! Te llamamos hoy mismo.») quedaba exento, el lead se iba con
+    // esa promesa por escrito, marcado como `perdido` y sin que nadie lo
+    // supiera — el Critical original de esta rama, de vuelta. Y la red de
+    // seguridad de `procesar.ts` no lo coge, porque ahí SÍ hay mensaje.
+    //
+    // El visitado lleva las dos banderas: con una sola, un ciclo entre pasos
+    // podría colgar la validación o saltarse un camino.
     const sinRecoger = new Set<string>();
     const vistos = new Set<string>();
-    const pendientes: Array<{ id: string; avisado: boolean }> = [{ id: s.inicio, avisado: false }];
+    type Pendiente = { id: string; avisado: boolean; descartado: boolean };
+    const pendientes: Pendiente[] = [{ id: s.inicio, avisado: false, descartado: false }];
     while (pendientes.length > 0) {
-      const { id, avisado } = pendientes.pop() as { id: string; avisado: boolean };
-      const clave = `${id}:${avisado}`;
+      const { id, avisado, descartado } = pendientes.pop() as Pendiente;
+      const clave = `${id}:${avisado}:${descartado}`;
       if (vistos.has(clave)) continue;
       vistos.add(clave);
 
       const paso = s.pasos[id];
       if (!paso) continue;
+      // El descarte heredado caduca al entrar en un paso que vuelve a preguntar.
+      const descarteVigente = paso.botones.length === 0 ? descartado : false;
       for (const ruta of rutasTomables(paso)) {
         const yaAvisado = avisado || !!ruta.avisar;
         // Un cierre con fase de descarte está recogido: el lead dijo que no y
         // queda registrado. No hace falta que además avise a nadie.
-        const recogido = yaAvisado || esFaseDescarte(ruta.fase);
+        const yaDescartado = descarteVigente || esFaseDescarte(ruta.fase);
+        const recogido = yaAvisado || yaDescartado;
         // El mismo orden que `aplicarRuta`, que es lo que de verdad decide a
         // dónde va el guion: `terminar` gana a `esperar_dias`, y este a `ir_a`.
         if (ruta.terminar) {
@@ -330,13 +350,9 @@ export function validarSecuencia(s: Secuencia, variablesExtra: string[] = []): A
         if (ruta.ir_a) {
           // Un destino inexistente ya lo dice la regla 2, con su propio aviso
           // grave: repetirlo aquí solo añadiría ruido al mismo error.
-          //
-          // Se propaga `recogido`, NO `yaAvisado`: si no, la excepción del
-          // descarte solo valía cuando el botón terminaba en sí mismo, y la
-          // forma que una persona escribe de verdad —botón «No me llaméis» que
-          // lleva a un paso de despedida— volvía a levantar el aviso grave en
-          // ese paso. O sea que educar la despedida apagaba la campaña.
-          if (idsPasos.has(ruta.ir_a)) pendientes.push({ id: ruta.ir_a, avisado: recogido });
+          if (idsPasos.has(ruta.ir_a)) {
+            pendientes.push({ id: ruta.ir_a, avisado: yaAvisado, descartado: yaDescartado });
+          }
           continue;
         }
         // Ruta vacía: `aplicarRuta` pone `pasoActual` a null y la conversación

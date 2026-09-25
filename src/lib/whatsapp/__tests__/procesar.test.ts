@@ -339,21 +339,38 @@ function depsFalsas(
   // `fases` deja rastro de esas llamadas por separado de `actividades` para
   // que los tests puedan comprobar el movimiento sin acoplarse al texto de la nota.
   const fases: Array<{ leadId: string; fase: string }> = [];
-  // `actividades` modela FILAS DE LA FICHA, no llamadas a la RPC, y la
-  // diferencia es la que hace el test honesto: `ventas_registrar_actividad`
-  // (docs/sql/2026-09-17-ventas-fase1.sql, sobre la línea 270) inserta, cuando
-  // `p_tipo <> 'cambio_fase'` y la fase difiere, la fila de su tipo Y ADEMÁS una
-  // `cambio_fase` sin texto. Contando llamadas, un `toHaveLength(1)` daba verde
-  // con dos apuntes en la ficha del lead, que es exactamente el fallo que
-  // `avisarComercial` existe para evitar.
+  // `actividades` modela FILAS DE LA FICHA, no llamadas a la RPC. La diferencia
+  // es lo que hace el test honesto, y hay que copiar las DOS condiciones de
+  // `ventas_registrar_actividad` (docs/sql/2026-09-17-ventas-fase1.sql, sobre la
+  // línea 270), porque cada una esconde un fallo distinto:
+  //
+  //   if p_tipo <> 'cambio_fase' then          → inserta la fila de su tipo
+  //   if p_fase_nueva is not null
+  //      and p_fase_nueva <> v_lead.fase then  → inserta la de cambio de fase
+  //
+  // Sin la primera, contando llamadas, un `toHaveLength(1)` daba verde con dos
+  // apuntes en la ficha. Sin la segunda —que exige que la fase CAMBIE de verdad—
+  // el doble era ciego a lo contrario y peor: con `tipo: "cambio_fase"` sobre un
+  // lead que ya está en la fase destino, la RPC no escribe NADA y la nota se
+  // pierde. Por eso el doble lleva la fase de cada lead.
+  const faseDeLead = new Map<string, string>();
   registrarActividadMock.mockReset().mockImplementation(
     async (input: { leadId: string; tipo: string; nota: string; faseNueva?: string | null }) => {
-      actividades.push({ leadId: input.leadId, tipo: input.tipo, nota: input.nota });
-      if (input.faseNueva) {
+      if (input.tipo !== "cambio_fase") {
+        actividades.push({ leadId: input.leadId, tipo: input.tipo, nota: input.nota });
+      }
+      const faseActual = faseDeLead.get(input.leadId) ?? "nuevo";
+      if (input.faseNueva && input.faseNueva !== faseActual) {
         fases.push({ leadId: input.leadId, fase: input.faseNueva });
-        if (input.tipo !== "cambio_fase") {
-          actividades.push({ leadId: input.leadId, tipo: "cambio_fase", nota: "" });
-        }
+        faseDeLead.set(input.leadId, input.faseNueva);
+        actividades.push({
+          leadId: input.leadId,
+          tipo: "cambio_fase",
+          // La RPC solo guarda la nota en esta fila cuando el tipo ES
+          // `cambio_fase`; con cualquier otro tipo la nota va en la fila de
+          // arriba y esta se pinta como «Fase: X → Y».
+          nota: input.tipo === "cambio_fase" ? input.nota : "",
+        });
       }
       return { ok: true };
     },
@@ -854,6 +871,15 @@ describe("procesarWebhook", () => {
     // Falla SOLO el reclamo; el intento de recuperación (que también usa
     // `reclamarPaso`, condicionado al mismo puntero) sí funciona. Es lo que pasa
     // con un hipo puntual, que es el caso realista.
+    //
+    // RELAJACIÓN CONSCIENTE respecto a la versión anterior de este test, que
+    // hacía lanzar `reclamarPaso` SIEMPRE: desde que el recovery va también por
+    // `reclamarPaso` (para no pisar el avance de la entrega ganadora), un
+    // `reclamarPaso` roto de forma DURADERA deja la conversación en `bot` en vez
+    // de en `humana`, y ningún test lo cubre. Es el precio de condicionar el
+    // recovery, y se acepta porque ese caso significa que la base no responde
+    // —`actualizarConversacion` tampoco funcionaría— y el mensaje siguiente del
+    // lead lo recoge: sin puntero nuevo, cae por el camino que pasa a `humana`.
     const reclamarOriginal = deps.reclamarPaso;
     let intentos = 0;
     deps.reclamarPaso = async (id, cambios) => {
@@ -1009,7 +1035,7 @@ describe("procesarWebhook", () => {
     const { deps, conversaciones, actividades } = depsFalsas({ secuencias: [SECUENCIA_ACTIVA] });
     await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
     await procesarWebhook({ cuerpo: sobrePulsacion("opcion_1", "Huecos en la agenda"), deps });
-    expect(actividades).toHaveLength(1);
+    expect(actividades.filter((a) => a.tipo === "nota")).toHaveLength(1);
     expect([...conversaciones.values()][0].estado).toBe("humana");
   });
 
@@ -1064,20 +1090,19 @@ describe("procesarWebhook", () => {
   // `cambio_fase` en blanco, o sea dos apuntes para un solo cierre de guion. El
   // doble de `registrarActividad` de este fichero modela ese doble insert, así
   // que `actividades` cuenta FILAS DE LA FICHA y esta aserción sí lo detecta.
-  it("una ruta que solo cambia de fase deja UN apunte, con nota y sin duplicar el cambio", async () => {
+  it("una ruta que solo cambia de fase deja UNA nota, nunca una en blanco", async () => {
     const { deps, actividades } = depsFalsas({ secuencias: [SECUENCIA_SOLO_FASE] });
     await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
     await procesarWebhook({ cuerpo: sobrePulsacion("opcion_1", "Vienen bastante"), deps });
 
-    expect(actividades).toHaveLength(1);
     expect(registrarActividadMock).toHaveBeenCalledTimes(1);
-    expect(registrarActividadMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        tipo: "cambio_fase",
-        faseNueva: "interesado",
-        nota: "El lead respondió: «Vienen bastante». El guion no contestó a esa opción: revisa ese camino.",
-      }),
+    const notas = actividades.filter((a) => a.tipo === "nota");
+    expect(notas).toHaveLength(1);
+    expect(notas[0].nota).toBe(
+      "El lead respondió: «Vienen bastante». El guion no contestó a esa opción: revisa ese camino.",
     );
+    // Ninguna fila de nota vacía: es lo que arregló la tarea 9.
+    expect(actividades.some((a) => a.tipo === "nota" && !a.nota)).toBe(false);
   });
 
   // Hallazgo 2 (Important): la nota de `avisarComercial` explicaba POR QUÉ
@@ -1163,7 +1188,7 @@ describe("procesarWebhook", () => {
     ]);
 
     expect(salientes.filter((s) => s.texto.includes("cierre uno"))).toHaveLength(1);
-    expect(actividades).toHaveLength(1);
+    expect(actividades.filter((a) => a.tipo === "nota")).toHaveLength(1);
     expect(fases).toEqual([{ leadId: "lead-1", fase: "interesado" }]);
   });
 
@@ -1377,6 +1402,57 @@ describe("procesarWebhook", () => {
     expect(conv.paso_actual).toBe("inicio");
   });
 
+  // Ronda E, Important 3: condicionar el reclamo al puntero leído arregló el
+  // silencio del re-clic, pero dejó de serializar el DOBLE ENVÍO — el lead toca
+  // «Enviar» dos veces sobre el mensaje prerrellenado del anuncio, con dos
+  // wamid distintos, y recibía el primer paso dos veces: dos juegos de botones
+  // idénticos y indistinguibles. Ni siquiera hacía falta concurrencia.
+  it("dos envíos del mismo clic de anuncio no repiten el primer paso", async () => {
+    const { deps, salientes, conversaciones } = depsFalsas({ secuencias: [SECUENCIA_ACTIVA] });
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    await procesarWebhook({
+      cuerpo: sobreConMensajes([mensajeDeAnuncio({ id: "wamid.E1", referral: { source_id: "AD1" } })]),
+      deps,
+    });
+    await procesarWebhook({
+      cuerpo: sobreConMensajes([mensajeDeAnuncio({ id: "wamid.E2", referral: { source_id: "AD1" } })]),
+      deps,
+    });
+
+    expect(salientes).toHaveLength(1);
+    expect(conversaciones.size).toBe(1);
+    warnSpy.mockRestore();
+  });
+
+  // Ronda E, bloqueante 1: con `tipo: "cambio_fase"` la RPC se salta la fila de
+  // la nota SIEMPRE y solo escribe la de fase `if p_fase_nueva <> v_lead.fase`,
+  // así que sobre un lead que YA está en la fase destino no escribía NADA y la
+  // frase se tiraba. Le pasa a la secuencia sembrada sin que nadie escriba nada
+  // raro: basta que el lead vuelva a clicar el anuncio y a pulsar su botón.
+  it("un lead que ya está en la fase destino sigue dejando su apunte en la ficha", async () => {
+    const { deps, actividades, conversaciones } = depsFalsas({ secuencias: [SECUENCIA_ACTIVA] });
+
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+    await procesarWebhook({ cuerpo: sobrePulsacion("opcion_1", "Vienen bastante"), deps });
+    const apuntesPrimeraVuelta = actividades.length;
+    expect(actividades.some((a) => a.nota.includes("Vienen bastante"))).toBe(true);
+
+    // Segunda vuelta: el lead ya es `interesado`. Se le deja volver a arrancar
+    // (conversación en `humana` y puntero limpio tras el aviso anterior).
+    await deps.actualizarConversacion([...conversaciones.values()][0].id, { estado: "bot", datos: {} });
+    await procesarWebhook({
+      cuerpo: sobreConMensajes([mensajeDeAnuncio({ id: "wamid.VUELTA", referral: { source_id: "AD1" } })]),
+      deps,
+    });
+    await procesarWebhook({ cuerpo: sobrePulsacionConWamid("wamid.B2", "opcion_1", "Vienen bastante"), deps });
+
+    // Lo que importa: el segundo paso por el guion TAMBIÉN deja rastro, aunque
+    // la fase no se mueva porque ya estaba donde tenía que estar.
+    expect(actividades.length).toBeGreaterThan(apuntesPrimeraVuelta);
+    expect(actividades.filter((a) => a.nota.includes("Vienen bastante"))).toHaveLength(2);
+  });
+
   // Ronda D, hallazgo 7: la espera de la secuencia anterior no puede sobrevivir
   // a un re-arranque, o `reanudar_en` señalaría como «parada esperando» una
   // conversación que está corriendo.
@@ -1547,8 +1623,9 @@ describe.each<[string, Secuencia]>([
       // nota se partía en DOS actividades —el rótulo en una, el aviso en
       // otra—, que es justo la regresión que arreglaron 3ce8299 y 279e594.
       // En el camino feliz la comercial tiene que ver un único apunte.
-      expect(actividades).toHaveLength(1);
-      expect(actividades[0].nota).toBe(`El lead respondió: «${rotulo}». Avisar a la comercial.`);
+      const notas = actividades.filter((a) => a.tipo === "nota");
+      expect(notas).toHaveLength(1);
+      expect(notas[0].nota).toBe(`El lead respondió: «${rotulo}». Avisar a la comercial.`);
     },
   );
 });

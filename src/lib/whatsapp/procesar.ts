@@ -467,8 +467,15 @@ function notaAvisoComercial(frase: string | null, respuestaLead: string | null |
  * dos cosas van en la MISMA llamada a `registrarActividad` a propósito:
  * `registrarActividad` ya admite `faseNueva` (lo usa `ventas/servicios.ts`
  * para lo mismo desde el panel), así que separar esto en dos llamadas solo
- * conseguiría que la comercial viera dos notas para un único cierre de guion
- * — justo la duplicación que se quiere evitar.
+ * conseguiría que la comercial viera dos NOTAS para un único cierre de guion.
+ *
+ * Ojo con qué es «duplicar» aquí, porque confundirlo ya costó un arreglo del
+ * revés: que la RPC escriba una fila de nota y otra de cambio de fase NO es
+ * duplicar. La segunda se pinta como «Fase: Nuevo → Interesado»
+ * (`ventas/historial.ts`) y es historial que la comercial quiere, igual que
+ * cuando se registra una llamada que además mueve la fase. Lo que sí sobra es
+ * una fila de NOTA EN BLANCO, y eso es lo que evita la elección de `tipo` de
+ * más abajo.
  *
  * `tipo` se elige según si hay algo que avisar de verdad (Hallazgo 1, ronda
  * de arreglos 1 de la tarea 9): `"cambio_fase"` cuando `fraseDeAviso`
@@ -500,14 +507,24 @@ async function avisarComercial(
     const resultado = await registrarActividad({
       leadId,
       usuariaId: null,
-      // El tipo lo decide LA FASE, no si hay frase. La RPC
-      // `ventas_registrar_actividad` con `p_tipo <> 'cambio_fase'` inserta la
-      // fila de su tipo Y ADEMÁS una `cambio_fase` cuando la fase difiere, así
-      // que un `tipo: "nota"` con `faseNueva` deja DOS apuntes en la ficha, uno
-      // de ellos sin texto — justo lo que esta función existe para evitar. Con
-      // `cambio_fase` la nota viaja dentro de esa misma fila: un apunte.
-      // Cuando no hay cambio de fase no hay nada que duplicar y va como `nota`.
-      tipo: cambios.faseNueva ? "cambio_fase" : "nota",
+      // El tipo lo decide SI HAY FRASE, y hay que leer la RPC entera para ver
+      // por qué (`ventas_registrar_actividad`, en
+      // docs/sql/2026-09-17-ventas-fase1.sql sobre la línea 270):
+      //
+      // - Con `p_tipo <> 'cambio_fase'` inserta la fila de su tipo Y ADEMÁS una
+      //   `cambio_fase` si la fase difiere. Son dos filas, sí, pero ninguna
+      //   sobra: una lleva la nota y la otra se pinta como «Fase: Nuevo →
+      //   Interesado» (ver `ventas/historial.ts`). Es lo mismo que hace
+      //   `registrarLlamada` desde antes de esta entrega.
+      // - Con `p_tipo = 'cambio_fase'` la primera fila se salta SIEMPRE, y la
+      //   segunda solo se inserta `if p_fase_nueva <> v_lead.fase`. O sea que si
+      //   el lead YA está en la fase destino no se escribe NADA y la frase se
+      //   tira: un lead que vuelve a pedir una llamada desaparece de su ficha.
+      //
+      // Así que `cambio_fase` solo se usa cuando no hay frase que perder, y
+      // sirve para lo que se añadió en la tarea 9: evitar la fila de nota EN
+      // BLANCO que `tipo: "nota"` con `nota: null` insertaría.
+      tipo: frase ? "nota" : "cambio_fase",
       nota: notaAvisoComercial(frase, cambios.respuestaLead),
       faseNueva: cambios.faseNueva ?? null,
     });
@@ -763,67 +780,88 @@ async function procesarMensaje(
         // respaldo, porque esa rama ya no se alcanza) y el único rastro era un
         // `console.warn` que además decía otra cosa. Un clic pagado contestado
         // con silencio, que es justo lo que esta entrega existe para evitar.
-        // Con el puntero leído, dos entregas concurrentes siguen serializándose
-        // (las dos leyeron el mismo valor, solo una lo cambia) y un re-clic
-        // arranca la secuencia que le toca.
+        // Pero el puntero leído SOLO no serializa dos entregas del MISMO clic
+        // (el lead toca «Enviar» dos veces sobre el mensaje prerrellenado): la
+        // que pierde puede releer la conversación tras chocar con el índice
+        // único, leer ya el puntero de la ganadora y encajar también. De ahí
+        // `yaEnEstePaso`: si la conversación ya está en el paso de inicio DE
+        // ESTA MISMA secuencia, el primer paso ya salió y repetirlo solo le
+        // deja al lead dos juegos de botones idénticos. Un re-clic de OTRO
+        // anuncio no entra por aquí (la secuencia es distinta), y uno del mismo
+        // anuncio después de pulsar tampoco (el puntero ya se movió).
         const punteroLeido = conversacion.paso_actual;
+        const yaEnEstePaso =
+          conversacion.secuencia_id === arrancada.secuenciaId &&
+          conversacion.paso_actual === arrancada.estado.pasoActual;
         let reclamado = false;
+        // `false` significa «otra entrega ganó la carrera»; se pone a `true`
+        // cuando NO se envía por cualquier otra razón, para que el `warn` de
+        // más abajo no diagnostique mal el fallo más caro de este camino.
         let falloAlReclamar = false;
-        try {
-          reclamado = await deps.reclamarPaso(conversacion.id, {
-            pasoEsperado: punteroLeido,
-            secuenciaId: arrancada.secuenciaId,
-            pasoActual: arrancada.estado.pasoActual,
-            datos: arrancada.estado.datos,
-            // Un re-arranque borra la espera de la secuencia anterior: si no,
-            // `reanudar_en` seguiría marcando como «parada esperando» una
-            // conversación que acaba de volver a arrancar.
-            reanudarEn: null,
-          });
-        } catch (e) {
-          // No se pudo ni reclamar, y no se ha enviado nada: el lead no va a
-          // recibir el primer paso, y la idempotencia por wamid impide que un
-          // reintento de Meta lo repare. Se pasa a `humana` para que aparezca
-          // en la bandeja y una persona la retome a mano, en vez de dejar al
-          // lead mudo sin que nadie lo note (Hallazgo 2, ronda de arreglos 1).
-          console.error(
-            "[whatsapp] fallo reclamando el arranque de la secuencia, se pasa a humana",
+        if (yaEnEstePaso) {
+          console.warn(
+            "[whatsapp] esta conversación ya está en el primer paso de esta secuencia, no se reenvía",
             mensaje.waId,
-            e,
+            conversacion.id,
           );
+          falloAlReclamar = true;
+        } else {
           try {
-            // CONDICIONADO al puntero leído, por el mismo motivo que en el
-            // avance: `reclamarPaso` puede haber lanzado DESPUÉS de que otra
-            // entrega concurrente ganara la carrera y mandara el primer paso.
-            // Un `humana` ciego aquí congelaría esa secuencia para siempre — el
-            // lead tendría delante botones vivos, y `decidir` ya no devolvería
-            // `guardar_respuesta` (exige `estado === "bot"`), así que al
-            // pulsarlos no avanzaría nada ni quedaría nota.
-            const recuperado = await deps.reclamarPaso(conversacion.id, {
+            reclamado = await deps.reclamarPaso(conversacion.id, {
               pasoEsperado: punteroLeido,
-              pasoActual: punteroLeido,
-              datos: conversacion.datos,
-              estado: "humana",
+              secuenciaId: arrancada.secuenciaId,
+              pasoActual: arrancada.estado.pasoActual,
+              datos: arrancada.estado.datos,
+              // Un re-arranque borra la espera de la secuencia anterior: si no,
+              // `reanudar_en` seguiría marcando como «parada esperando» una
+              // conversación que acaba de volver a arrancar.
+              reanudarEn: null,
             });
-            if (!recuperado) {
-              console.warn(
-                "[whatsapp] otra entrega ya arrancó esta conversación: no se fuerza el paso a humana",
+          } catch (e) {
+            // No se pudo ni reclamar, y no se ha enviado nada: el lead no va a
+            // recibir el primer paso, y la idempotencia por wamid impide que un
+            // reintento de Meta lo repare. Se pasa a `humana` para que aparezca
+            // en la bandeja y una persona la retome a mano, en vez de dejar al
+            // lead mudo sin que nadie lo note (Hallazgo 2, ronda de arreglos 1).
+            console.error(
+              "[whatsapp] fallo reclamando el arranque de la secuencia, se pasa a humana",
+              mensaje.waId,
+              e,
+            );
+            try {
+              // CONDICIONADO al puntero leído, por el mismo motivo que en el
+              // avance: `reclamarPaso` puede haber lanzado DESPUÉS de que otra
+              // entrega concurrente ganara la carrera y mandara el primer paso.
+              // Un `humana` ciego aquí congelaría esa secuencia para siempre — el
+              // lead tendría delante botones vivos, y `decidir` ya no devolvería
+              // `guardar_respuesta` (exige `estado === "bot"`), así que al
+              // pulsarlos no avanzaría nada ni quedaría nota.
+              const recuperado = await deps.reclamarPaso(conversacion.id, {
+                pasoEsperado: punteroLeido,
+                pasoActual: punteroLeido,
+                datos: conversacion.datos,
+                estado: "humana",
+              });
+              if (!recuperado) {
+                console.warn(
+                  "[whatsapp] otra entrega ya arrancó esta conversación: no se fuerza el paso a humana",
+                  mensaje.waId,
+                  conversacion.id,
+                );
+              }
+            } catch (e2) {
+              console.error(
+                "[whatsapp] fallo también pasando la conversación a humana tras el error anterior",
                 mensaje.waId,
-                conversacion.id,
+                e2,
               );
             }
-          } catch (e2) {
-            console.error(
-              "[whatsapp] fallo también pasando la conversación a humana tras el error anterior",
-              mensaje.waId,
-              e2,
-            );
+            // `fallado` distingue las dos razones por las que no se envía: aquí
+            // el reclamo LANZÓ (y ya se ha registrado y recuperado arriba), no es
+            // que otra entrega ganara la carrera. Sin esto el `warn` de abajo
+            // diagnosticaba mal el fallo más caro de este camino.
+            falloAlReclamar = true;
           }
-          // `fallado` distingue las dos razones por las que no se envía: aquí
-          // el reclamo LANZÓ (y ya se ha registrado y recuperado arriba), no es
-          // que otra entrega ganara la carrera. Sin esto el `warn` de abajo
-          // diagnosticaba mal el fallo más caro de este camino.
-          falloAlReclamar = true;
         }
 
         if (!reclamado) {
@@ -908,6 +946,10 @@ async function procesarMensaje(
               secuenciaId: null,
               pasoActual: null,
               datos: {},
+              // Y la espera de la secuencia anterior, por el mismo motivo que
+              // al re-arrancar: si no, el panel seguiría enseñando como «parada
+              // esperando» una conversación que acaba de recibir el respaldo.
+              reanudarEn: null,
             });
             conversacion = { ...conversacion, secuencia_id: null, paso_actual: null, datos: {} };
           } catch (e) {

@@ -203,6 +203,32 @@ describe("validarSecuencia, regla 10: caminos que acaban sin avisar a la comerci
     expect(sinAviso(validarSecuencia(s))).toEqual([]);
   });
 
+  test("un paso de descarte que ofrece volver NO exime lo que cuelga de él", () => {
+    // Ronda E, bloqueante 2: heredar el descarte por todo el subárbol devolvía
+    // el Critical original de la rama. Un paso de despedida que ofrece una
+    // puerta de vuelta es una forma natural de escribir un guion, y con la
+    // herencia ciega el lead se iba con «te llamamos hoy mismo» por escrito,
+    // marcado como `perdido`, sin que nadie lo supiera — y la red de seguridad
+    // del motor NO lo coge, porque por ese camino sí se manda mensaje.
+    const s = conHandoff();
+    s.pasos.inicio.botones[0].ruta = { fase: "perdido", ir_a: "despedida" };
+    delete s.pasos.cierre_a;
+    s.pasos.despedida = {
+      tipo: "mensaje",
+      texto: "Entendido. Si cambias de idea, dímelo.",
+      botones: [{ texto: "Bueno, llamadme", ruta: { ir_a: "gracias" } }],
+    };
+    s.pasos.gracias = {
+      tipo: "mensaje",
+      texto: "¡Perfecto! Te llamamos hoy mismo.",
+      botones: [],
+      ruta: { terminar: true },
+    };
+    const avisos = sinAviso(validarSecuencia(s));
+    expect(avisos).toHaveLength(1);
+    expect(avisos[0]).toMatchObject({ paso: "gracias", grave: true });
+  });
+
   test("una fase que NO es de descarte no exime: «interesado» quiere una llamada", () => {
     const s = conHandoff();
     s.pasos.inicio.botones[0].ruta = { fase: "interesado", terminar: true };
