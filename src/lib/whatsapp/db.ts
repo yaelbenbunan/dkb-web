@@ -127,6 +127,54 @@ export async function actualizarConversacion(
   if (error) throw new Error(`[whatsapp/db] actualizarConversacion: ${error.message}`);
 }
 
+/**
+ * Update CONDICIONAL del puntero del guion: escribe `paso_actual` (y lo que
+ * venga con él) SOLO si en la base sigue estando `pasoEsperado`, es decir el
+ * paso que el llamador leyó antes de decidir el avance. Devuelve `true` si
+ * esta entrega se quedó con el avance y `false` si no encajó ninguna fila,
+ * que es la señal de que otra entrega concurrente ya avanzó desde ese mismo
+ * paso (ronda B1, arreglo 1: el gate por wamid cubre el reintento del MISMO
+ * mensaje, no dos mensajes distintos del lead entregados a la vez).
+ *
+ * Existe aparte de `actualizarConversacion` —y no como una opción suya— porque
+ * su contrato es otro: esta función DEVUELVE si ganó la carrera, y el llamador
+ * tiene que decidir en consecuencia (no enviar nada). Un `void` que se ignora,
+ * como el de `actualizarConversacion`, no sirve para eso.
+ *
+ * El `.select("id")` no es decorativo: en supabase-js un update no dice cuántas
+ * filas tocó si no le pides las filas afectadas, y sin ese dato no hay forma de
+ * distinguir "reclamado" de "otra entrega se me adelantó".
+ */
+export async function reclamarPaso(
+  id: string,
+  cambios: {
+    /** El `paso_actual` que el llamador leyó: la condición de la carrera. */
+    pasoEsperado: string;
+    pasoActual: string | null;
+    datos: Record<string, string>;
+    estado?: Conversacion["estado"];
+    reanudarEn?: Date | null;
+  },
+): Promise<boolean> {
+  const patch: Record<string, unknown> = {
+    paso_actual: cambios.pasoActual,
+    datos: cambios.datos,
+  };
+  if (cambios.estado !== undefined) patch.estado = cambios.estado;
+  if (cambios.reanudarEn !== undefined) {
+    patch.reanudar_en = cambios.reanudarEn ? cambios.reanudarEn.toISOString() : null;
+  }
+
+  const { data, error } = await db()
+    .from("ventas_conversaciones")
+    .update(patch)
+    .eq("id", id)
+    .eq("paso_actual", cambios.pasoEsperado)
+    .select("id");
+  if (error) throw new Error(`[whatsapp/db] reclamarPaso: ${error.message}`);
+  return (data ?? []).length > 0;
+}
+
 export async function listConversaciones(
   marcaId: string,
 ): Promise<Array<Conversacion & { ultimo_texto: string | null }>> {

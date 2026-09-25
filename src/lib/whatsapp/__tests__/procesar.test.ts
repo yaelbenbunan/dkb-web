@@ -94,6 +94,21 @@ const sobrePulsacion = (botonId: string, tituloTexto: string, waId = "3466041551
     },
   ]);
 
+// Igual que `sobrePulsacion` pero con el wamid a mano: la ronda B1 necesita DOS
+// entregas del MISMO botón que no se anulen por idempotencia (dos wamid
+// distintos), que es justo lo que `sobrePulsacion` no puede dar porque deriva
+// el wamid del botón y del rótulo.
+const sobrePulsacionConWamid = (wamid: string, botonId: string, tituloTexto: string, waId = "34660415514") =>
+  sobreConMensajes([
+    {
+      id: wamid,
+      from: waId,
+      timestamp: "1790000100",
+      type: "interactive",
+      interactive: { type: "button_reply", button_reply: { id: botonId, title: tituloTexto } },
+    },
+  ]);
+
 const sobreTexto = (texto: string, waId = "34660415514") =>
   sobreConMensajes([
     { id: `wamid.TEXTO.${texto}`, from: waId, timestamp: "1790000100", type: "text", text: { body: texto } },
@@ -255,6 +270,34 @@ const SECUENCIA_SOLO_FASE: SecuenciaFalsa = {
   },
 };
 
+/** Ronda B1, arreglo 2: una ruta con `esperar_dias` (las secuencias sembradas
+ *  las tienen y el editor del panel las admite). `aplicarRuta` entra por su
+ *  rama: ni manda mensaje ni entra en `ir_a`, solo deja la espera apuntada —
+ *  así que sin el arreglo la conversación se quedaba en `bot`, sin
+ *  `reanudar_en`, sin nota y para siempre. */
+const SECUENCIA_CON_ESPERA: SecuenciaFalsa = {
+  id: "s-espera",
+  estado: "activa",
+  anuncios: ["AD1"],
+  pasos: {
+    version: 1,
+    inicio: "inicio",
+    pasos: {
+      inicio: {
+        tipo: "mensaje",
+        texto: "¿Lo vemos ahora?",
+        botones: [{ texto: "Ahora no", ruta: { esperar_dias: 7, ir_a: "reintento" } }],
+      },
+      reintento: {
+        tipo: "mensaje",
+        texto: "¿Y ahora lo vemos?",
+        botones: [],
+        ruta: { terminar: true },
+      },
+    },
+  },
+};
+
 /** Lo que un lead falso puede traer para rellenar `ContextoSimulacion`. Todo
  *  opcional: la mayoría de tests no necesitan estos datos, así que
  *  `depsFalsas` los rellena con relleno neutro (negocio genérico, sin
@@ -366,7 +409,30 @@ function depsFalsas(
         if (cambios.secuenciaId !== undefined) conv.secuencia_id = cambios.secuenciaId;
         if (cambios.pasoActual !== undefined) conv.paso_actual = cambios.pasoActual;
         if (cambios.datos !== undefined) conv.datos = cambios.datos;
+        if (cambios.reanudarEn !== undefined) {
+          conv.reanudar_en = cambios.reanudarEn ? cambios.reanudarEn.toISOString() : null;
+        }
       }
+    },
+    // Doble del update CONDICIONAL de la ronda B1 (arreglo 1): comprueba el
+    // paso esperado y escribe SIN ceder el control en medio (ningún `await`
+    // entre la comprobación y la escritura), igual que el `update ... where
+    // paso_actual = ...` de Postgres es atómico. Si cediera, el doble no
+    // serviría para nada: las dos entregas concurrentes del test pasarían las
+    // dos la comprobación.
+    async reclamarPaso(id, cambios) {
+      for (const conv of conversaciones.values()) {
+        if (conv.id !== id) continue;
+        if (conv.paso_actual !== cambios.pasoEsperado) return false;
+        conv.paso_actual = cambios.pasoActual;
+        conv.datos = cambios.datos;
+        if (cambios.estado !== undefined) conv.estado = cambios.estado;
+        if (cambios.reanudarEn !== undefined) {
+          conv.reanudar_en = cambios.reanudarEn ? cambios.reanudarEn.toISOString() : null;
+        }
+        return true;
+      }
+      return false;
     },
     async guardarEntrante({ wamid }) {
       if (wamidsGuardados.has(wamid)) return { nuevo: false };
@@ -1020,6 +1086,96 @@ describe("procesarWebhook", () => {
       'El lead respondió: «Vienen 1 vez y ya». La secuencia se detuvo: el lead pulsó una opción que ya no existe en el paso actual de la secuencia.',
     );
   });
+
+  /* Ronda B1 ---------------------------------------------------------------- */
+
+  // Arreglo 1 (Important): el gate por wamid cubre el REINTENTO del mismo
+  // mensaje, pero no dos mensajes DISTINTOS del lead entregados a la vez (toca
+  // el mismo botón dos veces en un segundo y Meta manda los dos POST en
+  // paralelo). Ambas entregas leen el mismo `paso_actual` y ambas avanzan
+  // desde él: el lead recibe el mensaje de cierre DOS veces, y además se
+  // duplican la nota en la ficha y el cambio de fase. La segunda entrega tiene
+  // que perder la carrera al reclamar el paso y cortar sin enviar nada.
+  it("dos entregas concurrentes del mismo botón solo mandan un cierre y una nota", async () => {
+    const { deps, salientes, actividades, fases } = depsFalsas({ secuencias: [SECUENCIA_ACTIVA] });
+
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+    expect(salientes).toHaveLength(1);
+
+    // En vuelo a la vez, dos wamid distintos, el mismo botón: es lo que hace
+    // Meta cuando el lead pulsa dos veces seguidas.
+    await Promise.all([
+      procesarWebhook({ cuerpo: sobrePulsacionConWamid("wamid.CARRERA.1", "opcion_1", "Vienen bastante"), deps }),
+      procesarWebhook({ cuerpo: sobrePulsacionConWamid("wamid.CARRERA.2", "opcion_1", "Vienen bastante"), deps }),
+    ]);
+
+    expect(salientes.filter((s) => s.texto.includes("cierre uno"))).toHaveLength(1);
+    expect(actividades).toHaveLength(1);
+    expect(fases).toEqual([{ leadId: "lead-1", fase: "interesado" }]);
+  });
+
+  // Arreglo 2 (Important): el spec define `reanudar_en` como «solo se escribe
+  // si una ruta usa `esperar_dias`… sirve para que una persona vea que hay una
+  // conversación parada esperando», y esa escritura no existía. Sin cron que
+  // reanude nada, una espera dejaba la conversación en `bot`, sin mensaje, sin
+  // nota y sin `reanudar_en`: el lead se quedaba mudo para siempre.
+  it("una ruta con esperar_dias anota reanudar_en, entrega la conversación y deja nota", async () => {
+    const { deps, conversaciones, actividades, salientes } = depsFalsas({ secuencias: [SECUENCIA_CON_ESPERA] });
+    const ahora = new Date("2026-09-25T10:00:00.000Z");
+
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps, ahora });
+    await procesarWebhook({ cuerpo: sobrePulsacion("opcion_1", "Ahora no"), deps, ahora });
+
+    const conv = [...conversaciones.values()][0];
+    // Los 7 días contados desde `ahora`: es lo que una comercial ve en el
+    // panel para saber desde cuándo está parada.
+    expect(conv.reanudar_en).toBe("2026-10-02T10:00:00.000Z");
+    expect(conv.estado).toBe("humana");
+    expect(conv.paso_actual).toBeNull();
+    // La espera no manda nada: sigue estando solo el primer paso de la secuencia.
+    expect(salientes).toHaveLength(1);
+    expect(actividades).toHaveLength(1);
+    expect(actividades[0].nota).toBe(
+      "El lead respondió: «Ahora no». La secuencia quedó esperando 7 días: no hay envío automático que la reanude, la retoma una persona.",
+    );
+  });
+
+  // Arreglo 3 (Minor): 72d0cc9 hizo que el respaldo limpie el puntero, pero
+  // DESPUÉS de enviar. Si el envío o `guardarSaliente` lanzan, se sale por el
+  // `catch` de fuera sin limpiar y la conversación se queda con el puntero
+  // viejo: la pulsación siguiente avanza la secuencia equivocada, que es justo
+  // el fallo que 72d0cc9 arreglaba. `datos` entra también en la limpieza: sin
+  // eso el respaldo deja colgando el `problema_principal` de otro sector.
+  it("al caer al respaldo limpia puntero y datos aunque el guardado del saliente falle", async () => {
+    const { deps, conversaciones } = depsFalsas({ secuencias: [] });
+    const conv = await deps.crearConversacion({
+      marcaId: MARCA.id,
+      waId: "34660415514",
+      leadId: "lead-viejo",
+      estado: "bot",
+      ventanaHasta: new Date(Date.now() + 1000 * 60 * 60),
+    });
+    // Puntero y dato del clic de hace semanas, de la secuencia de otro sector.
+    await deps.actualizarConversacion(conv.id, {
+      secuenciaId: "s-psico",
+      pasoActual: "inicio",
+      datos: { problema_principal: "Pocas primeras consultas" },
+    });
+    deps.guardarSaliente = async () => {
+      throw new Error("fallo guardando el saliente");
+    };
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(procesarWebhook({ cuerpo: sobreDeAnuncio("AD-SIN-MAPEAR"), deps })).resolves.toEqual({
+      procesados: 1,
+    });
+
+    const guardada = conversaciones.get(`${MARCA.id}:34660415514`);
+    expect(guardada?.secuencia_id).toBeNull();
+    expect(guardada?.paso_actual).toBeNull();
+    expect(guardada?.datos).toEqual({});
+    errorSpy.mockRestore();
+  });
 });
 
 /* Extremo a extremo con las secuencias REALES ------------------------------ */
@@ -1068,11 +1224,13 @@ describe.each<[string, Secuencia]>([
       expect(conv.paso_actual).toBeNull();
 
       expect(fases).toContainEqual({ leadId: "lead-1", fase: "interesado" });
-      // La nota cita el rótulo: es el dato que cambia la llamada de la
-      // comercial, que abre la ficha para llamar y no ve la conversación.
-      const nota = actividades.map((a) => a.nota).join(" | ");
-      expect(nota).toContain(rotulo);
-      expect(nota).toContain("Avisar a la comercial");
+      // UNA sola actividad con la nota EXACTA, no un `toContain` sobre todas
+      // unidas (ronda B1, arreglo 4): unidas, la aserción pasaba igual si la
+      // nota se partía en DOS actividades —el rótulo en una, el aviso en
+      // otra—, que es justo la regresión que arreglaron 3ce8299 y 279e594.
+      // En el camino feliz la comercial tiene que ver un único apunte.
+      expect(actividades).toHaveLength(1);
+      expect(actividades[0].nota).toBe(`El lead respondió: «${rotulo}». Avisar a la comercial.`);
     },
   );
 });

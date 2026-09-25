@@ -5,6 +5,7 @@ import {
   getConversacion,
   guardarEntrante,
   guardarSaliente,
+  reclamarPaso,
   setEstadoMensaje,
   type Conversacion,
 } from "./db";
@@ -61,6 +62,11 @@ export interface Deps {
   getConversacion: typeof getConversacion;
   crearConversacion: typeof crearConversacion;
   actualizarConversacion: typeof actualizarConversacion;
+  /** El update CONDICIONAL del puntero (ronda B1, arreglo 1). Está en `Deps`
+   *  —y no se llama al de `db.ts` directamente— porque es la pieza que decide
+   *  si esta entrega puede enviar, así que los tests tienen que poder
+   *  sustituirla para reproducir la carrera. */
+  reclamarPaso: typeof reclamarPaso;
   guardarEntrante: typeof guardarEntrante;
   guardarSaliente: typeof guardarSaliente;
   setEstadoMensaje: typeof setEstadoMensaje;
@@ -97,6 +103,7 @@ function depsReales(): Deps {
     getConversacion,
     crearConversacion,
     actualizarConversacion,
+    reclamarPaso,
     guardarEntrante,
     guardarSaliente,
     setEstadoMensaje,
@@ -250,6 +257,12 @@ type ResultadoAvance =
        *  contra `FASE_RECONSTRUIDA` (el llamador lo hace) es cómo se sabe si
        *  la ruta aplicada la cambió — ver el JSDoc de esa constante. */
       fase: Fase;
+      /** Los días de `esperar_dias` si la ruta aplicada usó una espera, `null`
+       *  si no (ronda B1, arreglo 2). NO pasa por `EstadoGuardado`: la espera
+       *  no es estado que haya que reconstruir en el webhook siguiente, es un
+       *  hecho de ESTA transición — el llamador lo convierte en `reanudar_en`
+       *  y entrega la conversación a una persona. */
+      esperaDias: number | null;
     }
   | { ok: false; motivo: string };
 
@@ -350,6 +363,7 @@ function avanzarSecuencia(
     mensajes: mensajesAEnviar(anterior, nuevo),
     avisos: nuevo.avisos,
     fase: nuevo.fase,
+    esperaDias: nuevo.esperaDias,
   };
 }
 
@@ -383,11 +397,32 @@ function conPuntoFinal(frase: string): string {
  * ni comparar contra `AVISO_AVISAR`): el mensaje pasado por el LLAMADOR ya
  * dice de qué vocabulario es, y eso es lo único de lo que depende esta
  * función — así no se rompe el día que alguien reescriba un aviso.
+ *
+ * `esperaDias` es un TERCER vocabulario, y se AÑADE en vez de competir con
+ * los otros dos (ronda B1, arreglo 2): una ruta puede llevar `avisar: true` y
+ * `esperar_dias` a la vez, y entonces la comercial necesita saber las dos
+ * cosas — por qué se le avisa y hasta cuándo estaba parada la conversación.
  */
-function fraseDeAviso(cambios: { avisos?: string[]; motivoDetenido?: string }): string | null {
-  if (cambios.avisos && cambios.avisos.length > 0) return conPuntoFinal(cambios.avisos.join("; "));
-  if (cambios.motivoDetenido) return `La secuencia se detuvo: ${cambios.motivoDetenido}.`;
-  return null;
+function fraseDeAviso(cambios: {
+  avisos?: string[];
+  motivoDetenido?: string;
+  esperaDias?: number | null;
+}): string | null {
+  const frases: string[] = [];
+  if (cambios.avisos && cambios.avisos.length > 0) frases.push(conPuntoFinal(cambios.avisos.join("; ")));
+  else if (cambios.motivoDetenido) frases.push(`La secuencia se detuvo: ${cambios.motivoDetenido}.`);
+  if (cambios.esperaDias != null) frases.push(fraseDeEspera(cambios.esperaDias));
+  return frases.length > 0 ? frases.join(" ") : null;
+}
+
+/**
+ * Cómo se le cuenta a la comercial que la conversación quedó esperando. Dice
+ * que la retoma UNA PERSONA a propósito: no hay cron que reanude la secuencia
+ * (`aplicarRuta` deja la espera apuntada y no avanza al destino), así que la
+ * nota no debe prometer un envío automático que no va a ocurrir.
+ */
+function fraseDeEspera(dias: number): string {
+  return `La secuencia quedó esperando ${dias} ${dias === 1 ? "día" : "días"}: no hay envío automático que la reanude, la retoma una persona.`;
 }
 
 /**
@@ -432,7 +467,13 @@ function notaAvisoComercial(frase: string | null, respuestaLead: string | null |
  */
 async function avisarComercial(
   leadId: string,
-  cambios: { avisos?: string[]; motivoDetenido?: string; faseNueva?: Fase; respuestaLead?: string | null },
+  cambios: {
+    avisos?: string[];
+    motivoDetenido?: string;
+    esperaDias?: number | null;
+    faseNueva?: Fase;
+    respuestaLead?: string | null;
+  },
 ): Promise<void> {
   try {
     const frase = fraseDeAviso(cambios);
@@ -734,6 +775,50 @@ async function procesarMensaje(
         // falló (capturado arriba). El canal no puede quedarse mudo porque
         // alguien archive una secuencia por error.
         const texto = textoAutorespuesta({ anuncio });
+
+        // Se limpia el puntero de la secuencia que traía la conversación de
+        // antes, ANTES de enviar (Hallazgo 4, ronda de arreglos 3; el orden,
+        // ronda B1 arreglo 3). Los botones que estamos a punto de mandar son
+        // los GENÉRICOS del respaldo, no los de ningún guion: si
+        // `secuencia_id`/`paso_actual` sobreviven, la pulsación siguiente
+        // vuelve a entrar por la rama `guardar_respuesta` (que solo mira que
+        // los dos tengan valor) y se avanza por índice la secuencia VIEJA —
+        // el caso real es un teléfono que clicó el anuncio de psicología hace
+        // semanas y hoy clica otro sin mapear: recibiría copy de psicología y
+        // se le guardaría un `problema_principal` que no es el que pulsó.
+        //
+        // Va ANTES del envío a propósito: si estuviera después, un fallo al
+        // enviar o al guardar el saliente saltaría al `catch` de fuera sin
+        // limpiar nada y el puntero viejo seguiría ahí — o sea, el mismo
+        // fallo que esta limpieza existe para evitar. Adelantarla no cuesta
+        // nada: el puntero viejo no sirve para mandar el respaldo.
+        //
+        // `datos` entra también en la limpieza: sin eso queda colgando el
+        // `problema_principal` de otro sector, mientras que la rama que sí
+        // arranca secuencia escribe `datos` de la secuencia nueva. Y sigue
+        // condicionado a que haya algo que limpiar, para no gastar una
+        // escritura en el caso normal (primer contacto, sin puntero).
+        if (conversacion.secuencia_id || conversacion.paso_actual) {
+          try {
+            await deps.actualizarConversacion(conversacion.id, {
+              secuenciaId: null,
+              pasoActual: null,
+              datos: {},
+            });
+            conversacion = { ...conversacion, secuencia_id: null, paso_actual: null, datos: {} };
+          } catch (e) {
+            // Best-effort como el resto de la fase B, pero aquí el coste de
+            // seguir es real: si no se pudo limpiar, el respaldo se manda
+            // igualmente (mejor eso que dejar al lead sin respuesta) y queda
+            // registrado que el puntero viejo sobrevivió.
+            console.error(
+              "[whatsapp] fallo limpiando el puntero de la secuencia al caer al respaldo",
+              mensaje.waId,
+              e,
+            );
+          }
+        }
+
         // Con botones en vez de texto: la respuesta del lead vuelve como
         // `button_reply` y `entrante.ts` la guarda igual que un texto, así que
         // queda en su ficha. Es además lo que más sube la tasa de respuesta.
@@ -752,31 +837,6 @@ async function procesarMensaje(
           error: resultado.ok ? undefined : resultado.error,
         });
 
-        // Y se limpia el puntero de la secuencia que traía la conversación de
-        // antes (Hallazgo 4, ronda de arreglos 3). Los botones que acabamos de
-        // mandar son los GENÉRICOS del respaldo, no los de ningún guion: si
-        // `secuencia_id`/`paso_actual` sobreviven, la pulsación siguiente
-        // vuelve a entrar por la rama `guardar_respuesta` (que solo mira que
-        // los dos tengan valor) y se avanza por índice la secuencia VIEJA —
-        // el caso real es un teléfono que clicó el anuncio de psicología hace
-        // semanas y hoy clica otro sin mapear: recibiría copy de psicología y
-        // se le guardaría un `problema_principal` que no es el que pulsó.
-        // Condicionado a que haya algo que limpiar para no gastar una
-        // escritura en el caso normal (primer contacto, sin puntero), y
-        // best-effort como el resto de la fase B: el mensaje ya salió, y si
-        // esto falla lo peor que pasa es que el puntero viejo siga ahí.
-        if (conversacion.secuencia_id || conversacion.paso_actual) {
-          try {
-            await deps.actualizarConversacion(conversacion.id, { secuenciaId: null, pasoActual: null });
-            conversacion = { ...conversacion, secuencia_id: null, paso_actual: null };
-          } catch (e) {
-            console.error(
-              "[whatsapp] fallo limpiando el puntero de la secuencia al caer al respaldo",
-              mensaje.waId,
-              e,
-            );
-          }
-        }
       }
     } catch (e) {
       // Este catch es para un fallo al ENVIAR o GUARDAR el primer mensaje.
@@ -823,21 +883,6 @@ async function procesarMensaje(
         notaGenerica = false;
 
         if (avanzada.ok) {
-          // Igual que al arrancar: un paso con botones se manda con
-          // `enviarBotones`, uno sin botones con `enviarTexto` (decisión 5).
-          for (const entrada of avanzada.mensajes) {
-            const resultado =
-              entrada.botones && entrada.botones.length > 0
-                ? await deps.mensajero.enviarBotones(mensaje.waId, entrada.texto, entrada.botones)
-                : await deps.mensajero.enviarTexto(mensaje.waId, entrada.texto);
-            await deps.guardarSaliente({
-              conversacionId: conversacion.id,
-              wamid: resultado.ok ? resultado.wamid : null,
-              texto: entrada.texto,
-              error: resultado.ok ? undefined : resultado.error,
-            });
-          }
-
           // Cualquier aviso del motor (`avisar: true` de una ruta, la
           // respuesta libre que se sale del guion, o el destino de una ruta
           // que ya no existe) significa que el bot no debe seguir solo: se
@@ -848,9 +893,34 @@ async function procesarMensaje(
           // nadie leía `estado.fase`, así que un cierre que movía la fase del
           // lead en el guion no se veía reflejado en el CRM).
           const faseNueva = avanzada.fase !== FASE_RECONSTRUIDA ? avanzada.fase : null;
+          // Una ruta con `esperar_dias` también entrega la conversación a una
+          // persona (ronda B1, arreglo 2). `aplicarRuta` deja la espera
+          // apuntada y NO avanza al destino, contando con un cron que aquí no
+          // existe: sin esto la conversación se quedaba en `bot`, sin mensaje,
+          // sin nota y sin `reanudar_en` — el lead mudo para siempre. Se
+          // persiste `reanudar_en` (la escritura que el spec define y que
+          // nadie hacía) para que en el panel se vea desde cuándo está parada,
+          // y se pasa a `humana` porque, sin cron, lo que de verdad la reanuda
+          // es una llamada.
+          const esperaDias = avanzada.esperaDias;
+          const entregaAPersona = pasaAHumana || esperaDias != null;
+
+          // RECLAMAR el paso ANTES de enviar (ronda B1, arreglo 1). El orden
+          // importa y es contraintuitivo, así que: el gate por `wamid` de
+          // `guardarEntrante` cubre el REINTENTO del mismo mensaje, pero no
+          // dos mensajes DISTINTOS del lead entregados a la vez —pulsa el
+          // botón dos veces en un segundo y Meta manda los dos POST en
+          // paralelo—. Las dos entregas leen el mismo `paso_actual` y las dos
+          // avanzan desde él. Condicionar el guardado a posteriori no
+          // arreglaría nada: con el orden anterior (enviar y luego guardar) el
+          // mensaje duplicado ya habría salido cuando el guardado fallara.
+          // Reclamando primero, la entrega que pierde la carrera se enterra
+          // antes de gastar un envío. NO lo reordenes a enviar-y-luego-guardar.
+          let reclamado = false;
           try {
-            await deps.actualizarConversacion(conversacion.id, {
-              // Cuando se pasa a humana, el paso se limpia a `null` A
+            reclamado = await deps.reclamarPaso(conversacion.id, {
+              pasoEsperado: pasoGuardado,
+              // Cuando se entrega a una persona, el paso se limpia a `null` A
               // PROPÓSITO en vez de dejar el que devolvió el motor (tarea 9):
               // una ruta con `ir_a` a un mensaje de cierre que también avisa
               // deja `pasoActual` apuntando a ESE mensaje, no a `null` (el
@@ -861,27 +931,25 @@ async function procesarMensaje(
               // (el switch de más arriba en esta función solo mira eso) y
               // reactivaría el camino del bot sobre una conversación que ya
               // se entregó a una persona.
-              pasoActual: pasaAHumana ? null : avanzada.estado.pasoActual,
+              pasoActual: entregaAPersona ? null : avanzada.estado.pasoActual,
               datos: avanzada.estado.datos,
-              ...(pasaAHumana ? { estado: "humana" as const } : {}),
+              ...(entregaAPersona ? { estado: "humana" as const } : {}),
+              ...(esperaDias != null
+                ? { reanudarEn: new Date(ahora.getTime() + esperaDias * 24 * 60 * 60 * 1000) }
+                : {}),
             });
-            if (pasaAHumana) conversacion = { ...conversacion, estado: "humana" };
           } catch (e) {
-            // El mensaje YA se mandó (y ya se guardó como saliente, arriba).
-            // Igual que al arrancar (Hallazgo 2, ronda de arreglos 1): si
-            // este guardado falla, nadie vuelve a intentarlo —la idempotencia
-            // por wamid lo impide—, así que se pasa a `humana` para que la
-            // conversación no se quede muda sin que nadie lo note.
+            // No se pudo ni reclamar: no se ha enviado nada todavía, así que
+            // el lead no ha recibido un mensaje a medias. Pero tampoco va a
+            // recibir ninguno, y la idempotencia por wamid impide que un
+            // reintento de Meta lo repare, así que se entrega a una persona
+            // para que la conversación no se quede muda.
             console.error(
-              "[whatsapp] fallo guardando el avance de la secuencia, se pasa a humana",
+              "[whatsapp] fallo reclamando el paso de la secuencia, se pasa a humana",
               mensaje.waId,
               e,
             );
             try {
-              // También aquí se limpia el paso (mismo motivo que arriba): el
-              // guardado normal falló a medias, pero la conversación va a
-              // quedar en `humana` igualmente, y con el mismo riesgo de
-              // reactivarse sola si `paso_actual` se queda con un valor.
               await deps.actualizarConversacion(conversacion.id, { estado: "humana", pasoActual: null });
               conversacion = { ...conversacion, estado: "humana" };
             } catch (e2) {
@@ -893,7 +961,61 @@ async function procesarMensaje(
             }
           }
 
-          if ((pasaAHumana || faseNueva) && leadId) {
+          if (!reclamado) {
+            // Otra entrega concurrente ya avanzó desde este mismo paso (o el
+            // reclamo falló, y entonces ya se entregó a una persona arriba).
+            // No es un error del lead ni de Meta: es la segunda entrega
+            // perdiendo la carrera. Se corta aquí SIN enviar nada, que es
+            // justo lo que evita el mensaje duplicado.
+            console.warn(
+              "[whatsapp] otra entrega ya avanzó esta conversación, no se reenvía el paso",
+              mensaje.waId,
+              conversacion.id,
+            );
+          } else {
+            if (entregaAPersona) conversacion = { ...conversacion, estado: "humana" };
+
+            try {
+              // Igual que al arrancar: un paso con botones se manda con
+              // `enviarBotones`, uno sin botones con `enviarTexto` (decisión 5).
+              for (const entrada of avanzada.mensajes) {
+                const resultado =
+                  entrada.botones && entrada.botones.length > 0
+                    ? await deps.mensajero.enviarBotones(mensaje.waId, entrada.texto, entrada.botones)
+                    : await deps.mensajero.enviarTexto(mensaje.waId, entrada.texto);
+                await deps.guardarSaliente({
+                  conversacionId: conversacion.id,
+                  wamid: resultado.ok ? resultado.wamid : null,
+                  texto: entrada.texto,
+                  error: resultado.ok ? undefined : resultado.error,
+                });
+              }
+            } catch (e) {
+              // El paso YA está reclamado: la conversación avanzó en la base
+              // pero el lead puede no haber recibido nada. Nadie va a
+              // reintentarlo (la idempotencia por wamid lo impide), así que se
+              // entrega a una persona — la misma postura que el resto del
+              // módulo toma cuando algo se queda a medias después de un punto
+              // sin retorno.
+              console.error(
+                "[whatsapp] fallo enviando el paso ya reclamado, se pasa a humana",
+                mensaje.waId,
+                e,
+              );
+              try {
+                await deps.actualizarConversacion(conversacion.id, { estado: "humana", pasoActual: null });
+                conversacion = { ...conversacion, estado: "humana" };
+              } catch (e2) {
+                console.error(
+                  "[whatsapp] fallo también pasando la conversación a humana tras el error anterior",
+                  mensaje.waId,
+                  e2,
+                );
+              }
+            }
+          }
+
+          if (reclamado && (entregaAPersona || faseNueva) && leadId) {
             // `mensaje.texto` (Hallazgo 2, ronda de arreglos 1 de la tarea 9):
             // para un botón ya trae el rótulo que pulsó el lead, no solo el
             // texto libre — ver `respuestaDelMensaje` en entrante.ts.
@@ -904,6 +1026,11 @@ async function procesarMensaje(
             // pensado para la frase de continuación de `avanzarSecuencia`.
             await avisarComercial(leadId, {
               avisos: pasaAHumana ? avanzada.avisos : undefined,
+              // La espera se cuenta ADEMÁS del aviso, no en su lugar: una ruta
+              // puede llevar `avisar: true` y `esperar_dias` a la vez, y la
+              // comercial necesita las dos cosas — por qué se le avisa y
+              // desde cuándo está parada la conversación (ronda B1, arreglo 2).
+              esperaDias: esperaDias ?? undefined,
               faseNueva: faseNueva ?? undefined,
               respuestaLead: mensaje.texto,
             });
