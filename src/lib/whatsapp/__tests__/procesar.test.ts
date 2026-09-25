@@ -691,6 +691,39 @@ describe("procesarWebhook", () => {
     expect(salientes[0].texto).toContain("Escala");
   });
 
+  it("al caer al respaldo limpia el puntero de la secuencia anterior", async () => {
+    // Hallazgo 4: el mismo teléfono clicó hace semanas el anuncio de
+    // psicología (quedó `secuencia_id` + `paso_actual`) y no contestó. Hoy
+    // clica otro anuncio que ninguna secuencia sirve → respaldo. Si el
+    // puntero viejo sobrevive, la pulsación siguiente se interpreta contra el
+    // guion de PSICOLOGÍA: el lead recibe copy de consultas de psicología y
+    // se le guarda un `problema_principal` que no es el que pulsó.
+    const { deps, conversaciones, salientes } = depsFalsas({
+      secuencias: [{ id: "s-psico", estado: "activa", anuncios: ["AD-PSICO"], pasos: SECUENCIA_PSICOLOGIA }],
+    });
+
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD-PSICO"), deps });
+    const conv = [...conversaciones.values()][0];
+    expect(conv.secuencia_id).toBe("s-psico");
+    expect(conv.paso_actual).toBe("inicio");
+
+    // Otro anuncio, sin secuencia que lo sirva: respaldo. `id` propio porque
+    // `sobreDeAnuncio` reusa siempre el mismo wamid y la idempotencia cortaría
+    // el segundo mensaje.
+    const segundoClic = sobreConMensajes([
+      mensajeDeAnuncio({ id: "wamid.ANUNCIO.2", referral: { source_id: "AD-SIN-MAPEAR", headline: "Otra campaña" } }),
+    ]);
+    await procesarWebhook({ cuerpo: segundoClic, deps });
+    expect(salientes[1].texto).toContain("Escala");
+    expect(conv.secuencia_id).toBeNull();
+    expect(conv.paso_actual).toBeNull();
+
+    // Y la pulsación de un botón del respaldo no avanza el guion de psicología.
+    await procesarWebhook({ cuerpo: sobrePulsacion("opcion_2", "Vienen 1 vez y ya"), deps });
+    expect(salientes).toHaveLength(2);
+    expect(conv.datos.problema_principal).toBeUndefined();
+  });
+
   it("una variable sin valor deja el hueco visible y sigue", async () => {
     // El lead de WhatsApp no trae ciudad. El mensaje debe salir igual.
     const { deps, salientes, enviosMensajero } = depsFalsas({

@@ -751,6 +751,32 @@ async function procesarMensaje(
           // resultado tipado de `enviarTexto`/`enviarBotones`).
           error: resultado.ok ? undefined : resultado.error,
         });
+
+        // Y se limpia el puntero de la secuencia que traía la conversación de
+        // antes (Hallazgo 4, ronda de arreglos 3). Los botones que acabamos de
+        // mandar son los GENÉRICOS del respaldo, no los de ningún guion: si
+        // `secuencia_id`/`paso_actual` sobreviven, la pulsación siguiente
+        // vuelve a entrar por la rama `guardar_respuesta` (que solo mira que
+        // los dos tengan valor) y se avanza por índice la secuencia VIEJA —
+        // el caso real es un teléfono que clicó el anuncio de psicología hace
+        // semanas y hoy clica otro sin mapear: recibiría copy de psicología y
+        // se le guardaría un `problema_principal` que no es el que pulsó.
+        // Condicionado a que haya algo que limpiar para no gastar una
+        // escritura en el caso normal (primer contacto, sin puntero), y
+        // best-effort como el resto de la fase B: el mensaje ya salió, y si
+        // esto falla lo peor que pasa es que el puntero viejo siga ahí.
+        if (conversacion.secuencia_id || conversacion.paso_actual) {
+          try {
+            await deps.actualizarConversacion(conversacion.id, { secuenciaId: null, pasoActual: null });
+            conversacion = { ...conversacion, secuencia_id: null, paso_actual: null };
+          } catch (e) {
+            console.error(
+              "[whatsapp] fallo limpiando el puntero de la secuencia al caer al respaldo",
+              mensaje.waId,
+              e,
+            );
+          }
+        }
       }
     } catch (e) {
       // Este catch es para un fallo al ENVIAR o GUARDAR el primer mensaje.
