@@ -3,8 +3,6 @@ import { GROWTH_THEME as T } from "@/lib/growth-config";
 import { CONTACT_INFO } from "@/lib/contact-info";
 import type { SectorGrowth } from "@/lib/growth-sectores";
 import { Pasos } from "./Pasos";
-import { Subrayado } from "./Subrayado";
-import { Trama } from "./Trama";
 import { Logotipo } from "./Logotipo";
 import { FormularioHero } from "./FormularioHero";
 import { Planes } from "./Planes";
@@ -15,127 +13,92 @@ import { AlAparecer } from "./AlAparecer";
 /**
  * El cuerpo de la landing, compartido por `/growth` y por cada `/growth/<sector>`.
  *
- * **Existe para que no haya dos copias.** La alternativa era duplicar el fichero
- * por sector, y con cinco copias el día que cambie el precio hay que acordarse de
- * tocarlo en cinco sitios: no se acuerda nadie, y lo que queda es una landing
- * anunciando una tarifa que ya no existe.
+ * **Existe para que no haya dos copias.** Con una por sector, el día que cambie
+ * el precio hay que acordarse de tocarlo en cinco sitios, y no se acuerda nadie.
+ * Lo que cambia por sector —la cabecera, a quién buscan las campañas y las
+ * preguntas— viene de `growth-sectores.ts`.
  *
- * Lo que cambia por sector son tres cosas —la cabecera, a quién buscan las
- * campañas y las preguntas—; todo lo demás es el mismo producto, y se comparte
- * porque lo es. Los datos vienen de `growth-sectores.ts`, que explica el porqué de cada
- * uno.
+ * **El aspecto no tiene nada que ver con el de Escala, y es a propósito** (25
+ * de septiembre de 2026). Escala era casi negra, con titulares en negrita
+ * máxima alineados a la izquierda, trazos a mano, texturas y halos de color.
+ * Growth es clara, con las cabeceras de sección centradas, tarjetas con borde
+ * fino y nada dibujado a mano: son dos negocios distintos y no pueden parecer
+ * el mismo con otro color. Ver `GROWTH_THEME`.
  */
 
-/**
- * El subrayado de «Sin permanencia», a mano.
- *
- * **Un `text-decoration` recto se lee como formato; esto se lee como que alguien
- * lo ha subrayado.** Es lo que hace una persona con un boli sobre lo que le
- * importa de un papel, y en una sección que va sobre confianza esa diferencia es
- * el argumento entero: una raya perfecta la pone una hoja de estilos, esta la
- * pone alguien.
- *
- * El trazo va con dos pasadas y no una, porque nadie subraya de una: la segunda
- * es más corta, algo desalineada y más suave, como cuando se repasa sin levantar
- * del todo. Y las dos se pasan de largo por los extremos — un subrayado que
- * empieza y acaba exactamente donde la palabra es otra vez una regla.
- *
- * **Es una forma rellena, no una línea con grosor.** Un trazo estirado a lo ancho
- * del texto con `preserveAspectRatio="none"` se deforma, y el `vector-effect` que
- * lo compensaba dejaba los empalmes de las curvas duros y con dientes. Dibujando
- * el contorno del trazo, el estirón solo lo alarga —que es lo que hace un
- * subrayado más largo— y no toca su forma.
- *
- * Y de paso sale gratis lo que más lo hace parecer un boli: el grosor cambia a lo
- * largo del trazo y se va a nada al final, como cuando se levanta la mano.
- */
-function SubrayadoABoli() {
+/** Contenedor de la página. Un solo ancho: esta página se lee, no se recorre. */
+function Wrap({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <div className={`mx-auto w-full max-w-6xl px-5 sm:px-8 ${className}`}>{children}</div>;
+}
+
+/** Rótulo de sección: una píldora teñida, en minúsculas y sin espaciado ancho. */
+function Rotulo({ children }: { children: React.ReactNode }) {
   return (
-    <svg
-      aria-hidden
-      viewBox="0 0 300 20"
-      preserveAspectRatio="none"
-      className="absolute inset-x-0 -bottom-[0.17em] h-[0.3em] w-full overflow-visible"
-      fill="currentColor"
+    <span
+      className="inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold"
+      style={{ background: `${T.accent}1f`, color: T.accentText }}
     >
-      {/* La pasada de ida. El contorno va de izquierda a derecha por el borde
-          de arriba y vuelve por el de abajo, con las dos curvas ligeramente
-          distintas: de ahí sale que engorde en el medio y se afile al final. */}
-      <path d="M2 12.6C58 6.2 118 12.9 168 9.1 218 5.2 258 10.6 298 6.5c-40 6.9-80 1.6-130 5.5C118 15.8 58 9.6 2 15.8Z" />
-      {/* La de vuelta: más corta, más baja y más floja. Nadie subraya de una
-          pasada, y es la segunda —desalineada y a medio gas— la que convierte
-          esto en un boli y no en una hoja de estilos. */}
-      <path
-        opacity={0.4}
-        d="M28 17.4C94 12.6 170 18.2 246 13.4c-76 6.6-152 1-218 5.6Z"
-      />
-    </svg>
+      {children}
+    </span>
   );
 }
 
-/**
- * Ancho máximo propio: no usamos el Container del sitio para no heredar su
- * escala, pensada para páginas corporativas.
- *
- * 1760 px y no 1152: con el ancho de antes, en una pantalla de 1920 quedaban
- * 256 px muertos a cada lado —más de una cuarta parte del monitor— y todo el
- * contenido apretado en el centro. La página parecía alejada, como si el
- * navegador tuviera el zoom bajado.
- *
- * Se topa igualmente, y no se deja crecer sin límite: una línea de texto de
- * 2000 px no se lee, se recorre con el cuello. Lo que se busca es llenar un
- * monitor normal, no cualquier monitor.
- */
-function Wrap({
-  children,
-  narrow = false,
-  ancho = false,
-  className = "",
+/** Cabecera centrada de cada sección. */
+function Cabecera({
+  rotulo,
+  titulo,
+  texto,
 }: {
-  children: React.ReactNode;
-  narrow?: boolean;
-  /**
-   * Solo el hero. 124 rem en vez de 110: el titular se mide contra el ancho de
-   * su columna, así que cada centímetro que se le da al contenedor sale
-   * directamente en el tamaño de letra. En las secciones de texto ese ancho de
-   * más sería peor —una línea de prosa de 1900 px no se lee, se recorre con el
-   * cuello—, pero el hero no es prosa: son ocho palabras.
-   */
-  ancho?: boolean;
-  className?: string;
+  rotulo: string;
+  titulo: React.ReactNode;
+  texto?: React.ReactNode;
 }) {
-  const tope = narrow ? "max-w-4xl" : ancho ? "max-w-[124rem]" : "max-w-[110rem]";
   return (
-    <div className={`mx-auto w-full px-6 sm:px-10 lg:px-14 ${tope} ${className}`}>
-      {children}
+    <div className="mx-auto max-w-3xl text-center">
+      <Rotulo>{rotulo}</Rotulo>
+      <h2
+        className="mt-4 font-extrabold leading-[1.1] tracking-[-0.02em] text-balance"
+        style={{ fontSize: "clamp(1.875rem, 3.6vw, 2.75rem)" }}
+      >
+        {titulo}
+      </h2>
+      {texto && (
+        <p className="mt-4 text-lg leading-relaxed text-pretty" style={{ color: T.muted }}>
+          {texto}
+        </p>
+      )}
     </div>
   );
 }
 
-/** Etiqueta pequeña en mayúsculas que abre cada sección. */
-function Eyebrow({ children, color = T.accent }: { children: React.ReactNode; color?: string }) {
+/** Una marca de verificación en su círculo, para las garantías del hero. */
+function Check() {
   return (
-    <p className="text-sm font-bold uppercase tracking-[0.24em]" style={{ color }}>
-      {children}
-    </p>
+    <span
+      aria-hidden
+      className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+      style={{ background: T.accent }}
+    >
+      <svg viewBox="0 0 16 16" className="h-3 w-3">
+        <path
+          d="M3.5 8.5 6.5 11.5 12.5 5"
+          fill="none"
+          stroke={T.onAccent}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
   );
 }
 
 /**
  * Los tres pasos del servicio, en el orden en que pasan.
  *
- * Hacen doble trabajo: explican el proceso y son, a la vez, el inventario de
- * lo que entra en la cuota. Por eso el precio va justo detrás — "todo esto,
- * desde 199 €" solo se entiende si acabas de leer qué es "todo esto".
- *
- * **Son tres porque Growth es eso y nada más** (25 de septiembre de 2026): la
- * landing, las campañas y el análisis. Hasta entonces el segundo paso metía a
- * cada paciente «en tu sistema con su ficha y su cita» y el tercero medía lo
- * que facturaba; ese sistema ya no forma parte de lo que se vende, y un paso
- * que lo prometiera sería lo primero que un cliente reclamaría.
- *
- * Solo el de campañas cambia por sector: a quién se busca se dice con las
- * palabras del gremio.
+ * Son a la vez la explicación del proceso y el inventario de lo que entra en la
+ * cuota, por eso los planes van justo detrás. Solo el de campañas cambia por
+ * sector: a quién se busca se dice con las palabras del gremio.
  */
 function pasosPara(sector: SectorGrowth) {
   return [
@@ -153,65 +116,24 @@ function pasosPara(sector: SectorGrowth) {
   ];
 }
 
+/**
+ * Las tres garantías bajo el subtítulo. Son las tres dudas que frenan a quien
+ * llega desde un anuncio —cuánto cuesta, si le atan, qué recibe— contestadas
+ * antes de que las piense.
+ */
+const GARANTIAS = ["Desde 199 € al mes", "Sin permanencia", "Landing y campañas incluidas"];
+
 export function PaginaGrowth({ sector }: { sector: SectorGrowth }) {
   return (
     <>
       {/* ───────── 1. Hero ───────── */}
-      {/* **La pantalla entera, y nada más que el hero.** Estaba en 80svh y el
-          resultado era el peor de los dos mundos: no llenaba la pantalla, pero
-          asomaba un dedo de la sección siguiente por abajo. Esa franja de otro
-          color no invita a bajar —para eso hace falta que se note que hay algo
-          debajo, no verlo a medias— y en cambio le quita al titular la única
-          ventaja que tiene un hero, que es ser lo único que se ve.
-
-          Se condiciona a `lg:landscape` y no a un ancho a secas: el problema no
-          es la anchura sino la proporción. En cualquier viewport vertical
-          —móvil o tableta— el contenido ocupa un tercio de la altura, así que
-          centrarlo dentro de 100svh dejaría entre 500 y 750 px muertos. Fuera
-          de apaisado manda un suelo en píxeles, que no crece con la altura de
-          la pantalla y por tanto no puede volver a abrir ese hueco.
-
-          `svh` y no `vh`: en el móvil, `vh` cuenta la barra del navegador como
-          si no estuviera y el botón del formulario queda por debajo del corte. */}
-      {/* **Mide lo que mide su contenido, y ni un píxel más.**
-          Reservaba la pantalla entera (`min-h-svh`) y centraba dentro. Eso tenía
-          sentido con el contenido centrado —llenaba— pero dejó de tenerlo en
-          cuanto empieza arriba: lo único que quedaba era un hueco muerto abajo
-          que hay que pasar con la rueda antes de llegar a lo siguiente. Un hero
-          alto no convence a nadie; lo que convence es lo que hay debajo.
-
-          El contenido arranca arriba y no centrado porque con `items-center`
-          sobraban 131 px de negro sobre el logotipo, medidos en el navegador:
-          eso es lo que hace el centrado cuando el contenido es más corto que la
-          ventana. */}
-      {/* **Aire arriba y abajo, pero sin reservar la pantalla entera.**
-          Esto ha pasado por tres versiones y las dos anteriores fallaban por
-          extremos opuestos: `min-h-svh` con el contenido centrado dejaba 131 px
-          de negro sobre el logotipo y un hueco muerto al final; quitarle el
-          `padding-bottom` arreglaba el hueco pero pegaba el formulario al corte
-          con la sección siguiente, y dos bloques que se tocan se leen como uno.
-
-          El punto medio es este: el hero mide lo que mide su contenido más un
-          margen que lo separa de lo que viene detrás. El aire entre secciones no
-          es desperdicio — es lo que hace que se lean como dos cosas distintas. */}
-      <header className="relative flex min-h-[26rem] items-start overflow-hidden py-16 md:py-20 lg:pb-16 lg:pt-24">
-        {/* Tres capas para que la cabecera deje de ser un rectángulo negro, y
-            ninguna se ve como tal: una trama de puntos que da textura sin hacer
-            ruido, un halo verde detrás del formulario —que además empuja la
-            tarjeta clara hacia delante— y otro más flojo arriba a la izquierda
-            para que el titular no flote sobre la nada. */}
-        <Trama />
-
-        {/* **La foto del sector, y el degradado que la hace posible.**
-            Sola no valdría: estas fotos son de consultas reales —blancas,
-            luminosas y con la ventana justo donde va el titular—, así que al 18 %
-            todavía levantan el fondo lo suficiente para comerse el contraste del
-            texto blanco. El degradado va en diagonal y deja el negro casi entero
-            a la izquierda, donde se lee, y suelta la imagen hacia la derecha,
-            donde solo hay que reconocer de qué sector es.
-
-            Por eso la opacidad vive aquí y no quemada en el fichero: sube o baja
-            en una línea, y el oscurecido usa exactamente el negro del tema. */}
+      <header
+        className="relative overflow-hidden pb-14 pt-8 md:pb-20"
+        style={{ background: `linear-gradient(180deg, ${T.soft} 0%, ${T.bg} 100%)` }}
+      >
+        {/* La foto del sector, desvanecida hacia el blanco por la izquierda para
+            que el titular se lea encima. Solo la llevan los sectores que tienen
+            una foto propia: repetir la misma en todos no distinguiría nada. */}
         {sector.imagen && (
           <>
             <div aria-hidden className="pointer-events-none absolute inset-0">
@@ -221,316 +143,147 @@ export function PaginaGrowth({ sector }: { sector: SectorGrowth }) {
                 fill
                 sizes="100vw"
                 className="object-cover"
-                // **Al 60 %, y la legibilidad la sostiene el degradado.** Pasó
-                // por 0,18 y por 0,32 y en las dos había que buscar la foto para
-                // encontrarla: una imagen que hay que buscar no distingue una
-                // landing de otra, que era justo para lo que está. Subir la
-                // opacidad no le quita contraste al titular —de eso se encarga la
-                // capa de abajo—, solo hace que la consulta se reconozca.
-                style={{ opacity: 0.6 }}
+                style={{ opacity: 0.35 }}
               />
             </div>
             <div
               aria-hidden
               className="pointer-events-none absolute inset-0"
               style={{
-                // Negro casi entero bajo el titular y se suelta deprisa a partir
-                // de la mitad. Lo que protege el texto es este tramo de la
-                // izquierda, no la opacidad de la foto: por eso se puede subir
-                // una sin tocar la otra. El lado derecho cae detrás del
-                // formulario, que es una tarjeta opaca y no compite con nada.
-                background: `linear-gradient(100deg, ${T.ink} 0%, ${T.ink}f7 24%, ${T.ink}b3 46%, ${T.ink}1a 100%)`,
+                background: `linear-gradient(100deg, ${T.bg} 0%, ${T.bg}f2 38%, ${T.bg}b3 62%, ${T.soft}66 100%)`,
               }}
             />
           </>
         )}
 
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-32 top-1/2 h-[42rem] w-[42rem] -translate-y-1/2 rounded-full blur-[130px]"
-          style={{ background: T.accent, opacity: 0.16 }}
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -left-40 -top-40 h-[34rem] w-[34rem] rounded-full blur-[140px]"
-          style={{ background: T.accent, opacity: 0.07 }}
-        />
-        <Wrap ancho className="relative">
-          {/* **El titular y el formulario, uno al lado del otro.**
-              El formulario lleva ancho fijo y el titular se queda con lo que
-              sobre. Es al revés de lo normal —repartir en fracciones— y es a
-              propósito: con fracciones, el titular crecía con la pantalla y a
-              1375 px se partía en tres líneas. */}
-          {/* **Arriba, no centradas.** Con `items-center` la columna del texto se
-              centraba respecto a la del formulario, que es bastante más alta: de
-              ahí salían 111 px de negro por encima del logotipo aunque la
-              cabecera ya empezara arriba. Medido en el navegador, no a ojo. */}
-          <div className="grid items-start gap-10 xl:grid-cols-[minmax(0,1fr)_27rem] xl:gap-14">
-            {/* **El tamaño del titular se mide contra su columna, no contra la
-                ventana.** Con `vw` había que elegir el peor caso —el ancho más
-                estrecho donde hay dos columnas— y dejarlo pequeño en todos los
-                demás. Con `cqw` el cálculo es exacto en cada ancho, sea la que
-                sea la columna.
+        <Wrap className="relative">
+          <Logotipo />
 
-                El 9,5 no es una estimación: la frase original mide 10,27 veces
-                su propio cuerpo, medido en el navegador, así que cabe hasta 9,7
-                cqw y se deja un dedo de margen.
+          <div className="mt-10 grid items-center gap-10 lg:mt-14 lg:grid-cols-[minmax(0,1fr)_25rem] lg:gap-14">
+            <div>
+              {sector.eyebrow && <Rotulo>{sector.eyebrow}</Rotulo>}
 
-                **Si se añade un sector, hay que medir su titular.** Las frases
-                de los sectores se eligieron de largo parecido al original por
-                esto mismo; una notablemente más larga se saldría del renglón, y
-                a ojo sale un número mucho más conservador que deja el titular
-                pequeño en todas las demás sin que se note por qué.
-
-                Por debajo de 640 px se le deja partirse: ahí no hay tamaño
-                legible que la meta en un renglón. */}
-            <div style={{ containerType: "inline-size" }}>
-              {/* El logotipo va dentro de la columna del titular y no en una
-                  barra propia: esta landing no tiene navegación —no hay a dónde
-                  ir— y ponerle una cabecera al uso solo serviría para quitarle
-                  altura al hero. */}
-              {/* El hueco va DEBAJO del logotipo, no encima: el logotipo se
-                  queda donde está —lo fija el padding de la cabecera— y lo que
-                  se abre es la distancia hasta el titular, que es lo que separa
-                  la firma del mensaje. */}
-              <Logotipo className="mb-10 lg:mb-28" />
-
-              {/* Solo en las landings de sector: es lo que dice «esta página es
-                  para ti» antes de que se lea el titular. La general no lo
-                  lleva, porque no tiene a quién señalar. */}
-              {sector.eyebrow && (
-                <p
-                  className="mb-5 text-sm font-bold uppercase tracking-[0.24em]"
-                  style={{ color: T.accent }}
-                >
-                  {sector.eyebrow}
-                </p>
-              )}
-
-              {/* **`text-balance` para que ninguna línea se quede coja.**
-                  Por debajo de 640 px las dos frases pueden partirse, y el
-                  navegador parte donde deja de caber: "Llenar tu agenda es" y
-                  debajo "fácil." sola. Una palabra suelta en su propio renglón
-                  no es un titular, es un titular roto — y en un titular a este
-                  tamaño se ve antes que se lee. */}
               <h1
-                className="font-black leading-[0.94] tracking-[-0.035em] text-balance"
-                style={{ fontSize: "clamp(2.75rem, 9.5cqw, 10rem)" }}
+                className="mt-5 font-extrabold leading-[1.05] tracking-[-0.025em] text-balance"
+                style={{ fontSize: "clamp(2.5rem, 5.6vw, 4.5rem)" }}
               >
-                <span className="whitespace-nowrap max-sm:whitespace-normal">
-                  {sector.titular.primera}
-                </span>
-                <br />
-                <span
-                  className="whitespace-nowrap max-sm:whitespace-normal"
-                  style={{ color: T.accent }}
-                >
+                {sector.titular.primera}{" "}
+                <span className="block" style={{ color: T.accentText }}>
                   {sector.titular.segunda}
                 </span>
               </h1>
 
-              {/* En blanco entero: el acento ya está en el titular, justo encima,
-                  y repetirlo aquí hacía que las dos frases compitieran. Lo que
-                  destaca la palabra es el trazo, no el color. */}
               <p
-                className="mt-9 max-w-3xl font-bold leading-[1.3] tracking-[-0.015em] text-balance lg:mt-14"
-                style={{ fontSize: "clamp(1.5rem, 2.6vw, 3.25rem)" }}
+                className="mt-6 max-w-xl leading-relaxed text-pretty"
+                style={{ fontSize: "clamp(1.125rem, 1.6vw, 1.375rem)", color: T.muted }}
               >
                 {sector.subtitulo.antes}
-                <Subrayado>{sector.subtitulo.resaltado}</Subrayado>
+                <strong className="font-semibold" style={{ color: T.fg }}>
+                  {sector.subtitulo.resaltado}
+                </strong>
                 {sector.subtitulo.despues}
               </p>
+
+              <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-3">
+                {GARANTIAS.map((g) => (
+                  <li key={g} className="flex items-center gap-2 text-[0.95rem] font-semibold">
+                    <Check />
+                    {g}
+                  </li>
+                ))}
+              </ul>
             </div>
 
-            {/* El formulario baja un poco en pantalla ancha. Arrancando a la
-                misma altura que el logotipo competía con él por el mismo
-                renglón; algo más abajo, la vista lee primero la firma y el
-                titular y llega al formulario después, que es el orden en que
-                esta página quiere que se lea.
-
-                Solo desde xl, que es donde hay dos columnas: apiladas, ese
-                margen sería un hueco entre el texto y el formulario. */}
-            <div className="xl:mt-12">
-              <FormularioHero
-                sectorPorDefecto={sector.valorFormulario}
-                termino={sector.termino.singular}
-              />
-            </div>
+            <FormularioHero
+              sectorPorDefecto={sector.valorFormulario}
+              termino={sector.termino.singular}
+            />
           </div>
         </Wrap>
       </header>
 
-      {/* ───────── 2. La solución ─────────
-          Los tres pasos son a la vez la explicación del proceso y el inventario
-          de lo que se compra, así que el precio va dos secciones más abajo
-          apoyado en ellos: "desde 199 €" solo se entiende si acabas de leer qué
-          es "todo esto". */}
-      <section
-        className="relative overflow-hidden py-16 md:py-20 lg:py-24"
-        style={{ background: T.surface }}
-      >
-        <Trama desde="25% 30%" />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -top-32 right-0 h-[32rem] w-[32rem] rounded-full blur-[130px]"
-          style={{ background: T.accent, opacity: 0.09 }}
-        />
-        <Wrap className="relative">
+      {/* ───────── 2. Cómo trabajamos ───────── */}
+      <section className="py-16 md:py-24" style={{ background: T.bg }}>
+        <Wrap>
           <AlAparecer>
-            <Eyebrow>La solución</Eyebrow>
-
-            <h2
-              className="mt-8 max-w-5xl font-black leading-[1.02] tracking-[-0.03em] text-balance"
-              style={{ fontSize: "clamp(2.5rem, 6vw, 5.5rem)" }}
-            >
-              Nos ocupamos de todo.
-              <br />
-              <span style={{ color: T.accent }}>De principio a fin.</span>
-            </h2>
-
-            {/* El subtítulo, y lo que de verdad se compra: no unos anuncios,
-                sino dejar de ocuparse de llenar la agenda.
-
-                Estuvo suelto después de los tres pasos, de remate. Aquí funciona
-                mejor por una razón que no es de maquetación: "llenarte la agenda" pide
-                que le expliquen cómo, y justo debajo están los tres pasos
-                diciéndolo. Antes cerraba; ahora abre. */}
-            <p
-              className="mt-8 font-bold leading-[1.2] tracking-[-0.015em] text-balance"
-              style={{ fontSize: "clamp(1.375rem, 2.4vw, 2.25rem)" }}
-            >
-              Tú encárgate de {sector.tuParte}.{" "}
-              <span style={{ color: T.accent }}>Nosotros, de llenarte la agenda.</span>
-            </p>
+            <Cabecera
+              rotulo="Cómo trabajamos"
+              titulo="Nos ocupamos de todo, de principio a fin"
+              texto={
+                <>
+                  Tú encárgate de {sector.tuParte}.{" "}
+                  <strong className="font-semibold" style={{ color: T.fg }}>
+                    Nosotros, de llenarte la agenda.
+                  </strong>
+                </>
+              }
+            />
           </AlAparecer>
-
           <Pasos pasos={pasosPara(sector)} />
         </Wrap>
       </section>
 
-      {/* ───────── 3. Los planes ─────────
-          El título estuvo DENTRO de la tabla, en la casilla vacía de la
-          esquina, para no separar los precios de los tres pasos que los
-          justifican. Salió mal: sin nada que abriera la sección, la tabla
-          aparecía de golpe y ni siquiera se veía que había empezado un
-          capítulo nuevo. */}
-      <section
-        className="relative overflow-hidden py-16 md:py-20 lg:py-24"
-        style={{ background: T.surface }}
-      >
-        <Trama desde="75% 40%" />
-        <Wrap className="relative">
-          {/* El título de esta sección va DENTRO de `Planes`, en la esquina de
-              la tabla. Ver el porqué allí: aquí fuera dejaba una banda vacía a
-              su derecha y otra entre él y la tabla. */}
+      {/* ───────── 3. Planes ───────── */}
+      <section className="py-16 md:py-24" style={{ background: T.soft }}>
+        <Wrap>
+          <AlAparecer>
+            <Cabecera
+              rotulo="Planes"
+              titulo="Dos planes, sin letra pequeña"
+              texto="La diferencia está en los canales y en el informe mensual. Todo lo demás va en los dos."
+            />
+          </AlAparecer>
           <AlAparecer>
             <Planes />
           </AlAparecer>
         </Wrap>
       </section>
 
-      {/* ───────── 4. El compromiso ─────────
-          Va justo después del precio y las garantías: es la respuesta a la
-          desconfianza que deja cualquier tarifa.
-
-          Va sobre el acento y en negro, la única sección de toda la página que
-          invierte los colores. Después de tres pantallas de fondo oscuro, el
-          cambio se nota antes de leer una palabra — y esta es justo la frase
-          que tiene que quedarse. */}
-      <section
-        className="flex items-center py-20 md:py-24 lg:py-28"
-        style={{ background: T.accent, color: T.ink }}
-      >
+      {/* ───────── 4. Sin permanencia ─────────
+          La única banda oscura de la página, para que la frase que resuelve la
+          desconfianza que deja cualquier precio se note antes de leerla. */}
+      <section className="py-14 md:py-16" style={{ background: T.dark, color: T.onDark }}>
         <Wrap>
-          {/* **El hecho primero; el porqué, debajo.**
-
-              Antes esto era una sola frase grande: "Vas a querer quedarte por
-              los resultados, no porque te obliguemos". Se lee bien, pero hay
-              que leerla ENTERA para saber qué te están diciendo, y en una
-              página de venta lo que se escanea es lo grande. Lo que de verdad
-              mata la objeción es el dato: no hay permanencia.
-
-              **Alineado a la izquierda, como el resto de la página.** Esto pasó
-              por dos versiones antes de volver aquí: primero se mandó el botón
-              a la derecha para llenar el hueco —y quedó un botón solo, pegado
-              al margen y a medio metro de la frase que lo justifica—, después
-              se centró la columna entera, y centrado deja de leerse como las
-              demás secciones. */}
           <AlAparecer>
-            <div className="max-w-4xl">
-              <div>
+            <div className="flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
+              <div className="max-w-2xl">
                 <p
-                  className="relative inline-block font-black leading-[1.02] tracking-[-0.035em]"
-                  style={{ fontSize: "clamp(2.25rem, 6.4vw, 5rem)" }}
+                  className="font-extrabold leading-[1.1] tracking-[-0.02em]"
+                  style={{ fontSize: "clamp(1.875rem, 3.6vw, 2.75rem)" }}
                 >
-                  Sin permanencia
-                  <SubrayadoABoli />
+                  Sin permanencia.{" "}
+                  <span style={{ color: T.accent }}>Mes a mes.</span>
                 </p>
-
-                {/* El corte va en la coma. Dejándoselo al navegador partía por
-                    "los resultados", que no significa nada; en la coma se lee
-                    en dos golpes que son sus dos mitades. Debajo de lg fluye
-                    sola, porque ahí no hay ancho para elegir dónde romper. */}
-                <p
-                  className="mt-7 font-bold leading-[1.2] tracking-[-0.02em]"
-                  style={{ fontSize: "clamp(1.375rem, 3.1vw, 2.5rem)" }}
-                >
-                  <span className="lg:block">Vas a querer quedarte por los resultados,</span>{" "}
-                  <span className="lg:block">no porque te obliguemos.</span>
+                <p className="mt-3 text-lg leading-relaxed" style={{ color: T.onDarkMuted }}>
+                  Vas a querer quedarte por los resultados, no porque te obliguemos.
                 </p>
               </div>
 
-              {/* **WhatsApp y no otro formulario.** Aquí hubo un tiempo sin
-                  botón, y el argumento era bueno: repetir la misma llamada a la
-                  acción convierte el cierre en un anuncio. Lo que cambia es que
-                  esto no repite nada — el formulario del hero pide un teléfono
-                  para que llamemos nosotros, y hay bastante gente que no lo deja
-                  pero sí escribe. Son dos puertas distintas para dos personas
-                  distintas, no la misma dos veces. */}
-              <div className="mt-10">
-                <a
-                  href={CONTACT_INFO.socials.whatsapp}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-3 rounded-full px-7 py-4 text-base font-bold transition-transform hover:-translate-y-0.5 sm:text-lg"
-                  style={{ background: T.ink, color: T.fg }}
-                >
-                  <svg
-                    aria-hidden
-                    viewBox="0 0 24 24"
-                    className="h-5 w-5 shrink-0"
-                    fill="currentColor"
-                  >
-                    <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.46 1.32 4.96L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.19 8.19 0 0 1-1.26-4.38c0-4.54 3.7-8.23 8.25-8.23a8.2 8.2 0 0 1 8.24 8.24c0 4.54-3.7 8.23-8.24 8.23Zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.24-.64.8-.79.97-.14.16-.29.18-.54.06-.25-.13-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.01-.38.11-.5.11-.11.25-.29.37-.43.13-.15.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.42-.56-.43h-.48c-.16 0-.43.06-.65.31-.22.25-.85.83-.85 2.03s.87 2.35.99 2.51c.12.17 1.71 2.61 4.15 3.66.58.25 1.03.4 1.39.51.58.19 1.11.16 1.53.1.47-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.06-.11-.22-.17-.47-.29Z" />
-                  </svg>
-                  Escríbenos por WhatsApp
-                </a>
-              </div>
+              {/* WhatsApp y no otro formulario: el del hero es para quien deja su
+                  teléfono, y hay gente que no lo deja pero sí escribe. */}
+              <a
+                href={CONTACT_INFO.socials.whatsapp}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex shrink-0 items-center gap-2.5 rounded-lg px-6 py-3.5 text-base font-bold transition-opacity hover:opacity-90"
+                style={{ background: T.accent, color: T.onAccent }}
+              >
+                <svg aria-hidden viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="currentColor">
+                  <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.46 1.32 4.96L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.650-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.19 8.19 0 0 1-1.26-4.38c0-4.54 3.7-8.23 8.25-8.23a8.2 8.2 0 0 1 8.24 8.24c0 4.54-3.7 8.23-8.24 8.23Zm4.52-6.16c-.25-.12-1.470-.72-1.690-.81-.23-.08-.39-.12-.56.13-.16.24-.64.8-.79.97-.14.16-.29.18-.54.06-.25-.13-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.01-.38.11-.5.11-.11.25-.29.37-.43.13-.15.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.42-.56-.43h-.48c-.16 0-.43.06-.65.31-.22.25-.85.83-.85 2.03s.87 2.35.99 2.51c.12.17 1.71 2.61 4.15 3.66.58.25 1.03.4 1.39.51.58.19 1.11.16 1.53.1.47-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.06-.11-.22-.17-.47-.29Z" />
+                </svg>
+                Escríbenos por WhatsApp
+              </a>
             </div>
           </AlAparecer>
         </Wrap>
       </section>
 
-      {/* ───────── 5. Elegir hueco ─────────
-          Entre el cierre emocional y la letra pequeña: quien ha llegado hasta
-          aquí ya está convencido o casi, y es el momento en que tiene sentido
-          ofrecerle zanjarlo él mismo sin esperar una llamada. */}
+      {/* ───────── 5. Reunión online ───────── */}
       <CalendarioReserva />
 
-      {/* ───────── 6. Preguntas frecuentes ─────────
-          Después de la frase del compromiso y no antes del precio. Quien llega
-          hasta aquí ya ha visto la tabla y ya ha decidido si le encaja; lo que
-          le queda es la desconfianza, y eso no se resuelve con más argumentos
-          sino contestando la pregunta incómoda con su nombre.
-
-          Vuelve al fondo oscuro a propósito: el bloque de color de arriba es el
-          cierre emocional y tiene que quedarse como tal. */}
-      <section
-        className="relative overflow-hidden py-16 md:py-20 lg:py-24"
-        style={{ background: T.surface }}
-      >
-        <Trama motivo="rayas" desde="20% 60%" />
-        <Wrap className="relative">
+      {/* ───────── 6. Preguntas frecuentes ───────── */}
+      <section className="py-16 md:py-24" style={{ background: T.soft }}>
+        <Wrap>
           <AlAparecer>
             <Faqs sector={sector} />
           </AlAparecer>

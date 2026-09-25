@@ -54,24 +54,25 @@ const THEMES = {
     shadow: "0 18px 50px -24px rgba(15,23,42,0.35)",
     colorScheme: "light",
   },
+  // Claro desde el 25-09-2026, como la landing: Growth no puede parecerse a
+  // Escala, que era oscura. El acento es el turquesa oscurecido (#0A7C7E) y no
+  // el de la página (#30CCCE): en el correo también se usa para texto, y el
+  // claro sobre blanco no se lee.
   growth: {
-    page: "#08090C",
-    card: "#131519",
-    accent: "#30CCCE",
-    onAccent: "#08090C",
-    heading: "#F5F7F8",
-    // Ni el gris apagado de la landing ni el blanco del titular: sobre #131519
-    // este gris claro da 12:1 de contraste, que es lo que hace que un párrafo
-    // largo se lea sin forzar la vista.
-    body: "#C3C8D0",
-    muted: "#8E949F",
-    panel: "#1A1D23",
-    panelLine: "#23262E",
-    panelText: "#C3C8D0",
-    line: "#23262E",
-    ctaNote: "#8E949F",
-    shadow: "0 18px 50px -24px rgba(0,0,0,0.75)",
-    colorScheme: "dark",
+    page: "#F2F8F8",
+    card: "#ffffff",
+    accent: "#0A7C7E",
+    onAccent: "#ffffff",
+    heading: "#0F2B30",
+    body: "#3E5559",
+    muted: "#7D9195",
+    panel: "#F2F8F8",
+    panelLine: "#DDE9EA",
+    panelText: "#3E5559",
+    line: "#DDE9EA",
+    ctaNote: "#587075",
+    shadow: "0 18px 50px -24px rgba(15,43,48,0.30)",
+    colorScheme: "light",
   },
 } as const;
 
@@ -80,33 +81,18 @@ export type EmailTheme = keyof typeof THEMES;
 /**
  * Rótulo de Growth en HTML, sin imágenes.
  *
- * El logotipo de la landing es un componente con cuatro barras, y no hay PNG
- * equivalente para correo; el de dinkbit es azul y sobre este fondo no se lee.
- * Las barras se pintan con celdas de tabla de colores sólidos, que es lo único
- * que aguanta en Outlook, y los cuatro colores son los del logotipo de la
- * landing (`Logotipo.tsx`).
+ * La baldosa turquesa del logotipo de la landing (`Logotipo.tsx`) y el nombre
+ * con la firma al lado. La baldosa es una celda de tabla con fondo, que es lo
+ * único que aguanta en Outlook; la flecha va como carácter.
  */
 function growthLockup(t: (typeof THEMES)["growth"]): string {
-  const bars = [
-    { h: 10, c: "#124B4C" },
-    { h: 17, c: "#186667" },
-    { h: 25, c: "#218B8C" },
-    { h: 34, c: "#30CCCE" },
-  ];
   return `<table role="presentation" cellpadding="0" cellspacing="0"><tr>
-      <td valign="bottom" style="padding-right:10px;">
-        <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-          ${bars
-            .map(
-              (b) =>
-                `<td valign="bottom" style="padding-right:3px;"><div style="width:7px;height:${b.h}px;background:${b.c};font-size:1px;line-height:${b.h}px;">&nbsp;</div></td>`,
-            )
-            .join("")}
-        </tr></table>
+      <td valign="middle" style="padding-right:10px;">
+        <div style="width:30px;height:30px;border-radius:8px;background:#30CCCE;color:#0F2B30;font-size:18px;font-weight:800;line-height:30px;text-align:center;">&#8599;</div>
       </td>
       <td valign="middle">
-        <div style="font-size:22px;font-weight:900;letter-spacing:-1px;color:${t.heading};line-height:1.1;">growth</div>
-        <div style="font-size:11px;font-weight:700;letter-spacing:2.4px;color:${t.muted};text-transform:uppercase;">by dinkbit</div>
+        <span style="font-size:21px;font-weight:800;letter-spacing:-0.4px;color:${t.heading};">Growth</span>
+        <span style="font-size:12px;color:${t.muted};padding-left:6px;">by dinkbit</span>
       </td>
     </tr></table>`;
 }
@@ -262,7 +248,7 @@ export function renderBrandedEmail(input: BrandedEmailInput): {
   </td></tr>
 ${bulletsHtml}${ctaHtml}
   <tr><td style="padding:20px 36px 28px;border-top:1px solid ${t.line};">
-    <p style="margin:0;font-size:12px;color:${t.muted};">${input.theme === "growth" ? "growth by dinkbit" : "dinkbit"} · <a href="${BRAND.siteUrl}" style="color:${accent};text-decoration:none;">www.dinkbit.es</a> · ${BRAND.contactEmail}</p>
+    <p style="margin:0;font-size:12px;color:${t.muted};">${input.theme === "growth" ? "Growth by dinkbit" : "dinkbit"} · <a href="${BRAND.siteUrl}" style="color:${accent};text-decoration:none;">www.dinkbit.es</a> · ${BRAND.contactEmail}</p>
   </td></tr>
 
 </table>

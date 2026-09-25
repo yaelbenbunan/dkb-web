@@ -24,18 +24,17 @@ import { appendUtms } from "@/lib/utm";
  * enseña el mismo caso— y se responde en un toque. Cualquier campo de más aquí
  * arriba se paga en leads perdidos.
  *
- * **Y va en claro sobre el fondo oscuro, no en gris sobre negro.** Era una
- * tarjeta apenas un tono más clara que la página: se camuflaba justo donde
- * tiene que llamar la atención. En una página casi negra, lo blanco es lo único
- * que grita "esto se rellena". El botón invierte otra vez —negro con letra
- * del color del acento— para que dentro de la tarjeta clara siga habiendo un
- * punto de máximo contraste, que es donde tiene que ir el dedo.
+ * **Va en oscuro sobre la página clara.** Es lo único oscuro del hero, y por
+ * eso es lo primero que se ve: en una página blanca, una tarjeta blanca más se
+ * camufla justo donde tiene que llamar la atención. Dentro, los campos van en
+ * blanco y el botón en turquesa, que es el punto de máximo contraste y donde
+ * tiene que ir el dedo.
  */
 
-/** La tarjeta clara. Estos colores solo viven aquí: no son del tema. */
-const PAPEL = "#F5F7F8";
-const TINTA = "#08090C";
-const BORDE = "rgba(11, 27, 43, 0.16)";
+/** La tarjeta oscura. */
+const PAPEL = T.dark;
+const TINTA = T.onDark;
+const BORDE = "rgba(255, 255, 255, 0.18)";
 
 /**
  * @param sectorPorDefecto Deja el desplegable ya elegido. Lo pasan las landings
@@ -58,18 +57,18 @@ export function FormularioHero({
       <div
         id="empezar"
         role="status"
-        className="scroll-mt-8 rounded-3xl p-7 sm:p-8"
-        style={{ background: PAPEL, color: TINTA, boxShadow: `0 0 0 6px ${T.accent}22` }}
+        className="scroll-mt-8 rounded-2xl p-7 sm:p-8"
+        style={{ background: PAPEL, color: TINTA, boxShadow: "0 24px 48px -24px rgba(15,43,48,0.55)" }}
       >
-        <p className="text-2xl font-black leading-tight">Recibido.</p>
-        <p className="mt-3 text-base leading-relaxed" style={{ color: "rgba(11,27,43,0.65)" }}>
+        <p className="text-2xl font-extrabold leading-tight">Recibido.</p>
+        <p className="mt-3 text-base leading-relaxed" style={{ color: T.onDarkMuted }}>
           Te escribimos hoy mismo. Mientras tanto, si quieres ir con los deberes hechos,
           calcula lo que te cuesta hoy conseguir un {termino}.
         </p>
         <Link
           href="/growth/calculadora"
-          className="mt-6 inline-flex h-12 items-center justify-center rounded-full px-7 text-base font-bold"
-          style={{ background: TINTA, color: T.accent }}
+          className="mt-6 inline-flex h-12 items-center justify-center rounded-lg px-7 text-base font-bold"
+          style={{ background: T.accent, color: T.onAccent }}
         >
           Calcular
         </Link>
@@ -82,13 +81,13 @@ export function FormularioHero({
       id="empezar"
       // `scroll-mt` para que al llegar desde los botones de los planes no se
       // pegue al borde de arriba de la ventana.
-      className="relative scroll-mt-8 rounded-3xl p-6 sm:p-7"
+      className="relative scroll-mt-8 rounded-2xl p-6 sm:p-7"
       style={{
         background: PAPEL,
         color: TINTA,
         // Un halo del acento en vez de un borde: separa la tarjeta del fondo sin
         // dibujarle una caja alrededor.
-        boxShadow: `0 0 0 6px ${T.accent}22, 0 30px 60px -20px rgba(0,0,0,0.6)`,
+        boxShadow: "0 24px 48px -24px rgba(15,43,48,0.55)",
       }}
       action={(fd) => {
         // La calculadora manda tres cifras; aquí no se preguntan. Vacías
@@ -123,14 +122,14 @@ export function FormularioHero({
       }}
     >
       <span
-        aria-hidden
-        className="absolute -right-3 -top-4 rotate-[-7deg] rounded-full px-4 py-1.5 text-sm font-black"
-        style={{ background: T.accent, color: TINTA, boxShadow: "0 8px 20px -8px rgba(0,0,0,0.7)" }}
+        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold"
+        style={{ background: T.accent, color: T.onAccent }}
       >
+        <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: T.onAccent }} />
         Te llamamos hoy
       </span>
 
-      <p className="text-2xl font-black leading-[1.15] tracking-[-0.01em]">
+      <p className="mt-3 text-2xl font-extrabold leading-[1.2] tracking-[-0.01em]">
         Cuéntanos quién eres
         <br />y te llamamos
       </p>
@@ -206,14 +205,14 @@ export function FormularioHero({
 
         <label
           className="flex items-start gap-3 text-xs leading-relaxed"
-          style={{ color: "rgba(11,27,43,0.6)" }}
+          style={{ color: T.onDarkMuted }}
         >
           <input
             name="consent"
             type="checkbox"
             value="true"
             required
-            className="mt-0.5 h-4 w-4 shrink-0 accent-[#08090C]"
+            className="mt-0.5 h-4 w-4 shrink-0 accent-[#30CCCE]"
           />
           <span>
             Acepto que dinkbit me contacte y me envíe comunicaciones comerciales, según la{" "}
@@ -244,14 +243,14 @@ export function FormularioHero({
       <button
         type="submit"
         disabled={pendiente}
-        className="mt-5 inline-flex w-full items-center justify-center rounded-full py-3.5 text-lg font-bold transition-transform enabled:hover:-translate-y-0.5 disabled:opacity-60"
-        style={{ background: TINTA, color: T.accent }}
+        className="mt-5 inline-flex w-full items-center justify-center rounded-lg py-3.5 text-lg font-bold transition-opacity enabled:hover:opacity-90 disabled:opacity-60"
+        style={{ background: T.accent, color: T.onAccent }}
       >
         {pendiente ? "Enviando…" : "Quiero que me llaméis"}
       </button>
 
       {error && (
-        <p role="alert" className="mt-3 text-center text-sm font-bold" style={{ color: "#B4321F" }}>
+        <p role="alert" className="mt-3 text-center text-sm font-bold" style={{ color: "#FFB4A8" }}>
           {error}
         </p>
       )}
@@ -276,7 +275,7 @@ export function FormularioHero({
         <>
           <div className="mt-4 flex items-center gap-3" aria-hidden>
             <span className="h-px flex-1" style={{ background: BORDE }} />
-            <span className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "rgba(11,27,43,0.45)" }}>
+            <span className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: T.onDarkMuted }}>
               o
             </span>
             <span className="h-px flex-1" style={{ background: BORDE }} />
@@ -292,7 +291,7 @@ export function FormularioHero({
             {...(GROWTH.demoEmbedUrl
               ? {}
               : { target: "_blank", rel: "noopener noreferrer" })}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-base font-bold transition hover:bg-[rgba(11,27,43,0.04)]"
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3.5 text-base font-bold transition hover:bg-[rgba(255,255,255,0.06)]"
             style={{ border: `1.5px solid ${BORDE}`, color: TINTA }}
           >
             Agenda una reunión online
@@ -301,7 +300,7 @@ export function FormularioHero({
               texto y el calendario de abajo se leen seguidos, así que si uno dice
               15 y el otro 30 se desmienten a la vista. Cuanto más corta se
               anuncia una llamada, más gente la coge. */}
-          <p className="mt-2 text-center text-xs" style={{ color: "rgba(11,27,43,0.55)" }}>
+          <p className="mt-2 text-center text-xs" style={{ color: T.onDarkMuted }}>
             15 minutos por videollamada, sin compromiso.
           </p>
         </>
@@ -311,10 +310,10 @@ export function FormularioHero({
 }
 
 const campo =
-  "w-full rounded-xl px-4 py-3 text-base outline-none transition placeholder:text-[rgba(11,27,43,0.45)] focus:border-[rgba(11,27,43,0.5)]";
+  "w-full rounded-lg px-4 py-3 text-base outline-none transition placeholder:text-[#7D9195] focus:ring-2 focus:ring-[#30CCCE]";
 
 const estiloCampo = {
   background: "#FFFFFF",
-  border: `1px solid ${BORDE}`,
-  color: TINTA,
+  border: "1px solid transparent",
+  color: T.fg,
 } as const;

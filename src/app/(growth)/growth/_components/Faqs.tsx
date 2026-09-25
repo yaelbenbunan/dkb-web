@@ -113,65 +113,54 @@ const preguntasComunes = (s: SectorGrowth): { p: string; r: string }[] => [
 export function Faqs({ sector = GENERAL }: { sector?: SectorGrowth } = {}) {
   const preguntas = [...sector.preguntas, ...preguntasComunes(sector)];
   return (
-    // Un tercio y dos tercios, en proporción y no en un ancho fijo. La columna
-    // del título estaba topada en 22 rem, así que en un monitor ancho se
-    // quedaba en la cuarta parte y el titular se partía en cuatro renglones
-    // mientras al lado sobraba sitio. En fracciones, las dos crecen juntas.
-    <div className="grid gap-10 lg:grid-cols-[1fr_2fr] lg:gap-16">
-      <div>
-        <p className="text-sm font-bold uppercase tracking-[0.24em]" style={{ color: T.accent }}>
-          Preguntas frecuentes
-        </p>
-        <h2
-          className="mt-8 font-black leading-[1.02] tracking-[-0.03em] text-balance"
-          style={{ fontSize: "clamp(2.25rem, 4vw, 3.5rem)" }}
+    // Centradas y en tarjetas, no en dos columnas con rayas como en Escala.
+    <div className="mx-auto max-w-3xl">
+      <div className="text-center">
+        <span
+          className="inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold"
+          style={{ background: `${T.accent}1f`, color: T.accentText }}
         >
-          Lo que se pregunta
-          <br />
-          <span style={{ color: T.accent }}>en la primera llamada.</span>
+          Preguntas frecuentes
+        </span>
+        <h2
+          className="mt-4 font-extrabold leading-[1.1] tracking-[-0.02em] text-balance"
+          style={{ fontSize: "clamp(1.875rem, 3.6vw, 2.75rem)" }}
+        >
+          Lo que nos preguntan antes de empezar
         </h2>
-        <p className="mt-6 text-base leading-relaxed" style={{ color: T.muted }}>
+        <p className="mt-4 text-lg leading-relaxed" style={{ color: T.muted }}>
           Contestado aquí para que no haya que llamar para saberlo.
         </p>
       </div>
 
-      <div>
+      <div className="mt-10 space-y-3">
         {preguntas.map((f) => (
           <details
             key={f.p}
-            className="group border-t last:border-b"
-            style={{ borderColor: T.line }}
+            className="group rounded-xl"
+            style={{ background: T.bg, border: `1px solid ${T.line}` }}
           >
-            <summary
-              className="flex cursor-pointer list-none items-center justify-between gap-6 py-6 font-bold leading-snug text-pretty transition-colors hover:opacity-80 [&::-webkit-details-marker]:hidden"
-              style={{ fontSize: "clamp(1.125rem, 1.6vw, 1.375rem)" }}
-            >
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-5 px-5 py-4 text-[1.05rem] font-semibold leading-snug [&::-webkit-details-marker]:hidden">
               {f.p}
-              {/* Una cruz que se convierte en raya al abrir: dice "hay más" y
-                  "ya está" con el mismo trazo, sin girar una flecha que a este
-                  tamaño no se vería girar. */}
+              {/* Una flecha que gira al abrir. */}
               <span
                 aria-hidden
-                className="relative block h-6 w-6 shrink-0"
-                style={{ color: T.accent }}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-transform duration-200 group-open:rotate-180"
+                style={{ background: T.soft, color: T.accentText }}
               >
-                <span
-                  className="absolute left-1/2 top-1/2 block h-[2px] w-4 -translate-x-1/2 -translate-y-1/2 rounded-full"
-                  style={{ background: "currentColor" }}
-                />
-                <span
-                  className="absolute left-1/2 top-1/2 block h-[2px] w-4 -translate-x-1/2 -translate-y-1/2 rounded-full transition-transform duration-200 group-open:rotate-0 rotate-90"
-                  style={{ background: "currentColor" }}
-                />
+                <svg viewBox="0 0 16 16" className="h-3.5 w-3.5">
+                  <path
+                    d="M4 6l4 4 4-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
               </span>
             </summary>
-            {/* Sin tope de ancho: la columna ya es la que decide, y encima de
-                ella un `max-w` solo servía para dejar un canal vacío a la
-                derecha de cada respuesta. */}
-            <p
-              className="pb-7 pr-10 text-base leading-relaxed"
-              style={{ color: T.muted }}
-            >
+            <p className="px-5 pb-5 text-base leading-relaxed" style={{ color: T.muted }}>
               {f.r}
             </p>
           </details>

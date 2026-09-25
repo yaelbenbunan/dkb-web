@@ -36,14 +36,14 @@ export default function Calculadora() {
         </Link>
 
         <p
-          className="mt-8 text-xs font-bold uppercase tracking-[0.28em]"
-          style={{ color: T.accent }}
+          className="mt-8 text-xs font-bold tracking-normal"
+          style={{ color: T.accentText }}
         >
           Empieza por aquí
         </p>
 
         <h1
-          className="mt-8 font-black leading-[1.05] tracking-[-0.02em] text-balance"
+          className="mt-8 font-extrabold leading-[1.05] tracking-[-0.02em] text-balance"
           style={{ fontSize: "clamp(2rem, 5.5vw, 3.5rem)" }}
         >
           ¿Cuánto te cuesta hoy conseguir un paciente?

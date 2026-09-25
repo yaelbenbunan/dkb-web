@@ -2,21 +2,15 @@ import { GROWTH_THEME as T } from "@/lib/growth-config";
 import { AlAparecer } from "./AlAparecer";
 
 /**
- * Los tres pasos, en tres tarjetas con dibujo.
+ * Los tres pasos, en tres tarjetas.
  *
- * Antes era una lista vertical: tres párrafos uno debajo de otro, con media
- * página vacía a la derecha y sin nada que mirar. Y esa sección se lee de
- * refilón — nadie llega a una landing a estudiar un proceso—, así que si hay
- * que leerla entera para entenderla, no se entiende.
+ * Tarjetas blancas con borde fino, el dibujo en una baldosa teñida y el número
+ * escrito como «Paso 1». Es otra forma de contar lo mismo que en la landing de
+ * Escala —que eran tarjetas oscuras con volumen, número en insignia y flechas
+ * entre ellas— porque Growth no puede parecerse a ella (25-09-2026).
  *
- * En tres columnas ocupa el ancho que ya tenía asignado, y cada paso lleva un
- * dibujo que cuenta lo mismo que el texto. Quien lee, lee; quien pasa la vista,
- * ve tres viñetas y se queda con la idea igual.
- *
- * Los dibujos son de trazo, del mismo idioma que los subrayados a
- * mano, y ninguno es un icono de librería: cada uno dice EXACTAMENTE lo que
- * hace su paso —una página, gente que llega, barras que suben— en vez de una
- * metáfora que hay que descifrar.
+ * Los dibujos son la versión mirada de lo que dice el texto, y por eso van con
+ * `aria-hidden`: una página, gente que llega, barras que suben.
  */
 
 export interface Paso {
@@ -33,101 +27,33 @@ export function Pasos({ pasos }: { pasos: Paso[] }) {
       {pasos.map((p, i) => {
         const Dibujo = dibujos[i] ?? Captacion;
         return (
-          // El envoltorio va DENTRO del <li> y no fuera: un <ol> solo admite
-          // <li> como hijo directo, y meter un <div> entre medias rompe la
-          // lista para el lector de pantalla — que es quien más la necesita,
-          // porque estos tres son una secuencia y no tres tarjetas sueltas.
-          //
-          // Escalonados en el orden de los pasos, por lo mismo: entrando a la
-          // vez se leen como tres servicios a la carta.
-          <li key={p.n} className="relative h-full">
-          <AlAparecer retraso={i * 130} className="h-full">
-          {/* **Las tarjetas estaban hundidas en el fondo, no encima.** Llevaban
-              el negro del tema sobre una sección que es más CLARA que ese negro,
-              con un borde de 1px casi del mismo tono y sin sombra: el resultado
-              eran tres rectángulos que se adivinaban más que verse.
-
-              Se refuerzan por tres sitios a la vez, que es lo que hace que algo
-              parezca elevado de verdad: el degradado las aclara por arriba y las
-              oscurece por abajo —eso ya es volumen—, el filo interior blanco
-              finge la luz que daría en el canto superior, y la sombra las
-              despega del fondo. Ninguna de las tres se nota por separado, y
-              juntas son la diferencia entre una caja dibujada y una tarjeta. */}
-          <div
-            className="flex h-full flex-col rounded-3xl p-7"
-            style={{
-              background: `linear-gradient(180deg, #191D24 0%, ${T.ink} 62%)`,
-              border: "1px solid #2B303A",
-              boxShadow:
-                "inset 0 1px 0 rgba(255,255,255,0.05), 0 24px 50px -28px rgba(0,0,0,0.95)",
-            }}
-          >
-            <div className="flex items-center justify-between">
-              {/* El número en su insignia. Suelto y en gris era un detalle que
-                  no se leía; aquí dice de un vistazo que esto es el paso uno de
-                  tres, que es la mitad del mensaje de esta sección. */}
-              <span
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-xs font-black tabular-nums"
+          // El envoltorio va DENTRO del <li>: un <ol> solo admite <li> como hijo
+          // directo, y el lector de pantalla necesita la lista entera.
+          <li key={p.n} className="h-full">
+            <AlAparecer retraso={i * 110} className="h-full">
+              <div
+                className="flex h-full flex-col rounded-2xl p-6"
                 style={{
-                  color: T.accent,
-                  background: `${T.accent}14`,
-                  border: `1px solid ${T.accent}33`,
+                  background: T.bg,
+                  border: `1px solid ${T.line}`,
+                  boxShadow: "0 1px 2px rgba(15,43,48,0.04), 0 8px 24px -16px rgba(15,43,48,0.18)",
                 }}
               >
-                {p.n}
-              </span>
-              {/* La flecha entre tarjetas, solo en pantalla ancha: es lo que
-                  hace que se lean como una secuencia y no como tres servicios
-                  sueltos. La última no la lleva. */}
-              {i < pasos.length - 1 && (
-                <span
-                  aria-hidden
-                  className="absolute -right-[1.15rem] top-1/2 hidden -translate-y-1/2 md:block"
-                  // Era del color de los bordes y no se veía: una flecha que no
-                  // se ve no encadena nada, y encadenar los tres pasos es justo
-                  // su único trabajo.
-                  style={{ color: T.muted, opacity: 0.55 }}
+                <div
+                  className="flex h-14 w-14 items-center justify-center rounded-xl p-2.5"
+                  style={{ background: T.soft }}
                 >
-                  <svg aria-hidden viewBox="0 0 24 24" className="h-6 w-6">
-                    <path
-                      d="M4 12h14m-5-5 5 5-5 5"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </span>
-              )}
-            </div>
-
-            {/* La altura del dibujo sube con el ancho de la tarjeta y no al
-                revés. Estaba fija en h-24: en una columna de tres a partir de
-                768px la tarjeta se queda en unos 175px de contenido y el
-                dibujo pedía 160, así que llegaba de borde a borde y pesaba más
-                que el titular que va debajo. En móvil pasaba lo mismo por el
-                otro lado — una tarjeta a todo el ancho con un dibujo enorme
-                antes de haber leído nada.
-
-                Y bajó otra vez: el dibujo es la viñeta que acompaña al paso,
-                no el paso. Quien pasa la vista tiene que leer «Traemos los
-                pacientes» y ver el dibujo de refilón, no al revés. */}
-            <div className="mt-6 flex h-12 items-center sm:h-14 lg:h-16">
-              <Dibujo />
-            </div>
-
-            <p
-              className="mt-6 font-black leading-tight text-balance"
-              style={{ fontSize: "clamp(1.25rem, 1.8vw, 1.625rem)" }}
-            >
-              {p.t}
-            </p>
-            <p className="mt-2.5 text-base leading-relaxed" style={{ color: T.muted }}>
-              {p.d}
-            </p>
-          </div>
-          </AlAparecer>
+                  <Dibujo />
+                </div>
+                <p className="mt-6 text-sm font-semibold" style={{ color: T.accentText }}>
+                  <span className="sr-only">{p.n}. </span>Paso {Number(p.n)}
+                </p>
+                <p className="mt-1 text-xl font-bold leading-snug">{p.t}</p>
+                <p className="mt-2 text-base leading-relaxed" style={{ color: T.muted }}>
+                  {p.d}
+                </p>
+              </div>
+            </AlAparecer>
           </li>
         );
       })}
@@ -138,7 +64,7 @@ export function Pasos({ pasos }: { pasos: Paso[] }) {
 /** Gente que llega: tres siluetas entrando por una boca que las encauza. */
 function Captacion() {
   return (
-    <svg aria-hidden viewBox="0 0 120 72" className="h-full w-auto max-w-full" style={{ color: T.accent }}>
+    <svg aria-hidden viewBox="0 0 120 72" className="h-full w-auto max-w-full" style={{ color: T.accentText }}>
       <g fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
         <path d="M6 14h44M6 30h34M6 46h24" opacity="0.35" />
         <path d="M62 8 96 36 62 64" opacity="0.25" />
@@ -161,7 +87,7 @@ function Captacion() {
  */
 function Web() {
   return (
-    <svg aria-hidden viewBox="0 0 120 72" className="h-full w-auto max-w-full" style={{ color: T.accent }}>
+    <svg aria-hidden viewBox="0 0 120 72" className="h-full w-auto max-w-full" style={{ color: T.accentText }}>
       <g fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
         <rect x="4" y="6" width="112" height="60" rx="8" opacity="0.4" />
         <path d="M4 22h112" opacity="0.4" />
@@ -180,7 +106,7 @@ function Web() {
 /** Barras que suben con la flecha del retorno por encima. */
 function Analisis() {
   return (
-    <svg aria-hidden viewBox="0 0 120 76" className="h-full w-auto max-w-full" style={{ color: T.accent }}>
+    <svg aria-hidden viewBox="0 0 120 76" className="h-full w-auto max-w-full" style={{ color: T.accentText }}>
       <g fill="currentColor">
         <rect x="8" y="50" width="16" height="22" rx="3" opacity="0.3" />
         <rect x="34" y="38" width="16" height="34" rx="3" opacity="0.45" />

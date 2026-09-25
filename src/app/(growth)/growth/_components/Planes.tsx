@@ -1,41 +1,21 @@
 import { GROWTH_THEME as T } from "@/lib/growth-config";
 
 /**
- * Los dos planes, comparados línea a línea.
+ * Los dos planes, en dos tarjetas de precio.
  *
- * **Sin descripciones.** Cada fila era un título y un renglón explicándolo, y
- * eso convertía una tabla —que se mira— en un texto —que se lee—. Aquí lo único
- * que se busca es que alguien vea en dos segundos qué se lleva por 199 y qué
- * más por 299; lo que necesite explicación se explica en la llamada.
+ * **Tarjetas y no tabla**, que es como los enseñaba Escala: Growth no puede
+ * parecerse a ella (25-09-2026). Cada tarjeta lleva la lista entera, con lo que
+ * no incluye en gris y tachado, para que la diferencia se vea sin comparar
+ * columnas: canales e informe mensual.
  *
- * Las filas no son todas de sí o no. "Campañas" está en los dos y lo que cambia
- * es cuántos canales, así que ahí va el dato: dos checks dirían que son iguales,
- * que es lo contrario de lo que pasa.
+ * **Los dos se venden igual de bien.** Mismo botón y mismo peso; el avanzado
+ * solo lleva el borde oscuro y la etiqueta. Un básico apagado al lado de un
+ * avanzado encendido dice «el barato es el de segunda», y quien no puede pagar
+ * 299 no sube de plan al verlo: se va.
  *
- * Y cada columna termina en su botón. La tabla es donde se decide, así que
- * obligar a subir a buscar el formulario después de haber decidido es perder
- * gente por el camino.
- *
- * **El título ya no vive en la esquina de la tabla.** Estuvo ahí para no
- * separar la tabla de lo anterior, y el efecto fue el contrario: sin nada que
- * abriera la sección, los planes aparecían de golpe y no se leían como un
- * capítulo nuevo. Ahora la sección se presenta arriba —ver `page.tsx`— y la
- * esquina hace lo único que le corresponde: poner nombre a la columna de filas.
- *
- * **Cada columna va centrada.** Alineadas a la izquierda, el precio, el nombre
- * y los checks colgaban del borde de su celda y las dos columnas se leían como
- * un margen desordenado. Centradas, cada plan es un bloque con su eje, y el
- * precio —que es lo que se viene a mirar— cae justo en medio.
- *
- * **Los dos planes se venden igual de bien.** Se llegó a marcar mucho el
- * avanzado —columna teñida, precio en color, botón de color solo en él— y era un
- * error de negocio: nos interesa que contraten, sea el que sea, y un básico
- * apagado al lado de un avanzado encendido dice "el barato es el de segunda".
- * Quien no se puede permitir 299 no sube de plan al ver eso: se va.
- *
- * Así que los dos llevan el mismo precio en el color del acento, el mismo botón y el mismo
- * peso. Lo único que distingue al avanzado es una etiqueta discreta y un fondo
- * apenas teñido: suficiente para guiar, no tanto como para descartar el otro.
+ * La inversión en anuncios y la cuota de alta van dentro de la tarjeta y no en
+ * la letra pequeña: son las dos preguntas de toda primera llamada, y
+ * descubrirlas después de leer un precio parece que se escondían.
  */
 
 const PLANES = [
@@ -113,277 +93,114 @@ const CONDICIONES =
   "la mensualidad.";
 
 export function Planes() {
-  const filas = FILAS;
   return (
     <div>
-      {/* ── Tabla, de tableta para arriba ── */}
-      <div className="hidden md:block">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr>
-              {/* **El título de la sección vive aquí, en la esquina.**
-                  Estuvo fuera, encima de la tabla, y dejaba dos huecos a la vez:
-                  una banda vacía a su derecha —el título ocupa un tercio del
-                  ancho y la sección es toda la pantalla— y otra debajo, entre él
-                  y la tabla. Dos agujeros para un texto de dos palabras.
-
-                  Puesto en la casilla que la tabla necesita de todas formas para
-                  alinear las columnas, los dos desaparecen de golpe: el título
-                  ocupa el hueco que ya existía y queda a la misma altura que los
-                  precios, que es justo con lo que se quiere que se lea junto. */}
-              {/* **Del tamaño de los precios y en dos líneas.** A cuerpo menor
-                  y en una sola, el título terminaba muy por encima del borde de
-                  la tabla y dejaba un hueco muerto sobre él: la casilla mide lo
-                  que mide la columna del precio —nombre, cifra y «al mes»— y el
-                  título no llegaba ni a la mitad. Puesto a la misma escala y
-                  partido, ocupa el alto que la fila ya tenía y se lee a la par
-                  que las cifras, que es con lo que tiene que leerse.
-
-                  El salto va escrito y no se deja al azar del ancho: «Nuestros
-                  planes» partido por donde caiga es lo que da un «Nuestros
-                  pla-nes» el día que alguien toque el tamaño. Por eso tampoco
-                  lleva `text-balance`, que reparte las líneas por su cuenta. */}
-              <th className="w-[38%] pb-8 pl-1 pr-6 pt-3 text-left align-bottom">
-                <h2
-                  className="font-black leading-[0.92] tracking-[-0.035em]"
-                  style={{ fontSize: "clamp(2.25rem, 5.2vw, 4.75rem)" }}
-                >
-                  Nuestros
-                  <br />
-                  planes
-                </h2>
-              </th>
-              {PLANES.map((plan) => (
-                <th
-                  key={plan.id}
-                  className="px-6 pb-8 pt-3 text-center align-bottom"
-                  style={plan.destacado ? { background: `${T.accent}08` } : undefined}
-                >
-                  <Encabezado plan={plan} />
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filas.map((fila) => (
-              <tr key={fila.t} style={{ borderTop: `1px solid ${T.line}` }}>
-                <td className="py-4 pl-1 pr-6 text-left">
-                  <p
-                    className="font-bold leading-snug"
-                    style={{
-                      fontSize: "clamp(1.0625rem, 1.4vw, 1.25rem)",
-                      color: fila.apagado ? T.muted : T.fg,
-                    }}
-                  >
-                    {fila.t}
-                  </p>
-                </td>
-                {PLANES.map((plan) => (
-                  <td
-                    key={plan.id}
-                    className="px-6 py-4 text-center align-middle"
-                    style={plan.destacado ? { background: `${T.accent}08` } : undefined}
-                  >
-                    <Celda
-                      valor={plan.id === "basico" ? fila.basico : fila.avanzado}
-                      apagado={fila.apagado}
-                    />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr style={{ borderTop: `1px solid ${T.line}` }}>
-              <td />
-              {PLANES.map((plan) => (
-                <td
-                  key={plan.id}
-                  className="px-6 pb-7 pt-7 align-top"
-                  style={plan.destacado ? { background: `${T.accent}08` } : undefined}
-                >
-                  <Boton />
-                </td>
-              ))}
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-
-      {/* ── Tarjetas, en móvil. Una tabla de tres columnas en un teléfono se
-             lee con lupa, y esta página la van a abrir muchos desde el móvil.
-
-             Aquí el título sí va encima: sin tabla no hay esquina donde
-             meterlo, y una columna de tarjetas que empieza sin nombre no dice
-             de qué sección forma parte. ── */}
-      <h2
-        className="font-black leading-[1.02] tracking-[-0.03em] text-balance md:hidden"
-        style={{ fontSize: "clamp(2.25rem, 8vw, 3rem)" }}
-      >
-        Nuestros planes
-      </h2>
-
-      <div className="mt-7 grid gap-5 md:hidden">
+      <div className="mx-auto mt-12 grid max-w-4xl gap-6 md:grid-cols-2">
         {PLANES.map((plan) => (
-          <div
+          <article
             key={plan.id}
-            className="rounded-3xl p-6"
+            data-plan={plan.id}
+            className="relative flex flex-col rounded-2xl p-7"
             style={{
-              background: plan.destacado ? `${T.accent}08` : T.ink,
-              border: `1px solid ${plan.destacado ? `${T.accent}33` : T.line}`,
+              background: T.bg,
+              border: plan.destacado ? `2px solid ${T.dark}` : `1px solid ${T.line}`,
+              boxShadow: "0 1px 2px rgba(15,43,48,0.04), 0 12px 32px -20px rgba(15,43,48,0.25)",
             }}
           >
-            <Encabezado plan={plan} />
-            {/* La lista sí va a la izquierda aunque la cabecera esté centrada:
-                ocho renglones centrados no se recorren con la vista, se leen
-                uno a uno buscando dónde empieza cada cual. */}
-            <ul className="mt-6 space-y-3 text-left">
-              {filas.map((fila) => {
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-lg font-bold">{plan.nombre}</h3>
+              {plan.destacado && (
+                <span
+                  className="rounded-full px-3 py-1 text-xs font-bold"
+                  style={{ background: T.accent, color: T.onAccent }}
+                >
+                  Más completo
+                </span>
+              )}
+            </div>
+
+            <p className="mt-4 flex items-baseline gap-1.5">
+              <span
+                className="font-extrabold tabular-nums tracking-[-0.03em]"
+                style={{ fontSize: "clamp(2.75rem, 5vw, 3.5rem)", lineHeight: 1 }}
+              >
+                {plan.precio}
+              </span>
+              <span className="text-base font-medium" style={{ color: T.muted }}>
+                / mes
+              </span>
+            </p>
+
+            <ul className="mt-6 flex-1 space-y-3 border-t pt-6" style={{ borderColor: T.line }}>
+              {FILAS.map((fila) => {
                 const valor = plan.id === "basico" ? fila.basico : fila.avanzado;
-                const dentro = valor !== false && !fila.apagado;
+                const incluido = valor !== false;
                 return (
-                  <li key={fila.t} className="flex items-center gap-3">
-                    <Marca activo={dentro} />
+                  <li key={fila.t} className="flex items-start gap-3 text-[0.95rem] leading-snug">
+                    {fila.apagado ? <Punto /> : <Marca activo={incluido} />}
                     <span
-                      className="font-bold"
-                      style={!dentro ? { color: T.muted } : undefined}
+                      style={{
+                        color: incluido && !fila.apagado ? T.fg : T.muted,
+                        textDecoration: incluido ? undefined : "line-through",
+                      }}
                     >
                       {fila.t}
                       {typeof valor === "string" && (
-                        <span style={{ color: fila.apagado ? T.muted : T.accent }}> · {valor}</span>
+                        <strong className="font-semibold" style={{ color: T.fg }}>
+                          {" "}
+                          · {valor}
+                        </strong>
                       )}
                     </span>
                   </li>
                 );
               })}
             </ul>
-            <div className="mt-7">
-              <Boton />
-            </div>
-          </div>
+
+            <a
+              href="#empezar"
+              className="mt-8 inline-flex w-full items-center justify-center rounded-lg px-6 py-3.5 text-base font-bold transition-opacity hover:opacity-90"
+              style={{ background: T.accent, color: T.onAccent }}
+            >
+              Quiero el plan {plan.nombre.toLowerCase()}
+            </a>
+          </article>
         ))}
       </div>
 
-      {/* A todo el ancho y en letra pequeña: es la letra pequeña de verdad, la
-          que se lee de corrido si a alguien le interesa. Encajonada en una
-          columna estrecha volvía a parecer un bloque con importancia propia. */}
-      <p className="mt-10 text-sm leading-relaxed" style={{ color: T.muted, opacity: 0.75 }}>
+      <p className="mx-auto mt-8 max-w-4xl text-sm leading-relaxed" style={{ color: T.muted }}>
         {CONDICIONES}
       </p>
     </div>
   );
 }
 
-/**
- * Nombre, etiqueta y precio, centrados y en ese orden.
- *
- * **El precio va solo en su renglón y es lo más grande de la sección.** Estaba
- * en línea con "al mes" y compartía renglón con él, y esos dos elementos no
- * pesan lo mismo: el número es la respuesta a lo único que se ha venido a
- * preguntar aquí, y "al mes" es la unidad. Puesto debajo y en pequeño, la
- * unidad sigue estando —hace falta, si no el precio parece un pago único— pero
- * ya no le resta sitio a la cifra.
- */
-function Encabezado({ plan }: { plan: (typeof PLANES)[number] }) {
-  return (
-    <div className="text-center">
-      <p className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
-        <span
-          className="text-sm font-black uppercase tracking-[0.2em]"
-          style={{ color: T.muted }}
-        >
-          {plan.nombre}
-        </span>
-        {plan.destacado && (
-          <span
-            className="rounded-full px-2.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-[0.12em]"
-            style={{ color: T.accent, border: `1px solid ${T.accent}55` }}
-          >
-            Más completo
-          </span>
-        )}
-      </p>
-      <p
-        className="mt-3 block font-black leading-[0.9] tabular-nums tracking-[-0.04em]"
-        style={{ fontSize: "clamp(3.5rem, 6.4vw, 5.75rem)", color: T.accent }}
-      >
-        {plan.precio}
-      </p>
-      <p
-        className="mt-2 text-sm font-bold uppercase tracking-[0.18em]"
-        style={{ color: T.muted }}
-      >
-        al mes
-      </p>
-    </div>
-  );
-}
-
-/**
- * Lleva al formulario de arriba, que es el único sitio donde se deja el
- * teléfono. Es idéntico en los dos planes: ya no depende de cuál sea.
- */
-function Boton() {
-  return (
-    <a
-      href="#empezar"
-      className="inline-flex w-full items-center justify-center rounded-full px-6 py-3.5 text-base font-bold transition-transform hover:-translate-y-0.5"
-      style={{ background: T.accent, color: T.ink }}
-    >
-      Me interesa este plan
-    </a>
-  );
-}
-
-/** Un sí, un no, o el dato cuando lo que cambia no es si entra sino cuánto. */
-function Celda({ valor, apagado }: { valor: Valor; apagado?: boolean }) {
-  if (typeof valor === "string") {
-    return (
-      <span
-        className="font-bold"
-        style={{ fontSize: "1.125rem", color: apagado ? T.muted : T.accent }}
-      >
-        {valor}
-      </span>
-    );
-  }
-  // En bloque y centrado: el check es un SVG en línea y, suelto en una celda
-  // centrada, se apoyaba en la línea base del texto que no hay.
-  return (
-    <span className="flex items-center justify-center">
-      <Marca activo={valor} />
-    </span>
-  );
-}
-
+/** Un sí o un no. El no es una cruz fina: aquí no falla nada, ese plan no lo lleva. */
 function Marca({ activo }: { activo: boolean }) {
-  if (!activo) {
-    // Una raya y no una cruz: la cruz se lee como error, y aquí no falla nada
-    // — simplemente ese plan no lo lleva.
-    return (
-      <span
-        aria-label="No incluido"
-        className="inline-block h-[2px] w-5 shrink-0 rounded-full align-middle"
-        style={{ background: T.line }}
-      />
-    );
-  }
-  return (
-    <svg
-      aria-label="Incluido"
-      role="img"
-      viewBox="0 0 24 24"
-      className="h-7 w-7 shrink-0"
-      style={{ color: T.accent }}
-    >
+  return activo ? (
+    <svg aria-label="Incluido" role="img" viewBox="0 0 20 20" className="mt-0.5 h-5 w-5 shrink-0">
+      <circle cx="10" cy="10" r="10" fill={`${T.accent}33`} />
       <path
-        d="M4.5 12.5l5 5 10-11"
+        d="M6 10.5 8.7 13 14 7.5"
         fill="none"
-        stroke="currentColor"
-        strokeWidth="2.8"
+        stroke={T.accentText}
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
     </svg>
+  ) : (
+    <svg aria-label="No incluido" role="img" viewBox="0 0 20 20" className="mt-0.5 h-5 w-5 shrink-0">
+      <path d="M7 7l6 6M13 7l-6 6" stroke={T.muted} strokeOpacity={0.55} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** Para las condiciones —inversión, cuota de alta—, que no son ni sí ni no. */
+function Punto() {
+  return (
+    <span aria-hidden className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center">
+      <span className="h-1.5 w-1.5 rounded-full" style={{ background: T.muted }} />
+    </span>
   );
 }

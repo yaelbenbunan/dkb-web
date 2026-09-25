@@ -56,15 +56,15 @@ function Fila({
       </span>
       <span className="w-[5.25rem] text-right sm:w-28">
         <span
-          className="block whitespace-nowrap font-black tabular-nums"
-          style={{ fontSize: tamano, color: T.accent }}
+          className="block whitespace-nowrap font-extrabold tabular-nums"
+          style={{ fontSize: tamano, color: T.accentText }}
         >
           {conNosotros}
         </span>
         {crecimiento && (
           <span
             className="block whitespace-nowrap text-[0.7rem] font-bold tabular-nums"
-            style={{ color: T.accent }}
+            style={{ color: T.accentText }}
           >
             {crecimiento}
           </span>
@@ -118,9 +118,9 @@ export function SimuladorInversion({
   return (
     <div
       className="rounded-2xl p-5 sm:p-7"
-      style={{ background: T.ink, border: `1px solid ${T.accent}55` }}
+      style={{ background: T.bg, border: `1px solid ${T.accent}55` }}
     >
-      <p className="text-[0.7rem] font-bold uppercase tracking-[0.2em]" style={{ color: T.accent }}>
+      <p className="text-[0.7rem] font-bold uppercase tracking-[0.2em]" style={{ color: T.accentText }}>
         Con nuestro sistema
       </p>
       <p className="mt-2 text-sm leading-relaxed" style={{ color: T.muted }}>
@@ -137,7 +137,7 @@ export function SimuladorInversion({
         </span>
         <span
           className="w-[5.25rem] text-right text-[0.6rem] font-bold uppercase tracking-[0.12em] sm:w-28"
-          style={{ color: T.accent }}
+          style={{ color: T.accentText }}
         >
           Con nosotros
         </span>
@@ -173,7 +173,7 @@ export function SimuladorInversion({
         destacar
       />
 
-      <div className="mt-7 rounded-xl p-4" style={{ background: T.surface }}>
+      <div className="mt-7 rounded-xl p-4" style={{ background: T.soft }}>
         <label
           htmlFor={id}
           className="text-[0.65rem] font-bold uppercase tracking-[0.16em]"
@@ -183,7 +183,7 @@ export function SimuladorInversion({
         </label>
         <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2">
           <span
-            className="font-black leading-none tabular-nums"
+            className="font-extrabold leading-none tabular-nums"
             style={{ fontSize: "clamp(1.5rem, 6vw, 2rem)", color: T.fg }}
           >
             {formatEur(inversion)}
@@ -216,8 +216,8 @@ export function SimuladorInversion({
               : "Empezando a invertir estarías generando"}
           </p>
           <p
-            className="mt-1 font-black leading-none tabular-nums"
-            style={{ fontSize: "clamp(2.25rem, 10vw, 3.5rem)", color: T.accent }}
+            className="mt-1 font-extrabold leading-none tabular-nums"
+            style={{ fontSize: "clamp(2.25rem, 10vw, 3.5rem)", color: T.accentText }}
           >
             +{eur(masAlMes)}
           </p>

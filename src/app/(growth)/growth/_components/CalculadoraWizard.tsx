@@ -28,21 +28,21 @@ import { appendUtms } from "@/lib/utm";
  * Aquí el color es explícito y no depende de nada externo.
  */
 const tarjetaStyle = {
-  background: T.surface,
+  background: T.soft,
   border: `1px solid ${T.line}`,
 } as const;
 
 const inputStyle = {
-  background: T.ink,
+  background: T.bg,
   border: `1px solid ${T.line}`,
   color: T.fg,
 } as const;
 
 const inputClass =
-  "mt-1.5 block w-full rounded-xl px-4 py-3 text-base outline-none focus:border-[#C7F73E]";
+  "mt-1.5 block w-full rounded-xl px-4 py-3 text-base outline-none focus:border-[#0A7C7E]";
 const legendClass = "text-xs font-bold uppercase tracking-[0.18em]";
 const botonPrincipalClass =
-  "inline-flex h-13 items-center justify-center rounded-full px-7 text-base font-bold transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0";
+  "inline-flex h-13 items-center justify-center rounded-lg px-7 text-base font-bold transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0";
 
 /**
  * Vuelta al paso anterior.
@@ -163,7 +163,7 @@ export function CalculadoraWizard({
         <div className="mt-7">
           <label
             htmlFor={actual.clave}
-            className="block font-black leading-tight"
+            className="block font-extrabold leading-tight"
             style={{ fontSize: "clamp(1.375rem, 3.5vw, 1.875rem)", color: T.fg }}
           >
             {actual.etiqueta}
@@ -189,7 +189,7 @@ export function CalculadoraWizard({
                 setPaso((p) => p + 1);
               }}
               className={botonPrincipalClass}
-              style={{ background: T.accent, color: T.ink }}
+              style={{ background: T.accent, color: T.onAccent }}
             >
               Siguiente
             </button>
@@ -246,7 +246,7 @@ export function CalculadoraWizard({
           }}
         >
           <p
-            className="font-black leading-tight"
+            className="font-extrabold leading-tight"
             style={{ fontSize: "clamp(1.375rem, 3.5vw, 1.875rem)", color: T.fg }}
           >
             Últimos datos y te enseñamos el resultado
@@ -254,14 +254,14 @@ export function CalculadoraWizard({
 
           <div className="mt-6 space-y-4">
             <label htmlFor="name" className="block">
-              <span className={legendClass} style={{ color: T.accent }}>
+              <span className={legendClass} style={{ color: T.accentText }}>
                 Nombre
               </span>
               <input id="name" name="name" required className={inputClass} style={inputStyle} />
             </label>
 
             <label htmlFor="email" className="block">
-              <span className={legendClass} style={{ color: T.accent }}>
+              <span className={legendClass} style={{ color: T.accentText }}>
                 Email
               </span>
               <input
@@ -275,7 +275,7 @@ export function CalculadoraWizard({
             </label>
 
             <label htmlFor="phone" className="block">
-              <span className={legendClass} style={{ color: T.accent }}>
+              <span className={legendClass} style={{ color: T.accentText }}>
                 Teléfono
               </span>
               <input
@@ -299,7 +299,7 @@ export function CalculadoraWizard({
                 type="checkbox"
                 value="true"
                 required
-                className="mt-0.5 h-4 w-4 shrink-0 accent-[#C7F73E]"
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[#0A7C7E]"
               />
               <span>
                 Acepto que dinkbit me contacte sobre esta consulta y me envíe
@@ -307,7 +307,7 @@ export function CalculadoraWizard({
                 <Link
                   href="/privacidad"
                   className="font-bold underline underline-offset-2"
-                  style={{ color: T.accent }}
+                  style={{ color: T.accentText }}
                 >
                   política de privacidad
                 </Link>
@@ -320,12 +320,12 @@ export function CalculadoraWizard({
             type="submit"
             disabled={pendiente}
             className={`${botonPrincipalClass} mt-7 w-full`}
-            style={{ background: T.accent, color: T.ink }}
+            style={{ background: T.accent, color: T.onAccent }}
           >
             {pendiente ? "Calculando…" : "Ver mi resultado"}
           </button>
           {error && (
-            <p role="alert" className="mt-3 text-center text-sm font-bold" style={{ color: T.accent }}>
+            <p role="alert" className="mt-3 text-center text-sm font-bold" style={{ color: T.accentText }}>
               {error}
             </p>
           )}
@@ -356,10 +356,10 @@ function Dato({
           {etiqueta}
         </span>
         <span
-          className="whitespace-nowrap font-black tabular-nums"
+          className="whitespace-nowrap font-extrabold tabular-nums"
           style={{
             fontSize: destacar ? "clamp(1.5rem, 5vw, 2rem)" : "clamp(1.125rem, 4vw, 1.375rem)",
-            color: destacar ? T.accent : T.fg,
+            color: destacar ? T.accentText : T.fg,
           }}
         >
           {valor}
@@ -408,7 +408,7 @@ function Resultado({ resultado }: { resultado: CalcResult }) {
               <span
                 key={t as string}
                 className="rounded-full px-3 py-1.5 text-xs font-bold"
-                style={{ background: T.ink, border: `1px solid ${T.line}`, color: T.fg }}
+                style={{ background: T.bg, border: `1px solid ${T.line}`, color: T.fg }}
               >
                 {t}
               </span>
@@ -417,7 +417,7 @@ function Resultado({ resultado }: { resultado: CalcResult }) {
 
         {/* 2. Qué significan esas cifras hoy. */}
         <p
-          className="mt-8 font-black leading-tight"
+          className="mt-8 font-extrabold leading-tight"
           style={{ fontSize: "clamp(1.375rem, 4.5vw, 1.875rem)" }}
         >
           Esto es lo que te sale hoy
@@ -487,8 +487,8 @@ function Resultado({ resultado }: { resultado: CalcResult }) {
     return (
       <div className="rounded-3xl p-7 text-center sm:p-9" style={tarjetaStyle}>
         <strong
-          className="block font-black leading-tight"
-          style={{ fontSize: "clamp(1.75rem, 6vw, 2.75rem)", color: T.accent }}
+          className="block font-extrabold leading-tight"
+          style={{ fontSize: "clamp(1.75rem, 6vw, 2.75rem)", color: T.accentText }}
         >
           No se puede calcular
         </strong>
@@ -505,8 +505,8 @@ function Resultado({ resultado }: { resultado: CalcResult }) {
   return (
     <div className="rounded-3xl p-7 text-center sm:p-9" style={tarjetaStyle}>
       <strong
-        className="block font-black leading-tight"
-        style={{ fontSize: "clamp(1.75rem, 6vw, 2.75rem)", color: T.accent }}
+        className="block font-extrabold leading-tight"
+        style={{ fontSize: "clamp(1.75rem, 6vw, 2.75rem)", color: T.accentText }}
       >
         Todavía no hay coste que medir
       </strong>
@@ -554,7 +554,7 @@ function DiagnosticoCta() {
         target="_blank"
         rel="noopener noreferrer"
         className={`${botonPrincipalClass} w-full`}
-        style={{ background: T.accent, color: T.ink }}
+        style={{ background: T.accent, color: T.onAccent }}
       >
         Pídenos el diagnóstico comentado
       </a>

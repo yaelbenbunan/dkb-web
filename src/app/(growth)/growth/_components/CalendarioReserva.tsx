@@ -26,58 +26,47 @@ export function CalendarioReserva() {
   if (!GROWTH.demoEmbedUrl) return null;
 
   return (
-    <section
-      id="reservar"
-      className="relative overflow-hidden py-16 md:py-20 lg:py-24"
-      style={{ background: T.ink }}
-    >
-      <div className="mx-auto w-full max-w-[110rem] px-6 sm:px-10 lg:px-14">
-        <div className="grid gap-10 lg:grid-cols-[1fr_1.35fr] lg:items-start lg:gap-14">
-          <div>
-            <p
-              className="text-sm font-bold uppercase tracking-[0.24em]"
-              style={{ color: T.accent }}
-            >
-              Sin esperar a que te llamemos
-            </p>
-            {/* «Elige tú el hueco» describía el mecanismo —cómo se reserva— y no
-                lo que se lleva quien reserva. Esto dice de qué va la reunión, que
-                es lo que decide si alguien la pide o cierra la pestaña. */}
-            <h2
-              className="mt-8 font-black leading-[1.02] tracking-[-0.03em] text-balance"
-              style={{ fontSize: "clamp(2.25rem, 4vw, 3.5rem)" }}
-            >
-              Agenda una
-              <br />
-              <span style={{ color: T.accent }}>reunión online.</span>
-            </h2>
-            <p className="mt-6 max-w-md text-base leading-relaxed" style={{ color: T.muted }}>
-              Una videollamada corta para ver tus números, explicarte cómo trabajamos y decirte si
-              encaja con tu negocio. Sin compromiso.
-            </p>
-          </div>
-
-          {/* La tarjeta blanca es del propio Google y no se puede teñir desde
-              fuera, así que en vez de disimularla se le da marco: fondo claro,
-              esquinas redondeadas y el mismo halo de color que lleva el formulario
-              del hero. Así se lee como una pieza de esta página y no como algo
-              pegado. */}
-          <div
-            className="overflow-hidden rounded-3xl"
-            style={{ boxShadow: `0 0 0 6px ${T.accent}22, 0 30px 60px -20px rgba(0,0,0,0.6)` }}
+    <section id="reservar" className="scroll-mt-8 py-16 md:py-24" style={{ background: T.bg }}>
+      <div className="mx-auto w-full max-w-6xl px-5 sm:px-8">
+        <div className="mx-auto max-w-3xl text-center">
+          <span
+            className="inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold"
+            style={{ background: `${T.accent}1f`, color: T.accentText }}
           >
-            <iframe
-              src={GROWTH.demoEmbedUrl}
-              title="Agenda una reunión online con dinkbit"
-              loading="lazy"
-              // La altura la manda el contenido de Google y no se puede medir
-              // desde aquí —es de otro origen—, así que se le da sitio de sobra:
-              // un iframe corto obliga a hacer scroll DENTRO del iframe, y ese
-              // scroll anidado es de las cosas que peor se manejan en el móvil.
-              className="block h-[46rem] w-full border-0 sm:h-[42rem]"
-              style={{ background: "#fff" }}
-            />
-          </div>
+            Sin esperar a que te llamemos
+          </span>
+          <h2
+            className="mt-4 font-extrabold leading-[1.1] tracking-[-0.02em] text-balance"
+            style={{ fontSize: "clamp(1.875rem, 3.6vw, 2.75rem)" }}
+          >
+            Agenda una reunión online
+          </h2>
+          <p className="mt-4 text-lg leading-relaxed" style={{ color: T.muted }}>
+            Una videollamada corta para ver tus números, explicarte cómo trabajamos y decirte si
+            encaja con tu negocio. Sin compromiso.
+          </p>
+        </div>
+
+        {/* La tarjeta blanca es del propio Google y no se puede teñir desde
+            fuera: se le da marco con borde y sombra para que se lea como parte
+            de la página. */}
+        <div
+          className="mx-auto mt-10 max-w-4xl overflow-hidden rounded-2xl"
+          style={{
+            border: `1px solid ${T.line}`,
+            boxShadow: "0 12px 32px -20px rgba(15,43,48,0.25)",
+          }}
+        >
+          <iframe
+            src={GROWTH.demoEmbedUrl}
+            title="Agenda una reunión online con dinkbit"
+            loading="lazy"
+            // La altura la manda Google y no se puede medir desde aquí —es otro
+            // origen—, así que se le da sitio de sobra: un scroll dentro del
+            // iframe es de lo peor que hay en el móvil.
+            className="block h-[46rem] w-full border-0 sm:h-[42rem]"
+            style={{ background: "#fff" }}
+          />
         </div>
       </div>
     </section>

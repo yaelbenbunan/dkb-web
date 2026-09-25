@@ -118,31 +118,31 @@ describe("tema de growth", () => {
   const growth = () =>
     renderBrandedEmail({ ...base, subject: "s", theme: "growth", cta: { label: "WhatsApp", url: "https://wa.me/34600" } });
 
-  test("pinta la paleta de la landing, no la azul de dinkbit", () => {
+  test("pinta la paleta clara de la landing, no la azul de dinkbit", () => {
     const { html } = growth();
-    expect(html).toContain("#08090C"); // fondo casi negro
-    expect(html).toContain("#131519"); // tarjeta
-    expect(html).toContain("#30CCCE"); // acento turquesa
+    expect(html).toContain("#F2F8F8"); // fondo
+    expect(html).toContain("#0A7C7E"); // acento turquesa oscuro
     expect(html).not.toContain("#187bef"); // el azul de dinkbit no pinta aquí
   });
 
-  test("el logo azul no vale sobre fondo oscuro: va el rótulo de growth", () => {
+  test("no se parece al de Escala: ni fondo casi negro ni lima", () => {
+    const { html } = growth();
+    expect(html).not.toContain("#08090C");
+    expect(html).not.toContain("#C7F73E");
+    expect(html).toContain('name="color-scheme" content="light"');
+  });
+
+  test("lleva el rótulo de Growth, no el logo azul de dinkbit", () => {
     const { html } = growth();
     expect(html).not.toContain("dinkbit-email.png");
-    expect(html).toContain("growth");
+    expect(html).toContain("Growth");
     expect(html).toContain("by dinkbit");
   });
 
-  test("avisa a los clientes de correo de que el correo es oscuro", () => {
-    const { html } = growth();
-    expect(html).toContain('name="color-scheme" content="dark"');
-    expect(html).toContain("supported-color-schemes");
-  });
-
-  test("el botón lleva texto oscuro sobre el acento, que es donde se lee", () => {
+  test("el botón lleva texto blanco sobre el turquesa oscuro", () => {
     const { html } = growth();
     const boton = html.slice(html.indexOf("https://wa.me/34600"));
-    expect(boton).toContain("#08090C");
+    expect(boton).toContain("#ffffff");
   });
 
   test("sin tema, los demás correos siguen siendo los de dinkbit", () => {

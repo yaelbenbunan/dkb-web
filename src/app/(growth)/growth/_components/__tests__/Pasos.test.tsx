@@ -11,8 +11,8 @@ const PASOS = [
 describe("Pasos", () => {
   test("pinta cada paso con su número, título y descripción", () => {
     render(<Pasos pasos={PASOS} />);
-    for (const p of PASOS) {
-      expect(screen.getByText(p.n)).toBeInTheDocument();
+    for (const [i, p] of PASOS.entries()) {
+      expect(screen.getByText(`Paso ${i + 1}`)).toBeInTheDocument();
       expect(screen.getByText(p.t)).toBeInTheDocument();
       expect(screen.getByText(p.d)).toBeInTheDocument();
     }

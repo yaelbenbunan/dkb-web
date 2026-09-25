@@ -72,44 +72,46 @@ export const GROWTH = {
 } as const;
 
 /**
- * Paleta propia del producto, deliberadamente ajena a la del resto de dinkbit.
+ * Paleta de Growth: clara, limpia y con un solo acento turquesa.
  *
- * Existe por dos razones:
+ * **No se parece a la de Escala a propósito** (25 de septiembre de 2026). Escala
+ * era casi negra con acento lima, tipografía en negrita máxima, trazos a mano y
+ * texturas; Growth es otro negocio y no puede leerse como su hermana. Por eso
+ * aquí todo va al revés: fondo blanco, texto en un azul petróleo muy oscuro,
+ * tarjetas con borde fino y nada dibujado a mano. La versión de Escala está en
+ * la etiqueta `respaldo/landing-escala-2026-09-25`.
  *
- * 1. Diferenciación. Esta landing compite contra cientos de agencias que
- *    prometen "llenarte la agenda", y el sector entero es azul clarito. Un
- *    fondo casi negro con un turquesa encendido rompe con eso de un vistazo.
- *    Fue lima (#C7F73E) mientras la landing se llamó Escala; con Growth pasa
- *    a #30CCCE.
+ * **El turquesa tiene dos tonos, y no es un capricho.** #30CCCE sobre blanco da
+ * 2:1 de contraste: vale para rellenar un botón o un icono, no para escribir.
+ * Para texto de acento está `accentText`, que es el mismo tono oscurecido hasta
+ * pasar 4,5:1. Encima del turquesa relleno se escribe en `onAccent` (el azul
+ * oscuro), nunca en blanco.
  *
- * 2. Inmunidad al tema. Los tokens del sitio (`text-fg`, `surface-elevated`…)
- *    cambian con el interruptor claro/oscuro, y esa dependencia ya provocó que
- *    la calculadora quedara ilegible: texto casi blanco sobre un panel que es
- *    claro en LOS DOS temas. Aquí los colores son explícitos y no dependen de
- *    nada externo, así que ese fallo no puede repetirse.
- *
- * **Hay UN acento y solo uno.** Hubo dos —el acento para lo que se gana, rojo
- * y luego ámbar para el problema— y era peor: con dos colores el lector tiene
- * que ir aprendiendo qué significa cada uno mientras lee, y el rojo además
- * sonaba a reproche justo donde el dueño de la clínica tiene que reconocerse
- * sin ponerse a la defensiva.
- *
- * Con un solo acento, el color quiere decir siempre lo mismo: esto importa.
- *
- * Para remarcar dentro de una frase está `Subrayado`, un trazo torcido a mano.
- * Ver el porqué en ese componente.
+ * Los colores van en línea y no con los tokens del tema del sitio, que cambian
+ * con el interruptor claro/oscuro de dinkbit: esa dependencia ya dejó una vez la
+ * calculadora ilegible.
  */
 export const GROWTH_THEME = {
-  /** Fondo principal, casi negro. */
-  ink: "#08090C",
-  /** Fondo de tarjetas y bloques elevados. */
-  surface: "#131519",
-  /** Bordes y separadores. */
-  line: "#23262E",
-  /** El único acento: lo que importa. */
-  accent: "#30CCCE",
+  /** Fondo principal. */
+  bg: "#FFFFFF",
+  /** Fondo de las secciones alternas: blanco apenas teñido de turquesa. */
+  soft: "#F2F8F8",
+  /** El oscuro de la marca: texto principal, banda oscura y tarjeta del formulario. */
+  dark: "#0F2B30",
   /** Texto principal. */
-  fg: "#F5F7F8",
+  fg: "#0F2B30",
   /** Texto secundario. */
-  muted: "#8E949F",
+  muted: "#587075",
+  /** Bordes y separadores. */
+  line: "#DDE9EA",
+  /** El acento, para rellenos: botones, iconos, marcas. */
+  accent: "#30CCCE",
+  /** El acento para escribir sobre claro. */
+  accentText: "#0A7C7E",
+  /** Texto encima del acento relleno. */
+  onAccent: "#0F2B30",
+  /** Texto sobre el oscuro. */
+  onDark: "#FFFFFF",
+  /** Texto secundario sobre el oscuro. */
+  onDarkMuted: "#A3C1C5",
 } as const;

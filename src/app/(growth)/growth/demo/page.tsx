@@ -47,13 +47,13 @@ export default async function GrowthDemoPage({
     <section className="py-16 md:py-24">
       <div className="mx-auto w-full max-w-3xl px-6 md:px-10">
         <p
-          className="text-xs font-bold uppercase tracking-[0.28em]"
-          style={{ color: T.accent }}
+          className="text-xs font-bold tracking-normal"
+          style={{ color: T.accentText }}
         >
           Demostración
         </p>
         <h1
-          className="mt-6 font-black leading-[1.05] tracking-[-0.02em] text-balance"
+          className="mt-6 font-extrabold leading-[1.05] tracking-[-0.02em] text-balance"
           style={{ fontSize: "clamp(2rem, 5.5vw, 3rem)" }}
         >
           Así queda el simulador.
