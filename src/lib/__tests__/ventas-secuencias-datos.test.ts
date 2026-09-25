@@ -14,13 +14,16 @@ import { activarSecuencia, duplicarSecuencia, guardarSecuencia } from "../ventas
 const MARCA = { id: "m1", slug: "hydrup" } as never;
 const USUARIA = { id: "u1", rol: "admin" } as never;
 
-function fila(patch: Partial<{ id: string; marca_id: string; nombre: string; estado: string; pasos: unknown }> = {}) {
+function fila(
+  patch: Partial<{ id: string; marca_id: string; nombre: string; estado: string; pasos: unknown; anuncios: string[] }> = {},
+) {
   return {
     id: "s1",
     marca_id: "m1",
     nombre: "Captación gimnasios",
     estado: "borrador",
     pasos: secuenciaVacia(),
+    anuncios: [] as string[],
     creada_por: "u1",
     created_at: "2026-09-19T00:00:00Z",
     updated_at: "2026-09-19T00:00:00Z",
@@ -104,7 +107,8 @@ describe("activarSecuencia", () => {
     expect(m.actualizarSecuencia).not.toHaveBeenCalled();
   });
 
-  test("activa la secuencia y archiva las demás activas de la marca", async () => {
+  test("activa la secuencia y archiva la otra activa que compite por los mismos anuncios", async () => {
+    // Las dos sin anuncios: dos comodines de la misma marca sí compiten.
     m.getSecuencia.mockResolvedValue(fila());
     m.listSecuencias.mockResolvedValue([
       fila({ id: "s1", estado: "borrador" }),
@@ -116,6 +120,60 @@ describe("activarSecuencia", () => {
     expect(m.actualizarSecuencia).toHaveBeenCalledWith("s3", { estado: "archivada" });
     expect(m.actualizarSecuencia).toHaveBeenCalledWith("s1", { estado: "activa" });
     expect(m.actualizarSecuencia).not.toHaveBeenCalledWith("s4", expect.anything());
+  });
+
+  /** Ids de las secuencias que la activación ha archivado, en orden. */
+  const archivadas = () =>
+    m.actualizarSecuencia.mock.calls.filter((c) => c[1].estado === "archivada").map((c) => c[0]);
+
+  test("una específica y un comodín conviven: activar dental no deja sin guion a los leads de psicología", async () => {
+    // El escenario caro: psicología está viva con el anuncio que corre en Meta
+    // y dental se activa sin anuncios, o sea como comodín. Si dental archivara
+    // psicología, `elegirSecuencia` serviría el guion dental a los leads que
+    // vienen del anuncio de psicología: campaña viva y copy cruzado.
+    const dental = fila({ id: "dental", nombre: "Captación clínicas dentales", anuncios: [] });
+    const psicologia = fila({
+      id: "psicologia",
+      nombre: "Captación consultas de psicología",
+      estado: "activa",
+      anuncios: ["120252112386740343"],
+    });
+    m.getSecuencia.mockResolvedValue(dental);
+    m.listSecuencias.mockResolvedValue([dental, psicologia]);
+
+    const r = await activarSecuencia({ marca: MARCA, secuenciaId: "dental" });
+    expect(r).toEqual({ ok: true });
+    expect(archivadas()).toEqual([]);
+    expect(m.actualizarSecuencia).toHaveBeenCalledWith("dental", { estado: "activa" });
+  });
+
+  test("dos específicas sin ningún anuncio en común conviven", async () => {
+    const nueva = fila({ id: "s2", anuncios: ["anuncio-b"] });
+    m.getSecuencia.mockResolvedValue(nueva);
+    m.listSecuencias.mockResolvedValue([nueva, fila({ id: "s1", estado: "activa", anuncios: ["anuncio-a"] })]);
+
+    expect(await activarSecuencia({ marca: MARCA, secuenciaId: "s2" })).toEqual({ ok: true });
+    expect(archivadas()).toEqual([]);
+  });
+
+  test("archiva la activa que comparte aunque sea un anuncio", async () => {
+    const nueva = fila({ id: "s2", anuncios: ["anuncio-a", "anuncio-b"] });
+    m.getSecuencia.mockResolvedValue(nueva);
+    m.listSecuencias.mockResolvedValue([nueva, fila({ id: "s1", estado: "activa", anuncios: ["anuncio-b"] })]);
+
+    expect(await activarSecuencia({ marca: MARCA, secuenciaId: "s2" })).toEqual({ ok: true });
+    expect(archivadas()).toEqual(["s1"]);
+  });
+
+  test("con la columna `anuncios` todavía sin migrar se comporta como comodín", async () => {
+    // La migración de `anuncios` es manual (docs/sql/): hasta que se aplique,
+    // las filas llegan sin la columna y no por eso puede reventar la activación.
+    const sinColumna = { ...fila({ id: "s2" }), anuncios: undefined } as never;
+    m.getSecuencia.mockResolvedValue(sinColumna);
+    m.listSecuencias.mockResolvedValue([sinColumna, { ...fila({ id: "s1", estado: "activa" }), anuncios: undefined }]);
+
+    expect(await activarSecuencia({ marca: MARCA, secuenciaId: "s2" })).toEqual({ ok: true });
+    expect(archivadas()).toEqual(["s1"]);
   });
 });
 

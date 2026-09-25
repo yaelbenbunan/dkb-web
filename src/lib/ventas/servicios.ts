@@ -422,8 +422,41 @@ export async function guardarSecuencia(input: {
 }
 
 /**
- * Activa una secuencia: falla si tiene avisos graves. Al activarla, archiva
- * las demás secuencias activas de la marca (solo una activa a la vez).
+ * Dos secuencias activas de la misma marca «compiten» cuando `elegirSecuencia`
+ * (src/lib/whatsapp/eleccion.ts) podría servir cualquiera de las dos al mismo
+ * lead. Esta función y esa tienen que decir lo mismo: allí gana la que declara
+ * el anuncio del lead, y la que no declara ninguno (el comodín) es el respaldo.
+ *
+ * - Dos comodines compiten: los dos son respaldo de toda la marca y
+ *   `elegirSecuencia` se quedaría con el primero del array, y cuál es «el
+ *   primero» no lo decide nadie de forma predecible.
+ * - Dos que declaran el mismo anuncio compiten: gana la primera del array, otra
+ *   vez sin criterio.
+ * - Una específica y un comodín NO compiten, ni dos específicas sin anuncios en
+ *   común: cada lead encuentra la suya, que es justo para lo que se añadió la
+ *   columna `anuncios`.
+ *
+ * Las migraciones de este proyecto se aplican a mano, así que una fila leída de
+ * una base donde `anuncios` todavía no existe llega sin el campo: se trata como
+ * comodín (lo que era antes de la columna) en vez de reventar la activación.
+ */
+function compitenPorAnuncios(a: string[] | undefined, b: string[] | undefined): boolean {
+  const unos = a ?? [];
+  const otros = b ?? [];
+  if (unos.length === 0 && otros.length === 0) return true;
+  return unos.some((anuncio) => otros.includes(anuncio));
+}
+
+/**
+ * Activa una secuencia: falla si tiene avisos graves. Al activarla, archiva las
+ * demás activas de la marca que COMPITAN por los mismos anuncios, no todas.
+ *
+ * Archivarlas todas era caro con dos campañas vivas bajo `dinkbit`: con
+ * «Captación consultas de psicología» activa y su `anuncios` del anuncio que
+ * está corriendo, activar «Captación clínicas dentales» —que llega sin
+ * anuncios, o sea comodín— archivaba psicología, y entonces el comodín dental
+ * pasaba a servir su guion a los leads que venían del anuncio de psicología:
+ * campaña viva, copy cruzado, y pagado en Meta.
  */
 export async function activarSecuencia(input: { marca: Marca; secuenciaId: string }): Promise<Escritura> {
   const secuencia = await secuenciaDeMarca(input.marca.id, input.secuenciaId);
@@ -435,10 +468,10 @@ export async function activarSecuencia(input: { marca: Marca; secuenciaId: strin
 
   const otras = await listSecuencias(input.marca.id);
   for (const otra of otras) {
-    if (otra.id !== input.secuenciaId && otra.estado === "activa") {
-      const res = await actualizarSecuencia(otra.id, { estado: "archivada" });
-      if (!res.ok) return res;
-    }
+    if (otra.id === input.secuenciaId || otra.estado !== "activa") continue;
+    if (!compitenPorAnuncios(secuencia.anuncios, otra.anuncios)) continue;
+    const res = await actualizarSecuencia(otra.id, { estado: "archivada" });
+    if (!res.ok) return res;
   }
 
   return actualizarSecuencia(input.secuenciaId, { estado: "activa" });
