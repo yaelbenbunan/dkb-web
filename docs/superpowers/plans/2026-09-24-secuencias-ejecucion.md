@@ -791,6 +791,10 @@ git commit -m "feat(ventas): las secuencias empiezan por la pregunta"
 
 1. Aplicar `docs/sql/2026-09-24-secuencias-ejecucion.sql`.
 2. Aplicar `docs/sql/2026-09-24-refundir-secuencias-dinkbit.sql` **solo si no se han editado las secuencias en el panel**.
-3. Activar la secuencia de psicología desde `/panel/ventas/dinkbit/secuencias`.
-4. Escribir al número desde un móvil pulsando el anuncio de prueba: debe llegar el saludo con tres botones, y al pulsar uno, el cierre de esa rama.
-5. Comprobar en la ficha del lead que quedó registrada la respuesta y el aviso.
+3. **Aplicar `docs/sql/2026-09-25-corregir-rutas-de-botones.sql`.** Obligatorio en cualquier base donde ya se haya ejecutado el refundido del paso 2 con su versión anterior al 25-09-2026: esa versión dejaba el `avisar` en la ruta del paso de cierre, donde el motor no lo aplica, así que el lead pulsaba un botón, recibía un mensaje que le promete una llamada y nadie se enteraba. El fichero es idempotente (solo toca las filas que siguen con la forma rota) y trae al final un `select` de comprobación: **debe dar `avisan = 3`, `con_fase = 3` y `con_terminar = 0` en cada secuencia**. Si da `avisan = 0` el `update` no encajó con ninguna fila —la secuencia se editó en el panel, o ya estaba corregida— y hay que mirar a mano cómo están las rutas de los botones antes de seguir.
+4. Activar la secuencia de psicología desde `/panel/ventas/dinkbit/secuencias`. Si el panel se niega por un aviso grave, leerlo: desde el 25-09-2026 `validarSecuencia` bloquea las secuencias con un camino que acaba sin avisar a la comercial, que es exactamente el fallo del paso 3.
+5. Escribir al número desde un móvil pulsando el anuncio de prueba: debe llegar el saludo con tres botones, y al pulsar uno, el cierre de esa rama.
+6. Comprobar en la ficha del lead que quedó registrada la respuesta y el aviso, en **un solo apunte** que cite el rótulo del botón (`El lead respondió: «…». Avisar a la comercial.`), con la fase movida a «Interesado».
+7. Comprobar en la bandeja que la conversación quedó en manos de una persona, no del bot: si sigue en `bot`, el paso 3 no se aplicó.
+
+**Sobre activar la segunda secuencia:** desde el 25-09-2026 `activarSecuencia` solo archiva las activas que compiten por los mismos anuncios, así que dental y psicología pueden estar activas a la vez y cada lead va a la suya por el anuncio del que viene. Antes de ese cambio, activar dental archivaba psicología y —como dental no declara anuncios y funciona de comodín— los leads del anuncio de psicología pasaban a recibir el guion dental.

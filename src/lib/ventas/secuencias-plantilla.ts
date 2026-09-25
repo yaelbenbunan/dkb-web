@@ -48,9 +48,15 @@
  * el `if (ruta.terminar)` sale ANTES del `if (ruta.ir_a)`, así que poner
  * `terminar` en el botón haría que el mensaje de cierre no se enviara nunca.
  * Quien cierra la conversación es `procesar.ts`: ve el aviso, la pasa a
- * `humana` y limpia `paso_actual`. El `{ terminar: true }` que se queda en
- * cada paso `cierre_*` ya no es el camino normal, pero cubre al lead que
- * escriba texto libre sobre ese paso (que no tiene botones).
+ * `humana` y limpia `paso_actual`.
+ *
+ * El `{ terminar: true }` que se queda en cada paso `cierre_*` no es
+ * alcanzable por WhatsApp: como `procesar.ts` pasa la conversación a `humana`
+ * y limpia `paso_actual` en la MISMA vuelta del aviso, ninguna conversación
+ * puede quedarse posada en un `cierre_*` esperando otro mensaje del lead.
+ * Donde sí se recorre es en el simulador de secuencias del panel, que ejercita
+ * el guion paso a paso sin pasar por el orquestador — y ahí marca el final,
+ * que es lo que una comercial necesita ver al revisar el guion.
  *
  * NINGÚN PASO ES PLANTILLA, y es deliberado: la conversación la arranca el
  * lead pulsando un anuncio Click-to-WhatsApp, o sea que es él quien abre la
