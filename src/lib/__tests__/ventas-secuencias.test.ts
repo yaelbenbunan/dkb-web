@@ -110,6 +110,98 @@ describe("validarSecuencia", () => {
   });
 });
 
+/** Secuencia con la forma de las de captación: el inicio pregunta el problema y
+ *  cada botón avisa a la comercial y lleva a su cierre, que termina. */
+function conHandoff(): Secuencia {
+  return {
+    version: 1,
+    inicio: "inicio",
+    pasos: {
+      inicio: {
+        tipo: "mensaje",
+        texto: "¿Cuál es tu problema?",
+        botones: [
+          { texto: "Faltan pacientes", ruta: { avisar: true, fase: "interesado", ir_a: "cierre_a" } },
+          { texto: "No vuelven", ruta: { avisar: true, fase: "interesado", ir_a: "cierre_b" } },
+        ],
+      },
+      cierre_a: { tipo: "mensaje", texto: "Te escribe mi compañera.", botones: [], ruta: { terminar: true } },
+      cierre_b: { tipo: "mensaje", texto: "Te escribe mi compañera.", botones: [], ruta: { terminar: true } },
+    },
+  };
+}
+
+/** Los avisos de la regla 10, por el texto con el que los ve la comercial. */
+const sinAviso = (avisos: ReturnType<typeof validarSecuencia>) =>
+  avisos.filter((a) => /sin avisar a la comercial/i.test(a.mensaje));
+
+describe("validarSecuencia, regla 10: caminos que acaban sin avisar a la comercial", () => {
+  test("una secuencia que avisa en todos sus caminos no da ningún aviso", () => {
+    expect(validarSecuencia(conHandoff())).toEqual([]);
+  });
+
+  test("desmarcar «avisar» en un solo botón es grave: ese tercio del tráfico se queda sin recoger", () => {
+    // El CRITICAL de esta rama, pero por el panel: la comercial retoca el copy
+    // y desmarca la casilla de un botón. El lead recibe el cierre que le
+    // promete una llamada y nadie se entera.
+    const s = conHandoff();
+    s.pasos.inicio.botones[0].ruta = { fase: "interesado", ir_a: "cierre_a" };
+    const avisos = sinAviso(validarSecuencia(s));
+    expect(avisos).toHaveLength(1);
+    expect(avisos[0]).toMatchObject({ paso: "cierre_a", grave: true });
+  });
+
+  test("el aviso vale igual si vive en la ruta del paso de cierre y no en el botón", () => {
+    // Lo que importa es si el MOTOR levanta el aviso en ese camino, no en qué
+    // ruta está escrito. En un cierre sin botones, `responderTexto` sí aplica
+    // la ruta del paso, así que ahí también cuenta.
+    const s = conHandoff();
+    s.pasos.inicio.botones[0].ruta = { fase: "interesado", ir_a: "cierre_a" };
+    s.pasos.cierre_a.ruta = { avisar: true, terminar: true };
+    expect(sinAviso(validarSecuencia(s))).toEqual([]);
+  });
+
+  test("una secuencia que no avisa en ningún camino NO se marca", () => {
+    // Un guion que no promete ninguna llamada es legítimo: informa y se
+    // despide. La regla solo salta cuando la propia secuencia demuestra que
+    // pretende un traspaso a persona, avisando en algún camino.
+    const s = base();
+    expect(sinAviso(validarSecuencia(s))).toEqual([]);
+    expect(sinAviso(validarSecuencia(secuenciaVacia()))).toEqual([]);
+  });
+
+  test("un botón que termina sin más también cuenta como camino sin avisar", () => {
+    const s = conHandoff();
+    s.pasos.inicio.botones.push({ texto: "Ahora no", ruta: { terminar: true } });
+    const avisos = sinAviso(validarSecuencia(s));
+    expect(avisos).toHaveLength(1);
+    expect(avisos[0]).toMatchObject({ paso: "inicio", grave: true });
+  });
+
+  test("un botón con la ruta vacía deja al lead colgado y también se marca", () => {
+    // `aplicarRuta` sin `terminar`, sin espera y sin `ir_a` pone `pasoActual` a
+    // null: la conversación se acaba ahí igual, solo que sin decirlo.
+    const s = conHandoff();
+    s.pasos.inicio.botones[1].ruta = {};
+    const avisos = sinAviso(validarSecuencia(s));
+    expect(avisos).toHaveLength(1);
+    expect(avisos[0]).toMatchObject({ paso: "inicio", grave: true });
+  });
+
+  test("un ciclo entre pasos no cuelga la validación", () => {
+    const s = conHandoff();
+    s.pasos.cierre_a.botones = [{ texto: "Volver", ruta: { ir_a: "inicio" } }];
+    delete s.pasos.cierre_a.ruta;
+    expect(sinAviso(validarSecuencia(s))).toEqual([]);
+  });
+
+  test("un destino que no existe lo dice la regla 2, no esta", () => {
+    const s = conHandoff();
+    s.pasos.inicio.botones[0].ruta = { ir_a: "no-existe" };
+    expect(sinAviso(validarSecuencia(s))).toEqual([]);
+  });
+});
+
 describe("parsearSecuencia", () => {
   test("una secuencia válida se lee bien", () => {
     const r = parsearSecuencia(base());

@@ -253,5 +253,82 @@ export function validarSecuencia(s: Secuencia, variablesExtra: string[] = []): A
     }
   }
 
+  // 10. Ningún camino acaba sin avisar a la comercial.
+  //
+  // Existe por un fallo real y caro de esta entrega: las dos secuencias de
+  // captación llevaban el `avisar` en la ruta del PASO de cierre, y el motor no
+  // aplica la ruta del paso al que entra con `ir_a` (ver `aplicarRuta` en
+  // `simulador.ts`). El lead pulsaba su problema, recibía el cierre que le
+  // promete «Le digo a mi compañera que te escriba», y la conversación se
+  // quedaba viva en `bot` sin aviso, sin nota y sin cambio de fase: un lead
+  // pagado en Meta del que nadie se enteraba. Lo mismo pasa si alguien
+  // desmarca la casilla «avisar» de un botón desde el editor del panel, y esa
+  // fila de Supabase es la que corre de verdad — los tests del repo miran las
+  // constantes del código, no la secuencia editada.
+  //
+  // Solo se aplica si la secuencia avisa en ALGÚN camino. Un guion que no
+  // promete ninguna llamada es legítimo (informa y se despide); lo que no es
+  // legítimo es que avise en dos caminos y en el tercero no, porque entonces la
+  // propia secuencia demuestra que pretende un traspaso a una persona.
+  const avisaEnAlgunCamino = Object.values(s.pasos).some((paso) =>
+    rutasDelPaso(paso).some((ruta) => ruta.avisar),
+  );
+  if (avisaEnAlgunCamino && idsPasos.has(s.inicio)) {
+    // Las rutas que el motor puede TOMAR desde un paso. Un paso con botones no
+    // aplica nunca su propia `ruta`: `responderTexto` trata el texto libre
+    // sobre un paso con botones como salirse del guion, y eso ya levanta su
+    // aviso. Un paso sin botones sí aplica la suya.
+    const rutasTomables = (paso: Paso): Ruta[] =>
+      paso.botones.length > 0 ? paso.botones.map((b) => b.ruta) : paso.ruta ? [paso.ruta] : [];
+
+    // Un `paso` puede recorrerse con el aviso ya levantado o sin él, y el
+    // resultado es distinto, así que el visitado lleva las dos cosas. Sin eso,
+    // un ciclo entre pasos colgaría la validación.
+    const sinRecoger = new Set<string>();
+    const vistos = new Set<string>();
+    const pendientes: Array<{ id: string; avisado: boolean }> = [{ id: s.inicio, avisado: false }];
+    while (pendientes.length > 0) {
+      const { id, avisado } = pendientes.pop() as { id: string; avisado: boolean };
+      const clave = `${id}:${avisado}`;
+      if (vistos.has(clave)) continue;
+      vistos.add(clave);
+
+      const paso = s.pasos[id];
+      if (!paso) continue;
+      for (const ruta of rutasTomables(paso)) {
+        const yaAvisado = avisado || !!ruta.avisar;
+        // El mismo orden que `aplicarRuta`, que es lo que de verdad decide a
+        // dónde va el guion: `terminar` gana a `esperar_dias`, y este a `ir_a`.
+        if (ruta.terminar) {
+          if (!yaAvisado) sinRecoger.add(id);
+          continue;
+        }
+        if (ruta.esperar_dias !== undefined) {
+          // Una espera no deja al lead sin recoger: `procesar.ts` persiste
+          // `reanudar_en` y entrega la conversación a una persona, porque no
+          // hay cron que la reanude (ronda B1, arreglo 2).
+          continue;
+        }
+        if (ruta.ir_a) {
+          // Un destino inexistente ya lo dice la regla 2, con su propio aviso
+          // grave: repetirlo aquí solo añadiría ruido al mismo error.
+          if (idsPasos.has(ruta.ir_a)) pendientes.push({ id: ruta.ir_a, avisado: yaAvisado });
+          continue;
+        }
+        // Ruta vacía: `aplicarRuta` pone `pasoActual` a null y la conversación
+        // se acaba igual, solo que sin decirlo.
+        if (!yaAvisado) sinRecoger.add(id);
+      }
+    }
+
+    for (const id of sinRecoger) {
+      avisos.push({
+        paso: id,
+        mensaje: "Hay un camino que acaba aquí sin avisar a la comercial: el lead se queda sin que nadie le recoja.",
+        grave: true,
+      });
+    }
+  }
+
   return avisos;
 }
