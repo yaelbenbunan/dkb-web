@@ -52,6 +52,15 @@ const preguntasComunes = (s: SectorGrowth): { p: string; r: string }[] => [
       "la optimización de las campañas van en los dos.",
   },
   {
+    // Decidido el 25 de septiembre de 2026: sin CRM, lo que sustituye al tablero
+    // es el correo. Es lo primero que pregunta quien ya ha entendido el resto.
+    p: `¿Cómo me llegan los ${s.termino.plural} interesados?`,
+    r:
+      "Por correo, a la dirección que nos indiques. Cada vez que alguien pide cita en tu " +
+      "landing te llega un correo con su nombre, su teléfono y su email, para que le llames " +
+      "tú. No tienes que instalar nada ni entrar en ningún programa.",
+  },
+  {
     p: "¿La inversión en anuncios está incluida?",
     r:
       "No, y es la parte que conviene tener clara desde el principio. Lo que pagas a Google " +
