@@ -19,11 +19,12 @@ import { AlAparecer } from "./AlAparecer";
  * preguntas— viene de `growth-sectores.ts`.
  *
  * **El aspecto no tiene nada que ver con el de Escala, y es a propósito** (25
- * de septiembre de 2026). Escala era casi negra, con titulares en negrita
- * máxima alineados a la izquierda, trazos a mano, texturas y halos de color.
- * Growth es clara, con las cabeceras de sección centradas, tarjetas con borde
- * fino y nada dibujado a mano: son dos negocios distintos y no pueden parecer
- * el mismo con otro color. Ver `GROWTH_THEME`.
+ * de septiembre de 2026). Escala era negro neutro con lima, titulares en
+ * negrita máxima alineados a la izquierda, trazos a mano, texturas y halos.
+ * Growth es negro verdoso con azul petróleo y turquesa, otra letra, cabeceras
+ * de sección centradas, tarjetas con borde fino y nada dibujado a mano: son dos
+ * negocios distintos y no pueden parecer el mismo con otro color. Ver
+ * `GROWTH_THEME`.
  */
 
 /** Contenedor de la página. Un solo ancho: esta página se lee, no se recorre. */
@@ -131,7 +132,7 @@ export function PaginaGrowth({ sector }: { sector: SectorGrowth }) {
         className="relative overflow-hidden pb-14 pt-8 md:pb-20"
         style={{ background: `linear-gradient(180deg, ${T.soft} 0%, ${T.bg} 100%)` }}
       >
-        {/* La foto del sector, desvanecida hacia el blanco por la izquierda para
+        {/* La foto del sector, fundida con el fondo por la izquierda para
             que el titular se lea encima. Solo la llevan los sectores que tienen
             una foto propia: repetir la misma en todos no distinguiría nada. */}
         {sector.imagen && (
@@ -143,7 +144,7 @@ export function PaginaGrowth({ sector }: { sector: SectorGrowth }) {
                 fill
                 sizes="100vw"
                 className="object-cover"
-                style={{ opacity: 0.35 }}
+                style={{ opacity: 0.45 }}
               />
             </div>
             <div
@@ -242,7 +243,15 @@ export function PaginaGrowth({ sector }: { sector: SectorGrowth }) {
       {/* ───────── 4. Sin permanencia ─────────
           La única banda oscura de la página, para que la frase que resuelve la
           desconfianza que deja cualquier precio se note antes de leerla. */}
-      <section className="py-14 md:py-16" style={{ background: T.dark, color: T.onDark }}>
+      <section
+        className="py-14 md:py-16"
+        style={{
+          background: T.dark,
+          color: T.onDark,
+          borderTop: `1px solid ${T.line}`,
+          borderBottom: `1px solid ${T.line}`,
+        }}
+      >
         <Wrap>
           <AlAparecer>
             <div className="flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">

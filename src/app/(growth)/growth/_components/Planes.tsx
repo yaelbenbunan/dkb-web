@@ -9,7 +9,7 @@ import { GROWTH_THEME as T } from "@/lib/growth-config";
  * columnas: canales e informe mensual.
  *
  * **Los dos se venden igual de bien.** Mismo botón y mismo peso; el avanzado
- * solo lleva el borde oscuro y la etiqueta. Un básico apagado al lado de un
+ * solo lleva el borde turquesa y la etiqueta. Un básico apagado al lado de un
  * avanzado encendido dice «el barato es el de segunda», y quien no puede pagar
  * 299 no sube de plan al verlo: se va.
  *
@@ -103,7 +103,7 @@ export function Planes() {
             className="relative flex flex-col rounded-2xl p-7"
             style={{
               background: T.bg,
-              border: plan.destacado ? `2px solid ${T.dark}` : `1px solid ${T.line}`,
+              border: plan.destacado ? `2px solid ${T.accent}` : `1px solid ${T.line}`,
               boxShadow: "0 1px 2px rgba(15,43,48,0.04), 0 12px 32px -20px rgba(15,43,48,0.25)",
             }}
           >

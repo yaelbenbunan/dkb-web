@@ -79,22 +79,12 @@ const THEMES = {
 export type EmailTheme = keyof typeof THEMES;
 
 /**
- * Rótulo de Growth en HTML, sin imágenes.
- *
- * La baldosa turquesa del logotipo de la landing (`Logotipo.tsx`) y el nombre
- * con la firma al lado. La baldosa es una celda de tabla con fondo, que es lo
- * único que aguanta en Outlook; la flecha va como carácter.
+ * Logotipo de Growth para el correo: la versión de fondo claro (gris y negro),
+ * servida desde la web como el de dinkbit. La de fondo oscuro, con las letras
+ * en blanco, no se vería sobre la tarjeta blanca.
  */
-function growthLockup(t: (typeof THEMES)["growth"]): string {
-  return `<table role="presentation" cellpadding="0" cellspacing="0"><tr>
-      <td valign="middle" style="padding-right:10px;">
-        <div style="width:30px;height:30px;border-radius:8px;background:#30CCCE;color:#0F2B30;font-size:18px;font-weight:800;line-height:30px;text-align:center;">&#8599;</div>
-      </td>
-      <td valign="middle">
-        <span style="font-size:21px;font-weight:800;letter-spacing:-0.4px;color:${t.heading};">Growth</span>
-        <span style="font-size:12px;color:${t.muted};padding-left:6px;">by dinkbit</span>
-      </td>
-    </tr></table>`;
+function growthLockup(): string {
+  return `<img src="${BRAND.siteUrl}/img/growth/growth-logo-claro.png" alt="Growth by dinkbit" width="148" style="display:block;width:148px;height:auto;">`;
 }
 
 function esc(s: string): string {
@@ -233,7 +223,7 @@ export function renderBrandedEmail(input: BrandedEmailInput): {
 
   <tr><td style="padding:26px 36px 6px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td align="left" valign="middle">${input.theme === "growth" ? growthLockup(THEMES.growth) : `<img src="${BRAND.logoUrl}" alt="dinkbit" width="116" style="display:block;width:116px;height:auto;">`}</td>
+      <td align="left" valign="middle">${input.theme === "growth" ? growthLockup() : `<img src="${BRAND.logoUrl}" alt="dinkbit" width="116" style="display:block;width:116px;height:auto;">`}</td>
       ${
         input.eyebrow
           ? `<td align="right" valign="middle" style="font-size:12px;font-weight:700;letter-spacing:2px;color:${accent};text-transform:uppercase;">${esc(input.eyebrow)}</td>`

@@ -72,46 +72,45 @@ export const GROWTH = {
 } as const;
 
 /**
- * Paleta de Growth: clara, limpia y con un solo acento turquesa.
+ * Paleta de Growth: oscura, en azul petróleo, con un solo acento turquesa.
  *
- * **No se parece a la de Escala a propósito** (25 de septiembre de 2026). Escala
- * era casi negra con acento lima, tipografía en negrita máxima, trazos a mano y
- * texturas; Growth es otro negocio y no puede leerse como su hermana. Por eso
- * aquí todo va al revés: fondo blanco, texto en un azul petróleo muy oscuro,
- * tarjetas con borde fino y nada dibujado a mano. La versión de Escala está en
- * la etiqueta `respaldo/landing-escala-2026-09-25`.
+ * **Oscura, pero no la de Escala** (25 de septiembre de 2026). Escala era un
+ * negro neutro (#08090C) con acento lima, tipografía en negrita máxima, trazos a
+ * mano y texturas. Growth es otro negocio y no puede leerse como su hermana: su
+ * fondo es un negro verdoso, las superficies secundarias van en azul petróleo
+ * y el acento es turquesa; la letra, el logotipo y la composición también son
+ * otros. Estuvo unas horas en claro, y se pidió volver al oscuro con el azul
+ * verdoso de secundario. La versión de Escala está en la etiqueta
+ * `respaldo/landing-escala-2026-09-25`.
  *
- * **El turquesa tiene dos tonos, y no es un capricho.** #30CCCE sobre blanco da
- * 2:1 de contraste: vale para rellenar un botón o un icono, no para escribir.
- * Para texto de acento está `accentText`, que es el mismo tono oscurecido hasta
- * pasar 4,5:1. Encima del turquesa relleno se escribe en `onAccent` (el azul
- * oscuro), nunca en blanco.
+ * Encima del turquesa relleno se escribe en `onAccent` (el fondo), nunca en
+ * blanco: blanco sobre #30CCCE no se lee.
  *
  * Los colores van en línea y no con los tokens del tema del sitio, que cambian
  * con el interruptor claro/oscuro de dinkbit: esa dependencia ya dejó una vez la
  * calculadora ilegible.
  */
 export const GROWTH_THEME = {
-  /** Fondo principal. */
-  bg: "#FFFFFF",
-  /** Fondo de las secciones alternas: blanco apenas teñido de turquesa. */
-  soft: "#F2F8F8",
-  /** El oscuro de la marca: texto principal, banda oscura y tarjeta del formulario. */
-  dark: "#0F2B30",
+  /** Fondo principal: negro verdoso. */
+  bg: "#071A1D",
+  /** El secundario: azul petróleo, para secciones alternas y tarjetas. */
+  soft: "#0F2B30",
+  /** Un petróleo algo más claro, para la banda y la tarjeta del formulario. */
+  dark: "#0B3238",
   /** Texto principal. */
-  fg: "#0F2B30",
+  fg: "#EAF4F4",
   /** Texto secundario. */
-  muted: "#587075",
+  muted: "#94B0B4",
   /** Bordes y separadores. */
-  line: "#DDE9EA",
+  line: "#1F454C",
   /** El acento, para rellenos: botones, iconos, marcas. */
   accent: "#30CCCE",
-  /** El acento para escribir sobre claro. */
-  accentText: "#0A7C7E",
+  /** El acento para escribir: sobre estos fondos el mismo turquesa se lee bien. */
+  accentText: "#30CCCE",
   /** Texto encima del acento relleno. */
-  onAccent: "#0F2B30",
-  /** Texto sobre el oscuro. */
+  onAccent: "#071A1D",
+  /** Texto sobre la banda y el formulario. */
   onDark: "#FFFFFF",
-  /** Texto secundario sobre el oscuro. */
+  /** Texto secundario sobre la banda y el formulario. */
   onDarkMuted: "#A3C1C5",
 } as const;

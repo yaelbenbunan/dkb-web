@@ -24,11 +24,10 @@ import { appendUtms } from "@/lib/utm";
  * enseña el mismo caso— y se responde en un toque. Cualquier campo de más aquí
  * arriba se paga en leads perdidos.
  *
- * **Va en oscuro sobre la página clara.** Es lo único oscuro del hero, y por
- * eso es lo primero que se ve: en una página blanca, una tarjeta blanca más se
- * camufla justo donde tiene que llamar la atención. Dentro, los campos van en
- * blanco y el botón en turquesa, que es el punto de máximo contraste y donde
- * tiene que ir el dedo.
+ * **Va en una tarjeta de azul petróleo con borde turquesa**, un tono por
+ * encima del fondo, para que se separe de él sin una caja blanca como la de
+ * Escala. Dentro, los campos van en blanco y el botón en turquesa, que es el
+ * punto de máximo contraste y donde tiene que ir el dedo.
  */
 
 /** La tarjeta oscura. */
@@ -58,7 +57,7 @@ export function FormularioHero({
         id="empezar"
         role="status"
         className="scroll-mt-8 rounded-2xl p-7 sm:p-8"
-        style={{ background: PAPEL, color: TINTA, boxShadow: "0 24px 48px -24px rgba(15,43,48,0.55)" }}
+        style={{ background: PAPEL, color: TINTA, border: `1px solid ${T.accent}55`, boxShadow: "0 24px 48px -24px rgba(0,0,0,0.6)" }}
       >
         <p className="text-2xl font-extrabold leading-tight">Recibido.</p>
         <p className="mt-3 text-base leading-relaxed" style={{ color: T.onDarkMuted }}>
@@ -87,7 +86,8 @@ export function FormularioHero({
         color: TINTA,
         // Un halo del acento en vez de un borde: separa la tarjeta del fondo sin
         // dibujarle una caja alrededor.
-        boxShadow: "0 24px 48px -24px rgba(15,43,48,0.55)",
+        border: `1px solid ${T.accent}55`,
+        boxShadow: "0 24px 48px -24px rgba(0,0,0,0.6)",
       }}
       action={(fd) => {
         // La calculadora manda tres cifras; aquí no se preguntan. Vacías

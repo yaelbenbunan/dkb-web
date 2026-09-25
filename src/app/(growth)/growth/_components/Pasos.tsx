@@ -4,7 +4,7 @@ import { AlAparecer } from "./AlAparecer";
 /**
  * Los tres pasos, en tres tarjetas.
  *
- * Tarjetas blancas con borde fino, el dibujo en una baldosa teñida y el número
+ * Tarjetas en azul petróleo con borde fino, el dibujo en una baldosa oscura y el número
  * escrito como «Paso 1». Es otra forma de contar lo mismo que en la landing de
  * Escala —que eran tarjetas oscuras con volumen, número en insignia y flechas
  * entre ellas— porque Growth no puede parecerse a ella (25-09-2026).
@@ -34,14 +34,14 @@ export function Pasos({ pasos }: { pasos: Paso[] }) {
               <div
                 className="flex h-full flex-col rounded-2xl p-6"
                 style={{
-                  background: T.bg,
+                  background: T.soft,
                   border: `1px solid ${T.line}`,
                   boxShadow: "0 1px 2px rgba(15,43,48,0.04), 0 8px 24px -16px rgba(15,43,48,0.18)",
                 }}
               >
                 <div
                   className="flex h-14 w-14 items-center justify-center rounded-xl p-2.5"
-                  style={{ background: T.soft }}
+                  style={{ background: T.bg }}
                 >
                   <Dibujo />
                 </div>
