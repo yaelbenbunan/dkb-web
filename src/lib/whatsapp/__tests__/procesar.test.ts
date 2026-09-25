@@ -781,7 +781,10 @@ describe("procesarWebhook", () => {
 
     const conv = [...conversaciones.values()][0];
     expect(conv.estado).toBe("humana");
-    expect(actividades.some((a) => a.nota.includes("Avisar"))).toBe(true);
+    // "Respuesta libre" (no "Avisar"): este aviso es la frase completa que
+    // ya redacta `simulador.ts` (ronda de arreglos 2 sobre 3ce8299) — ver
+    // `fraseDeAviso` en procesar.ts.
+    expect(actividades.some((a) => a.nota.includes("Respuesta libre"))).toBe(true);
   });
 
   it("si el paso guardado ya no existe, termina con aviso en vez de romper", async () => {
@@ -817,7 +820,10 @@ describe("procesarWebhook", () => {
     ).resolves.toBeDefined();
 
     expect([...conversaciones.values()][0].estado).toBe("humana");
-    expect(actividades.some((a) => a.nota.includes("Avisar"))).toBe(true);
+    // "La secuencia se detuvo" (no "Avisar"): `avanzada.motivo` es la frase
+    // de continuación de `avanzarSecuencia`, no un aviso completo (ronda de
+    // arreglos 2 sobre 3ce8299) — ver `fraseDeAviso` en procesar.ts.
+    expect(actividades.some((a) => a.nota.includes("La secuencia se detuvo"))).toBe(true);
   });
 
   // Hallazgo 2 (Important): cuando no hay nada que avanzar porque la
@@ -837,7 +843,7 @@ describe("procesarWebhook", () => {
     ).resolves.toBeDefined();
 
     expect([...conversaciones.values()][0].estado).toBe("humana");
-    expect(actividades.some((a) => a.nota.includes("Avisar"))).toBe(true);
+    expect(actividades.some((a) => a.nota.includes("La secuencia se detuvo"))).toBe(true);
   });
 
   it("si la secuencia guardada no parsea, pasa a humana y deja el motivo en la ficha", async () => {
@@ -852,7 +858,7 @@ describe("procesarWebhook", () => {
     ).resolves.toBeDefined();
 
     expect([...conversaciones.values()][0].estado).toBe("humana");
-    expect(actividades.some((a) => a.nota.includes("Avisar"))).toBe(true);
+    expect(actividades.some((a) => a.nota.includes("La secuencia se detuvo"))).toBe(true);
   });
 
   /* Tarea 9: avisos, fases y fin de conversación --------------------------- */
@@ -894,12 +900,12 @@ describe("procesarWebhook", () => {
     await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
     secuencias.length = 0;
     await procesarWebhook({ cuerpo: sobrePulsacion("opcion_1", "Vienen bastante"), deps });
-    expect(actividades.filter((a) => a.nota.includes("Avisar")).length).toBe(1);
+    expect(actividades.filter((a) => a.nota.includes("La secuencia se detuvo")).length).toBe(1);
 
     await procesarWebhook({ cuerpo: sobreTexto("¿hola?"), deps });
 
     expect([...conversaciones.values()][0].estado).toBe("humana");
-    expect(actividades.filter((a) => a.nota.includes("Avisar")).length).toBe(1);
+    expect(actividades.filter((a) => a.nota.includes("La secuencia se detuvo")).length).toBe(1);
   });
 
   /* Ronda de arreglos 1 de la tarea 9 --------------------------------------- */
@@ -943,5 +949,41 @@ describe("procesarWebhook", () => {
     await procesarWebhook({ cuerpo: sobrePulsacion("opcion_1", "Vienen bastante"), deps });
 
     expect(actividades[0]?.nota).toContain("Vienen bastante");
+  });
+
+  /* Ronda de arreglos 2 sobre el commit 3ce8299 ------------------------------ */
+
+  // Hallazgo Important: `motivo` servía a dos lectores con formas
+  // incompatibles — los `avisos` de `simulador.ts` son frases COMPLETAS
+  // («Avisar a la comercial»), y `notaAvisoComercial` les anteponía OTRA VEZ
+  // "Avisar a la comercial: " como si fueran una frase de continuación. En
+  // el camino más común (una ruta que cierra con `avisar: true`, sin más
+  // texto) eso deja la frase duplicada literalmente. Es EL camino, no un
+  // caso raro: todo cierre de una secuencia real pasa por aquí.
+  it("un cierre con avisar no duplica «Avisar a la comercial» en la nota", async () => {
+    const { deps, actividades } = depsFalsas({ secuencias: [SECUENCIA_ACTIVA] });
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+    await procesarWebhook({ cuerpo: sobrePulsacion("opcion_1", "Huecos en la agenda"), deps });
+
+    const nota = actividades.find((a) => a.nota.includes("Avisar"))?.nota ?? "";
+    expect(nota.match(/Avisar a la comercial/g)).toHaveLength(1);
+  });
+
+  // Mismo hallazgo, la otra mitad: los `motivo` de `avanzarSecuencia` son
+  // frases de CONTINUACIÓN en minúscula, pensadas para encajar detrás de
+  // `[whatsapp] ${motivo}, se pasa a humana` en un log — no frases
+  // independientes. La nota tiene que introducirlas con un cierre propio en
+  // vez de heredar el prefijo "Avisar a la comercial:", que dejaría una
+  // minúscula justo tras un punto.
+  it("un botón fuera de rango redacta la nota como una frase propia, no con el prefijo de avisar", async () => {
+    const { deps, actividades, secuencias } = depsFalsas({ secuencias: [SECUENCIA_ACTIVA] });
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+    secuencias[0].pasos = SECUENCIA_MENOS_BOTONES;
+
+    await procesarWebhook({ cuerpo: sobrePulsacion("opcion_2", "Vienen 1 vez y ya"), deps });
+
+    expect(actividades[0]?.nota).toBe(
+      'El lead respondió: «Vienen 1 vez y ya». La secuencia se detuvo: el lead pulsó una opción que ya no existe en el paso actual de la secuencia.',
+    );
   });
 });

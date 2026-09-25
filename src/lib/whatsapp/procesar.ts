@@ -353,56 +353,94 @@ function avanzarSecuencia(
   };
 }
 
+/** Añade un punto final si la frase no lo trae ya (algunos avisos de
+ *  `simulador.ts` terminan en punto, otros no — ver `fraseDeAviso`). */
+function conPuntoFinal(frase: string): string {
+  return /[.!?]$/.test(frase) ? frase : `${frase}.`;
+}
+
 /**
- * Redacta la nota de `avisarComercial`: qué contestó el lead (`respuestaLead`,
- * Hallazgo 2, ronda de arreglos 1 de la tarea 9) y, si lo hay, por qué se
- * avisa (`motivo`, Hallazgo 2 de la ronda de arreglos 1 de la tarea 8). Antes
- * de este arreglo la nota solo llevaba el motivo —o a qué fase se movió el
- * lead, en `console.error`— pero nunca lo que el lead había respondido: para
- * una comercial que abre la ficha para llamar, qué botón pulsó (o qué
- * escribió) es justo el dato que cambia la llamada entera. Sin motivo (una
- * ruta que SOLO cambia de fase) se deja solo la respuesta, sin inventar un
- * "avisar" que no aplica.
+ * Arma la frase de "por qué se avisa" de la nota de `avisarComercial` a
+ * partir de DOS vocabularios que no se pueden mezclar con el mismo prefijo
+ * (Hallazgo Important, ronda de arreglos 2 sobre el commit 3ce8299):
+ *
+ * - `avisos`: frases COMPLETAS e independientes que ya redacta
+ *   `simulador.ts` («Avisar a la comercial», «Respuesta libre: la secuencia
+ *   se para y se avisa a la comercial»...). Van tal cual, unidas por "; " si
+ *   hay más de una — nunca con "Avisar a la comercial:" delante, porque en
+ *   el camino MÁS COMÚN (una ruta que cierra con `avisar: true`, sin más) el
+ *   único aviso YA ES esa frase: anteponerle el mismo texto como prefijo la
+ *   dejaba duplicada literalmente («Avisar a la comercial: Avisar a la
+ *   comercial») en CADA lead que cierra por ahí, no en un caso raro.
+ * - `motivoDetenido`: frase de CONTINUACIÓN en minúscula que devuelve
+ *   `avanzarSecuencia` (p.ej. `la secuencia "X" ya no existe...`), pensada
+ *   para encajar detrás de `[whatsapp] ${motivo}, se pasa a humana` en un
+ *   log, no para ser una frase suelta. Se introduce con un cierre propio en
+ *   español en vez de heredar el prefijo de `avisos`, que dejaría una
+ *   minúscula justo tras un punto.
+ *
+ * Ninguno de los dos textos se toca por su contenido (nada de `startsWith`
+ * ni comparar contra `AVISO_AVISAR`): el mensaje pasado por el LLAMADOR ya
+ * dice de qué vocabulario es, y eso es lo único de lo que depende esta
+ * función — así no se rompe el día que alguien reescriba un aviso.
  */
-function notaAvisoComercial(motivo: string | undefined, respuestaLead: string | null | undefined): string | null {
+function fraseDeAviso(cambios: { avisos?: string[]; motivoDetenido?: string }): string | null {
+  if (cambios.avisos && cambios.avisos.length > 0) return conPuntoFinal(cambios.avisos.join("; "));
+  if (cambios.motivoDetenido) return `La secuencia se detuvo: ${cambios.motivoDetenido}.`;
+  return null;
+}
+
+/**
+ * Redacta la nota completa de `avisarComercial`: qué contestó el lead
+ * (`respuestaLead`, Hallazgo 2, ronda de arreglos 1 de la tarea 9) y, si la
+ * hay, la frase de por qué se avisa (`frase`, ver `fraseDeAviso`). Antes de
+ * la tarea 9 la nota solo llevaba el motivo —o a qué fase se movió el lead,
+ * en `console.error`— pero nunca lo que el lead había respondido: para una
+ * comercial que abre la ficha para llamar, qué botón pulsó (o qué escribió)
+ * es justo el dato que cambia la llamada entera. Sin `frase` (una ruta que
+ * SOLO cambia de fase) se deja solo la respuesta, sin inventar un "avisar"
+ * que no aplica.
+ */
+function notaAvisoComercial(frase: string | null, respuestaLead: string | null | undefined): string | null {
   const dijoElLead = respuestaLead ? `El lead respondió: «${respuestaLead}».` : null;
-  if (!motivo) return dijoElLead;
-  const aviso = `Avisar a la comercial: ${motivo}`;
-  return dijoElLead ? `${dijoElLead} ${aviso}` : aviso;
+  if (!frase) return dijoElLead;
+  return dijoElLead ? `${dijoElLead} ${frase}` : frase;
 }
 
 /**
  * Deja rastro en la ficha del lead de lo que decidió el guion: por qué la
- * conversación pasó a manos de una persona (`motivo`, Hallazgo 2, ronda de
- * arreglos 1 de la tarea 8) y/o a qué fase se movió el lead (`faseNueva`,
- * tarea 9). Las dos cosas van en la MISMA llamada a `registrarActividad`
- * a propósito: `registrarActividad` ya admite `faseNueva` (lo usa
- * `ventas/servicios.ts` para lo mismo desde el panel), así que separar esto
- * en dos llamadas solo conseguiría que la comercial viera dos notas para un
- * único cierre de guion — justo la duplicación que se quiere evitar.
+ * conversación pasó a manos de una persona (`avisos`/`motivoDetenido`, ver
+ * `fraseDeAviso`) y/o a qué fase se movió el lead (`faseNueva`, tarea 9). Las
+ * dos cosas van en la MISMA llamada a `registrarActividad` a propósito:
+ * `registrarActividad` ya admite `faseNueva` (lo usa `ventas/servicios.ts`
+ * para lo mismo desde el panel), así que separar esto en dos llamadas solo
+ * conseguiría que la comercial viera dos notas para un único cierre de guion
+ * — justo la duplicación que se quiere evitar.
  *
- * `tipo` se elige según lo que haya de verdad (Hallazgo 1, ronda de arreglos
- * 1 de la tarea 9): `"cambio_fase"` cuando no hay `motivo` (una ruta que SOLO
- * mueve la fase), `"nota"` cuando sí lo hay. Antes se llamaba siempre con
- * `"nota"`, así que una ruta sin `avisar` dejaba `nota: null` con tipo
- * "nota" — la RPC (`ventas_registrar_actividad`, ver
- * docs/sql/2026-09-17-ventas-fase1.sql) inserta esa nota vacía Y, aparte, la
- * entrada `cambio_fase` que le corresponde por la fase: dos apuntes para un
- * único cambio, uno de ellos en blanco. Con `"cambio_fase"` la nota (si la
- * hay) viaja DENTRO de esa misma entrada, igual que hace el panel
- * (`cambiarFaseManual`/`moverLead` en `ventas/servicios.ts`) para lo mismo.
+ * `tipo` se elige según si hay algo que avisar de verdad (Hallazgo 1, ronda
+ * de arreglos 1 de la tarea 9): `"cambio_fase"` cuando `fraseDeAviso`
+ * devuelve `null` (una ruta que SOLO mueve la fase), `"nota"` cuando hay
+ * frase. Antes se llamaba siempre con `"nota"`, así que una ruta sin
+ * `avisar` dejaba `nota: null` con tipo "nota" — la RPC
+ * (`ventas_registrar_actividad`, ver docs/sql/2026-09-17-ventas-fase1.sql)
+ * inserta esa nota vacía Y, aparte, la entrada `cambio_fase` que le
+ * corresponde por la fase: dos apuntes para un único cambio, uno de ellos en
+ * blanco. Con `"cambio_fase"` la nota (si la hay) viaja DENTRO de esa misma
+ * entrada, igual que hace el panel (`cambiarFaseManual`/`moverLead` en
+ * `ventas/servicios.ts`) para lo mismo.
  * Best-effort, como el resto de FASE B: un fallo aquí solo se registra.
  */
 async function avisarComercial(
   leadId: string,
-  cambios: { motivo?: string; faseNueva?: Fase; respuestaLead?: string | null },
+  cambios: { avisos?: string[]; motivoDetenido?: string; faseNueva?: Fase; respuestaLead?: string | null },
 ): Promise<void> {
   try {
+    const frase = fraseDeAviso(cambios);
     const resultado = await registrarActividad({
       leadId,
       usuariaId: null,
-      tipo: cambios.motivo ? "nota" : "cambio_fase",
-      nota: notaAvisoComercial(cambios.motivo, cambios.respuestaLead),
+      tipo: frase ? "nota" : "cambio_fase",
+      nota: notaAvisoComercial(frase, cambios.respuestaLead),
       faseNueva: cambios.faseNueva ?? null,
     });
     if (!resultado.ok) {
@@ -833,8 +871,13 @@ async function procesarMensaje(
             // `mensaje.texto` (Hallazgo 2, ronda de arreglos 1 de la tarea 9):
             // para un botón ya trae el rótulo que pulsó el lead, no solo el
             // texto libre — ver `respuestaDelMensaje` en entrante.ts.
+            //
+            // `avisos`, no `motivo` (ronda de arreglos 2 sobre 3ce8299):
+            // `avanzada.avisos` ya son frases completas de `simulador.ts`,
+            // así que van tal cual a `fraseDeAviso` en vez de por el campo
+            // pensado para la frase de continuación de `avanzarSecuencia`.
             await avisarComercial(leadId, {
-              motivo: pasaAHumana ? avanzada.avisos.join("; ") : undefined,
+              avisos: pasaAHumana ? avanzada.avisos : undefined,
               faseNueva: faseNueva ?? undefined,
               respuestaLead: mensaje.texto,
             });
@@ -850,7 +893,11 @@ async function procesarMensaje(
           // avanzar la MISMA secuencia rota y duplicaría este aviso.
           await deps.actualizarConversacion(conversacion.id, { estado: "humana", pasoActual: null });
           conversacion = { ...conversacion, estado: "humana" };
-          if (leadId) await avisarComercial(leadId, { motivo: avanzada.motivo, respuestaLead: mensaje.texto });
+          // `motivoDetenido`, no `avisos` (ronda de arreglos 2 sobre 3ce8299):
+          // `avanzada.motivo` es la frase de CONTINUACIÓN de `avanzarSecuencia`
+          // (ver su JSDoc), no una frase suelta — `fraseDeAviso` la introduce
+          // con su propio cierre en vez de tratarla como un aviso completo.
+          if (leadId) await avisarComercial(leadId, { motivoDetenido: avanzada.motivo, respuestaLead: mensaje.texto });
         }
       } catch (e) {
         // Best-effort (fase B): un fallo aquí (p.ej. `listSecuencias` cae)
