@@ -32,6 +32,26 @@
  * Límites del canal que condicionan el copy: 3 botones por mensaje y 20
  * caracteres por botón. Por eso se eligen tres problemas, no cinco.
  *
+ * DÓNDE VIVE `avisar`/`fase`: en la ruta de CADA BOTÓN del paso `inicio`, no
+ * en el paso de cierre al que lleva. Es contraintuitivo —el aviso «pertenece»
+ * al cierre— y es fácil «arreglarlo» al revés, así que queda escrito: mira el
+ * orden de `aplicarRuta` en `simulador.ts`. La ruta de un paso solo se aplica
+ * cuando el lead contesta TEXTO LIBRE sobre un paso sin botones; al entrar en
+ * un paso con `ir_a`, `entrarEnPaso` manda su mensaje y fija `pasoActual`,
+ * pero NO aplica la ruta de ese paso destino. Con `avisar` en el cierre, el
+ * lead pulsaba, recibía un mensaje que le promete «Le digo a mi compañera que
+ * te escriba»… y la conversación se quedaba viva en `bot`, sin aviso, sin
+ * nota en la ficha y sin cambio de fase: nadie se enteraba de un lead que
+ * acabamos de pagar en Meta.
+ *
+ * Y por el mismo orden de `aplicarRuta`, la ruta del botón va SIN `terminar`:
+ * el `if (ruta.terminar)` sale ANTES del `if (ruta.ir_a)`, así que poner
+ * `terminar` en el botón haría que el mensaje de cierre no se enviara nunca.
+ * Quien cierra la conversación es `procesar.ts`: ve el aviso, la pasa a
+ * `humana` y limpia `paso_actual`. El `{ terminar: true }` que se queda en
+ * cada paso `cierre_*` ya no es el camino normal, pero cubre al lead que
+ * escriba texto libre sobre ese paso (que no tiene botones).
+ *
  * NINGÚN PASO ES PLANTILLA, y es deliberado: la conversación la arranca el
  * lead pulsando un anuncio Click-to-WhatsApp, o sea que es él quien abre la
  * ventana. Nuestro primer mensaje es una respuesta y va en texto libre, sin
@@ -51,10 +71,12 @@ export const SECUENCIA_DENTAL: Secuencia = {
       texto:
         "¡Hola! Soy Paula, de Escala. Gracias por interesarte en nuestro proceso para que ganes más con cada paciente.\n\n" +
         "Para poder ofrecerte la mejor solución, cuéntanos: ¿cuál es el principal problema que estás teniendo?",
+      // `avisar`/`fase` van AQUÍ, en el botón, y SIN `terminar` (ver la
+      // cabecera: es el orden de `aplicarRuta` lo que lo obliga).
       botones: [
-        { texto: "Faltan pacientes", ruta: { ir_a: "cierre_faltan" } },
-        { texto: "Primera visita y ya", ruta: { ir_a: "cierre_no_arrancan" } },
-        { texto: "Vienen y no vuelven", ruta: { ir_a: "cierre_no_vuelven" } },
+        { texto: "Faltan pacientes", ruta: { avisar: true, fase: "interesado", ir_a: "cierre_faltan" } },
+        { texto: "Primera visita y ya", ruta: { avisar: true, fase: "interesado", ir_a: "cierre_no_arrancan" } },
+        { texto: "Vienen y no vuelven", ruta: { avisar: true, fase: "interesado", ir_a: "cierre_no_vuelven" } },
       ],
       guardar_respuesta_en: "problema_principal",
     },
@@ -66,7 +88,7 @@ export const SECUENCIA_DENTAL: Secuencia = {
         "Tenemos una calculadora que lo hace con tus propios números en un minuto: dinkbit.es/escala/dental\n\n" +
         "Le digo a mi compañera que te escriba para verlo contigo.",
       botones: [],
-      ruta: { avisar: true, fase: "interesado", terminar: true },
+      ruta: { terminar: true },
     },
 
     cierre_no_arrancan: {
@@ -76,7 +98,7 @@ export const SECUENCIA_DENTAL: Secuencia = {
         "Pasa cuando una campaña se mide por citas. Nosotros la medimos por lo que factura cada paciente, así que a los dos meses sabes qué tratamiento te está pagando las campañas y cuál no. Suelen salir menos pacientes y más beneficio.\n\n" +
         "Le digo a mi compañera que te escriba y te lo enseña con tus cifras.",
       botones: [],
-      ruta: { avisar: true, fase: "interesado", terminar: true },
+      ruta: { terminar: true },
     },
 
     cierre_no_vuelven: {
@@ -85,7 +107,7 @@ export const SECUENCIA_DENTAL: Secuencia = {
         "Entonces el problema no está en la entrada, está en el seguimiento: cada paciente que no vuelve es beneficio que ya habías pagado por traer.\n\n" +
         "Eso se ve en el panel mes a mes, con su origen y su ficha, y se corrige. Le digo a mi compañera que te escriba y lo vemos con tu caso.",
       botones: [],
-      ruta: { avisar: true, fase: "interesado", terminar: true },
+      ruta: { terminar: true },
     },
   },
 };
@@ -99,10 +121,12 @@ export const SECUENCIA_PSICOLOGIA: Secuencia = {
       texto:
         "¡Hola! Soy Paula, de Escala. Gracias por interesarte en nuestro proceso para llenar la agenda de tu consulta.\n\n" +
         "Para poder ofrecerte la mejor solución, cuéntanos: ¿cuál es el principal problema que estás teniendo?",
+      // `avisar`/`fase` van AQUÍ, en el botón, y SIN `terminar` (ver la
+      // cabecera: es el orden de `aplicarRuta` lo que lo obliga).
       botones: [
-        { texto: "Huecos en la agenda", ruta: { ir_a: "cierre_huecos" } },
-        { texto: "Vienen 1 vez y ya", ruta: { ir_a: "cierre_abandono" } },
-        { texto: "Solo boca a boca", ruta: { ir_a: "cierre_boca_a_boca" } },
+        { texto: "Huecos en la agenda", ruta: { avisar: true, fase: "interesado", ir_a: "cierre_huecos" } },
+        { texto: "Vienen 1 vez y ya", ruta: { avisar: true, fase: "interesado", ir_a: "cierre_abandono" } },
+        { texto: "Solo boca a boca", ruta: { avisar: true, fase: "interesado", ir_a: "cierre_boca_a_boca" } },
       ],
       guardar_respuesta_en: "problema_principal",
     },
@@ -114,7 +138,7 @@ export const SECUENCIA_PSICOLOGIA: Secuencia = {
         "Trabajamos justo eso: traer pacientes nuevos cada mes hasta llenar la agenda. Puedes ver cómo salen los números con los tuyos aquí: dinkbit.es/escala/psicologia\n\n" +
         "Le digo a mi compañera que te escriba para verlo contigo.",
       botones: [],
-      ruta: { avisar: true, fase: "interesado", terminar: true },
+      ruta: { terminar: true },
     },
 
     cierre_abandono: {
@@ -123,7 +147,7 @@ export const SECUENCIA_PSICOLOGIA: Secuencia = {
         "Eso cambia mucho la cuenta: si el paciente no sigue, cada hueco vuelve a abrirse al mes siguiente y hay que llenarlo otra vez.\n\n" +
         "Por eso medimos no solo cuántos llegan, sino cuántos se quedan a seguir, y de qué campaña viene cada uno. Le digo a mi compañera que te escriba y lo vemos con tu agenda.",
       botones: [],
-      ruta: { avisar: true, fase: "interesado", terminar: true },
+      ruta: { terminar: true },
     },
 
     cierre_boca_a_boca: {
@@ -132,7 +156,7 @@ export const SECUENCIA_PSICOLOGIA: Secuencia = {
         "El boca a boca es la mejor señal de que lo haces bien, pero no lo puedes abrir el día que tienes la agenda floja.\n\n" +
         "La idea es dejarlo donde está y sumarle un canal que sí puedas regular. Le digo a mi compañera que te escriba y te cuenta cómo se empieza sin liarse.",
       botones: [],
-      ruta: { avisar: true, fase: "interesado", terminar: true },
+      ruta: { terminar: true },
     },
   },
 };

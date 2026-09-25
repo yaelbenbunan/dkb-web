@@ -3,6 +3,7 @@ import type { Conversacion } from "../db";
 import type { MensajeroWhatsApp, ResultadoEnvio } from "../mensajero";
 import type { SecuenciaRow } from "../../ventas/db";
 import type { Secuencia } from "../../ventas/secuencias";
+import { SECUENCIA_DENTAL, SECUENCIA_PSICOLOGIA } from "../../ventas/secuencias-plantilla";
 
 // `procesar.ts` llama directamente (fuera de `Deps`) a `getMarcaPorSlug` y
 // `registrarActividad` de `ventas/db.ts` — son wiring de dominio, no del
@@ -986,4 +987,59 @@ describe("procesarWebhook", () => {
       'El lead respondió: «Vienen 1 vez y ya». La secuencia se detuvo: el lead pulsó una opción que ya no existe en el paso actual de la secuencia.',
     );
   });
+});
+
+/* Extremo a extremo con las secuencias REALES ------------------------------ */
+
+// Ninguno de los tests de arriba pasa `SECUENCIA_DENTAL` ni
+// `SECUENCIA_PSICOLOGIA` por `procesarWebhook`: todos usan dobles escritos a
+// mano, y esos dobles resultaron tener una forma que ninguna secuencia real
+// usaba. Así se colaron 20 commits con el camino feliz roto —el lead pulsaba
+// un botón, recibía el cierre que le prometía «Le digo a mi compañera que te
+// escriba», y la conversación se quedaba viva en `bot` sin aviso ni nota ni
+// cambio de fase, porque `avisar`/`fase` vivían en el paso de cierre y
+// `aplicarRuta` NO aplica la ruta del paso al que entra con `ir_a`.
+//
+// Por eso este bloque no inventa nada: recorre las dos secuencias que están
+// en producción, pulsando CADA uno de sus tres botones, y afirma sobre el
+// resultado que le importa a la comercial —qué recibe el lead, dónde queda la
+// conversación y qué queda en su ficha—, no sobre la forma declarada del JSON.
+describe.each<[string, Secuencia]>([
+  ["dental", SECUENCIA_DENTAL],
+  ["psicología", SECUENCIA_PSICOLOGIA],
+])("secuencia real de %s por procesarWebhook", (_nombre, secuencia) => {
+  const inicio = secuencia.pasos[secuencia.inicio];
+
+  it.each(inicio.botones.map((b, i) => [b.texto, i] as const))(
+    "pulsar «%s» manda su cierre, entrega la conversación y deja el rótulo en la ficha",
+    async (rotulo, indice) => {
+      const { deps, salientes, conversaciones, actividades, fases } = depsFalsas({
+        secuencias: [{ id: "s-real", estado: "activa", anuncios: ["AD1"], pasos: secuencia }],
+      });
+
+      // Clic de anuncio + primer mensaje del lead: arranca la secuencia.
+      await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+      expect(salientes[0].texto).toBe(inicio.texto);
+
+      // Y ahora el lead pulsa el botón. `opcion_N` es el id que manda Meta
+      // para el botón N (ver `indiceDeBoton` en guion.ts).
+      await procesarWebhook({ cuerpo: sobrePulsacion(`opcion_${indice + 1}`, rotulo), deps });
+
+      const destino = inicio.botones[indice].ruta.ir_a as string;
+      expect(salientes[1].texto).toBe(secuencia.pasos[destino].texto);
+
+      const conv = [...conversaciones.values()][0];
+      expect(conv.estado).toBe("humana");
+      // A `null` a propósito: con un paso guardado, un mensaje suelto
+      // posterior reactivaría el bot sobre una conversación ya entregada.
+      expect(conv.paso_actual).toBeNull();
+
+      expect(fases).toContainEqual({ leadId: "lead-1", fase: "interesado" });
+      // La nota cita el rótulo: es el dato que cambia la llamada de la
+      // comercial, que abre la ficha para llamar y no ve la conversación.
+      const nota = actividades.map((a) => a.nota).join(" | ");
+      expect(nota).toContain(rotulo);
+      expect(nota).toContain("Avisar a la comercial");
+    },
+  );
 });

@@ -1,11 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { CUERPO, OPCIONES, type Vertical } from "../whatsapp/autorespuesta";
 import { parsearSecuencia, validarSecuencia, type Secuencia } from "../ventas/secuencias";
+import { iniciarSimulacion, responderBoton } from "../ventas/simulador";
 import { PLANTILLAS, SECUENCIA_DENTAL, SECUENCIA_PSICOLOGIA, secuenciaDePlantilla } from "../ventas/secuencias-plantilla";
 
 /** Pasos a los que se puede llegar pulsando un botón del paso dado. */
 const destinosDeBotones = (s: Secuencia, id: string): string[] =>
   s.pasos[id].botones.map((b) => b.ruta.ir_a).filter((d): d is string => Boolean(d));
+
+/** Contexto neutro para el motor: estas plantillas no usan variables, y la
+ *  fase de partida es la del lead que acaba de llegar del anuncio. */
+const CTX = { valores: {}, faseInicial: "nuevo" as const };
+
+/** Recorre la secuencia como un lead real: arranca y pulsa el botón `indice`
+ *  del paso de inicio. Devuelve el estado con el que queda el motor. */
+const pulsar = (s: Secuencia, indice: number) => responderBoton(s, iniciarSimulacion(s, CTX), indice, CTX);
 
 describe.each<[string, Vertical, Secuencia]>([
   ["dental", "dental", SECUENCIA_DENTAL],
@@ -32,11 +41,26 @@ describe.each<[string, Vertical, Secuencia]>([
     expect(conPlantilla).toEqual([]);
   });
 
-  it("avisa a la comercial en algún camino", () => {
-    const avisa = Object.values(secuencia.pasos).some((p) =>
-      [...p.botones.map((b) => b.ruta), ...(p.ruta ? [p.ruta] : [])].some((r) => r.avisar),
-    );
-    expect(avisa).toBe(true);
+  it("pulsar cualquier botón avisa a la comercial y mueve la fase, y manda su cierre", () => {
+    // EJERCITA EL MOTOR, no la declaración. La versión anterior de este test
+    // buscaba `some(ruta => ruta.avisar)` sobre TODAS las rutas de la
+    // secuencia: daba verde mientras el `avisar` vivía en el paso de cierre,
+    // donde `aplicarRuta` nunca llega por la vía de `ir_a` — o sea, daba la
+    // confianza contraria justo en el camino que paga los clics de Meta.
+    const inicio = secuencia.pasos[secuencia.inicio];
+    inicio.botones.forEach((boton, indice) => {
+      const estado = pulsar(secuencia, indice);
+      expect(estado.avisos).toContain("Avisar a la comercial");
+      expect(estado.fase).toBe("interesado");
+      // Y el cierre SE MANDA: si el `terminar` estuviera en la ruta del
+      // botón, `aplicarRuta` cortaría antes del `ir_a` y el lead se quedaría
+      // sin el mensaje que le promete que le escriben.
+      const destino = boton.ruta.ir_a as string;
+      expect(estado.pasoActual).toBe(destino);
+      expect(estado.conversacion.at(-1)).toEqual({ de: "marca", texto: secuencia.pasos[destino].texto });
+      // Y queda guardado QUÉ problema dijo tener, que es lo que cualifica.
+      expect(estado.datos.problema_principal).toBe(boton.texto);
+    });
   });
 
   it("empieza preguntando, sin pasos de presentación", () => {
@@ -56,11 +80,15 @@ describe.each<[string, Vertical, Secuencia]>([
     expect(inicio.botones.map((b) => b.texto)).toEqual([...OPCIONES[vertical]]);
   });
 
-  it("no tiene esperas: todos los cierres terminan", () => {
-    const esperas = Object.values(secuencia.pasos).flatMap((p) =>
-      [...p.botones.map((b) => b.ruta), ...(p.ruta ? [p.ruta] : [])].map((r) => r.esperar_dias),
-    );
-    expect(esperas.filter((d) => d !== undefined)).toEqual([]);
+  it("no deja al lead esperando: ningún camino se para en una espera", () => {
+    // También por el motor, y no leyendo `esperar_dias` de las rutas: lo que
+    // importa no es que el campo no esté escrito, es que recorriendo la
+    // secuencia el motor nunca devuelva una espera (`esperaDias`), que es lo
+    // que dejaría al lead mudo hasta que un cron —que hoy no existe— la
+    // dispare.
+    secuencia.pasos[secuencia.inicio].botones.forEach((_boton, indice) => {
+      expect(pulsar(secuencia, indice).esperaDias).toBeNull();
+    });
   });
 
   it("lleva cada problema a un cierre distinto", () => {
