@@ -148,10 +148,14 @@ export async function actualizarConversacion(
 export async function reclamarPaso(
   id: string,
   cambios: {
-    /** El `paso_actual` que el llamador leyó: la condición de la carrera. */
-    pasoEsperado: string;
+    /** El `paso_actual` que el llamador leyó: la condición de la carrera.
+     *  `null` reclama el ARRANQUE de una secuencia (una conversación que
+     *  todavía no va por ningún paso), y se traduce a `is null` en vez de a
+     *  `= null`, que en SQL no iguala nunca. */
+    pasoEsperado: string | null;
     pasoActual: string | null;
     datos: Record<string, string>;
+    secuenciaId?: string | null;
     estado?: Conversacion["estado"];
     reanudarEn?: Date | null;
   },
@@ -160,17 +164,18 @@ export async function reclamarPaso(
     paso_actual: cambios.pasoActual,
     datos: cambios.datos,
   };
+  if (cambios.secuenciaId !== undefined) patch.secuencia_id = cambios.secuenciaId;
   if (cambios.estado !== undefined) patch.estado = cambios.estado;
   if (cambios.reanudarEn !== undefined) {
     patch.reanudar_en = cambios.reanudarEn ? cambios.reanudarEn.toISOString() : null;
   }
 
-  const { data, error } = await db()
-    .from("ventas_conversaciones")
-    .update(patch)
-    .eq("id", id)
-    .eq("paso_actual", cambios.pasoEsperado)
-    .select("id");
+  const base = db().from("ventas_conversaciones").update(patch).eq("id", id);
+  const filtrado =
+    cambios.pasoEsperado === null
+      ? base.is("paso_actual", null)
+      : base.eq("paso_actual", cambios.pasoEsperado);
+  const { data, error } = await filtrado.select("id");
   if (error) throw new Error(`[whatsapp/db] reclamarPaso: ${error.message}`);
   return (data ?? []).length > 0;
 }

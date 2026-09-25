@@ -66,6 +66,21 @@ export function esFaseActiva(fase: string): boolean {
   return (FASES_ACTIVAS as readonly string[]).includes(fase);
 }
 
+/**
+ * Fases en las que el lead queda CERRADO y nadie tiene que llamarle. No es lo
+ * mismo que «no activa»: `cliente` también está fuera del embudo, pero por
+ * haber ganado, no por descarte.
+ *
+ * Lo usa el canal de WhatsApp para distinguir un camino del guion que se cierra
+ * A PROPÓSITO (el lead pulsa «No me llaméis» y se registra el descarte) de uno
+ * que se cierra sin más, que es un lead pagado del que nadie se entera.
+ */
+export const FASES_DESCARTE: readonly Fase[] = ["perdido", "no_interesa", "ilocalizable", "fuera_de_perfil"];
+
+export function esFaseDescarte(fase: string | null | undefined): boolean {
+  return typeof fase === "string" && (FASES_DESCARTE as readonly string[]).includes(fase);
+}
+
 export function esFase(v: unknown): v is Fase {
   return typeof v === "string" && (FASES as readonly string[]).includes(v);
 }

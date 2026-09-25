@@ -423,9 +423,13 @@ function depsFalsas(
     async reclamarPaso(id, cambios) {
       for (const conv of conversaciones.values()) {
         if (conv.id !== id) continue;
+        // `pasoEsperado: null` reclama el ARRANQUE, y en la base eso es un
+        // `is null`: aquí sale gratis porque la comparación con `null` ya hace
+        // lo mismo, pero conviene tenerlo dicho.
         if (conv.paso_actual !== cambios.pasoEsperado) return false;
         conv.paso_actual = cambios.pasoActual;
         conv.datos = cambios.datos;
+        if (cambios.secuenciaId !== undefined) conv.secuencia_id = cambios.secuenciaId;
         if (cambios.estado !== undefined) conv.estado = cambios.estado;
         if (cambios.reanudarEn !== undefined) {
           conv.reanudar_en = cambios.reanudarEn ? cambios.reanudarEn.toISOString() : null;
@@ -826,26 +830,45 @@ describe("procesarWebhook", () => {
   // null — que es exactamente "secuencia terminada" — y la idempotencia por
   // wamid impide que un reintento de Meta lo repare nunca. La conversación
   // debe pasar a `humana` para que se note en la bandeja, no desaparecer.
-  it("si falla guardar el estado de la secuencia tras enviar, la conversación pasa a humana", async () => {
+  // Desde la ronda C el arranque RECLAMA antes de enviar, así que este fallo
+  // ocurre ANTES de que el lead reciba nada: no hay mensaje que no se pueda
+  // deshacer, pero tampoco lo va a haber nunca (la idempotencia por wamid
+  // impide que un reintento de Meta lo repare). La conversación pasa a `humana`
+  // para que se note en la bandeja, no desaparecer.
+  it("si falla reclamar el arranque de la secuencia, la conversación pasa a humana sin enviar nada", async () => {
     const { deps, conversaciones, salientes } = depsFalsas({
       secuencias: [{ id: "s1", estado: "activa", anuncios: ["AD1"], pasos: SECUENCIA_MINIMA }],
     });
-    const actualizarConversacionOriginal = deps.actualizarConversacion;
-    deps.actualizarConversacion = async (id, cambios) => {
-      // Solo falla el guardado DEL ESTADO DE LA SECUENCIA (trae
-      // `secuenciaId`); las demás llamadas (crear el lead, y el intento de
-      // recuperación que pasa a `humana`) usan el doble real.
-      if (cambios.secuenciaId !== undefined) throw new Error("fallo guardando el estado de la secuencia");
-      return actualizarConversacionOriginal(id, cambios);
+    deps.reclamarPaso = async () => {
+      throw new Error("fallo reclamando el arranque de la secuencia");
     };
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     await expect(procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps })).resolves.toEqual({ procesados: 1 });
 
-    // El mensaje sí se mandó y se guardó: eso no se deshace.
-    expect(salientes).toHaveLength(1);
+    expect(salientes).toHaveLength(0);
     const conv = [...conversaciones.values()][0];
     expect(conv.secuencia_id).toBeNull();
+    expect(conv.estado).toBe("humana");
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  // La otra mitad del reordenado: si el envío falla DESPUÉS de reclamar, el
+  // puntero ya está escrito y nadie lo va a reintentar, así que la conversación
+  // tiene que acabar en manos de una persona igualmente.
+  it("si falla el envío del primer paso ya reclamado, la conversación pasa a humana", async () => {
+    const { deps, conversaciones } = depsFalsas({
+      secuencias: [{ id: "s1", estado: "activa", anuncios: ["AD1"], pasos: SECUENCIA_MINIMA }],
+    });
+    deps.guardarSaliente = async () => {
+      throw new Error("fallo guardando el saliente");
+    };
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps })).resolves.toEqual({ procesados: 1 });
+
+    const conv = [...conversaciones.values()][0];
     expect(conv.estado).toBe("humana");
     expect(errorSpy).toHaveBeenCalled();
     errorSpy.mockRestore();
@@ -1014,16 +1037,28 @@ describe("procesarWebhook", () => {
   // llamaba a `avisarComercial` con `tipo: "nota"` y `nota: null` — la RPC
   // (`ventas_registrar_actividad`) inserta esa nota vacía Y, por separado, la
   // entrada `cambio_fase` que le corresponde por la fase, así que la ficha
-  // del lead acababa con dos apuntes para un único cambio. Con `tipo:
-  // "cambio_fase"` la RPC deja solo una entrada.
-  it("una ruta que solo cambia de fase registra tipo cambio_fase, no nota", async () => {
+  // del lead acababa con dos apuntes para un único cambio. Un apunte, nunca
+  // dos, y nunca uno en blanco.
+  //
+  // Desde la ronda C el tipo de ESTE camino ya no es `cambio_fase` sino `nota`,
+  // y es correcto: una ruta con solo `fase: "interesado"` no manda mensaje, así
+  // que el lead pulsó un botón y se quedó sin contestación — la red de
+  // seguridad de `procesar.ts` lo entrega a una persona y eso SÍ tiene algo que
+  // contar. Donde sigue saliendo `cambio_fase` es en un cierre con fase de
+  // descarte, que no necesita frase (ver el test del botón «No me llaméis»).
+  it("una ruta que solo cambia de fase deja UN apunte, con nota y sin duplicar el cambio", async () => {
     const { deps, actividades } = depsFalsas({ secuencias: [SECUENCIA_SOLO_FASE] });
     await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
     await procesarWebhook({ cuerpo: sobrePulsacion("opcion_1", "Vienen bastante"), deps });
 
     expect(actividades).toHaveLength(1);
+    expect(registrarActividadMock).toHaveBeenCalledTimes(1);
     expect(registrarActividadMock).toHaveBeenCalledWith(
-      expect.objectContaining({ tipo: "cambio_fase", faseNueva: "interesado" }),
+      expect.objectContaining({
+        tipo: "nota",
+        faseNueva: "interesado",
+        nota: "El lead respondió: «Vienen bastante». La secuencia se cerró sin contestar nada: revisa ese camino del guion.",
+      }),
     );
   });
 
@@ -1175,6 +1210,200 @@ describe("procesarWebhook", () => {
     expect(guardada?.paso_actual).toBeNull();
     expect(guardada?.datos).toEqual({});
     errorSpy.mockRestore();
+  });
+
+  /* Ronda C: lo que encontró la review de la ronda B --------------------- */
+
+  // La RED DE SEGURIDAD contra el cierre en silencio. `validarSecuencia` no
+  // marca este guion (su regla 10 solo aplica a secuencias que avisan en algún
+  // camino, para no poner en rojo cada secuencia nueva del editor), así que se
+  // puede activar desde el panel. Sin la red, el lead pulsaba el botón y NO
+  // PASABA NADA: ni respuesta, ni apunte en la ficha, ni nadie a quien
+  // llamarle — el mismo silencio del Critical de esta rama.
+  it("un cierre que no manda nada ni avisa se entrega a una persona con su nota", async () => {
+    const SECUENCIA_MUDA: SecuenciaFalsa = {
+      id: "s-muda",
+      estado: "activa",
+      anuncios: ["AD1"],
+      pasos: {
+        version: 1,
+        inicio: "inicio",
+        pasos: {
+          inicio: {
+            tipo: "mensaje",
+            texto: "¿Te interesa?",
+            botones: [{ texto: "No, gracias", ruta: { terminar: true } }],
+          },
+        },
+      },
+    };
+    const { deps, conversaciones, actividades, salientes } = depsFalsas({ secuencias: [SECUENCIA_MUDA] });
+
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+    await procesarWebhook({ cuerpo: sobrePulsacion("opcion_1", "No, gracias"), deps });
+
+    const conv = [...conversaciones.values()][0];
+    expect(conv.estado).toBe("humana");
+    expect(conv.paso_actual).toBeNull();
+    // La pulsación no manda nada: sigue estando solo el primer paso.
+    expect(salientes).toHaveLength(1);
+    expect(actividades).toHaveLength(1);
+    expect(actividades[0].nota).toBe(
+      "El lead respondió: «No, gracias». La secuencia se cerró sin contestar nada: revisa ese camino del guion.",
+    );
+  });
+
+  // Un cierre CON fase de descarte sí puede terminar en silencio: el lead dijo
+  // que no y queda registrado. Entregarlo a una persona sería mandarle a llamar
+  // a quien acaba de pedir que no le llamen.
+  it("un cierre con fase de descarte termina sin traspaso, solo registrando la fase", async () => {
+    const SECUENCIA_DESCARTE: SecuenciaFalsa = {
+      id: "s-descarte",
+      estado: "activa",
+      anuncios: ["AD1"],
+      pasos: {
+        version: 1,
+        inicio: "inicio",
+        pasos: {
+          inicio: {
+            tipo: "mensaje",
+            texto: "¿Te interesa?",
+            botones: [{ texto: "No me llaméis", ruta: { fase: "no_interesa", terminar: true } }],
+          },
+        },
+      },
+    };
+    const { deps, conversaciones, actividades, fases } = depsFalsas({ secuencias: [SECUENCIA_DESCARTE] });
+
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+    await procesarWebhook({ cuerpo: sobrePulsacion("opcion_1", "No me llaméis"), deps });
+
+    const conv = [...conversaciones.values()][0];
+    expect(conv.estado).toBe("bot");
+    expect(fases).toEqual([{ leadId: "lead-1", fase: "no_interesa" }]);
+    expect(actividades).toHaveLength(1);
+    // Sin la frase de «se cerró sin contestar nada»: no hay hueco que revisar.
+    expect(actividades[0].nota).toBe("El lead respondió: «No me llaméis».");
+    // Y como no hay frase de aviso, el apunte va como `cambio_fase`: así la RPC
+    // deja UNA entrada en la ficha en vez de una nota más su cambio de fase.
+    expect(registrarActividadMock).toHaveBeenCalledWith(
+      expect.objectContaining({ tipo: "cambio_fase", faseNueva: "no_interesa" }),
+    );
+  });
+
+  // El arranque tenía el mismo agujero que el avance: enviaba y luego guardaba
+  // el puntero con un update ciego. Dos entregas concurrentes (el lead toca
+  // «Enviar» dos veces sobre el mensaje prerrellenado del anuncio) mandaban el
+  // primer paso DOS veces y el lead se quedaba con dos juegos de botones.
+  it("dos entregas concurrentes del mismo clic de anuncio solo mandan un primer paso", async () => {
+    const { deps, salientes, conversaciones } = depsFalsas({ secuencias: [SECUENCIA_ACTIVA] });
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    await Promise.all([
+      procesarWebhook({ cuerpo: sobreConMensajes([mensajeDeAnuncio({ id: "wamid.AD.1", referral: { source_id: "AD1" } })]), deps }),
+      procesarWebhook({ cuerpo: sobreConMensajes([mensajeDeAnuncio({ id: "wamid.AD.2", referral: { source_id: "AD1" } })]), deps }),
+    ]);
+
+    expect(salientes).toHaveLength(1);
+    expect(conversaciones.size).toBe(1);
+    expect([...conversaciones.values()][0].paso_actual).toBe("inicio");
+    warnSpy.mockRestore();
+  });
+
+  // Hallazgo 2 de la review de la ronda B: cuando `reclamarPaso` LANZA, el
+  // recovery pasaba la conversación a `humana` con un update CIEGO. Si la otra
+  // entrega concurrente ya había reclamado y avanzado, ese update le borraba el
+  // puntero: el lead acababa de recibir un paso con botones, los pulsaba, y con
+  // `paso_actual` en `null` no se avanzaba nada ni quedaba nota. O sea que un
+  // hipo de red en la entrega PERDEDORA se llevaba por delante a la ganadora.
+  it("un fallo al reclamar en la entrega perdedora no borra el avance de la ganadora", async () => {
+    const SECUENCIA_DOS_PASOS: SecuenciaFalsa = {
+      id: "s-dos",
+      estado: "activa",
+      anuncios: ["AD1"],
+      pasos: {
+        version: 1,
+        inicio: "inicio",
+        pasos: {
+          inicio: {
+            tipo: "mensaje",
+            texto: "¿Cuál es tu problema?",
+            botones: [{ texto: "Faltan pacientes", ruta: { ir_a: "p2" } }],
+          },
+          p2: {
+            tipo: "mensaje",
+            texto: "¿Y cuántos al mes?",
+            botones: [{ texto: "Menos de 10", ruta: { avisar: true, terminar: true } }],
+          },
+        },
+      },
+    };
+    const { deps, conversaciones, salientes } = depsFalsas({ secuencias: [SECUENCIA_DOS_PASOS] });
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+
+    // La primera pulsación que llegue gana; la segunda falla al reclamar.
+    const reclamarOriginal = deps.reclamarPaso;
+    let intentos = 0;
+    deps.reclamarPaso = async (id, cambios) => {
+      intentos += 1;
+      if (intentos === 2) throw new Error("hipo de red al reclamar");
+      return reclamarOriginal(id, cambios);
+    };
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    await Promise.all([
+      procesarWebhook({ cuerpo: sobrePulsacionConWamid("wamid.P.1", "opcion_1", "Faltan pacientes"), deps }),
+      procesarWebhook({ cuerpo: sobrePulsacionConWamid("wamid.P.2", "opcion_1", "Faltan pacientes"), deps }),
+    ]);
+
+    const conv = [...conversaciones.values()][0];
+    // El avance de la ganadora sigue en pie: el lead puede pulsar el botón de
+    // `p2` y la secuencia continúa.
+    expect(conv.paso_actual).toBe("p2");
+    expect(conv.estado).toBe("bot");
+    expect(salientes.map((s) => s.texto)).toEqual(["¿Cuál es tu problema?", "¿Y cuántos al mes?"]);
+    errorSpy.mockRestore();
+    warnSpy.mockRestore();
+  });
+
+  // La rama viva del ternario `pasoActual: entregaAPersona ? null : ...`: un
+  // avance que NO traspasa tiene que escribir el paso nuevo y dejar la
+  // conversación en `bot` para que el lead pueda seguir el guion.
+  it("un avance que no traspasa escribe el paso nuevo y sigue en bot", async () => {
+    const SECUENCIA_DOS_PREGUNTAS: SecuenciaFalsa = {
+      id: "s-dos",
+      estado: "activa",
+      anuncios: ["AD1"],
+      pasos: {
+        version: 1,
+        inicio: "inicio",
+        pasos: {
+          inicio: {
+            tipo: "mensaje",
+            texto: "¿Cuál es tu problema?",
+            botones: [{ texto: "Faltan pacientes", ruta: { ir_a: "p2" } }],
+          },
+          p2: {
+            tipo: "mensaje",
+            texto: "¿Y cuántos al mes?",
+            botones: [{ texto: "Menos de 10", ruta: { avisar: true, ir_a: "cierre" } }],
+          },
+          cierre: { tipo: "mensaje", texto: "Te escribe mi compañera.", botones: [], ruta: { terminar: true } },
+        },
+      },
+    };
+    const { deps, conversaciones, salientes, actividades } = depsFalsas({ secuencias: [SECUENCIA_DOS_PREGUNTAS] });
+
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+    await procesarWebhook({ cuerpo: sobrePulsacion("opcion_1", "Faltan pacientes"), deps });
+
+    const conv = [...conversaciones.values()][0];
+    expect(conv.estado).toBe("bot");
+    expect(conv.paso_actual).toBe("p2");
+    expect(salientes.map((s) => s.texto)).toEqual(["¿Cuál es tu problema?", "¿Y cuántos al mes?"]);
+    // Un paso normal del guion no deja apunte en la ficha: eso es deliberado.
+    expect(actividades).toHaveLength(0);
   });
 });
 

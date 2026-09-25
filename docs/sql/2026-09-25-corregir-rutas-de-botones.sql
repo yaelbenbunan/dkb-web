@@ -24,9 +24,12 @@
 -- El contenido sale de src/lib/ventas/secuencias-plantilla.ts, que es donde
 -- está testeado (SECUENCIA_DENTAL y SECUENCIA_PSICOLOGIA).
 --
--- Los dos `update` van en una transacción: si el primero pasara y el segundo
--- no, quedarían las dos secuencias con formas distintas —una arreglada y otra
--- rota— sin nada que lo delate hasta que un lead pulsara un botón.
+-- Los dos `update` van en una transacción por si el segundo falla con un error
+-- (se cae la conexión, un permiso): así no queda una secuencia arreglada y la
+-- otra rota. OJO con lo que la transacción NO cubre, que es el caso más
+-- probable: que un `update` encaje 0 filas porque esa secuencia ya no está como
+-- la dejó el refundido. Eso no es un error, no aborta nada, y el resultado sí
+-- sería mixto. Lo que detecta ese caso es el `select` del final, no el commit.
 
 begin;
 

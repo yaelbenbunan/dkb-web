@@ -170,6 +170,30 @@ describe("validarSecuencia, regla 10: caminos que acaban sin avisar a la comerci
     expect(sinAviso(validarSecuencia(secuenciaVacia()))).toEqual([]);
   });
 
+  test("un botón de descarte NO se marca: el cierre queda registrado en el CRM", () => {
+    // El falso positivo más caro posible. Los tres botones de WhatsApp ya están
+    // gastados, así que un botón de salida solo puede entrar SUSTITUYENDO a uno
+    // que avisaba. Si eso levantara un aviso grave, `guardarSecuencia` bajaría
+    // la secuencia de `activa` a `borrador` devolviendo `{ ok: true }`, y todos
+    // los leads del anuncio pasarían a caer al respaldo genérico sin que nada
+    // lo dijera: campaña viva apagada por editar el copy.
+    for (const fase of ["perdido", "no_interesa", "ilocalizable", "fuera_de_perfil"] as const) {
+      const s = conHandoff();
+      s.pasos.inicio.botones[0].ruta = { fase, terminar: true };
+      delete s.pasos.cierre_a;
+      expect(sinAviso(validarSecuencia(s))).toEqual([]);
+    }
+  });
+
+  test("una fase que NO es de descarte no exime: «interesado» quiere una llamada", () => {
+    const s = conHandoff();
+    s.pasos.inicio.botones[0].ruta = { fase: "interesado", terminar: true };
+    delete s.pasos.cierre_a;
+    const avisos = sinAviso(validarSecuencia(s));
+    expect(avisos).toHaveLength(1);
+    expect(avisos[0]).toMatchObject({ paso: "inicio", grave: true });
+  });
+
   test("un botón que termina sin más también cuenta como camino sin avisar", () => {
     const s = conHandoff();
     s.pasos.inicio.botones.push({ texto: "Ahora no", ruta: { terminar: true } });

@@ -15,7 +15,7 @@ import { elegirSecuencia } from "./eleccion";
 import { aEstadoGuardado, desdeEstadoGuardado, indiceDeBoton, mensajesAEnviar, type EstadoGuardado } from "./guion";
 import { crearMensajero, type MensajeroWhatsApp } from "./mensajero";
 import { calcularVentana, telefonoDeWaId } from "./ventana";
-import { MARCA_DINKBIT_SLUG, type Fase } from "../ventas/dominio";
+import { esFaseDescarte, MARCA_DINKBIT_SLUG, type Fase } from "../ventas/dominio";
 import {
   buscarLeadPorContacto,
   crearLeads,
@@ -407,10 +407,18 @@ function fraseDeAviso(cambios: {
   avisos?: string[];
   motivoDetenido?: string;
   esperaDias?: number | null;
+  cerradaSinRespuesta?: boolean;
 }): string | null {
   const frases: string[] = [];
   if (cambios.avisos && cambios.avisos.length > 0) frases.push(conPuntoFinal(cambios.avisos.join("; ")));
   else if (cambios.motivoDetenido) frases.push(`La secuencia se detuvo: ${cambios.motivoDetenido}.`);
+  else if (cambios.cerradaSinRespuesta) {
+    // Cuarto vocabulario, y el que menos debería aparecer: el guion cerró el
+    // camino sin mandar nada y sin pedir que se avise (ver `sinRespuesta` en
+    // el avance). Se dice tal cual, porque lo que la comercial necesita saber
+    // es que el lead se quedó sin contestación y que el guion tiene un hueco.
+    frases.push("La secuencia se cerró sin contestar nada: revisa ese camino del guion.");
+  }
   if (cambios.esperaDias != null) frases.push(fraseDeEspera(cambios.esperaDias));
   return frases.length > 0 ? frases.join(" ") : null;
 }
@@ -471,6 +479,7 @@ async function avisarComercial(
     avisos?: string[];
     motivoDetenido?: string;
     esperaDias?: number | null;
+    cerradaSinRespuesta?: boolean;
     faseNueva?: Fase;
     respuestaLead?: string | null;
   },
@@ -719,43 +728,30 @@ async function procesarMensaje(
 
     try {
       if (arrancada && arrancada.mensajes.length > 0) {
-        // La FUENTE: el primer paso de la secuencia que sirve a este anuncio.
-        // Un paso con botones se manda con `enviarBotones`; uno sin botones,
-        // con `enviarTexto` (decisión 5 del brief).
-        for (const entrada of arrancada.mensajes) {
-          const resultado =
-            entrada.botones && entrada.botones.length > 0
-              ? await deps.mensajero.enviarBotones(mensaje.waId, entrada.texto, entrada.botones)
-              : await deps.mensajero.enviarTexto(mensaje.waId, entrada.texto);
-          await deps.guardarSaliente({
-            conversacionId: conversacion.id,
-            wamid: resultado.ok ? resultado.wamid : null,
-            texto: entrada.texto,
-            error: resultado.ok ? undefined : resultado.error,
-          });
-        }
-        // Puntero de por dónde va el guion: sin esto, el próximo mensaje del
-        // lead no tendría con qué estado continuar la secuencia.
+        // RECLAMAR el arranque ANTES de enviar, por el mismo motivo que en el
+        // avance: dos entregas concurrentes (el lead toca «Enviar» dos veces
+        // sobre el mensaje prerrellenado del anuncio, o vuelve a pulsar el
+        // anuncio en el mismo segundo) leen las dos la conversación sin puntero
+        // y las dos mandan el primer paso, así que el lead se queda con dos
+        // juegos de botones vivos e indistinguibles. El reclamo condiciona a
+        // `paso_actual is null`, que es el estado que las dos leyeron: solo una
+        // lo convierte en el paso de inicio.
+        let reclamado = false;
         try {
-          await deps.actualizarConversacion(conversacion.id, {
+          reclamado = await deps.reclamarPaso(conversacion.id, {
+            pasoEsperado: null,
             secuenciaId: arrancada.secuenciaId,
             pasoActual: arrancada.estado.pasoActual,
             datos: arrancada.estado.datos,
           });
         } catch (e) {
-          // El mensaje YA se mandó (y ya se guardó como saliente, arriba).
-          // Si este guardado falla, la conversación se queda con
-          // `paso_actual` en `null` — que es EXACTAMENTE lo que significa
-          // "secuencia terminada" (ver `desdeEstadoGuardado` en guion.ts) — y
-          // la idempotencia por wamid impide que un reintento de Meta lo
-          // repare: nadie volverá a intentar guardar este estado. No podemos
-          // garantizar que este segundo intento tenga más suerte que el
-          // primero (best-effort, en su propio try), pero sí evitar que el
-          // lead se quede mudo SIN QUE NADIE LO NOTE: se pasa la conversación
-          // a `humana` para que aparezca en la bandeja y una persona pueda
-          // retomarla a mano (Hallazgo 2, ronda de arreglos 1).
+          // No se pudo ni reclamar, y no se ha enviado nada: el lead no va a
+          // recibir el primer paso, y la idempotencia por wamid impide que un
+          // reintento de Meta lo repare. Se pasa a `humana` para que aparezca
+          // en la bandeja y una persona la retome a mano, en vez de dejar al
+          // lead mudo sin que nadie lo note (Hallazgo 2, ronda de arreglos 1).
           console.error(
-            "[whatsapp] fallo guardando el estado de la secuencia tras enviar su primer paso, se pasa a humana",
+            "[whatsapp] fallo reclamando el arranque de la secuencia, se pasa a humana",
             mensaje.waId,
             e,
           );
@@ -767,6 +763,52 @@ async function procesarMensaje(
               mensaje.waId,
               e2,
             );
+          }
+        }
+
+        if (!reclamado) {
+          console.warn(
+            "[whatsapp] otra entrega ya arrancó esta conversación, no se reenvía el primer paso",
+            mensaje.waId,
+            conversacion.id,
+          );
+        } else {
+          // La FUENTE: el primer paso de la secuencia que sirve a este anuncio.
+          // Un paso con botones se manda con `enviarBotones`; uno sin botones,
+          // con `enviarTexto` (decisión 5 del brief).
+          try {
+            for (const entrada of arrancada.mensajes) {
+              const resultado =
+                entrada.botones && entrada.botones.length > 0
+                  ? await deps.mensajero.enviarBotones(mensaje.waId, entrada.texto, entrada.botones)
+                  : await deps.mensajero.enviarTexto(mensaje.waId, entrada.texto);
+              await deps.guardarSaliente({
+                conversacionId: conversacion.id,
+                wamid: resultado.ok ? resultado.wamid : null,
+                texto: entrada.texto,
+                error: resultado.ok ? undefined : resultado.error,
+              });
+            }
+          } catch (e) {
+            // El arranque YA está reclamado: la conversación cree que va por el
+            // paso de inicio, pero el lead puede no haber recibido nada, y
+            // nadie va a reintentarlo (idempotencia por wamid). Se pasa a
+            // `humana` para que la conversación aparezca en la bandeja en vez
+            // de quedarse esperando un botón que el lead nunca vio.
+            console.error(
+              "[whatsapp] fallo enviando el primer paso ya reclamado, se pasa a humana",
+              mensaje.waId,
+              e,
+            );
+            try {
+              await deps.actualizarConversacion(conversacion.id, { estado: "humana" });
+            } catch (e2) {
+              console.error(
+                "[whatsapp] fallo también pasando la conversación a humana tras el error anterior",
+                mensaje.waId,
+                e2,
+              );
+            }
           }
         }
       } else {
@@ -903,7 +945,25 @@ async function procesarMensaje(
           // y se pasa a `humana` porque, sin cron, lo que de verdad la reanuda
           // es una llamada.
           const esperaDias = avanzada.esperaDias;
-          const entregaAPersona = pasaAHumana || esperaDias != null;
+          // RED DE SEGURIDAD contra el cierre en silencio. Si una transición no
+          // produce mensaje, ni aviso, ni deja el lead en una fase de descarte,
+          // entonces el lead pulsó un botón y NO PASÓ NADA: ni respuesta, ni
+          // apunte en la ficha, ni nadie a quien llamarle. Es la forma exacta
+          // del CRITICAL de esta rama, y puede volver por el panel —un botón
+          // con `terminar` a secas— sin que `validarSecuencia` lo marque,
+          // porque su regla 10 solo aplica a secuencias que avisan en algún
+          // camino (ahí ser estricto pondría en rojo cada secuencia nueva).
+          // Así que el validador aconseja y esto garantiza: se entrega a una
+          // persona. Un cierre CON fase de descarte no entra: ahí el lead dijo
+          // que no y queda registrado, no hay nada que recoger.
+          // Una espera NO entra aquí: es una parada deliberada del guion, no un
+          // hueco, y ya tiene su propia frase y su `reanudar_en`.
+          const sinRespuesta =
+            avanzada.mensajes.length === 0 &&
+            avanzada.avisos.length === 0 &&
+            esperaDias == null &&
+            !esFaseDescarte(avanzada.fase);
+          const entregaAPersona = pasaAHumana || esperaDias != null || sinRespuesta;
 
           // RECLAMAR el paso ANTES de enviar (ronda B1, arreglo 1). El orden
           // importa y es contraintuitivo, así que: el gate por `wamid` de
@@ -950,8 +1010,27 @@ async function procesarMensaje(
               e,
             );
             try {
-              await deps.actualizarConversacion(conversacion.id, { estado: "humana", pasoActual: null });
-              conversacion = { ...conversacion, estado: "humana" };
+              // CONDICIONADO al mismo paso que se leyó, no un update ciego. Si
+              // esto fuera ciego y la otra entrega concurrente ya hubiera
+              // reclamado y avanzado, le borraríamos el puntero y mataríamos
+              // una secuencia que iba bien: el lead acabaría de recibir un paso
+              // con botones, los pulsaría, y con `paso_actual` en `null` no se
+              // avanzaría nada ni quedaría nota. O sea que un hipo de red en la
+              // entrega PERDEDORA se llevaría por delante a la ganadora.
+              const recuperado = await deps.reclamarPaso(conversacion.id, {
+                pasoEsperado: pasoGuardado,
+                pasoActual: null,
+                datos: conversacion.datos,
+                estado: "humana",
+              });
+              if (recuperado) conversacion = { ...conversacion, estado: "humana" };
+              else {
+                console.warn(
+                  "[whatsapp] otra entrega ya avanzó esta conversación: no se fuerza el paso a humana",
+                  mensaje.waId,
+                  conversacion.id,
+                );
+              }
             } catch (e2) {
               console.error(
                 "[whatsapp] fallo también pasando la conversación a humana tras el error anterior",
@@ -1031,6 +1110,7 @@ async function procesarMensaje(
               // comercial necesita las dos cosas — por qué se le avisa y
               // desde cuándo está parada la conversación (ronda B1, arreglo 2).
               esperaDias: esperaDias ?? undefined,
+              cerradaSinRespuesta: sinRespuesta || undefined,
               faseNueva: faseNueva ?? undefined,
               respuestaLead: mensaje.texto,
             });

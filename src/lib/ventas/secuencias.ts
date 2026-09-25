@@ -15,7 +15,7 @@
  */
 
 import { z } from "zod";
-import { FASES, type Fase } from "./dominio";
+import { esFaseDescarte, FASES, type Fase } from "./dominio";
 
 /** Variables siempre disponibles; cada marca puede añadir las suyas. */
 export const VARIABLES_BASE = ["negocio", "contacto", "ciudad", "marca", "remitente"] as const;
@@ -270,6 +270,21 @@ export function validarSecuencia(s: Secuencia, variablesExtra: string[] = []): A
   // promete ninguna llamada es legítimo (informa y se despide); lo que no es
   // legítimo es que avise en dos caminos y en el tercero no, porque entonces la
   // propia secuencia demuestra que pretende un traspaso a una persona.
+  //
+  // Y un camino que deja el lead en una fase de DESCARTE tampoco se marca: un
+  // botón de salida («No me llaméis») es precisamente el tercer camino que
+  // legítimamente no quiere llamada, y el descarte queda registrado en el CRM.
+  // Sin esta excepción la regla apagaba campañas vivas: `guardarSecuencia` no
+  // solo bloquea la activación, baja a `borrador` una secuencia que estaba
+  // `activa` devolviendo `{ ok: true }`, así que añadir ese botón desde el panel
+  // dejaba a todos los leads del anuncio cayendo al respaldo genérico sin que
+  // nada lo dijera.
+  //
+  // Esta regla ACONSEJA; lo que GARANTIZA que el bot no cierre una conversación
+  // en silencio es `procesar.ts`, que entrega a una persona cualquier
+  // transición que no produzca mensaje, ni aviso, ni descarte. Por eso aquí se
+  // puede ser prudente con los falsos positivos: la red de seguridad está en el
+  // motor, no en el validador.
   const avisaEnAlgunCamino = Object.values(s.pasos).some((paso) =>
     rutasDelPaso(paso).some((ruta) => ruta.avisar),
   );
@@ -297,10 +312,13 @@ export function validarSecuencia(s: Secuencia, variablesExtra: string[] = []): A
       if (!paso) continue;
       for (const ruta of rutasTomables(paso)) {
         const yaAvisado = avisado || !!ruta.avisar;
+        // Un cierre con fase de descarte está recogido: el lead dijo que no y
+        // queda registrado. No hace falta que además avise a nadie.
+        const recogido = yaAvisado || esFaseDescarte(ruta.fase);
         // El mismo orden que `aplicarRuta`, que es lo que de verdad decide a
         // dónde va el guion: `terminar` gana a `esperar_dias`, y este a `ir_a`.
         if (ruta.terminar) {
-          if (!yaAvisado) sinRecoger.add(id);
+          if (!recogido) sinRecoger.add(id);
           continue;
         }
         if (ruta.esperar_dias !== undefined) {
@@ -317,7 +335,7 @@ export function validarSecuencia(s: Secuencia, variablesExtra: string[] = []): A
         }
         // Ruta vacía: `aplicarRuta` pone `pasoActual` a null y la conversación
         // se acaba igual, solo que sin decirlo.
-        if (!yaAvisado) sinRecoger.add(id);
+        if (!recogido) sinRecoger.add(id);
       }
     }
 

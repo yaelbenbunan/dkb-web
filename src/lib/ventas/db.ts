@@ -436,10 +436,16 @@ export interface SecuenciaRow {
   creada_por: string | null;
   created_at: string;
   updated_at: string;
-  /** A qué anuncios de Meta sirve esta secuencia. Hace falta porque
-   *  `activarSecuencia` archiva las demás activas de la marca: sin esto, dos
-   *  campañas vivas de la misma marca no podrían tener cada una su guion. El
-   *  `select("*")` de abajo ya la trae; no hace falta tocar la consulta. */
+  /** A qué anuncios de Meta sirve esta secuencia. Es lo que permite dos
+   *  campañas vivas a la vez bajo la misma marca: `activarSecuencia` solo
+   *  archiva las activas que compiten por los mismos anuncios, y
+   *  `whatsapp/eleccion.ts` manda a cada lead a la suya. El `select("*")` de
+   *  abajo ya la trae; no hace falta tocar la consulta.
+   *
+   *  El tipo dice `string[]`, pero una base donde la migración manual todavía
+   *  no está aplicada devuelve la fila SIN el campo: quien lo lea tiene que
+   *  defenderse (`?? []`), como hacen `elegirSecuencia` y
+   *  `compitenPorAnuncios`. */
   anuncios: string[];
 }
 
