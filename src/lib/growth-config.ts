@@ -5,19 +5,20 @@ import { CONTACT_INFO } from "./contact-info";
  *
  * El nombre comercial vive aquí y NINGÚN componente lo escribe literal: si
  * cambia, se cambia en este fichero. Lo mismo con la ruta — y esa además
- * necesita un redirect 301 en next.config.ts, como el que ya hay de /growth,
+ * necesita un redirect 301 en next.config.ts, como el que ya hay de /escala,
  * que se queda para siempre.
  *
- * **"Escala" todavía no está cerrado del todo** (§14 del documento de
- * producto). Está puesto porque la landing no puede seguir llamándose "growth"
- * mientras se decide, y porque cambiarlo ahora —sin campañas en marcha— cuesta
- * una redirección y nada más.
+ * **Vuelve a llamarse Growth desde el 25 de septiembre de 2026**, en
+ * dinkbit.es/growth, y con eso cambia también lo que vende: solo captación
+ * con campañas —landing, Google y Meta, análisis—, sin CRM ni agenda. La
+ * versión de Escala tal y como estaba queda en la etiqueta
+ * `respaldo/landing-escala-2026-09-25`.
  */
 export const GROWTH = {
   /** Nombre comercial. */
-  name: "Escala",
+  name: "Growth",
   /** Ruta de la landing. */
-  path: "/escala",
+  path: "/growth",
   /**
    * Fuente del vídeo del hero. Mientras sea null, la sección de vídeo no se
    * renderiza: la landing no debe esperar al vídeo para poder publicarse.
@@ -77,7 +78,9 @@ export const GROWTH = {
  *
  * 1. Diferenciación. Esta landing compite contra cientos de agencias que
  *    prometen "llenarte la agenda", y el sector entero es azul clarito. Un
- *    fondo casi negro con un lima eléctrico rompe con eso de un vistazo.
+ *    fondo casi negro con un turquesa encendido rompe con eso de un vistazo.
+ *    Fue lima (#C7F73E) mientras la landing se llamó Escala; con Growth pasa
+ *    a #30CCCE.
  *
  * 2. Inmunidad al tema. Los tokens del sitio (`text-fg`, `surface-elevated`…)
  *    cambian con el interruptor claro/oscuro, y esa dependencia ya provocó que
@@ -85,16 +88,13 @@ export const GROWTH = {
  *    claro en LOS DOS temas. Aquí los colores son explícitos y no dependen de
  *    nada externo, así que ese fallo no puede repetirse.
  *
- * **Hay UN acento y solo uno.** Hubo dos —lima para lo que se gana, rojo y
- * luego ámbar para el problema— y era peor: con dos colores el lector tiene que
- * ir aprendiendo qué significa cada uno mientras lee, y el rojo además sonaba a
- * reproche justo donde el dueño de la clínica tiene que reconocerse sin
- * ponerse a la defensiva.
+ * **Hay UN acento y solo uno.** Hubo dos —el acento para lo que se gana, rojo
+ * y luego ámbar para el problema— y era peor: con dos colores el lector tiene
+ * que ir aprendiendo qué significa cada uno mientras lee, y el rojo además
+ * sonaba a reproche justo donde el dueño de la clínica tiene que reconocerse
+ * sin ponerse a la defensiva.
  *
- * Con un solo acento, el lima quiere decir siempre lo mismo: esto importa. Y lo
- * que antes distinguía el color ahora lo distingue el sitio — la clínica que va
- * mal se pinta en gris y la que va bien en lima, así que la comparación se ve
- * antes de leerla.
+ * Con un solo acento, el color quiere decir siempre lo mismo: esto importa.
  *
  * Para remarcar dentro de una frase está `Subrayado`, un trazo torcido a mano.
  * Ver el porqué en ese componente.
@@ -106,8 +106,8 @@ export const GROWTH_THEME = {
   surface: "#131519",
   /** Bordes y separadores. */
   line: "#23262E",
-  /** Acento principal: lo que se gana. */
-  lime: "#C7F73E",
+  /** El único acento: lo que importa. */
+  accent: "#30CCCE",
   /** Texto principal. */
   fg: "#F5F7F8",
   /** Texto secundario. */

@@ -33,7 +33,7 @@ describe("textoAutorespuesta", () => {
     const texto = textoAutorespuesta({ anuncio: null });
     expect(texto).not.toContain("Llenamos los huecos de tu agenda");
     expect(texto).toMatch(/gracias por interesarte/i);
-    expect(texto).toContain("Escala");
+    expect(texto).toContain("Growth");
   });
 
   it("va directo a la pregunta, sin presentación larga", () => {
@@ -41,9 +41,9 @@ describe("textoAutorespuesta", () => {
     expect(texto).toMatch(/para poder ofrecerte la mejor solución/i);
   });
 
-  it("se presenta y explica qué es Escala", () => {
+  it("se presenta y explica qué es Growth", () => {
     const texto = textoAutorespuesta({ anuncio: null });
-    expect(texto).toContain("Escala");
+    expect(texto).toContain("Growth");
     expect(texto).toContain("Paula");
   });
 

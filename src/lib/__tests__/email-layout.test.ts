@@ -114,33 +114,33 @@ describe("renderBrandedEmail", () => {
   });
 });
 
-describe("tema de escala", () => {
-  const escala = () =>
-    renderBrandedEmail({ ...base, subject: "s", theme: "escala", cta: { label: "WhatsApp", url: "https://wa.me/34600" } });
+describe("tema de growth", () => {
+  const growth = () =>
+    renderBrandedEmail({ ...base, subject: "s", theme: "growth", cta: { label: "WhatsApp", url: "https://wa.me/34600" } });
 
   test("pinta la paleta de la landing, no la azul de dinkbit", () => {
-    const { html } = escala();
+    const { html } = growth();
     expect(html).toContain("#08090C"); // fondo casi negro
     expect(html).toContain("#131519"); // tarjeta
-    expect(html).toContain("#C7F73E"); // acento lima
+    expect(html).toContain("#30CCCE"); // acento turquesa
     expect(html).not.toContain("#187bef"); // el azul de dinkbit no pinta aquí
   });
 
-  test("el logo azul no vale sobre fondo oscuro: va el rótulo de escala", () => {
-    const { html } = escala();
+  test("el logo azul no vale sobre fondo oscuro: va el rótulo de growth", () => {
+    const { html } = growth();
     expect(html).not.toContain("dinkbit-email.png");
-    expect(html).toContain("escala");
+    expect(html).toContain("growth");
     expect(html).toContain("by dinkbit");
   });
 
   test("avisa a los clientes de correo de que el correo es oscuro", () => {
-    const { html } = escala();
+    const { html } = growth();
     expect(html).toContain('name="color-scheme" content="dark"');
     expect(html).toContain("supported-color-schemes");
   });
 
-  test("el botón lleva texto oscuro sobre el lima, que es donde se lee", () => {
-    const { html } = escala();
+  test("el botón lleva texto oscuro sobre el acento, que es donde se lee", () => {
+    const { html } = growth();
     const boton = html.slice(html.indexOf("https://wa.me/34600"));
     expect(boton).toContain("#08090C");
   });

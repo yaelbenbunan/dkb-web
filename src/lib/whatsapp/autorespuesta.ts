@@ -8,11 +8,11 @@
  * —se probó y quedaba pesado—, así que el titular puede escribirse libre en
  * Meta sin pensar en cómo suena dentro de una frase.
  *
- * El argumento cambia según el anuncio del que venga: a una clínica dental se
- * le habla de ganar más con cada paciente, y a una consulta de psicología de
- * llenar la agenda, porque su sesión tiene un precio que no se estira. Esa
- * distinción ya está decidida en `escala-sectores.ts` y no es un matiz de
- * estilo: es lo que hace que el mensaje aterrice o no.
+ * El argumento es el mismo para todos —llenar la agenda— desde el 25 de
+ * septiembre de 2026, cuando Growth dejó de vender «ganar más» y se quedó en
+ * la captación (`growth-sectores.ts`). Lo que cambia según el anuncio del que
+ * venga es cómo se nombra el sitio —clínica, consulta— y las opciones de
+ * respuesta.
  *
  * Un anuncio sin mapear cae en el texto común, que sirve para cualquier
  * clínica. Es deliberado: al estrenar una campaña el anuncio existe antes de
@@ -63,13 +63,13 @@ const PREGUNTA = "Para poder ofrecerte la mejor solución, cuéntanos: ¿cuál e
  */
 export const CUERPO: Record<Vertical, string> = {
   dental:
-    `¡Hola! Soy ${REMITENTE}, de Escala. Gracias por interesarte en nuestro proceso para que ganes más con cada paciente.\n\n` +
+    `¡Hola! Soy ${REMITENTE}, de Growth. Gracias por interesarte en nuestro proceso para llenar la agenda de tu clínica.\n\n` +
     PREGUNTA,
   psicologia:
-    `¡Hola! Soy ${REMITENTE}, de Escala. Gracias por interesarte en nuestro proceso para llenar la agenda de tu consulta.\n\n` +
+    `¡Hola! Soy ${REMITENTE}, de Growth. Gracias por interesarte en nuestro proceso para llenar la agenda de tu consulta.\n\n` +
     PREGUNTA,
   generico:
-    `¡Hola! Soy ${REMITENTE}, de Escala. Gracias por interesarte en nuestro proceso para conseguir que ganes más pacientes.\n\n` +
+    `¡Hola! Soy ${REMITENTE}, de Growth. Gracias por interesarte en nuestro proceso para llenar tu agenda de pacientes nuevos.\n\n` +
     PREGUNTA,
 };
 

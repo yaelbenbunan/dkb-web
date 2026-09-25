@@ -3,9 +3,9 @@ import { describe, expect, test } from "vitest";
 import { Pasos } from "../Pasos";
 
 const PASOS = [
-  { n: "01", t: "Traemos pacientes", d: "Campañas en Google y Meta." },
-  { n: "02", t: "A tu agenda", d: "La cita se escribe en tu calendario." },
-  { n: "03", t: "Tu rentabilidad", d: "Quién acudió y cuánto facturó." },
+  { n: "01", t: "Desarrollo de landing", d: "Una página de captación hecha para ti." },
+  { n: "02", t: "Gestión de campañas", d: "Anuncios en Google y Meta." },
+  { n: "03", t: "Análisis y optimización", d: "Qué campaña trae más solicitudes." },
 ];
 
 describe("Pasos", () => {
@@ -23,9 +23,9 @@ describe("Pasos", () => {
     const items = container.querySelectorAll("ol > li");
     expect(items).toHaveLength(PASOS.length);
     // Si se reordenara, la cronología que vende la sección dejaría de ser
-    // cierta: primero se traen, luego se agendan, luego se mide.
-    expect(items[0].textContent).toContain("Traemos pacientes");
-    expect(items[2].textContent).toContain("Tu rentabilidad");
+    // cierta: primero la landing, luego las campañas, luego se mide.
+    expect(items[0].textContent).toContain("Desarrollo de landing");
+    expect(items[2].textContent).toContain("Análisis y optimización");
   });
 
   test("los dibujos no cuentan nada que el texto no diga", () => {

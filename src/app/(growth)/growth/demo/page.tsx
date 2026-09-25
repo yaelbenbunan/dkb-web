@@ -6,7 +6,7 @@ import { CalculadoraWizard } from "../_components/CalculadoraWizard";
 /**
  * Ruta de demostración del simulador, para enseñarlo sin recorrer el embudo.
  *
- * Vive aparte de `/escala` por tres motivos:
+ * Vive aparte de `/growth` por tres motivos:
  *
  * 1. La landing sigue siendo estática. Leer parámetros de la URL obliga a
  *    renderizar en cada petición, y no compensa pagarlo en la página que
@@ -18,7 +18,7 @@ import { CalculadoraWizard } from "../_components/CalculadoraWizard";
  *    El cliente sigue sin poder calcular, que es lo que impide enseñar el
  *    resultado sin pedir el contacto en el embudo de verdad.
  *
- * Uso: /escala/demo?inv=1500&pac=45&tk=250
+ * Uso: /growth/demo?inv=1500&pac=45&tk=250
  */
 export const metadata: Metadata = {
   title: "Simulador (demostración)",
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-/** Valores por defecto, para que /escala/demo a secas ya enseñe algo. */
+/** Valores por defecto, para que /growth/demo a secas ya enseñe algo. */
 const POR_DEFECTO = { inv: "1500", pac: "45", tk: "250" };
 
 export default async function GrowthDemoPage({
@@ -48,7 +48,7 @@ export default async function GrowthDemoPage({
       <div className="mx-auto w-full max-w-3xl px-6 md:px-10">
         <p
           className="text-xs font-bold uppercase tracking-[0.28em]"
-          style={{ color: T.lime }}
+          style={{ color: T.accent }}
         >
           Demostración
         </p>

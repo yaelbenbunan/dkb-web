@@ -5,7 +5,7 @@ import {
   getAllPosts,
 } from "@/lib/content";
 import { ALL_DEVICES } from "@/lib/kit-digital-data";
-import { SECTORES_ESCALA } from "@/lib/escala-sectores";
+import { SECTORES_GROWTH } from "@/lib/growth-sectores";
 
 const SITE = "https://www.dinkbit.es";
 
@@ -20,7 +20,7 @@ interface StaticRoute {
 const STATIC_ROUTES: StaticRoute[] = [
   { path: "", priority: 1.0, changeFrequency: "weekly" },
   { path: "/servicios", priority: 0.9, changeFrequency: "weekly" },
-  { path: "/escala", priority: 0.9, changeFrequency: "weekly" },
+  { path: "/growth", priority: 0.9, changeFrequency: "weekly" },
   { path: "/puesto-seguro", priority: 0.9, changeFrequency: "weekly" },
   { path: "/kit-digital-2026", priority: 0.9, changeFrequency: "weekly" },
   { path: "/web-para-psicologos", priority: 0.9, changeFrequency: "weekly" },
@@ -72,15 +72,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // Se generan de la lista y no se escriben a mano en STATIC_ROUTES: un sector
   // nuevo entra en el sitemap el mismo día que existe su página, sin que haya que
   // acordarse de venir aquí.
-  const sectoresEscala = SECTORES_ESCALA.map((s) => ({
-    url: `${SITE}/escala/${s.slug}`,
+  const sectoresGrowth = SECTORES_GROWTH.map((s) => ({
+    url: `${SITE}/growth/${s.slug}`,
     lastModified: now,
     changeFrequency: "weekly" as Freq,
     priority: 0.8,
   }));
   return [
     ...staticRoutes,
-    ...sectoresEscala,
+    ...sectoresGrowth,
     ...services,
     ...cases,
     ...posts,

@@ -33,7 +33,7 @@ export function Trama({
       : {
           // Rayas a 45°, muy separadas: de cerca son líneas, de lejos es un
           // tejido. El truco es que el hueco sea diez veces la raya.
-          backgroundImage: `repeating-linear-gradient(45deg, ${T.lime}0d 0 1px, transparent 1px 14px)`,
+          backgroundImage: `repeating-linear-gradient(45deg, ${T.accent}0d 0 1px, transparent 1px 14px)`,
         };
 
   return (

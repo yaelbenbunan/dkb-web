@@ -4,9 +4,9 @@ import { GROWTH_THEME as T } from "@/lib/growth-config";
  * Subraya unas palabras con un trazo hecho a mano.
  *
  * **Es el único recurso de énfasis de la landing, y sustituye a un segundo
- * color.** Antes había dos acentos: lima para lo que se gana y otro tono para
+ * color.** Antes había dos acentos: uno para lo que se gana y otro tono para
  * el problema. Con dos colores, el lector tiene que aprender qué significa cada
- * uno mientras lee; con uno solo, el lima significa siempre lo mismo —esto
+ * uno mientras lee; con uno solo, el acento significa siempre lo mismo —esto
  * importa— y no hay nada que descifrar.
  *
  * El trazo va torcido a propósito. Una línea recta bajo una palabra es una
@@ -20,7 +20,7 @@ import { GROWTH_THEME as T } from "@/lib/growth-config";
  */
 export function Subrayado({
   children,
-  color = T.lime,
+  color = T.accent,
   grosor = 1,
 }: {
   children: React.ReactNode;

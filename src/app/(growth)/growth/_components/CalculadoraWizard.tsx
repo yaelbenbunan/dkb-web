@@ -132,7 +132,7 @@ export function CalculadoraWizard({
         >
           <div
             className="h-full rounded-full transition-all duration-300"
-            style={{ width: `${((paso + 1) / total) * 100}%`, background: T.lime }}
+            style={{ width: `${((paso + 1) / total) * 100}%`, background: T.accent }}
           />
         </div>
         <p className="shrink-0 text-xs font-bold uppercase tracking-[0.18em]" style={{ color: T.muted }}>
@@ -189,7 +189,7 @@ export function CalculadoraWizard({
                 setPaso((p) => p + 1);
               }}
               className={botonPrincipalClass}
-              style={{ background: T.lime, color: T.ink }}
+              style={{ background: T.accent, color: T.ink }}
             >
               Siguiente
             </button>
@@ -254,14 +254,14 @@ export function CalculadoraWizard({
 
           <div className="mt-6 space-y-4">
             <label htmlFor="name" className="block">
-              <span className={legendClass} style={{ color: T.lime }}>
+              <span className={legendClass} style={{ color: T.accent }}>
                 Nombre
               </span>
               <input id="name" name="name" required className={inputClass} style={inputStyle} />
             </label>
 
             <label htmlFor="email" className="block">
-              <span className={legendClass} style={{ color: T.lime }}>
+              <span className={legendClass} style={{ color: T.accent }}>
                 Email
               </span>
               <input
@@ -275,7 +275,7 @@ export function CalculadoraWizard({
             </label>
 
             <label htmlFor="phone" className="block">
-              <span className={legendClass} style={{ color: T.lime }}>
+              <span className={legendClass} style={{ color: T.accent }}>
                 Teléfono
               </span>
               <input
@@ -307,7 +307,7 @@ export function CalculadoraWizard({
                 <Link
                   href="/privacidad"
                   className="font-bold underline underline-offset-2"
-                  style={{ color: T.lime }}
+                  style={{ color: T.accent }}
                 >
                   política de privacidad
                 </Link>
@@ -320,12 +320,12 @@ export function CalculadoraWizard({
             type="submit"
             disabled={pendiente}
             className={`${botonPrincipalClass} mt-7 w-full`}
-            style={{ background: T.lime, color: T.ink }}
+            style={{ background: T.accent, color: T.ink }}
           >
             {pendiente ? "Calculando…" : "Ver mi resultado"}
           </button>
           {error && (
-            <p role="alert" className="mt-3 text-center text-sm font-bold" style={{ color: T.lime }}>
+            <p role="alert" className="mt-3 text-center text-sm font-bold" style={{ color: T.accent }}>
               {error}
             </p>
           )}
@@ -359,7 +359,7 @@ function Dato({
           className="whitespace-nowrap font-black tabular-nums"
           style={{
             fontSize: destacar ? "clamp(1.5rem, 5vw, 2rem)" : "clamp(1.125rem, 4vw, 1.375rem)",
-            color: destacar ? T.lime : T.fg,
+            color: destacar ? T.accent : T.fg,
           }}
         >
           {valor}
@@ -488,14 +488,14 @@ function Resultado({ resultado }: { resultado: CalcResult }) {
       <div className="rounded-3xl p-7 text-center sm:p-9" style={tarjetaStyle}>
         <strong
           className="block font-black leading-tight"
-          style={{ fontSize: "clamp(1.75rem, 6vw, 2.75rem)", color: T.lime }}
+          style={{ fontSize: "clamp(1.75rem, 6vw, 2.75rem)", color: T.accent }}
         >
           No se puede calcular
         </strong>
         <p className="mt-5 text-base leading-relaxed" style={{ color: T.muted }}>
           {resultado.sinPacientes
             ? "Inviertes y no te está llegando nadie. Eso es lo primero que hay que mirar."
-            : "Y eso es justo el hallazgo: nadie está midiendo qué pasa entre el anuncio y la caja."}
+            : "Y eso es justo el hallazgo: nadie está midiendo qué trae cada anuncio."}
         </p>
         <DiagnosticoCta />
       </div>
@@ -506,7 +506,7 @@ function Resultado({ resultado }: { resultado: CalcResult }) {
     <div className="rounded-3xl p-7 text-center sm:p-9" style={tarjetaStyle}>
       <strong
         className="block font-black leading-tight"
-        style={{ fontSize: "clamp(1.75rem, 6vw, 2.75rem)", color: T.lime }}
+        style={{ fontSize: "clamp(1.75rem, 6vw, 2.75rem)", color: T.accent }}
       >
         Todavía no hay coste que medir
       </strong>
@@ -554,7 +554,7 @@ function DiagnosticoCta() {
         target="_blank"
         rel="noopener noreferrer"
         className={`${botonPrincipalClass} w-full`}
-        style={{ background: T.lime, color: T.ink }}
+        style={{ background: T.accent, color: T.ink }}
       >
         Pídenos el diagnóstico comentado
       </a>

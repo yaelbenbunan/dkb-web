@@ -1,5 +1,5 @@
 import { GROWTH_THEME as T } from "@/lib/growth-config";
-import { GENERAL, type SectorEscala } from "@/lib/escala-sectores";
+import { GENERAL, type SectorGrowth } from "@/lib/growth-sectores";
 
 /**
  * Las preguntas que salen siempre en la primera llamada, contestadas antes.
@@ -10,7 +10,7 @@ import { GENERAL, type SectorEscala } from "@/lib/escala-sectores";
  * pregunta incómoda con su nombre. Puestas antes, estas mismas respuestas
  * sembrarían dudas que el lector todavía no tenía.
  *
- * **Las cuatro primeras son de dinero y ninguna se esquiva.** "¿Cómo puede ser
+ * **Las primeras son de dinero y ninguna se esquiva.** "¿Cómo puede ser
  * tan barato?" es la que piensa todo el mundo y nadie dice en voz alta, y no
  * contestarla deja al lector con la única explicación que se le ocurre sola:
  * que hay truco. La inversión en anuncios y la cuota de alta ya están en la
@@ -23,19 +23,33 @@ import { GENERAL, type SectorEscala } from "@/lib/escala-sectores";
  * contestaba con Gesden, que es un gestor dental. La respuesta es la misma para
  * todos; lo que no puede es delatar para quién se escribió.
  *
+ * **Desde el 25 de septiembre de 2026 no hablan de sistema ni de agenda.** La
+ * pregunta del programa de gestión salió entera —solo tenía sentido mientras
+ * conectábamos la agenda de la clínica— y entró la de la diferencia entre
+ * planes, que ahora es sencilla de contestar: canales e informe.
+ *
  * Hechas con `<details>` nativo: se abren sin una línea de JavaScript, el
  * teclado y el lector de pantalla las entienden de serie, y el buscador ve el
  * texto de las respuestas aunque estén cerradas.
  */
 
-const preguntasComunes = (s: SectorEscala): { p: string; r: string }[] => [
+const preguntasComunes = (s: SectorGrowth): { p: string; r: string }[] => [
   {
     p: "¿Cómo puede costar tan poco?",
     r:
-      `Porque el sistema ya está construido y es el mismo para ${s.local.todos}. La web, ` +
-      `el sistema de ${s.termino.plural}, la agenda y el panel no se hacen otra vez cada vez: lo que ` +
-      "se prepara para ti son tus textos, tus tratamientos y tus campañas. No estás pagando " +
-      "que alguien te desarrolle un sistema, estás pagando por usarlo.",
+      `Porque solo hacemos esto: captar ${s.termino.plural} con una landing y campañas en Google ` +
+      `y Meta, y el método es el mismo para ${s.todos}. Lo que se prepara para ti son tus ` +
+      "textos, tus tratamientos y tus anuncios. No estás pagando que alguien se invente un " +
+      "proceso desde cero, estás pagando por uno que ya funciona.",
+  },
+  {
+    p: "¿Qué diferencia hay entre los dos planes?",
+    r:
+      "Los canales y el informe. El básico lleva tus campañas en uno —Google o Meta, el que " +
+      "mejor encaje con lo que ofreces— y el avanzado en los dos. Además, en el avanzado te " +
+      "mandamos cada mes un informe con lo que ha pasado —cuántas solicitudes han llegado, de " +
+      "qué campaña y a qué coste— y lo repasamos juntos en una reunión online. La landing y " +
+      "la optimización de las campañas van en los dos.",
   },
   {
     p: "¿La inversión en anuncios está incluida?",
@@ -43,16 +57,16 @@ const preguntasComunes = (s: SectorEscala): { p: string; r: string }[] => [
       "No, y es la parte que conviene tener clara desde el principio. Lo que pagas a Google " +
       "y a Meta lo pagas tú directamente con tu tarjeta: ese dinero no pasa por nuestras " +
       "manos y no nos llevamos ninguna comisión de lo que inviertes. La cuota es por el " +
-      "sistema y por el trabajo de llevarlo.",
+      "trabajo: tu landing y llevar tus campañas.",
   },
   {
     p: "¿Hay algún pago al empezar?",
     r:
       "Sí: una cuota de alta que se paga una sola vez, 150 € en el plan básico y 200 € en " +
-      "el avanzado. El trabajo del principio es real y está concentrado —tu web, la " +
-      "configuración de las campañas y el alta en el sistema— y por eso no va dentro de la " +
-      "cuota mensual. Ese es el importe y no hay otro: lo tienes escrito aquí para que no " +
-      "aparezca por sorpresa en la llamada.",
+      "el avanzado. El trabajo del principio es real y está concentrado —tu landing y la " +
+      "configuración de las campañas— y por eso no va dentro de la cuota mensual. Ese es el " +
+      "importe y no hay otro: lo tienes escrito aquí para que no aparezca por sorpresa en la " +
+      "llamada.",
   },
   {
     p: "¿Cuánto tengo que invertir en anuncios?",
@@ -71,28 +85,14 @@ const preguntasComunes = (s: SectorEscala): { p: string; r: string }[] => [
       "día de la baja.",
   },
   {
-    p: `¿Tengo que cambiar el programa que uso en ${s.local.uno}?`,
-    r:
-      "No. Se sigue dando hora donde se da hoy. Si tu agenda está en Google " +
-      "Calendar o en Outlook, la conectamos y las citas que vengan de campañas se escriben " +
-      "en un calendario aparte dentro de tu propia cuenta, para que se vean junto a las " +
-      "demás sin mezclarse. " +
-      (s.gestores
-        ? `Y si tu agenda vive en ${s.gestores} o cualquier otro gestor, `
-        : "Y si tu agenda vive en tu programa de gestión, ") +
-      `el sistema funciona igual: lo que medimos es de dónde viene cada ${s.termino.singular} y ` +
-      "cuánto factura, no dónde está escrita la cita.",
-  },
-  {
     p: "¿Y si ya tengo web?",
     r:
       "La tuya se queda como está: no la tocamos ni la sustituimos. Montamos aparte una " +
-      "página de captación, alojada por nosotros, y ahí dirigimos todo el tráfico de las " +
+      "landing de captación, alojada por nosotros, y ahí dirigimos todo el tráfico de las " +
       "campañas. Está lista en días y no hay que tocar nada de lo que ya tienes. Sale " +
-      "mejor así: a esa página solo llega gente de anuncios, y por eso los números se " +
-      `pueden atribuir con precisión. Lo que sí conviene saber es que los ${s.termino.plural} que ` +
-      "entren por tu web de siempre no aparecerán en el sistema. Si más adelante quieres " +
-      "que la página vaya en un dominio tuyo, se cambia cuando digas.",
+      "mejor así: a esa página solo llega gente de anuncios, y por eso se sabe con precisión " +
+      `qué campaña trae a cada ${s.termino.singular}. Si más adelante quieres que la landing ` +
+      "vaya en un dominio tuyo, se cambia cuando digas.",
   },
 ];
 
@@ -101,7 +101,7 @@ const preguntasComunes = (s: SectorEscala): { p: string; r: string }[] => [
  *   con la duda de su gremio —si se puede anunciar terapia, si sirve trabajando
  *   con mutuas—, y enterrada bajo siete preguntas de dinero no la encuentra.
  */
-export function Faqs({ sector = GENERAL }: { sector?: SectorEscala } = {}) {
+export function Faqs({ sector = GENERAL }: { sector?: SectorGrowth } = {}) {
   const preguntas = [...sector.preguntas, ...preguntasComunes(sector)];
   return (
     // Un tercio y dos tercios, en proporción y no en un ancho fijo. La columna
@@ -110,7 +110,7 @@ export function Faqs({ sector = GENERAL }: { sector?: SectorEscala } = {}) {
     // mientras al lado sobraba sitio. En fracciones, las dos crecen juntas.
     <div className="grid gap-10 lg:grid-cols-[1fr_2fr] lg:gap-16">
       <div>
-        <p className="text-sm font-bold uppercase tracking-[0.24em]" style={{ color: T.lime }}>
+        <p className="text-sm font-bold uppercase tracking-[0.24em]" style={{ color: T.accent }}>
           Preguntas frecuentes
         </p>
         <h2
@@ -119,7 +119,7 @@ export function Faqs({ sector = GENERAL }: { sector?: SectorEscala } = {}) {
         >
           Lo que se pregunta
           <br />
-          <span style={{ color: T.lime }}>en la primera llamada.</span>
+          <span style={{ color: T.accent }}>en la primera llamada.</span>
         </h2>
         <p className="mt-6 text-base leading-relaxed" style={{ color: T.muted }}>
           Contestado aquí para que no haya que llamar para saberlo.
@@ -144,7 +144,7 @@ export function Faqs({ sector = GENERAL }: { sector?: SectorEscala } = {}) {
               <span
                 aria-hidden
                 className="relative block h-6 w-6 shrink-0"
-                style={{ color: T.lime }}
+                style={{ color: T.accent }}
               >
                 <span
                   className="absolute left-1/2 top-1/2 block h-[2px] w-4 -translate-x-1/2 -translate-y-1/2 rounded-full"

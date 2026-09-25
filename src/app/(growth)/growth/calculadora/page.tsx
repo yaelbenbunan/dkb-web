@@ -28,7 +28,7 @@ export default function Calculadora() {
     <section className="px-6 py-16 md:py-24">
       <div className="mx-auto max-w-3xl">
         <Link
-          href="/escala"
+          href="/growth"
           className="text-sm font-bold underline underline-offset-4"
           style={{ color: T.muted }}
         >
@@ -37,7 +37,7 @@ export default function Calculadora() {
 
         <p
           className="mt-8 text-xs font-bold uppercase tracking-[0.28em]"
-          style={{ color: T.lime }}
+          style={{ color: T.accent }}
         >
           Empieza por aquí
         </p>

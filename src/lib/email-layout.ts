@@ -28,11 +28,11 @@ const FONT_STACK = "'Source Sans Pro','Source Sans 3',Helvetica,Arial,sans-serif
 /**
  * Paletas del correo.
  *
- * Existen porque escala no es dinkbit: quien rellena el formulario viene de una
- * página casi negra con acento lima, y recibía un correo blanco y azul. El salto
- * se notaba, así que el correo se viste como la página de la que viene.
+ * Existen porque Growth no es dinkbit: quien rellena el formulario viene de una
+ * página casi negra con acento turquesa, y recibía un correo blanco y azul. El
+ * salto se notaba, así que el correo se viste como la página de la que viene.
  *
- * Los colores del tema `escala` son los mismos de GROWTH_THEME (growth-config),
+ * Los colores del tema `growth` son los mismos de GROWTH_THEME (growth-config),
  * copiados a mano: este fichero no puede importar de la landing porque lo usan
  * también los correos que no tienen nada que ver con ella.
  */
@@ -54,10 +54,10 @@ const THEMES = {
     shadow: "0 18px 50px -24px rgba(15,23,42,0.35)",
     colorScheme: "light",
   },
-  escala: {
+  growth: {
     page: "#08090C",
     card: "#131519",
-    accent: "#C7F73E",
+    accent: "#30CCCE",
     onAccent: "#08090C",
     heading: "#F5F7F8",
     // Ni el gris apagado de la landing ni el blanco del titular: sobre #131519
@@ -78,19 +78,20 @@ const THEMES = {
 export type EmailTheme = keyof typeof THEMES;
 
 /**
- * Rótulo de escala en HTML, sin imágenes.
+ * Rótulo de Growth en HTML, sin imágenes.
  *
  * El logotipo de la landing es un componente con cuatro barras, y no hay PNG
  * equivalente para correo; el de dinkbit es azul y sobre este fondo no se lee.
  * Las barras se pintan con celdas de tabla de colores sólidos, que es lo único
- * que aguanta en Outlook, y los cuatro verdes son los del logotipo original.
+ * que aguanta en Outlook, y los cuatro colores son los del logotipo de la
+ * landing (`Logotipo.tsx`).
  */
-function escalaLockup(t: (typeof THEMES)["escala"]): string {
+function growthLockup(t: (typeof THEMES)["growth"]): string {
   const bars = [
-    { h: 10, c: "#4A5A21" },
-    { h: 17, c: "#647C28" },
-    { h: 25, c: "#88A830" },
-    { h: 34, c: "#C7F73D" },
+    { h: 10, c: "#124B4C" },
+    { h: 17, c: "#186667" },
+    { h: 25, c: "#218B8C" },
+    { h: 34, c: "#30CCCE" },
   ];
   return `<table role="presentation" cellpadding="0" cellspacing="0"><tr>
       <td valign="bottom" style="padding-right:10px;">
@@ -104,7 +105,7 @@ function escalaLockup(t: (typeof THEMES)["escala"]): string {
         </tr></table>
       </td>
       <td valign="middle">
-        <div style="font-size:22px;font-weight:900;letter-spacing:-1px;color:${t.heading};line-height:1.1;">escala</div>
+        <div style="font-size:22px;font-weight:900;letter-spacing:-1px;color:${t.heading};line-height:1.1;">growth</div>
         <div style="font-size:11px;font-weight:700;letter-spacing:2.4px;color:${t.muted};text-transform:uppercase;">by dinkbit</div>
       </td>
     </tr></table>`;
@@ -173,7 +174,7 @@ export interface BrandedEmailInput {
   /** Botón de acción. Se omite si falta o si la URL no es http/https. */
   cta?: { label: string; url: string };
   /**
-   * Paleta del correo. Por defecto la de dinkbit (clara, azul); `"escala"`
+   * Paleta del correo. Por defecto la de dinkbit (clara, azul); `"growth"`
    * viste el correo como la landing de la que viene el lead.
    */
   theme?: EmailTheme;
@@ -246,7 +247,7 @@ export function renderBrandedEmail(input: BrandedEmailInput): {
 
   <tr><td style="padding:26px 36px 6px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td align="left" valign="middle">${input.theme === "escala" ? escalaLockup(THEMES.escala) : `<img src="${BRAND.logoUrl}" alt="dinkbit" width="116" style="display:block;width:116px;height:auto;">`}</td>
+      <td align="left" valign="middle">${input.theme === "growth" ? growthLockup(THEMES.growth) : `<img src="${BRAND.logoUrl}" alt="dinkbit" width="116" style="display:block;width:116px;height:auto;">`}</td>
       ${
         input.eyebrow
           ? `<td align="right" valign="middle" style="font-size:12px;font-weight:700;letter-spacing:2px;color:${accent};text-transform:uppercase;">${esc(input.eyebrow)}</td>`
@@ -261,7 +262,7 @@ export function renderBrandedEmail(input: BrandedEmailInput): {
   </td></tr>
 ${bulletsHtml}${ctaHtml}
   <tr><td style="padding:20px 36px 28px;border-top:1px solid ${t.line};">
-    <p style="margin:0;font-size:12px;color:${t.muted};">${input.theme === "escala" ? "escala by dinkbit" : "dinkbit"} · <a href="${BRAND.siteUrl}" style="color:${accent};text-decoration:none;">www.dinkbit.es</a> · ${BRAND.contactEmail}</p>
+    <p style="margin:0;font-size:12px;color:${t.muted};">${input.theme === "growth" ? "growth by dinkbit" : "dinkbit"} · <a href="${BRAND.siteUrl}" style="color:${accent};text-decoration:none;">www.dinkbit.es</a> · ${BRAND.contactEmail}</p>
   </td></tr>
 
 </table>

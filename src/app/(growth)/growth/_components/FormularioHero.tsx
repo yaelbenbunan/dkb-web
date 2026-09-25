@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { requestGrowth } from "@/lib/growth-action";
 import { GROWTH, GROWTH_THEME as T } from "@/lib/growth-config";
-import { SECTORES_FORMULARIO } from "@/lib/escala-sectores";
+import { SECTORES_FORMULARIO } from "@/lib/growth-sectores";
 import { track, pushUserData } from "@/lib/gtm";
 import { newEventId, trackMetaLead } from "@/lib/meta-pixel";
 import { trackChatGptLead } from "@/lib/chatgpt-pixel";
@@ -28,8 +28,8 @@ import { appendUtms } from "@/lib/utm";
  * tarjeta apenas un tono más clara que la página: se camuflaba justo donde
  * tiene que llamar la atención. En una página casi negra, lo blanco es lo único
  * que grita "esto se rellena". El botón invierte otra vez —negro con letra
- * lima— para que dentro de la tarjeta clara siga habiendo un punto de máximo
- * contraste, que es donde tiene que ir el dedo.
+ * del color del acento— para que dentro de la tarjeta clara siga habiendo un
+ * punto de máximo contraste, que es donde tiene que ir el dedo.
  */
 
 /** La tarjeta clara. Estos colores solo viven aquí: no son del tema. */
@@ -39,7 +39,7 @@ const BORDE = "rgba(11, 27, 43, 0.16)";
 
 /**
  * @param sectorPorDefecto Deja el desplegable ya elegido. Lo pasan las landings
- *   de sector: quien llega a /escala/dental ya ha dicho lo que es al entrar, y
+ *   de sector: quien llega a /growth/dental ya ha dicho lo que es al entrar, y
  *   volvérselo a preguntar es un campo más entre él y el botón. Además el sector
  *   viaja con el lead, así que el aviso llega etiquetado aunque nadie lo toque.
  */
@@ -59,7 +59,7 @@ export function FormularioHero({
         id="empezar"
         role="status"
         className="scroll-mt-8 rounded-3xl p-7 sm:p-8"
-        style={{ background: PAPEL, color: TINTA, boxShadow: `0 0 0 6px ${T.lime}22` }}
+        style={{ background: PAPEL, color: TINTA, boxShadow: `0 0 0 6px ${T.accent}22` }}
       >
         <p className="text-2xl font-black leading-tight">Recibido.</p>
         <p className="mt-3 text-base leading-relaxed" style={{ color: "rgba(11,27,43,0.65)" }}>
@@ -67,9 +67,9 @@ export function FormularioHero({
           calcula lo que te cuesta hoy conseguir un {termino}.
         </p>
         <Link
-          href="/escala/calculadora"
+          href="/growth/calculadora"
           className="mt-6 inline-flex h-12 items-center justify-center rounded-full px-7 text-base font-bold"
-          style={{ background: TINTA, color: T.lime }}
+          style={{ background: TINTA, color: T.accent }}
         >
           Calcular
         </Link>
@@ -86,9 +86,9 @@ export function FormularioHero({
       style={{
         background: PAPEL,
         color: TINTA,
-        // Un halo de lima en vez de un borde: separa la tarjeta del fondo sin
+        // Un halo del acento en vez de un borde: separa la tarjeta del fondo sin
         // dibujarle una caja alrededor.
-        boxShadow: `0 0 0 6px ${T.lime}22, 0 30px 60px -20px rgba(0,0,0,0.6)`,
+        boxShadow: `0 0 0 6px ${T.accent}22, 0 30px 60px -20px rgba(0,0,0,0.6)`,
       }}
       action={(fd) => {
         // La calculadora manda tres cifras; aquí no se preguntan. Vacías
@@ -125,7 +125,7 @@ export function FormularioHero({
       <span
         aria-hidden
         className="absolute -right-3 -top-4 rotate-[-7deg] rounded-full px-4 py-1.5 text-sm font-black"
-        style={{ background: T.lime, color: TINTA, boxShadow: "0 8px 20px -8px rgba(0,0,0,0.7)" }}
+        style={{ background: T.accent, color: TINTA, boxShadow: "0 8px 20px -8px rgba(0,0,0,0.7)" }}
       >
         Te llamamos hoy
       </span>
@@ -179,7 +179,7 @@ export function FormularioHero({
         </div>
 
         {/* **En una landing de sector no se pregunta qué sector es.**
-            Quien llega a /escala/dental ya lo ha dicho al entrar, y volvérselo a
+            Quien llega a /growth/dental ya lo ha dicho al entrar, y volvérselo a
             preguntar es un campo más entre él y el botón — en un formulario de
             captación eso se paga en leads perdidos. El dato viaja igual, oculto,
             así que el aviso sigue llegando etiquetado («Growth — Ana (Clínica
@@ -245,7 +245,7 @@ export function FormularioHero({
         type="submit"
         disabled={pendiente}
         className="mt-5 inline-flex w-full items-center justify-center rounded-full py-3.5 text-lg font-bold transition-transform enabled:hover:-translate-y-0.5 disabled:opacity-60"
-        style={{ background: TINTA, color: T.lime }}
+        style={{ background: TINTA, color: T.accent }}
       >
         {pendiente ? "Enviando…" : "Quiero que me llaméis"}
       </button>

@@ -1,10 +1,9 @@
 import Image from "next/image";
 import { GROWTH_THEME as T } from "@/lib/growth-config";
 import { CONTACT_INFO } from "@/lib/contact-info";
-import type { FilaAgenda, FilaComparativa, SectorEscala } from "@/lib/escala-sectores";
+import type { SectorGrowth } from "@/lib/growth-sectores";
 import { Pasos } from "./Pasos";
 import { Subrayado } from "./Subrayado";
-import { Circulo } from "./Circulo";
 import { Trama } from "./Trama";
 import { Logotipo } from "./Logotipo";
 import { FormularioHero } from "./FormularioHero";
@@ -14,16 +13,16 @@ import { Faqs } from "./Faqs";
 import { AlAparecer } from "./AlAparecer";
 
 /**
- * El cuerpo de la landing, compartido por `/escala` y por cada `/escala/<sector>`.
+ * El cuerpo de la landing, compartido por `/growth` y por cada `/growth/<sector>`.
  *
  * **Existe para que no haya dos copias.** La alternativa era duplicar el fichero
  * por sector, y con cinco copias el día que cambie el precio hay que acordarse de
  * tocarlo en cinco sitios: no se acuerda nadie, y lo que queda es una landing
  * anunciando una tarifa que ya no existe.
  *
- * Lo que cambia por sector son tres cosas —la cabecera, los números de la tabla
- * y las preguntas—; todo lo demás es el mismo producto, y se comparte porque lo
- * es. Los datos vienen de `escala-sectores.ts`, que explica el porqué de cada
+ * Lo que cambia por sector son tres cosas —la cabecera, a quién buscan las
+ * campañas y las preguntas—; todo lo demás es el mismo producto, y se comparte
+ * porque lo es. Los datos vienen de `growth-sectores.ts`, que explica el porqué de cada
  * uno.
  */
 
@@ -114,7 +113,7 @@ function Wrap({
 }
 
 /** Etiqueta pequeña en mayúsculas que abre cada sección. */
-function Eyebrow({ children, color = T.lime }: { children: React.ReactNode; color?: string }) {
+function Eyebrow({ children, color = T.accent }: { children: React.ReactNode; color?: string }) {
   return (
     <p className="text-sm font-bold uppercase tracking-[0.24em]" style={{ color }}>
       {children}
@@ -123,121 +122,38 @@ function Eyebrow({ children, color = T.lime }: { children: React.ReactNode; colo
 }
 
 /**
- * Los tres pasos del sistema, en orden cronológico real.
- *
- * Eran cuatro y sobraba uno: "no se pierde ni uno" y "sabemos quién vino" son
- * el mismo tramo contado dos veces —lo que le pasa al paciente desde que deja
- * el teléfono hasta que se sienta en el sillón—. Tres pasos se leen de una
- * pasada; cuatro ya piden esfuerzo.
+ * Los tres pasos del servicio, en el orden en que pasan.
  *
  * Hacen doble trabajo: explican el proceso y son, a la vez, el inventario de
  * lo que entra en la cuota. Por eso el precio va justo detrás — "todo esto,
  * desde 199 €" solo se entiende si acabas de leer qué es "todo esto".
  *
- * Y ninguno dice "CRM". Lo entiende quien ya sabe lo que es, que no es el
- * dueño de una clínica dental.
+ * **Son tres porque Growth es eso y nada más** (25 de septiembre de 2026): la
+ * landing, las campañas y el análisis. Hasta entonces el segundo paso metía a
+ * cada paciente «en tu sistema con su ficha y su cita» y el tercero medía lo
+ * que facturaba; ese sistema ya no forma parte de lo que se vende, y un paso
+ * que lo prometiera sería lo primero que un cliente reclamaría.
  *
- * El trabajo no cambia por sector —montar la web, traer gente y medir qué dejó
- * es lo mismo en una consulta de psicología que en una dental—, pero sí cómo se
- * cuenta: a quién se busca y qué se mide. Estuvo fijo, y la landing de estética
- * prometía «Traemos tus pacientes» a un centro que no tiene pacientes.
+ * Solo el de campañas cambia por sector: a quién se busca se dice con las
+ * palabras del gremio.
  */
-function pasosPara(sector: SectorEscala) {
+function pasosPara(sector: SectorGrowth) {
   return [
     {
       n: "01",
-      t: "Hacemos tu web",
-      d: "Montada y alojada por nosotros, pensada para que quien entre pida cita. No hay que tocar nada ni contratar a nadie más.",
+      t: "Desarrollo de landing",
+      d: "Una página de captación hecha para ti, alojada por nosotros y pensada para que quien llegue desde un anuncio pida cita. No hay que tocar nada ni contratar a nadie más.",
     },
-    { n: "02", t: `Traemos tus ${sector.termino.plural}`, d: sector.pasos.traemos },
+    { n: "02", t: "Gestión de campañas", d: sector.campanas },
     {
       n: "03",
-      t: sector.pasos.tituloAnalizamos ?? "Analizamos tu rentabilidad",
-      d: sector.pasos.analizamos,
+      t: "Análisis y optimización",
+      d: "Medimos qué campañas y qué anuncios traen más solicitudes, y a qué coste. Con eso ajustamos anuncios, públicos y presupuesto cada mes.",
     },
   ];
 }
 
-/**
- * Lo que pinta cada tarjeta de la tabla del problema, sea cual sea su tipo.
- *
- * Las dos tablas —beneficio y agenda— tienen filas distintas, pero la tarjeta
- * es la misma: unas filas, una cifra grande rodeada y una frase. Traducirlas
- * aquí deja el JSX de la tarjeta igual para las dos.
- */
-function columnasDe(sector: SectorEscala) {
-  const c = sector.comparativa;
-  const personas = enMayuscula(sector.termino.plural);
-
-  if (c.tipo === "agenda") {
-    const filas = (f: FilaAgenda) => [
-      { k: "Sesiones que caben a la semana", v: c.capacidad },
-      { k: `${personas} nuevos al mes`, v: f.nuevos },
-      { k: "Sesiones ocupadas", v: f.ocupadas },
-      { k: "Huecos libres", v: f.libres },
-    ];
-    return {
-      rotulo: "Agenda ocupada",
-      sin: { filas: filas(c.sin), destacado: c.sin.ocupacion, remate: c.sin.remate },
-      con: { filas: filas(c.con), destacado: c.con.ocupacion, remate: c.con.remate },
-    };
-  }
-
-  // Donde se viene varias veces, precio y veces por separado: un «ticket
-  // medio» de 300 € se lee como precio de sesión y nadie se lo cree.
-  const precio = c.repite
-    ? [
-        { k: c.repite.rotuloPrecio, v: c.ticket },
-        { k: c.repite.rotuloVeces, v: c.repite.veces },
-      ]
-    : [{ k: "Ticket medio", v: c.ticket }];
-  const filas = (f: FilaComparativa) => [
-    ...precio,
-    { k: `${personas} nuevos`, v: f.entran },
-    { k: "Se gasta en traerlos", v: f.gasto },
-    { k: "Factura", v: f.factura },
-  ];
-  return {
-    rotulo: "Beneficio",
-    sin: { filas: filas(c.sin), destacado: c.sin.queda, remate: c.sin.remate },
-    con: { filas: filas(c.con), destacado: c.con.queda, remate: c.con.remate },
-  };
-}
-
-/** «pacientes» → «Pacientes», para el rótulo de la tabla. */
-function enMayuscula(palabra: string): string {
-  return palabra.charAt(0).toUpperCase() + palabra.slice(1);
-}
-
-export function PaginaEscala({ sector }: { sector: SectorEscala }) {
-  /**
-   * Las dos columnas del bloque del problema.
-   *
-   * Es la pieza que sostiene todo el argumento: una trabaja el doble y se lleva
-   * un tercio. Va en cifras grandes y no en prosa porque el dueño de un negocio
-   * reconoce su propia situación en un número antes que en un párrafo.
-   *
-   * Los rótulos son neutros —«sin escala» y «con escala»— y no «la que llena la
-   * agenda» / «la que mira los números». Aquellas etiquetas daban el veredicto
-   * antes de enseñar los números, y así el lector no comparaba: leía una
-   * conclusión. La frase de debajo de cada tarjeta sigue diciendo quién es quién,
-   * pero después.
-   */
-  const columnas = columnasDe(sector);
-  const comparativa = [
-    { ...columnas.sin, color: T.muted, conLogo: false, rodeado: false },
-    {
-      ...columnas.con,
-      color: T.lime,
-      // Solo ésta lleva el logotipo. Es lo que convierte una comparación
-      // abstracta en una promesa con nombre: la de la derecha es la que nos
-      // tiene a nosotros.
-      conLogo: true,
-      // Solo ésta se rodea: si se marcaran las dos, no señalaría nada.
-      rodeado: true,
-    },
-  ];
-
+export function PaginaGrowth({ sector }: { sector: SectorGrowth }) {
   return (
     <>
       {/* ───────── 1. Hero ───────── */}
@@ -332,12 +248,12 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
         <div
           aria-hidden
           className="pointer-events-none absolute -right-32 top-1/2 h-[42rem] w-[42rem] -translate-y-1/2 rounded-full blur-[130px]"
-          style={{ background: T.lime, opacity: 0.16 }}
+          style={{ background: T.accent, opacity: 0.16 }}
         />
         <div
           aria-hidden
           className="pointer-events-none absolute -left-40 -top-40 h-[34rem] w-[34rem] rounded-full blur-[140px]"
-          style={{ background: T.lime, opacity: 0.07 }}
+          style={{ background: T.accent, opacity: 0.07 }}
         />
         <Wrap ancho className="relative">
           {/* **El titular y el formulario, uno al lado del otro.**
@@ -385,7 +301,7 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
               {sector.eyebrow && (
                 <p
                   className="mb-5 text-sm font-bold uppercase tracking-[0.24em]"
-                  style={{ color: T.lime }}
+                  style={{ color: T.accent }}
                 >
                   {sector.eyebrow}
                 </p>
@@ -407,15 +323,15 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
                 <br />
                 <span
                   className="whitespace-nowrap max-sm:whitespace-normal"
-                  style={{ color: T.lime }}
+                  style={{ color: T.accent }}
                 >
                   {sector.titular.segunda}
                 </span>
               </h1>
 
-              {/* En blanco entero: el lima ya está en el titular, justo encima,
+              {/* En blanco entero: el acento ya está en el titular, justo encima,
                   y repetirlo aquí hacía que las dos frases compitieran. Lo que
-                  destaca "ganar más" es el trazo, no el color. */}
+                  destaca la palabra es el trazo, no el color. */}
               <p
                 className="mt-9 max-w-3xl font-bold leading-[1.3] tracking-[-0.015em] text-balance lg:mt-14"
                 style={{ fontSize: "clamp(1.5rem, 2.6vw, 3.25rem)" }}
@@ -444,113 +360,7 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
         </Wrap>
       </header>
 
-      {/* ───────── 2. El problema ───────── */}
-      <section
-        id="problema"
-        className="relative overflow-hidden py-16 md:py-20 lg:py-24"
-        style={{ background: T.surface }}
-      >
-        <Trama motivo="rayas" desde="70% 40%" />
-        <Wrap className="relative">
-          <AlAparecer>
-            <Eyebrow>El problema</Eyebrow>
-
-            <h2
-              className="mt-8 max-w-4xl font-black leading-[1.05] tracking-[-0.02em] text-balance"
-              style={{ fontSize: "clamp(2.25rem, 5.2vw, 4.5rem)" }}
-            >
-              {sector.tituloProblema}
-            </h2>
-          </AlAparecer>
-
-          {/* Escalonadas: entrando a la vez se leen como un bloque, y lo que
-              tienen que leerse es como una comparación — primero una y después
-              la otra, que es el orden en que se entiende. */}
-          <div className="mt-12 grid gap-5 md:grid-cols-2">
-            {comparativa.map((c, i) => (
-              <AlAparecer key={c.remate} retraso={i * 140} className="h-full">
-                <div
-                  className="h-full rounded-3xl p-7 md:p-9"
-                  style={{
-                    background: c.rodeado
-                      ? `radial-gradient(120% 100% at 50% 0%, ${T.lime}14, ${T.ink} 60%)`
-                      : T.ink,
-                    border: `1px solid ${c.color}44`,
-                  }}
-                >
-                  {/* El rótulo de la tarjeta ganadora lleva el logotipo en vez de
-                      la palabra suelta: es lo que ata el número de abajo a un
-                      nombre. Va en versión compacta para no romper el renglón —el
-                      logotipo entero mete una segunda línea y deja de leerse como
-                      parte de la frase. */}
-                  <p
-                    className="flex flex-wrap items-center gap-x-1.5 text-sm font-bold uppercase tracking-[0.18em]"
-                    style={{ color: c.color }}
-                  >
-                    {c.conLogo ? (
-                      <>
-                        {sector.negocio} con <Logotipo compacto />
-                      </>
-                    ) : (
-                      `${sector.negocio} sin escala`
-                    )}
-                  </p>
-
-                  <div className="mt-7 space-y-4">
-                    {c.filas.map((f) => (
-                      <div key={f.k} className="flex items-baseline justify-between gap-3">
-                        <span className="text-base" style={{ color: T.muted }}>
-                          {f.k}
-                        </span>
-                        <span
-                          className="font-black tabular-nums"
-                          style={{ fontSize: "clamp(1.5rem, 2.2vw, 1.875rem)" }}
-                        >
-                          {f.v}
-                        </span>
-                      </div>
-                    ))}
-                    <div
-                      className="flex items-baseline justify-between gap-3"
-                      style={{ borderTop: `1px solid ${T.line}`, paddingTop: "1rem" }}
-                    >
-                      <span className="text-base font-bold" style={{ color: T.fg }}>
-                        {columnas.rotulo}
-                      </span>
-                      {c.rodeado ? (
-                        <Circulo>
-                          <span
-                            className="font-black leading-none tabular-nums"
-                            style={{ fontSize: "clamp(2.25rem, 4.5vw, 3.5rem)", color: c.color }}
-                          >
-                            {c.destacado}
-                          </span>
-                        </Circulo>
-                      ) : (
-                        <span
-                          className="font-black leading-none tabular-nums"
-                          style={{ fontSize: "clamp(2.25rem, 4.5vw, 3.5rem)", color: c.color }}
-                        >
-                          {c.destacado}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <p
-                    className="mt-8 font-bold leading-snug"
-                    style={{ fontSize: "clamp(1.0625rem, 1.4vw, 1.25rem)" }}
-                  >
-                    {c.remate}
-                  </p>
-                </div>
-              </AlAparecer>
-            ))}
-          </div>
-        </Wrap>
-      </section>
-
-      {/* ───────── 3. La solución ─────────
+      {/* ───────── 2. La solución ─────────
           Los tres pasos son a la vez la explicación del proceso y el inventario
           de lo que se compra, así que el precio va dos secciones más abajo
           apoyado en ellos: "desde 199 €" solo se entiende si acabas de leer qué
@@ -563,7 +373,7 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
         <div
           aria-hidden
           className="pointer-events-none absolute -top-32 right-0 h-[32rem] w-[32rem] rounded-full blur-[130px]"
-          style={{ background: T.lime, opacity: 0.09 }}
+          style={{ background: T.accent, opacity: 0.09 }}
         />
         <Wrap className="relative">
           <AlAparecer>
@@ -573,24 +383,24 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
               className="mt-8 max-w-5xl font-black leading-[1.02] tracking-[-0.03em] text-balance"
               style={{ fontSize: "clamp(2.5rem, 6vw, 5.5rem)" }}
             >
-              Un sistema integral.
+              Nos ocupamos de todo.
               <br />
-              <span style={{ color: T.lime }}>De principio a fin.</span>
+              <span style={{ color: T.accent }}>De principio a fin.</span>
             </h2>
 
-            {/* El subtítulo, y lo que de verdad se compra: no un sistema, sino
-                dejar de ocuparse de esto.
+            {/* El subtítulo, y lo que de verdad se compra: no unos anuncios,
+                sino dejar de ocuparse de llenar la agenda.
 
                 Estuvo suelto después de los tres pasos, de remate. Aquí funciona
-                mejor por una razón que no es de maquetación: "todo lo demás" pide
-                que le expliquen qué es, y justo debajo están los tres pasos
+                mejor por una razón que no es de maquetación: "llenarte la agenda" pide
+                que le expliquen cómo, y justo debajo están los tres pasos
                 diciéndolo. Antes cerraba; ahora abre. */}
             <p
               className="mt-8 font-bold leading-[1.2] tracking-[-0.015em] text-balance"
               style={{ fontSize: "clamp(1.375rem, 2.4vw, 2.25rem)" }}
             >
               Tú encárgate de {sector.tuParte}.{" "}
-              <span style={{ color: T.lime }}>Nosotros, de todo lo demás.</span>
+              <span style={{ color: T.accent }}>Nosotros, de llenarte la agenda.</span>
             </p>
           </AlAparecer>
 
@@ -598,7 +408,7 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
         </Wrap>
       </section>
 
-      {/* ───────── 4. Los planes ─────────
+      {/* ───────── 3. Los planes ─────────
           El título estuvo DENTRO de la tabla, en la casilla vacía de la
           esquina, para no separar los precios de los tres pasos que los
           justifican. Salió mal: sin nada que abriera la sección, la tabla
@@ -614,22 +424,22 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
               la tabla. Ver el porqué allí: aquí fuera dejaba una banda vacía a
               su derecha y otra entre él y la tabla. */}
           <AlAparecer>
-            <Planes termino={sector.termino.plural} panel={sector.panel} />
+            <Planes />
           </AlAparecer>
         </Wrap>
       </section>
 
-      {/* ───────── 5. El compromiso ─────────
+      {/* ───────── 4. El compromiso ─────────
           Va justo después del precio y las garantías: es la respuesta a la
           desconfianza que deja cualquier tarifa.
 
-          Va sobre lima y en negro, la única sección de toda la página que
-          invierte los colores. Después de cuatro pantallas de fondo oscuro, el
+          Va sobre el acento y en negro, la única sección de toda la página que
+          invierte los colores. Después de tres pantallas de fondo oscuro, el
           cambio se nota antes de leer una palabra — y esta es justo la frase
           que tiene que quedarse. */}
       <section
         className="flex items-center py-20 md:py-24 lg:py-28"
-        style={{ background: T.lime, color: T.ink }}
+        style={{ background: T.accent, color: T.ink }}
       >
         <Wrap>
           {/* **El hecho primero; el porqué, debajo.**
@@ -701,19 +511,19 @@ export function PaginaEscala({ sector }: { sector: SectorEscala }) {
         </Wrap>
       </section>
 
-      {/* ───────── 6. Elegir hueco ─────────
+      {/* ───────── 5. Elegir hueco ─────────
           Entre el cierre emocional y la letra pequeña: quien ha llegado hasta
           aquí ya está convencido o casi, y es el momento en que tiene sentido
           ofrecerle zanjarlo él mismo sin esperar una llamada. */}
       <CalendarioReserva />
 
-      {/* ───────── 7. Preguntas frecuentes ─────────
+      {/* ───────── 6. Preguntas frecuentes ─────────
           Después de la frase del compromiso y no antes del precio. Quien llega
           hasta aquí ya ha visto la tabla y ya ha decidido si le encaja; lo que
           le queda es la desconfianza, y eso no se resuelve con más argumentos
           sino contestando la pregunta incómoda con su nombre.
 
-          Vuelve al fondo oscuro a propósito: el bloque lima de arriba es el
+          Vuelve al fondo oscuro a propósito: el bloque de color de arriba es el
           cierre emocional y tiene que quedarse como tal. */}
       <section
         className="relative overflow-hidden py-16 md:py-20 lg:py-24"

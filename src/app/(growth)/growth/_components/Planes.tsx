@@ -28,12 +28,12 @@ import { GROWTH_THEME as T } from "@/lib/growth-config";
  * precio —que es lo que se viene a mirar— cae justo en medio.
  *
  * **Los dos planes se venden igual de bien.** Se llegó a marcar mucho el
- * avanzado —columna teñida, precio en lima, botón de color solo en él— y era un
+ * avanzado —columna teñida, precio en color, botón de color solo en él— y era un
  * error de negocio: nos interesa que contraten, sea el que sea, y un básico
  * apagado al lado de un avanzado encendido dice "el barato es el de segunda".
  * Quien no se puede permitir 299 no sube de plan al ver eso: se va.
  *
- * Así que los dos llevan el mismo precio en lima, el mismo botón y el mismo
+ * Así que los dos llevan el mismo precio en el color del acento, el mismo botón y el mismo
  * peso. Lo único que distingue al avanzado es una etiqueta discreta y un fondo
  * apenas teñido: suficiente para guiar, no tanto como para descartar el otro.
  */
@@ -47,18 +47,20 @@ type Valor = true | false | string;
 
 type Fila = { t: string; basico: Valor; avanzado: Valor; apagado?: boolean };
 
-/** `termino` en plural: un centro de estética no tiene «sistema de pacientes». */
-const incluye = (termino: string, panel: string): Fila[] => [
-  { t: "Página web", basico: true, avanzado: true },
-  { t: "Campañas de publicidad", basico: "Google o Meta", avanzado: "Google y Meta" },
-  { t: `Sistema de ${termino}`, basico: true, avanzado: true },
-  { t: "Citas en tu agenda", basico: true, avanzado: true },
-  { t: panel, basico: true, avanzado: true },
-  { t: "Informe mensual de resultados", basico: true, avanzado: true },
-  // Por correo y no por WhatsApp desde el 2026-09-23 (§14.1 del documento de
-  // producto): WhatsApp no está construido para las clínicas y no se promete
-  // hasta tenerlo probado.
-  { t: "Recordatorio y confirmación de citas por correo", basico: false, avanzado: true },
+/**
+ * Lo que entra en cada plan.
+ *
+ * **Solo captación desde el 25 de septiembre de 2026.** La tabla llevaba
+ * además sistema de pacientes, citas en tu agenda, panel de rentabilidad y
+ * recordatorios, y todo eso sale: Growth es la landing, las campañas y el
+ * análisis. Lo que distingue los planes son los canales —uno o dos— y el
+ * informe mensual, que va solo en el avanzado.
+ */
+const FILAS: Fila[] = [
+  { t: "Landing de captación", basico: true, avanzado: true },
+  { t: "Campañas de publicidad", basico: "1 canal: Google o Meta", avanzado: "2 canales: Google y Meta" },
+  { t: "Análisis y optimización de campañas", basico: true, avanzado: true },
+  { t: "Informe mensual de resultados", basico: false, avanzado: true },
   { t: "Reunión mensual online", basico: false, avanzado: true },
   // Las dos van DENTRO de la tabla y no en la letra pequeña. Son las dos
   // preguntas que hace todo el mundo en la primera llamada, y descubrirlas
@@ -106,15 +108,12 @@ const CONDICIONES =
   "inviertes. El segundo canal pide una inversión mínima de 300 € al mes: por debajo de " +
   "esa cifra, el presupuesto no da para mantener dos campañas activas todos los días del " +
   "mes. Sin permanencia: pagas mes a mes y te vas cuando quieras. Al empezar sí hay una " +
-  "cuota de alta única de 150 € en el básico y 200 € en el avanzado: la web, la " +
-  "configuración de las campañas y el alta en el sistema son trabajo real y concentrado, y " +
-  "por eso no van dentro de la mensualidad.";
+  "cuota de alta única de 150 € en el básico y 200 € en el avanzado: la landing y la " +
+  "configuración de las campañas son trabajo real y concentrado, y por eso no van dentro de " +
+  "la mensualidad.";
 
-export function Planes({
-  termino = "pacientes",
-  panel = "Panel de rentabilidad",
-}: { termino?: string; panel?: string } = {}) {
-  const filas = incluye(termino, panel);
+export function Planes() {
+  const filas = FILAS;
   return (
     <div>
       {/* ── Tabla, de tableta para arriba ── */}
@@ -158,7 +157,7 @@ export function Planes({
                 <th
                   key={plan.id}
                   className="px-6 pb-8 pt-3 text-center align-bottom"
-                  style={plan.destacado ? { background: `${T.lime}08` } : undefined}
+                  style={plan.destacado ? { background: `${T.accent}08` } : undefined}
                 >
                   <Encabezado plan={plan} />
                 </th>
@@ -183,7 +182,7 @@ export function Planes({
                   <td
                     key={plan.id}
                     className="px-6 py-4 text-center align-middle"
-                    style={plan.destacado ? { background: `${T.lime}08` } : undefined}
+                    style={plan.destacado ? { background: `${T.accent}08` } : undefined}
                   >
                     <Celda
                       valor={plan.id === "basico" ? fila.basico : fila.avanzado}
@@ -201,7 +200,7 @@ export function Planes({
                 <td
                   key={plan.id}
                   className="px-6 pb-7 pt-7 align-top"
-                  style={plan.destacado ? { background: `${T.lime}08` } : undefined}
+                  style={plan.destacado ? { background: `${T.accent}08` } : undefined}
                 >
                   <Boton />
                 </td>
@@ -230,8 +229,8 @@ export function Planes({
             key={plan.id}
             className="rounded-3xl p-6"
             style={{
-              background: plan.destacado ? `${T.lime}08` : T.ink,
-              border: `1px solid ${plan.destacado ? `${T.lime}33` : T.line}`,
+              background: plan.destacado ? `${T.accent}08` : T.ink,
+              border: `1px solid ${plan.destacado ? `${T.accent}33` : T.line}`,
             }}
           >
             <Encabezado plan={plan} />
@@ -251,7 +250,7 @@ export function Planes({
                     >
                       {fila.t}
                       {typeof valor === "string" && (
-                        <span style={{ color: fila.apagado ? T.muted : T.lime }}> · {valor}</span>
+                        <span style={{ color: fila.apagado ? T.muted : T.accent }}> · {valor}</span>
                       )}
                     </span>
                   </li>
@@ -298,7 +297,7 @@ function Encabezado({ plan }: { plan: (typeof PLANES)[number] }) {
         {plan.destacado && (
           <span
             className="rounded-full px-2.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-[0.12em]"
-            style={{ color: T.lime, border: `1px solid ${T.lime}55` }}
+            style={{ color: T.accent, border: `1px solid ${T.accent}55` }}
           >
             Más completo
           </span>
@@ -306,7 +305,7 @@ function Encabezado({ plan }: { plan: (typeof PLANES)[number] }) {
       </p>
       <p
         className="mt-3 block font-black leading-[0.9] tabular-nums tracking-[-0.04em]"
-        style={{ fontSize: "clamp(3.5rem, 6.4vw, 5.75rem)", color: T.lime }}
+        style={{ fontSize: "clamp(3.5rem, 6.4vw, 5.75rem)", color: T.accent }}
       >
         {plan.precio}
       </p>
@@ -329,7 +328,7 @@ function Boton() {
     <a
       href="#empezar"
       className="inline-flex w-full items-center justify-center rounded-full px-6 py-3.5 text-base font-bold transition-transform hover:-translate-y-0.5"
-      style={{ background: T.lime, color: T.ink }}
+      style={{ background: T.accent, color: T.ink }}
     >
       Me interesa este plan
     </a>
@@ -342,7 +341,7 @@ function Celda({ valor, apagado }: { valor: Valor; apagado?: boolean }) {
     return (
       <span
         className="font-bold"
-        style={{ fontSize: "1.125rem", color: apagado ? T.muted : T.lime }}
+        style={{ fontSize: "1.125rem", color: apagado ? T.muted : T.accent }}
       >
         {valor}
       </span>
@@ -375,7 +374,7 @@ function Marca({ activo }: { activo: boolean }) {
       role="img"
       viewBox="0 0 24 24"
       className="h-7 w-7 shrink-0"
-      style={{ color: T.lime }}
+      style={{ color: T.accent }}
     >
       <path
         d="M4.5 12.5l5 5 10-11"

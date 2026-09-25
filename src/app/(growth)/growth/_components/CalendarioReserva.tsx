@@ -36,7 +36,7 @@ export function CalendarioReserva() {
           <div>
             <p
               className="text-sm font-bold uppercase tracking-[0.24em]"
-              style={{ color: T.lime }}
+              style={{ color: T.accent }}
             >
               Sin esperar a que te llamemos
             </p>
@@ -49,22 +49,22 @@ export function CalendarioReserva() {
             >
               Agenda una
               <br />
-              <span style={{ color: T.lime }}>reunión online.</span>
+              <span style={{ color: T.accent }}>reunión online.</span>
             </h2>
             <p className="mt-6 max-w-md text-base leading-relaxed" style={{ color: T.muted }}>
-              Una videollamada corta para ver tus números, explicarte el sistema y decirte si
+              Una videollamada corta para ver tus números, explicarte cómo trabajamos y decirte si
               encaja con tu negocio. Sin compromiso.
             </p>
           </div>
 
           {/* La tarjeta blanca es del propio Google y no se puede teñir desde
               fuera, así que en vez de disimularla se le da marco: fondo claro,
-              esquinas redondeadas y el mismo halo lima que lleva el formulario
+              esquinas redondeadas y el mismo halo de color que lleva el formulario
               del hero. Así se lee como una pieza de esta página y no como algo
               pegado. */}
           <div
             className="overflow-hidden rounded-3xl"
-            style={{ boxShadow: `0 0 0 6px ${T.lime}22, 0 30px 60px -20px rgba(0,0,0,0.6)` }}
+            style={{ boxShadow: `0 0 0 6px ${T.accent}22, 0 30px 60px -20px rgba(0,0,0,0.6)` }}
           >
             <iframe
               src={GROWTH.demoEmbedUrl}

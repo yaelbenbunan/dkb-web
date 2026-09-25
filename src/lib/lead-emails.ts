@@ -159,7 +159,7 @@ export function webExpressAutoresponder(input: {
 }
 
 /**
- * Escala: el acuse de recibo del lead.
+ * Growth: el acuse de recibo del lead.
  *
  * **Hay dos correos porque hay dos conversaciones distintas.**
  *
@@ -193,7 +193,7 @@ export function growthAutoresponder(input: {
       heading: "Un paso más cerca de llenar tu agenda",
       name: input.name,
       intro:
-        "gracias por escribirnos. Ya tenemos tus datos y te llamaremos en menos de 24 horas laborables para contarte cómo vamos a hacer para escalar tu negocio.",
+        "gracias por escribirnos. Ya tenemos tus datos y te llamaremos en menos de 24 horas laborables para contarte cómo vamos a llenar tu agenda.",
       preheader: "Te llamamos en menos de 24 horas laborables.",
       // **Sin lista de pasos.** Enumerar aquí lo que va a pasar en la llamada
       // es contar la película antes de verla: esta persona ha dejado su
@@ -201,9 +201,9 @@ export function growthAutoresponder(input: {
       // ha llegado y cuándo le llamamos — y el botón, por si no quiere
       // esperar.
       cta: WHATSAPP_CTA,
-      // Viene de una página casi negra con acento lima: el correo se viste
-      // igual, o el salto de una cosa a la otra se nota.
-      theme: "escala",
+      // Viene de una página casi negra con acento turquesa: el correo se
+      // viste igual, o el salto de una cosa a la otra se nota.
+      theme: "growth",
     };
   }
 
@@ -211,7 +211,7 @@ export function growthAutoresponder(input: {
     input.rama === "A" && input.costePorPaciente !== null
       ? `según los datos que nos has dado, cada paciente nuevo te está costando alrededor de **${formatEur(input.costePorPaciente)}**. Es un cálculo con tus medias: lo que todavía no sabes es **qué campaña** te trae los pacientes que de verdad se quedan.`
       : input.rama === "B"
-        ? "con los datos que tienes hoy, tu coste por paciente **no se puede calcular** — y eso es justo el hallazgo. No es un problema de tu publicidad, es que nadie está midiendo qué pasa entre el anuncio y la caja."
+        ? "con los datos que tienes hoy, tu coste por paciente **no se puede calcular** — y eso es justo el hallazgo. No es un problema de tu publicidad, es que nadie está midiendo qué trae cada anuncio."
         : "todavía no inviertes en publicidad, así que no hay un coste por paciente que medir. Lo que sí se puede ver es cuántos pacientes estás dejando de captar.";
 
   return {
@@ -222,12 +222,15 @@ export function growthAutoresponder(input: {
     intro,
     preheader: "Te contamos qué hemos visto y qué haríamos.",
     bulletsLabel: "Lo que medimos contigo",
+    // Solo lo que miden las campañas. Hasta el 25 de septiembre de 2026 decía
+    // también cuántos acuden y cuánto facturan, que se medía con el sistema de
+    // pacientes; Growth ya no lo incluye y el correo no puede prometerlo.
     bullets: [
-      "Cuánto inviertes y cuántos leads entran, por canal",
-      "Cuántos acaban con cita y cuántos acuden de verdad",
-      "Cuánto dinero generan, y el retorno de cada campaña",
+      "Cuánto inviertes y cuántas solicitudes entran, por canal",
+      "Qué te cuesta cada solicitud, campaña a campaña",
+      "Qué anuncios funcionan y cuáles hay que cambiar",
     ],
     cta: WHATSAPP_CTA,
-    theme: "escala",
+    theme: "growth",
   };
 }

@@ -13,7 +13,7 @@ import { AlAparecer } from "./AlAparecer";
  * dibujo que cuenta lo mismo que el texto. Quien lee, lee; quien pasa la vista,
  * ve tres viñetas y se queda con la idea igual.
  *
- * Los dibujos son de trazo, del mismo idioma que el subrayado y el círculo a
+ * Los dibujos son de trazo, del mismo idioma que los subrayados a
  * mano, y ninguno es un icono de librería: cada uno dice EXACTAMENTE lo que
  * hace su paso —una página, gente que llega, barras que suben— en vez de una
  * metáfora que hay que descifrar.
@@ -26,7 +26,7 @@ export interface Paso {
 }
 
 export function Pasos({ pasos }: { pasos: Paso[] }) {
-  const dibujos = [Web, Captacion, Rentabilidad];
+  const dibujos = [Web, Captacion, Analisis];
 
   return (
     <ol className="mt-12 grid gap-5 md:grid-cols-3">
@@ -69,9 +69,9 @@ export function Pasos({ pasos }: { pasos: Paso[] }) {
               <span
                 className="inline-flex h-8 w-8 items-center justify-center rounded-full text-xs font-black tabular-nums"
                 style={{
-                  color: T.lime,
-                  background: `${T.lime}14`,
-                  border: `1px solid ${T.lime}33`,
+                  color: T.accent,
+                  background: `${T.accent}14`,
+                  border: `1px solid ${T.accent}33`,
                 }}
               >
                 {p.n}
@@ -138,7 +138,7 @@ export function Pasos({ pasos }: { pasos: Paso[] }) {
 /** Gente que llega: tres siluetas entrando por una boca que las encauza. */
 function Captacion() {
   return (
-    <svg aria-hidden viewBox="0 0 120 72" className="h-full w-auto max-w-full" style={{ color: T.lime }}>
+    <svg aria-hidden viewBox="0 0 120 72" className="h-full w-auto max-w-full" style={{ color: T.accent }}>
       <g fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
         <path d="M6 14h44M6 30h34M6 46h24" opacity="0.35" />
         <path d="M62 8 96 36 62 64" opacity="0.25" />
@@ -161,7 +161,7 @@ function Captacion() {
  */
 function Web() {
   return (
-    <svg aria-hidden viewBox="0 0 120 72" className="h-full w-auto max-w-full" style={{ color: T.lime }}>
+    <svg aria-hidden viewBox="0 0 120 72" className="h-full w-auto max-w-full" style={{ color: T.accent }}>
       <g fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
         <rect x="4" y="6" width="112" height="60" rx="8" opacity="0.4" />
         <path d="M4 22h112" opacity="0.4" />
@@ -178,9 +178,9 @@ function Web() {
 }
 
 /** Barras que suben con la flecha del retorno por encima. */
-function Rentabilidad() {
+function Analisis() {
   return (
-    <svg aria-hidden viewBox="0 0 120 76" className="h-full w-auto max-w-full" style={{ color: T.lime }}>
+    <svg aria-hidden viewBox="0 0 120 76" className="h-full w-auto max-w-full" style={{ color: T.accent }}>
       <g fill="currentColor">
         <rect x="8" y="50" width="16" height="22" rx="3" opacity="0.3" />
         <rect x="34" y="38" width="16" height="34" rx="3" opacity="0.45" />
