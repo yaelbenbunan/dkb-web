@@ -185,6 +185,24 @@ describe("validarSecuencia, regla 10: caminos que acaban sin avisar a la comerci
     }
   });
 
+  test("un botón de descarte CON mensaje de despedida tampoco se marca", () => {
+    // Ronda D, hallazgo 2: la exención del descarte no se propagaba por el
+    // `ir_a`, así que solo valía cuando el botón terminaba en sí mismo. La forma
+    // que una persona escribe de verdad —contestarle algo a quien te dice que no
+    // le llames— volvía a levantar el aviso grave en el paso de despedida. O
+    // sea: educar la despedida apagaba la campaña.
+    const s = conHandoff();
+    s.pasos.inicio.botones[0].ruta = { fase: "perdido", ir_a: "despedida" };
+    delete s.pasos.cierre_a;
+    s.pasos.despedida = {
+      tipo: "mensaje",
+      texto: "Entendido, no te molestamos más. ¡Suerte!",
+      botones: [],
+      ruta: { terminar: true },
+    };
+    expect(sinAviso(validarSecuencia(s))).toEqual([]);
+  });
+
   test("una fase que NO es de descarte no exime: «interesado» quiere una llamada", () => {
     const s = conHandoff();
     s.pasos.inicio.botones[0].ruta = { fase: "interesado", terminar: true };

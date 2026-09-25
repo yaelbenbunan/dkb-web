@@ -408,16 +408,26 @@ function fraseDeAviso(cambios: {
   motivoDetenido?: string;
   esperaDias?: number | null;
   cerradaSinRespuesta?: boolean;
+  /** Si el lead llegó aquí pulsando un botón o escribiendo texto libre: cambia
+   *  la redacción de `cerradaSinRespuesta`, no la decisión. */
+  pulsoBoton?: boolean;
 }): string | null {
   const frases: string[] = [];
   if (cambios.avisos && cambios.avisos.length > 0) frases.push(conPuntoFinal(cambios.avisos.join("; ")));
   else if (cambios.motivoDetenido) frases.push(`La secuencia se detuvo: ${cambios.motivoDetenido}.`);
   else if (cambios.cerradaSinRespuesta) {
     // Cuarto vocabulario, y el que menos debería aparecer: el guion cerró el
-    // camino sin mandar nada y sin pedir que se avise (ver `sinRespuesta` en
-    // el avance). Se dice tal cual, porque lo que la comercial necesita saber
-    // es que el lead se quedó sin contestación y que el guion tiene un hueco.
-    frases.push("La secuencia se cerró sin contestar nada: revisa ese camino del guion.");
+    // camino sin mandar nada y sin pedir que se avise (ver `sinRespuesta` en el
+    // avance). Dos redacciones, porque son dos cosas distintas y culpar al
+    // guion cuando no tiene culpa hace que la nota deje de creerse: si el lead
+    // PULSÓ UN BOTÓN y no recibió nada, el guion tiene un hueco de verdad; si
+    // escribió texto libre sobre un paso que ya era el último, el guion
+    // simplemente no tenía nada más que decir y la conversación se acabó.
+    frases.push(
+      cambios.pulsoBoton
+        ? "El guion no contestó a esa opción: revisa ese camino."
+        : "La secuencia ya había terminado, así que no había nada más que contestar.",
+    );
   }
   if (cambios.esperaDias != null) frases.push(fraseDeEspera(cambios.esperaDias));
   return frases.length > 0 ? frases.join(" ") : null;
@@ -480,6 +490,7 @@ async function avisarComercial(
     motivoDetenido?: string;
     esperaDias?: number | null;
     cerradaSinRespuesta?: boolean;
+    pulsoBoton?: boolean;
     faseNueva?: Fase;
     respuestaLead?: string | null;
   },
@@ -489,7 +500,14 @@ async function avisarComercial(
     const resultado = await registrarActividad({
       leadId,
       usuariaId: null,
-      tipo: frase ? "nota" : "cambio_fase",
+      // El tipo lo decide LA FASE, no si hay frase. La RPC
+      // `ventas_registrar_actividad` con `p_tipo <> 'cambio_fase'` inserta la
+      // fila de su tipo Y ADEMÁS una `cambio_fase` cuando la fase difiere, así
+      // que un `tipo: "nota"` con `faseNueva` deja DOS apuntes en la ficha, uno
+      // de ellos sin texto — justo lo que esta función existe para evitar. Con
+      // `cambio_fase` la nota viaja dentro de esa misma fila: un apunte.
+      // Cuando no hay cambio de fase no hay nada que duplicar y va como `nota`.
+      tipo: cambios.faseNueva ? "cambio_fase" : "nota",
       nota: notaAvisoComercial(frase, cambios.respuestaLead),
       faseNueva: cambios.faseNueva ?? null,
     });
@@ -731,18 +749,36 @@ async function procesarMensaje(
         // RECLAMAR el arranque ANTES de enviar, por el mismo motivo que en el
         // avance: dos entregas concurrentes (el lead toca «Enviar» dos veces
         // sobre el mensaje prerrellenado del anuncio, o vuelve a pulsar el
-        // anuncio en el mismo segundo) leen las dos la conversación sin puntero
-        // y las dos mandan el primer paso, así que el lead se queda con dos
-        // juegos de botones vivos e indistinguibles. El reclamo condiciona a
-        // `paso_actual is null`, que es el estado que las dos leyeron: solo una
-        // lo convierte en el paso de inicio.
+        // anuncio en el mismo segundo) leen las dos la misma conversación y las
+        // dos mandan el primer paso, así que el lead se queda con dos juegos de
+        // botones vivos e indistinguibles.
+        //
+        // La condición es EL PUNTERO QUE SE LEYÓ, no `null`. Condicionar a
+        // `paso_actual is null` parecía natural —una conversación que arranca no
+        // va por ningún paso— y era un error grave: este camino se recorre
+        // SIEMPRE que el mensaje trae `referral` (`decidir` no mira
+        // `paso_actual`), así que un lead que clicó un anuncio y no pulsó ningún
+        // botón, y vuelve a clicar —el mismo anuncio u otro—, tiene el puntero
+        // puesto: el reclamo no encajaba, no se enviaba NADA (ni el guion ni el
+        // respaldo, porque esa rama ya no se alcanza) y el único rastro era un
+        // `console.warn` que además decía otra cosa. Un clic pagado contestado
+        // con silencio, que es justo lo que esta entrega existe para evitar.
+        // Con el puntero leído, dos entregas concurrentes siguen serializándose
+        // (las dos leyeron el mismo valor, solo una lo cambia) y un re-clic
+        // arranca la secuencia que le toca.
+        const punteroLeido = conversacion.paso_actual;
         let reclamado = false;
+        let falloAlReclamar = false;
         try {
           reclamado = await deps.reclamarPaso(conversacion.id, {
-            pasoEsperado: null,
+            pasoEsperado: punteroLeido,
             secuenciaId: arrancada.secuenciaId,
             pasoActual: arrancada.estado.pasoActual,
             datos: arrancada.estado.datos,
+            // Un re-arranque borra la espera de la secuencia anterior: si no,
+            // `reanudar_en` seguiría marcando como «parada esperando» una
+            // conversación que acaba de volver a arrancar.
+            reanudarEn: null,
           });
         } catch (e) {
           // No se pudo ni reclamar, y no se ha enviado nada: el lead no va a
@@ -756,7 +792,26 @@ async function procesarMensaje(
             e,
           );
           try {
-            await deps.actualizarConversacion(conversacion.id, { estado: "humana" });
+            // CONDICIONADO al puntero leído, por el mismo motivo que en el
+            // avance: `reclamarPaso` puede haber lanzado DESPUÉS de que otra
+            // entrega concurrente ganara la carrera y mandara el primer paso.
+            // Un `humana` ciego aquí congelaría esa secuencia para siempre — el
+            // lead tendría delante botones vivos, y `decidir` ya no devolvería
+            // `guardar_respuesta` (exige `estado === "bot"`), así que al
+            // pulsarlos no avanzaría nada ni quedaría nota.
+            const recuperado = await deps.reclamarPaso(conversacion.id, {
+              pasoEsperado: punteroLeido,
+              pasoActual: punteroLeido,
+              datos: conversacion.datos,
+              estado: "humana",
+            });
+            if (!recuperado) {
+              console.warn(
+                "[whatsapp] otra entrega ya arrancó esta conversación: no se fuerza el paso a humana",
+                mensaje.waId,
+                conversacion.id,
+              );
+            }
           } catch (e2) {
             console.error(
               "[whatsapp] fallo también pasando la conversación a humana tras el error anterior",
@@ -764,14 +819,21 @@ async function procesarMensaje(
               e2,
             );
           }
+          // `fallado` distingue las dos razones por las que no se envía: aquí
+          // el reclamo LANZÓ (y ya se ha registrado y recuperado arriba), no es
+          // que otra entrega ganara la carrera. Sin esto el `warn` de abajo
+          // diagnosticaba mal el fallo más caro de este camino.
+          falloAlReclamar = true;
         }
 
         if (!reclamado) {
-          console.warn(
-            "[whatsapp] otra entrega ya arrancó esta conversación, no se reenvía el primer paso",
-            mensaje.waId,
-            conversacion.id,
-          );
+          if (!falloAlReclamar) {
+            console.warn(
+              "[whatsapp] otra entrega ya arrancó esta conversación, no se reenvía el primer paso",
+              mensaje.waId,
+              conversacion.id,
+            );
+          }
         } else {
           // La FUENTE: el primer paso de la secuencia que sirve a este anuncio.
           // Un paso con botones se manda con `enviarBotones`; uno sin botones,
@@ -1111,6 +1173,7 @@ async function procesarMensaje(
               // desde cuándo está parada la conversación (ronda B1, arreglo 2).
               esperaDias: esperaDias ?? undefined,
               cerradaSinRespuesta: sinRespuesta || undefined,
+              pulsoBoton: mensaje.botonId != null,
               faseNueva: faseNueva ?? undefined,
               respuestaLead: mensaje.texto,
             });

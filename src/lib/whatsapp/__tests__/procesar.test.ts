@@ -339,10 +339,22 @@ function depsFalsas(
   // `fases` deja rastro de esas llamadas por separado de `actividades` para
   // que los tests puedan comprobar el movimiento sin acoplarse al texto de la nota.
   const fases: Array<{ leadId: string; fase: string }> = [];
+  // `actividades` modela FILAS DE LA FICHA, no llamadas a la RPC, y la
+  // diferencia es la que hace el test honesto: `ventas_registrar_actividad`
+  // (docs/sql/2026-09-17-ventas-fase1.sql, sobre la línea 270) inserta, cuando
+  // `p_tipo <> 'cambio_fase'` y la fase difiere, la fila de su tipo Y ADEMÁS una
+  // `cambio_fase` sin texto. Contando llamadas, un `toHaveLength(1)` daba verde
+  // con dos apuntes en la ficha del lead, que es exactamente el fallo que
+  // `avisarComercial` existe para evitar.
   registrarActividadMock.mockReset().mockImplementation(
     async (input: { leadId: string; tipo: string; nota: string; faseNueva?: string | null }) => {
       actividades.push({ leadId: input.leadId, tipo: input.tipo, nota: input.nota });
-      if (input.faseNueva) fases.push({ leadId: input.leadId, fase: input.faseNueva });
+      if (input.faseNueva) {
+        fases.push({ leadId: input.leadId, fase: input.faseNueva });
+        if (input.tipo !== "cambio_fase") {
+          actividades.push({ leadId: input.leadId, tipo: "cambio_fase", nota: "" });
+        }
+      }
       return { ok: true };
     },
   );
@@ -839,8 +851,15 @@ describe("procesarWebhook", () => {
     const { deps, conversaciones, salientes } = depsFalsas({
       secuencias: [{ id: "s1", estado: "activa", anuncios: ["AD1"], pasos: SECUENCIA_MINIMA }],
     });
-    deps.reclamarPaso = async () => {
-      throw new Error("fallo reclamando el arranque de la secuencia");
+    // Falla SOLO el reclamo; el intento de recuperación (que también usa
+    // `reclamarPaso`, condicionado al mismo puntero) sí funciona. Es lo que pasa
+    // con un hipo puntual, que es el caso realista.
+    const reclamarOriginal = deps.reclamarPaso;
+    let intentos = 0;
+    deps.reclamarPaso = async (id, cambios) => {
+      intentos += 1;
+      if (intentos === 1) throw new Error("fallo reclamando el arranque de la secuencia");
+      return reclamarOriginal(id, cambios);
     };
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -1040,12 +1059,11 @@ describe("procesarWebhook", () => {
   // del lead acababa con dos apuntes para un único cambio. Un apunte, nunca
   // dos, y nunca uno en blanco.
   //
-  // Desde la ronda C el tipo de ESTE camino ya no es `cambio_fase` sino `nota`,
-  // y es correcto: una ruta con solo `fase: "interesado"` no manda mensaje, así
-  // que el lead pulsó un botón y se quedó sin contestación — la red de
-  // seguridad de `procesar.ts` lo entrega a una persona y eso SÍ tiene algo que
-  // contar. Donde sigue saliendo `cambio_fase` es en un cierre con fase de
-  // descarte, que no necesita frase (ver el test del botón «No me llaméis»).
+  // El tipo lo decide LA FASE, no si hay frase (ronda D, hallazgo 3): con
+  // `tipo: "nota"` y `faseNueva`, la RPC insertaba la nota Y ADEMÁS una
+  // `cambio_fase` en blanco, o sea dos apuntes para un solo cierre de guion. El
+  // doble de `registrarActividad` de este fichero modela ese doble insert, así
+  // que `actividades` cuenta FILAS DE LA FICHA y esta aserción sí lo detecta.
   it("una ruta que solo cambia de fase deja UN apunte, con nota y sin duplicar el cambio", async () => {
     const { deps, actividades } = depsFalsas({ secuencias: [SECUENCIA_SOLO_FASE] });
     await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
@@ -1055,9 +1073,9 @@ describe("procesarWebhook", () => {
     expect(registrarActividadMock).toHaveBeenCalledTimes(1);
     expect(registrarActividadMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        tipo: "nota",
+        tipo: "cambio_fase",
         faseNueva: "interesado",
-        nota: "El lead respondió: «Vienen bastante». La secuencia se cerró sin contestar nada: revisa ese camino del guion.",
+        nota: "El lead respondió: «Vienen bastante». El guion no contestó a esa opción: revisa ese camino.",
       }),
     );
   });
@@ -1249,7 +1267,7 @@ describe("procesarWebhook", () => {
     expect(salientes).toHaveLength(1);
     expect(actividades).toHaveLength(1);
     expect(actividades[0].nota).toBe(
-      "El lead respondió: «No, gracias». La secuencia se cerró sin contestar nada: revisa ese camino del guion.",
+      "El lead respondió: «No, gracias». El guion no contestó a esa opción: revisa ese camino.",
     );
   });
 
@@ -1308,6 +1326,77 @@ describe("procesarWebhook", () => {
     expect(conversaciones.size).toBe(1);
     expect([...conversaciones.values()][0].paso_actual).toBe("inicio");
     warnSpy.mockRestore();
+  });
+
+  // Ronda D, hallazgo 1: el reclamo del arranque condicionaba a `paso_actual is
+  // null`, y este camino se recorre SIEMPRE que el mensaje trae `referral`
+  // (`decidir` no mira el puntero). Un lead que clicó un anuncio y no pulsó
+  // ningún botón tiene el puntero puesto, así que al volver a clicar el reclamo
+  // no encajaba y NO SE ENVIABA NADA: ni el guion ni el respaldo. Un clic pagado
+  // contestado con silencio, y peor que antes del arreglo.
+  it("un re-clic de anuncio sobre una conversación con puntero arranca su secuencia", async () => {
+    const DENTAL: SecuenciaFalsa = { id: "s-dental", estado: "activa", anuncios: ["AD-DENTAL"], pasos: SECUENCIA_MINIMA };
+    const PSICO: SecuenciaFalsa = {
+      id: "s-psico",
+      estado: "activa",
+      anuncios: ["AD-PSICO"],
+      pasos: {
+        version: 1,
+        inicio: "inicio",
+        pasos: {
+          inicio: {
+            tipo: "mensaje",
+            texto: "Hola, soy de psicología",
+            botones: [{ texto: "Huecos en la agenda", ruta: { avisar: true, fase: "interesado", ir_a: "fin" } }],
+          },
+          fin: { tipo: "mensaje", texto: "Te escribe mi compañera.", botones: [], ruta: { terminar: true } },
+        },
+      },
+    };
+    const { deps, salientes, conversaciones } = depsFalsas({ secuencias: [DENTAL, PSICO] });
+
+    await procesarWebhook({
+      cuerpo: sobreConMensajes([mensajeDeAnuncio({ id: "wamid.C1", referral: { source_id: "AD-DENTAL" } })]),
+      deps,
+    });
+    expect(salientes).toHaveLength(1);
+    // El puntero queda puesto: es la condición que hacía fallar el reclamo.
+    expect([...conversaciones.values()][0].paso_actual).not.toBeNull();
+
+    // El lead no pulsa nada y clica otro anuncio. Tiene que recibir el primer
+    // paso de LA SECUENCIA NUEVA, y la conversación queda colgada de esa.
+    await procesarWebhook({
+      cuerpo: sobreConMensajes([mensajeDeAnuncio({ id: "wamid.C2", referral: { source_id: "AD-PSICO" } })]),
+      deps,
+    });
+
+    expect(salientes).toHaveLength(2);
+    expect(salientes[1].texto).toBe("Hola, soy de psicología");
+    const conv = [...conversaciones.values()][0];
+    expect(conv.secuencia_id).toBe("s-psico");
+    expect(conv.paso_actual).toBe("inicio");
+  });
+
+  // Ronda D, hallazgo 7: la espera de la secuencia anterior no puede sobrevivir
+  // a un re-arranque, o `reanudar_en` señalaría como «parada esperando» una
+  // conversación que está corriendo.
+  it("un re-arranque borra el reanudar_en de la secuencia anterior", async () => {
+    const { deps, conversaciones } = depsFalsas({
+      secuencias: [{ id: "s1", estado: "activa", anuncios: ["AD1"], pasos: SECUENCIA_MINIMA }],
+    });
+    const conv = await deps.crearConversacion({
+      marcaId: MARCA.id,
+      waId: "34660415514",
+      leadId: "lead-viejo",
+      estado: "humana",
+      ventanaHasta: new Date(Date.now() + 1000 * 60 * 60),
+    });
+    await deps.actualizarConversacion(conv.id, { reanudarEn: new Date("2026-10-02T10:00:00.000Z"), datos: {} });
+    expect(conversaciones.get(`${MARCA.id}:34660415514`)?.reanudar_en).toBe("2026-10-02T10:00:00.000Z");
+
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
+
+    expect(conversaciones.get(`${MARCA.id}:34660415514`)?.reanudar_en).toBeNull();
   });
 
   // Hallazgo 2 de la review de la ronda B: cuando `reclamarPaso` LANZA, el

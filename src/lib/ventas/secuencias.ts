@@ -330,7 +330,13 @@ export function validarSecuencia(s: Secuencia, variablesExtra: string[] = []): A
         if (ruta.ir_a) {
           // Un destino inexistente ya lo dice la regla 2, con su propio aviso
           // grave: repetirlo aquí solo añadiría ruido al mismo error.
-          if (idsPasos.has(ruta.ir_a)) pendientes.push({ id: ruta.ir_a, avisado: yaAvisado });
+          //
+          // Se propaga `recogido`, NO `yaAvisado`: si no, la excepción del
+          // descarte solo valía cuando el botón terminaba en sí mismo, y la
+          // forma que una persona escribe de verdad —botón «No me llaméis» que
+          // lleva a un paso de despedida— volvía a levantar el aviso grave en
+          // ese paso. O sea que educar la despedida apagaba la campaña.
+          if (idsPasos.has(ruta.ir_a)) pendientes.push({ id: ruta.ir_a, avisado: recogido });
           continue;
         }
         // Ruta vacía: `aplicarRuta` pone `pasoActual` a null y la conversación
