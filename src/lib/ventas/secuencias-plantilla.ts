@@ -19,11 +19,12 @@
  *
  * Las dos comparten esqueleto —inicio con la pregunta, tres cierres— y
  * cambia el argumento, porque el argumento de cada sector ya está decidido en
- * `escala-sectores.ts` y no es el mismo:
+ * `growth-sectores.ts` y no es el mismo:
  *
- * - **Dental habla de dinero.** «La mitad de pacientes, el doble de
- *   beneficio»: lo caro no es llenar la agenda, es llenarla de pacientes que
- *   no acaban haciéndose el tratamiento.
+ * - **Dental habla de dinero en los cierres.** Lo caro no es llenar la
+ *   agenda, es llenarla de pacientes que no acaban haciéndose el tratamiento.
+ *   El saludo, en cambio, habla de llenar la agenda desde el 25-09-2026, como
+ *   la landing de Growth y como `autorespuesta.ts`, del que es copia exacta.
  * - **Psicología habla de huecos.** A una consulta no se le vende «ganar más»
  *   (decisión del 17-09-2026): la sesión tiene un precio que no se estira y un
  *   profesional solo atiende las horas que tiene. Lo que le cambia el mes son
@@ -75,7 +76,7 @@ export const SECUENCIA_DENTAL: Secuencia = {
     inicio: {
       tipo: "mensaje",
       texto:
-        "¡Hola! Soy Paula, de Escala. Gracias por interesarte en nuestro proceso para que ganes más con cada paciente.\n\n" +
+        "¡Hola! Soy Paula, de Growth. Gracias por interesarte en nuestro proceso para llenar la agenda de tu clínica.\n\n" +
         "Para poder ofrecerte la mejor solución, cuéntanos: ¿cuál es el principal problema que estás teniendo?",
       // `avisar`/`fase` van AQUÍ, en el botón, y SIN `terminar` (ver la
       // cabecera: es el orden de `aplicarRuta` lo que lo obliga).
@@ -91,7 +92,7 @@ export const SECUENCIA_DENTAL: Secuencia = {
       tipo: "mensaje",
       texto:
         "Entendido. Ahí lo primero es saber cuánto te cuesta traer un paciente y cuánto te deja, porque sin eso invertir es apostar.\n\n" +
-        "Tenemos una calculadora que lo hace con tus propios números en un minuto: dinkbit.es/escala/dental\n\n" +
+        "Tenemos una calculadora que lo hace con tus propios números en un minuto: dinkbit.es/growth/dental\n\n" +
         "Le digo a mi compañera que te escriba para verlo contigo.",
       botones: [],
       ruta: { terminar: true },
@@ -125,7 +126,7 @@ export const SECUENCIA_PSICOLOGIA: Secuencia = {
     inicio: {
       tipo: "mensaje",
       texto:
-        "¡Hola! Soy Paula, de Escala. Gracias por interesarte en nuestro proceso para llenar la agenda de tu consulta.\n\n" +
+        "¡Hola! Soy Paula, de Growth. Gracias por interesarte en nuestro proceso para llenar la agenda de tu consulta.\n\n" +
         "Para poder ofrecerte la mejor solución, cuéntanos: ¿cuál es el principal problema que estás teniendo?",
       // `avisar`/`fase` van AQUÍ, en el botón, y SIN `terminar` (ver la
       // cabecera: es el orden de `aplicarRuta` lo que lo obliga).
@@ -141,7 +142,7 @@ export const SECUENCIA_PSICOLOGIA: Secuencia = {
       tipo: "mensaje",
       texto:
         "Es lo más habitual. Una consulta privada tiene unas 25 sesiones de hueco a la semana y con el boca a boca se queda en torno al 60 % de ocupación.\n\n" +
-        "Trabajamos justo eso: traer pacientes nuevos cada mes hasta llenar la agenda. Puedes ver cómo salen los números con los tuyos aquí: dinkbit.es/escala/psicologia\n\n" +
+        "Trabajamos justo eso: traer pacientes nuevos cada mes hasta llenar la agenda. Puedes ver cómo salen los números con los tuyos aquí: dinkbit.es/growth/psicologia\n\n" +
         "Le digo a mi compañera que te escriba para verlo contigo.",
       botones: [],
       ruta: { terminar: true },

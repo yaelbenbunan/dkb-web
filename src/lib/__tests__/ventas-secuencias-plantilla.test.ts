@@ -70,7 +70,7 @@ describe.each<[string, Vertical, Secuencia]>([
     // uno en el que el lead puede abandonar.
     const inicio = secuencia.pasos[secuencia.inicio];
     expect(inicio.botones).toHaveLength(3);
-    expect(inicio.texto).toContain("Escala");
+    expect(inicio.texto).toContain("Growth");
   });
 
   it("el inicio es, palabra por palabra, el de autorespuesta.ts", () => {

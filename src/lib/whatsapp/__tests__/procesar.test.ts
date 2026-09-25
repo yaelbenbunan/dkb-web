@@ -787,7 +787,7 @@ describe("procesarWebhook", () => {
 
     await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
 
-    expect(salientes[0].texto).toContain("Escala");
+    expect(salientes[0].texto).toContain("Growth");
   });
 
   it("al caer al respaldo limpia el puntero de la secuencia anterior", async () => {
@@ -813,7 +813,7 @@ describe("procesarWebhook", () => {
       mensajeDeAnuncio({ id: "wamid.ANUNCIO.2", referral: { source_id: "AD-SIN-MAPEAR", headline: "Otra campaña" } }),
     ]);
     await procesarWebhook({ cuerpo: segundoClic, deps });
-    expect(salientes[1].texto).toContain("Escala");
+    expect(salientes[1].texto).toContain("Growth");
     expect(conv.secuencia_id).toBeNull();
     expect(conv.paso_actual).toBeNull();
 
