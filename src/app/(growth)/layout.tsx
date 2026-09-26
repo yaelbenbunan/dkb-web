@@ -6,8 +6,8 @@ import { GROWTH_THEME as T } from "@/lib/growth-config";
 /**
  * Tipografía propia de Growth, cargada solo aquí.
  *
- * El resto de dinkbit —y la landing de Escala— van en Source Sans. Una letra
- * distinta es lo primero que separa dos marcas antes de leer una palabra, y
+ * El resto de dinkbit va en Source Sans. Una letra distinta es lo primero que
+ * separa dos marcas antes de leer una palabra, y
  * Plus Jakarta Sans tiene la redondez de una marca de salud sin parecer una
  * plantilla.
  */
@@ -40,8 +40,8 @@ export default function GrowthLayout({
           minHeight: "100svh",
           // El CSS global pone `font-display` en todos los h1–h4, y Tailwind lo
           // compila ya resuelto a `var(--font-source-sans)`: la letra de
-          // dinkbit y de Escala. Sin esto, los titulares de Growth salían en
-          // ella aunque el resto de la página no. Solo afecta dentro de Growth.
+          // dinkbit. Sin esto, los titulares de Growth salían en ella aunque el
+          // resto de la página no. Solo afecta dentro de Growth.
           "--font-source-sans": jakarta.style.fontFamily,
         } as React.CSSProperties
       }

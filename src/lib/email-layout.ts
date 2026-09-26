@@ -54,8 +54,8 @@ const THEMES = {
     shadow: "0 18px 50px -24px rgba(15,23,42,0.35)",
     colorScheme: "light",
   },
-  // Claro desde el 25-09-2026, como la landing: Growth no puede parecerse a
-  // Escala, que era oscura. El acento es el turquesa oscurecido (#0A7C7E) y no
+  // Claro, para leerse bien en cualquier cliente de correo. El acento es el
+  // turquesa oscurecido (#0A7C7E) y no
   // el de la página (#30CCCE): en el correo también se usa para texto, y el
   // claro sobre blanco no se lee.
   growth: {

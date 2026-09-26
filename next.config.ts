@@ -23,25 +23,6 @@ const config: NextConfig = {
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
   redirects: async () => [
-    // La landing del sistema para clínicas se llamó Escala, en /escala, del 26
-    // de agosto al 25 de septiembre de 2026, y vuelve a llamarse Growth, en
-    // /growth. 301 y no 302: /escala estuvo en el sitemap, en anuncios y en las
-    // secuencias comerciales, y esos enlaces van a seguir vivos años.
-    //
-    // Esta redirección NO se quita nunca, aunque parezca que ya no la usa
-    // nadie: lo que se rompe al quitarla no se ve desde aquí. La de /growth →
-    // /escala que había antes se quitó a la vez, porque con las dos puestas la
-    // ruta entraría en bucle.
-    {
-      source: "/escala",
-      destination: "/growth",
-      permanent: true,
-    },
-    {
-      source: "/escala/:slug*",
-      destination: "/growth/:slug*",
-      permanent: true,
-    },
     // El servicio de IA y automatización se sustituye por el de anuncios en
     // ChatGPT y visibilidad en buscadores con IA. La URL vieja estaba indexada
     // y enlazada desde el menú de servicios, así que 301 y no se quita.

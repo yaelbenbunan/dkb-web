@@ -113,7 +113,7 @@ const preguntasComunes = (s: SectorGrowth): { p: string; r: string }[] => [
 export function Faqs({ sector = GENERAL }: { sector?: SectorGrowth } = {}) {
   const preguntas = [...sector.preguntas, ...preguntasComunes(sector)];
   return (
-    // Centradas y en tarjetas, no en dos columnas con rayas como en Escala.
+    // Centradas y en tarjetas.
     <div className="mx-auto max-w-3xl">
       <div className="text-center">
         <span

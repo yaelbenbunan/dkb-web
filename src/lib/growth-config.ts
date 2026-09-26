@@ -5,14 +5,10 @@ import { CONTACT_INFO } from "./contact-info";
  *
  * El nombre comercial vive aquí y NINGÚN componente lo escribe literal: si
  * cambia, se cambia en este fichero. Lo mismo con la ruta — y esa además
- * necesita un redirect 301 en next.config.ts, como el que ya hay de /escala,
- * que se queda para siempre.
+ * necesita un redirect 301 en next.config.ts desde la vieja.
  *
- * **Vuelve a llamarse Growth desde el 25 de septiembre de 2026**, en
- * dinkbit.es/growth, y con eso cambia también lo que vende: solo captación
- * con campañas —landing, Google y Meta, análisis—, sin CRM ni agenda. La
- * versión de Escala tal y como estaba queda en la etiqueta
- * `respaldo/landing-escala-2026-09-25`.
+ * **Growth vende solo captación con campañas** —landing, Google y Meta,
+ * análisis—, sin CRM ni agenda (25 de septiembre de 2026).
  */
 export const GROWTH = {
   /** Nombre comercial. */
@@ -74,14 +70,8 @@ export const GROWTH = {
 /**
  * Paleta de Growth: oscura, en azul petróleo, con un solo acento turquesa.
  *
- * **Oscura, pero no la de Escala** (25 de septiembre de 2026). Escala era un
- * negro neutro (#08090C) con acento lima, tipografía en negrita máxima, trazos a
- * mano y texturas. Growth es otro negocio y no puede leerse como su hermana: su
- * fondo es un negro verdoso, las superficies secundarias van en azul petróleo
- * y el acento es turquesa; la letra, el logotipo y la composición también son
- * otros. Estuvo unas horas en claro, y se pidió volver al oscuro con el azul
- * verdoso de secundario. La versión de Escala está en la etiqueta
- * `respaldo/landing-escala-2026-09-25`.
+ * El fondo es un negro verdoso, las superficies secundarias van en azul
+ * petróleo y el acento es turquesa (26 de septiembre de 2026).
  *
  * Encima del turquesa relleno se escribe en `onAccent` (el fondo), nunca en
  * blanco: blanco sobre #30CCCE no se lee.

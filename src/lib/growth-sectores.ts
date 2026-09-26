@@ -26,8 +26,7 @@
  * «Growth — Ana (Fisioterapia)» sin que nadie haya tocado nada. Ver
  * `growth-action.ts`, que ya lo mete en el asunto.
  *
- * Son hijas de `/growth`, y el 301 de `/escala/:slug*` cubre las direcciones
- * que tuvieron mientras la landing se llamó Escala.
+ * Son hijas de `/growth`.
  */
 
 /**

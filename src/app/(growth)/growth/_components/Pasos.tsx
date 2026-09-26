@@ -4,10 +4,8 @@ import { AlAparecer } from "./AlAparecer";
 /**
  * Los tres pasos, en tres tarjetas.
  *
- * Tarjetas en azul petróleo con borde fino, el dibujo en una baldosa oscura y el número
- * escrito como «Paso 1». Es otra forma de contar lo mismo que en la landing de
- * Escala —que eran tarjetas oscuras con volumen, número en insignia y flechas
- * entre ellas— porque Growth no puede parecerse a ella (25-09-2026).
+ * Tarjetas en azul petróleo con borde fino, el dibujo en una baldosa oscura y
+ * el número escrito como «Paso 1».
  *
  * Los dibujos son la versión mirada de lo que dice el texto, y por eso van con
  * `aria-hidden`: una página, gente que llega, barras que suben.

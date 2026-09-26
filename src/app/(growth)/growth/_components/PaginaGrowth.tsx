@@ -18,13 +18,9 @@ import { AlAparecer } from "./AlAparecer";
  * Lo que cambia por sector —la cabecera, a quién buscan las campañas y las
  * preguntas— viene de `growth-sectores.ts`.
  *
- * **El aspecto no tiene nada que ver con el de Escala, y es a propósito** (25
- * de septiembre de 2026). Escala era negro neutro con lima, titulares en
- * negrita máxima alineados a la izquierda, trazos a mano, texturas y halos.
- * Growth es negro verdoso con azul petróleo y turquesa, otra letra, cabeceras
- * de sección centradas, tarjetas con borde fino y nada dibujado a mano: son dos
- * negocios distintos y no pueden parecer el mismo con otro color. Ver
- * `GROWTH_THEME`.
+ * El aspecto es el propio de Growth: negro verdoso con azul petróleo y
+ * turquesa, Plus Jakarta Sans, cabeceras de sección centradas, tarjetas con
+ * borde fino y nada dibujado a mano. Ver `GROWTH_THEME`.
  */
 
 /** Contenedor de la página. Un solo ancho: esta página se lee, no se recorre. */

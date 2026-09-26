@@ -1,5 +1,5 @@
 /**
- * Plantillas de secuencia para los sectores de `escala`: el punto de partida
+ * Plantillas de secuencia para los sectores de Growth: el punto de partida
  * al crear una conversación de WhatsApp para dental o para psicología.
  *
  * No son código de producto: son CONTENIDO tipado. Se cargan en el editor del

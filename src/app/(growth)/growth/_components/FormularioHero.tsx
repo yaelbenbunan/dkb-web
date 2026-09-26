@@ -25,8 +25,8 @@ import { appendUtms } from "@/lib/utm";
  * arriba se paga en leads perdidos.
  *
  * **Va en una tarjeta de azul petróleo con borde turquesa**, un tono por
- * encima del fondo, para que se separe de él sin una caja blanca como la de
- * Escala. Dentro, los campos van en blanco y el botón en turquesa, que es el
+ * encima del fondo, para que se separe de él sin una caja blanca. Dentro, los
+ * campos van en blanco y el botón en turquesa, que es el
  * punto de máximo contraste y donde tiene que ir el dedo.
  */
 

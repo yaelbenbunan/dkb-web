@@ -3,10 +3,9 @@ import { GROWTH_THEME as T } from "@/lib/growth-config";
 /**
  * Los dos planes, en dos tarjetas de precio.
  *
- * **Tarjetas y no tabla**, que es como los enseñaba Escala: Growth no puede
- * parecerse a ella (25-09-2026). Cada tarjeta lleva la lista entera, con lo que
- * no incluye en gris y tachado, para que la diferencia se vea sin comparar
- * columnas: canales e informe mensual.
+ * Cada tarjeta lleva la lista entera, con lo que no incluye en gris y tachado,
+ * para que la diferencia se vea sin comparar columnas: canales e informe
+ * mensual.
  *
  * **Los dos se venden igual de bien.** Mismo botón y mismo peso; el avanzado
  * solo lleva el borde turquesa y la etiqueta. Un básico apagado al lado de un

@@ -125,7 +125,7 @@ describe("tema de growth", () => {
     expect(html).not.toContain("#187bef"); // el azul de dinkbit no pinta aquí
   });
 
-  test("no se parece al de Escala: ni fondo casi negro ni lima", () => {
+  test("es claro y turquesa: ni fondo casi negro ni lima", () => {
     const { html } = growth();
     expect(html).not.toContain("#08090C");
     expect(html).not.toContain("#C7F73E");
