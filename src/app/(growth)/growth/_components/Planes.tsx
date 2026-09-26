@@ -12,14 +12,26 @@ import { GROWTH_THEME as T } from "@/lib/growth-config";
  * avanzado encendido dice «el barato es el de segunda», y quien no puede pagar
  * 299 no sube de plan al verlo: se va.
  *
- * La inversión en anuncios y la cuota de alta van dentro de la tarjeta y no en
- * la letra pequeña: son las dos preguntas de toda primera llamada, y
- * descubrirlas después de leer un precio parece que se escondían.
+ * **Sin letra pequeña, porque el titular de la sección lo promete** (26-09-2026).
+ * Había un párrafo de condiciones debajo, y al lado de «Dos planes, sin letra
+ * pequeña» se contradecía. Todo lo que decía está ya a la vista: la inversión en
+ * anuncios y la cuota de alta, dentro de cada tarjeta; el mínimo de 300 € para
+ * dos canales, en la del avanzado; y el resto —sin comisión, sin permanencia—,
+ * en la banda de abajo y en las preguntas frecuentes.
  */
 
 const PLANES = [
-  { id: "basico", nombre: "Básico", precio: "199 €", destacado: false },
-  { id: "avanzado", nombre: "Avanzado", precio: "299 €", destacado: true },
+  { id: "basico", nombre: "Básico", precio: "199 €", destacado: false, nota: null },
+  {
+    id: "avanzado",
+    nombre: "Avanzado",
+    precio: "299 €",
+    destacado: true,
+    // Lo único de la antigua letra pequeña que no estaba ya en la tarjeta o en
+    // las preguntas: con menos de 300 € repartidos en dos canales, ninguno de
+    // los dos tiene presupuesto para estar activo todos los días del mes.
+    nota: "Recomendado con 300 € al mes o más de inversión en anuncios.",
+  },
 ] as const;
 
 type Valor = true | false | string;
@@ -55,41 +67,6 @@ const FILAS: Fila[] = [
   // se leen por lo que son al lado de la cuota: baratos.
   { t: "Cuota de alta (una sola vez)", basico: "150 €", avanzado: "200 €", apagado: true },
 ];
-
-/**
- * Las condiciones, en un párrafo pequeño y seguido.
- *
- * Estaban en cuatro líneas con viñeta, y con esa forma pesaban lo mismo que la
- * tabla: cuatro promesas puestas en fila parecen cuatro cosas importantes que
- * hay que sopesar antes de decidir. Son lo contrario — son lo que se cuenta
- * para que nadie se lleve una sorpresa. En letra pequeña y de corrido están en
- * su sitio: quien las quiera, ahí están.
- *
- * **La cuota de alta se dice, y se dice con su importe.** Estuvo escrito "sin
- * cuota de alta", que contradecía §3 del documento de producto y —peor— era la
- * peor secuencia comercial posible: anunciar 199 € y sacar el pago inicial en
- * la llamada mata la confianza justo en el momento de cerrar, y la confianza es
- * el producto. Después estuvo como "según tu caso", que era verdad mientras se
- * calculaba sobre la inversión prevista y dejaba igualmente el desembolso para
- * la llamada. Desde el 2026-08-28 es una cifra por plan y va escrita.
- *
- * **El suelo de 300 € se explica por el calendario, no por el algoritmo.**
- * Decía "para que dé tiempo a aprender", que es cierto por dentro y no dice
- * nada por fuera: nadie que lleve una clínica sabe qué tiene que aprender un
- * anuncio. Lo que sí entiende cualquiera es que un presupuesto pequeño
- * repartido en dos plataformas no llega para tener las dos encendidas todos los
- * días del mes. Es la misma advertencia contada en unidades que se pueden
- * comprobar en un calendario.
- */
-const CONDICIONES =
-  "La inversión en anuncios la pagas tú directamente a Google y a Meta, con tu tarjeta: " +
-  "ese dinero no pasa por nuestras manos, y tampoco nos llevamos comisión de lo que " +
-  "inviertes. El segundo canal pide una inversión mínima de 300 € al mes: por debajo de " +
-  "esa cifra, el presupuesto no da para mantener dos campañas activas todos los días del " +
-  "mes. Sin permanencia: pagas mes a mes y te vas cuando quieras. Al empezar sí hay una " +
-  "cuota de alta única de 150 € en el básico y 200 € en el avanzado: la landing y la " +
-  "configuración de las campañas son trabajo real y concentrado, y por eso no van dentro de " +
-  "la mensualidad.";
 
 export function Planes() {
   return (
@@ -130,6 +107,12 @@ export function Planes() {
               </span>
             </p>
 
+            {plan.nota && (
+              <p className="mt-3 text-sm font-medium" style={{ color: T.accentText }}>
+                {plan.nota}
+              </p>
+            )}
+
             <ul className="mt-6 flex-1 space-y-3 border-t pt-6" style={{ borderColor: T.line }}>
               {FILAS.map((fila) => {
                 const valor = plan.id === "basico" ? fila.basico : fila.avanzado;
@@ -167,9 +150,6 @@ export function Planes() {
         ))}
       </div>
 
-      <p className="mx-auto mt-8 max-w-4xl text-sm leading-relaxed" style={{ color: T.muted }}>
-        {CONDICIONES}
-      </p>
     </div>
   );
 }

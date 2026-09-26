@@ -45,6 +45,17 @@ describe("Planes", () => {
     expect(linea(container, "avanzado", "Cuota de alta").textContent).toContain("200 €");
   });
 
+  test("sin letra pequeña, que es lo que promete el titular de la sección", () => {
+    // Hubo un párrafo de condiciones debajo de las tarjetas, justo bajo «Dos
+    // planes, sin letra pequeña». Todo lo que importa va dentro de la tarjeta.
+    const { container } = render(<Planes />);
+    const fuera = [...container.querySelectorAll("p")].filter((p) => !p.closest("article"));
+    expect(fuera).toHaveLength(0);
+    // Y el mínimo para dos canales se ve en la del avanzado.
+    const avanzado = container.querySelector('[data-plan="avanzado"]')!;
+    expect(avanzado.textContent).toContain("300 €");
+  });
+
   test("cada tarjeta lleva al formulario", () => {
     const { container } = render(<Planes />);
     const botones = container.querySelectorAll('a[href="#empezar"]');
