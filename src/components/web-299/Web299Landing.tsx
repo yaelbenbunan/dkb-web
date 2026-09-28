@@ -20,147 +20,53 @@ import {
 /**
  * Landing de la web a 299€.
  *
- * La idea que la ordena: en vez de DESCRIBIR el producto, la página lo
- * DEMUESTRA. El hero monta una web sección a sección delante de quien mira, el
- * coste va en un tique sumado en vez de en tres tarjetas, y la anatomía de la
- * one page es la pieza central en lugar de una lista de «qué incluye». Una
- * landing de web que no enseña una web montándose está desaprovechando lo único
- * que tiene a mano.
+ * PALETA: negros para las superficies oscuras y el azul de dinkbit (#0b3ae7)
+ * SOLO como relleno —botones, hitos, subrayados— nunca como texto pequeño sobre
+ * negro. Está medido: el azul de marca como texto sobre este negro da 2.5:1,
+ * ilegible; como fondo con blanco encima da 8.4:1, y como texto sobre la crema
+ * 7.15:1. O sea que el azul manda en los sitios donde se pulsa, y el texto sobre
+ * negro va en blanco.
  *
- * PALETA PROPIA, no los tokens del sitio: con tokens, las secciones sin fondo
+ * Los colores son FIJOS, no tokens del tema: con tokens, las secciones sin fondo
  * explícito heredaban el modo oscuro del visitante mientras el texto seguía
  * fijado en claro, y media landing quedaba ilegible. Cada superficie declara su
  * fondo Y su color.
- *
- * El acento tiene dos variantes por CONTRASTE, no por gusto: el azul de marca
- * sobre la tinta se queda en 4.4, por debajo del mínimo para texto pequeño, y
- * sobre crema se queda flojo. Cada variante va en su fondo.
  */
-/**
- * EL AZUL DE DINKBIT, el de verdad: #0b3ae7. Y la consecuencia importante es
- * que el azul no es un detalle sobre un fondo negro, es LA SUPERFICIE OSCURA.
- *
- * Está medido: el azul como TEXTO sobre un casi negro (#0B1020, que es lo que
- * tenía esta página) da 2.50:1, ilegible. El mismo azul como FONDO con blanco
- * encima da 7.57:1, y sobre la crema como texto da 7.15:1. O sea que la manera
- * de que el azul de marca mande en la página sin que nada quede ilegible es
- * pintarlo entero y poner blanco encima — no salpicarlo sobre negro.
- */
-const AZUL = "#0b3ae7";
-/** Para la segunda superficie oscura, y así dos secciones azules seguidas no se
- *  confunden. Blanco encima da 14.96:1. */
-const AZUL_PROFUNDO = "#061c6f";
+const NEGRO = "#0B0B0E";
+/** Segunda superficie oscura, para que dos secciones seguidas no se confundan. */
+const NEGRO_SUAVE = "#15151B";
 const CREAM = "#FBF8F4";
-/** Tinta para el texto sobre la crema. */
+/** El azul de dinkbit. Relleno y texto sobre claro; nunca texto sobre negro. */
+const AZUL = "#0b3ae7";
 const INK = "#0B1020";
 
 /**
- * Animaciones locales, en un `<style>` del propio componente y con prefijo
- * `w299-`, no en `globals.css`: son de esta página y nada más, y meterlas en la
- * hoja global las cargaría en las otras cuarenta rutas del sitio.
- *
- * `prefers-reduced-motion` apaga el montaje y deja todos los bloques visibles:
- * quien pide menos movimiento tiene que ver la web entera igual, no una a
- * medias.
+ * Animaciones locales, con prefijo `w299-` y en un `<style>` del propio
+ * componente: son de esta página, y meterlas en `globals.css` las cargaría en
+ * las otras cuarenta rutas del sitio.
  */
 const ANIMACIONES = `
-@keyframes w299-montar {
-  0%   { opacity: 0; transform: translateY(14px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
-.w299-bloque { opacity: 0; animation: w299-montar .55s cubic-bezier(.21,.47,.32,.98) forwards; }
-@keyframes w299-cursor { 0%, 49% { opacity: 1 } 50%, 100% { opacity: 0 } }
-.w299-cursor { animation: w299-cursor 1.1s step-end infinite; }
-/* La línea de la cronología se dibuja de izquierda a derecha al entrar en pantalla. */
 @keyframes w299-linea { from { transform: scaleX(0) } to { transform: scaleX(1) } }
 .w299-linea { transform-origin: left center; animation: w299-linea 1.1s .15s cubic-bezier(.21,.47,.32,.98) both; }
-/* El último hito late: es «ya la tienes», y es donde se quiere que caiga el ojo. */
 @keyframes w299-latido {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(11,58,231,.55) }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(11,58,231,.6) }
   70%      { box-shadow: 0 0 0 12px rgba(11,58,231,0) }
 }
 .w299-latido { animation: w299-latido 2.4s ease-out infinite; }
 @media (prefers-reduced-motion: reduce) {
-  .w299-bloque { opacity: 1; animation: none; }
-  .w299-cursor { animation: none; }
   .w299-linea { transform: scaleX(1); animation: none; }
   .w299-latido { animation: none; }
 }
 `;
 
-/**
- * La web montándose. Cada bloque entra con un retraso, así que se ve construir
- * una portada, luego los servicios, luego el resto — exactamente las seis
- * secciones que se venden. Son cajas de color, NO texto de pega: un «Lorem
- * ipsum» a este tamaño se lee como una web sin terminar, y las cajas se leen
- * como una maqueta.
- *
- * Plano y de frente, sin inclinación ni perspectiva.
- */
-function WebMontandose() {
-  const bloque = (delay: number, extra: string, style?: React.CSSProperties) => (
-    <div className={`w299-bloque ${extra}`} style={{ animationDelay: `${delay}s`, ...style }} />
-  );
-  return (
-    <div
-      className="overflow-hidden rounded-2xl"
-      style={{
-        border: "1px solid rgba(255,255,255,.14)",
-        background: "#fff",
-        boxShadow: "0 30px 70px -40px rgba(0,0,0,.7)",
-      }}
-    >
-      {/* Barra del navegador, puro CSS. */}
-      <div
-        className="flex items-center gap-1.5 px-4 py-3"
-        style={{ background: "#F1EEE9", borderBottom: "1px solid rgba(11,16,32,.08)" }}
-      >
-        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: "rgba(11,16,32,.22)" }} />
-        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: "rgba(11,16,32,.16)" }} />
-        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: "rgba(11,16,32,.10)" }} />
-        <span className="ml-2 flex h-5 flex-1 items-center rounded px-2 text-[10px]" style={{ background: "#fff", color: "#8A91A6" }}>
-          tunegocio.es
-          <span className="w299-cursor ml-0.5" aria-hidden="true">|</span>
-        </span>
-      </div>
-
-      <div className="space-y-2.5 p-4" aria-hidden="true">
-        {/* 01 Portada: titular + botón */}
-        <div className="flex items-end gap-3">
-          {bloque(0.15, "h-16 flex-1 rounded-lg", { background: "rgba(11,16,32,.85)" })}
-          {bloque(0.3, "h-8 w-20 rounded-lg", { background: AZUL })}
-        </div>
-        {/* 02 Servicios: tres tarjetas */}
-        <div className="grid grid-cols-3 gap-2.5">
-          {bloque(0.5, "h-14 rounded-lg", { background: "rgba(11,16,32,.10)" })}
-          {bloque(0.6, "h-14 rounded-lg", { background: "rgba(11,16,32,.10)" })}
-          {bloque(0.7, "h-14 rounded-lg", { background: "rgba(11,16,32,.10)" })}
-        </div>
-        {/* 03 Cómo trabajas */}
-        {bloque(0.9, "h-10 rounded-lg", { background: "rgba(11,58,231,.14)" })}
-        {/* 04 Precios + 05 Dónde estás */}
-        <div className="grid grid-cols-[1.6fr_1fr] gap-2.5">
-          {bloque(1.05, "h-12 rounded-lg", { background: "rgba(11,16,32,.10)" })}
-          {bloque(1.15, "h-12 rounded-lg", { background: "rgba(11,16,32,.22)" })}
-        </div>
-        {/* 06 Contacto */}
-        {bloque(1.35, "h-9 rounded-lg", { background: "rgba(11,16,32,.85)" })}
-      </div>
-    </div>
-  );
-}
-
-/** Marco de navegador plano para las capturas reales. */
+/** Marco de navegador plano y de frente para las capturas reales. */
 function Ventana({ src, alt }: { src: string; alt: string }) {
   return (
     <figure
       className="overflow-hidden rounded-2xl"
       style={{ border: "1px solid rgba(11,16,32,.12)", background: "#fff", boxShadow: "0 18px 40px -28px rgba(11,16,32,.45)" }}
     >
-      <div
-        className="flex items-center gap-1.5 px-4 py-3"
-        style={{ background: "#F1EEE9", borderBottom: "1px solid rgba(11,16,32,.08)" }}
-      >
+      <div className="flex items-center gap-1.5 px-4 py-3" style={{ background: "#F1EEE9", borderBottom: "1px solid rgba(11,16,32,.08)" }}>
         <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: "rgba(11,16,32,.22)" }} />
         <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: "rgba(11,16,32,.16)" }} />
         <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: "rgba(11,16,32,.10)" }} />
@@ -193,8 +99,17 @@ const LOGO_EXT: Record<string, string> = {
   "instituto-fich": "png",
 };
 
-/** Logos en movimiento. Doble juego, el segundo `aria-hidden`: así el bucle no
- *  tiene costura y un lector de pantalla no lee la lista dos veces. */
+/**
+ * Logos de clientes en movimiento.
+ *
+ * A TAMAÑO GRANDE: la primera versión los puso a 28px de alto y no se
+ * distinguía ni uno, que es lo contrario de lo que busca una tira de logos —
+ * si no se reconoce la marca, no hay prueba social, solo ruido gris. Ahora
+ * ocupan el triple y van a opacidad plena.
+ *
+ * Doble juego de logos y `aria-hidden` en el segundo: así el bucle no tiene
+ * costura y un lector de pantalla no lee la lista dos veces.
+ */
 function TiraDeLogos() {
   const fila = (oculta: boolean) =>
     LOGOS.map((slug) => (
@@ -203,24 +118,24 @@ function TiraDeLogos() {
         src={`/img/casos/${slug}/logo/negativo.${LOGO_EXT[slug] ?? "webp"}`}
         alt={oculta ? "" : slug.replace(/-/g, " ")}
         aria-hidden={oculta || undefined}
-        width={150}
-        height={48}
-        className="h-7 w-auto shrink-0 opacity-70 sm:h-8"
+        width={320}
+        height={110}
+        className="h-12 w-auto shrink-0 sm:h-16 lg:h-20"
       />
     ));
   return (
-    <section className="relative" style={{ background: AZUL_PROFUNDO }}>
-      <div className="py-8 pb-16">
-        <p className="mb-6 text-center text-[12px] font-bold uppercase tracking-[0.18em]" style={{ color: "rgba(255,255,255,.45)" }}>
+    <section className="relative" style={{ background: NEGRO_SUAVE }}>
+      <div className="py-12 pb-20">
+        <p className="mb-9 text-center text-[13px] font-bold uppercase tracking-[0.18em]" style={{ color: "rgba(255,255,255,.6)" }}>
           Ya trabajamos con
         </p>
         <div className="relative overflow-hidden">
-          <div className="animate-marquee flex w-max items-center gap-12 pr-12">
+          <div className="animate-marquee flex w-max items-center gap-16 pr-16 lg:gap-20 lg:pr-20">
             {fila(false)}
             {fila(true)}
           </div>
-          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-16" style={{ background: `linear-gradient(to right, ${AZUL_PROFUNDO}, transparent)` }} />
-          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-16" style={{ background: `linear-gradient(to left, ${AZUL_PROFUNDO}, transparent)` }} />
+          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-20" style={{ background: `linear-gradient(to right, ${NEGRO_SUAVE}, transparent)` }} />
+          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-20" style={{ background: `linear-gradient(to left, ${NEGRO_SUAVE}, transparent)` }} />
         </div>
       </div>
       <Cut to={CREAM} shape="valley" />
@@ -228,10 +143,10 @@ function TiraDeLogos() {
   );
 }
 
-/** Corte curvo entre secciones. Va DENTRO de la sección anterior, absoluto
- *  sobre su fondo, para que no aparezca el escalón que dejaba un bloque
- *  intermedio con fondo propio. Los trazados rebasan el lienzo por los lados
- *  para que el borde antialiaseado quede fuera y no se vea la costura. */
+/** Corte curvo entre secciones. Va DENTRO de la sección anterior, absoluto sobre
+ *  su fondo, para que no aparezca el escalón que dejaba un bloque intermedio con
+ *  fondo propio. Los trazados rebasan el lienzo por los lados para que el borde
+ *  antialiaseado quede fuera y no se vea la costura de un píxel. */
 function Cut({ to, shape = "valley", height = 90 }: { to: string; shape?: "valley" | "wave" | "crest"; height?: number }) {
   const paths = {
     valley: "M-1,7 L-1,1.5 Q50,7.5 101,1.5 L101,7 Z",
@@ -250,19 +165,43 @@ export function Web299LandingPage() {
     <div style={{ background: CREAM, color: INK }}>
       <style>{ANIMACIONES}</style>
 
-      {/* HERO. El precio es el protagonista TIPOGRÁFICO: a este tamaño, la cifra
-          es la ilustración, y no hace falta ningún asset para que la página
-          tenga una imagen fuerte. El formulario sigue arriba y a la vista. */}
-      <section className="relative overflow-hidden" style={{ background: AZUL, color: "#fff" }}>
-        <div aria-hidden="true" className="pointer-events-none absolute -left-40 -top-40 h-[32rem] w-[32rem] rounded-full opacity-25 blur-3xl" style={{ background: AZUL }} />
-        <Container className="relative py-14 md:py-20">
-          <div className="grid items-start gap-12 lg:grid-cols-[1.15fr_minmax(350px,400px)]">
+      {/* HERO con FOTO de fondo.
+          El degradado no es decorativo: cae de .94 a .55 de izquierda a derecha,
+          o sea opaco justo donde va el texto y más claro donde va el formulario,
+          que es una tarjeta blanca y se defiende sola. Encima, `text-shadow` en
+          el titular. Texto sobre foto sin esas dos cosas es el fallo de
+          legibilidad que ya costó una corrección en /imagina-tu-web: la foto
+          cambia de tono por zonas y el contraste medido sobre un color plano no
+          garantiza nada. */}
+      <section className="relative isolate overflow-hidden" style={{ background: NEGRO, color: "#fff" }}>
+        <Image
+          src="/img/home/hero-bg-alt-meeting.webp"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="-z-20 object-cover object-center"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 -z-10"
+          style={{
+            background:
+              "linear-gradient(100deg, rgba(11,11,14,.95) 0%, rgba(11,11,14,.90) 42%, rgba(11,11,14,.62) 78%, rgba(11,11,14,.52) 100%)",
+          }}
+        />
+
+        <Container className="relative py-16 md:py-24">
+          <div className="grid items-start gap-12 lg:grid-cols-[1.1fr_minmax(350px,400px)]">
             <div>
-              <p className="text-[13px] font-bold uppercase tracking-[0.14em]" style={{ color: "rgba(255,255,255,.88)" }}>
+              <p className="text-[13px] font-bold uppercase tracking-[0.16em]" style={{ color: "rgba(255,255,255,.75)" }}>
                 Una página. Seis secciones. Un pago.
               </p>
 
-              <h1 className="mt-5 text-[34px] font-extrabold leading-[1.02] tracking-tight sm:text-[46px]">
+              <h1
+                className="mt-5 text-[34px] font-extrabold leading-[1.02] tracking-tight sm:text-[48px]"
+                style={{ textShadow: "0 2px 14px rgba(0,0,0,.55)" }}
+              >
                 Tu web optimizada para
                 <br />
                 convertir visitantes
@@ -270,27 +209,29 @@ export function Web299LandingPage() {
                 en clientes{" "}
                 <span className="whitespace-nowrap">
                   desde solo{" "}
-                  {/* La cifra, a cuerpo mayor que el resto del titular y con el
-                      símbolo pequeño: así el número manda dentro de la frase sin
-                      partirla en dos titulares. */}
-                  <span className="text-[1.35em] leading-none">299</span>
-                  <span className="text-[0.62em] align-super font-bold">€</span>
+                  {/* La cifra, a cuerpo mayor dentro de la frase y subrayada en
+                      azul: el azul de marca como RELLENO, que es donde se lee. */}
+                  <span
+                    className="relative inline-block"
+                    style={{ boxShadow: `inset 0 -0.26em 0 ${AZUL}` }}
+                  >
+                    <span className="relative text-[1.3em] leading-none">299</span>
+                    <span className="relative text-[0.6em] align-super font-bold">€</span>
+                  </span>
                 </span>
               </h1>
 
-              <p className="mt-6 max-w-xl text-[17px] leading-relaxed sm:text-[19px]" style={{ color: "rgba(255,255,255,.82)" }}>
+              <p
+                className="mt-7 max-w-xl text-[17px] leading-relaxed sm:text-[19px]"
+                style={{ color: "rgba(255,255,255,.9)", textShadow: "0 1px 10px rgba(0,0,0,.5)" }}
+              >
                 Una sola página de las que se recorren haciendo scroll, con tus colores, tus textos y
                 tus fotos. Pago único: no hay cuota mensual por la web.
               </p>
 
-              {/* La web montándose: demuestra el producto en el sitio donde
-                  normalmente va una lista de tres ventajas. */}
-              <div className="mt-9 max-w-lg">
-                <WebMontandose />
-                <p className="mt-3 text-[13px]" style={{ color: "rgba(255,255,255,.55)" }}>
-                  Así se monta: portada, servicios, cómo trabajas, precios, dónde estás y contacto.
-                </p>
-              </div>
+              <p className="mt-8 text-[15px] font-semibold" style={{ color: "rgba(255,255,255,.8)" }}>
+                Publicada en {WEB_299_DAYS} días laborables · Alojamiento y dominio aparte
+              </p>
             </div>
 
             <div className="lg:sticky lg:top-24">
@@ -302,39 +243,33 @@ export function Web299LandingPage() {
 
       <TiraDeLogos />
 
-      {/* EL TIQUE. Sustituye a las tres tarjetas de precio, y es la sección que
-          más se va a recordar: es la suma que todo el mundo hace a mano y que
-          nadie pone. Decirla nosotros quita la sospecha de que hay algo
-          escondido, y el número del segundo año es el argumento de verdad
-          frente a una cuota mensual. */}
+      {/* EL TIQUE. Sustituye a tres tarjetas de precio: es la suma que todo el
+          mundo hace a mano y que ninguna competencia pone, y decirla nosotros
+          quita la sospecha de que hay algo escondido. */}
       <section className="relative" style={{ background: CREAM }}>
         <Container className="py-16 md:py-24">
           <div className="grid items-center gap-12 lg:grid-cols-[1fr_minmax(320px,440px)]">
             <div>
               <h2 className="text-[32px] font-extrabold leading-[1.05] tracking-tight sm:text-[44px]">
-                Lo que cuesta,
+                Sin sorpresas:
                 <br />
-                <span style={{ color: AZUL }}>sumado</span>
+                <span style={{ color: AZUL }}>esto es todo lo que pagas</span>
               </h2>
               <p className="mt-5 max-w-lg text-[17px] leading-relaxed" style={{ color: "#3E4557" }}>
-                Nadie pone esta cuenta, así que la ponemos nosotros. El alojamiento y el dominio no
-                van incluidos y son anuales: puedes contratarlos con quien quieras, y si te apetece
-                nos encargamos por ese precio.
+                El alojamiento y el dominio no van incluidos y son anuales. Puedes contratarlos con
+                quien quieras, y si te apetece nos encargamos nosotros por ese precio.
               </p>
               <p className="mt-6 text-[15px] leading-relaxed" style={{ color: "#5A6178" }}>
-                A partir del segundo año solo pagas el alojamiento y el dominio:{" "}
+                A partir del segundo año solo pagas alojamiento y dominio:{" "}
                 <strong style={{ color: INK }}>{WEB_299_TOTAL_SIGUIENTES} al año</strong>. Eso es lo
-                que cuesta tenerla viva, no una cuota mensual.
+                que cuesta tenerla viva, y no una cuota mensual.
               </p>
             </div>
 
-            {/* El tique. Tipografía monoespaciada y borde dentado abajo: se lee
+            {/* El tique: monoespaciada, línea de puntos y dentado abajo. Se lee
                 como un recibo, que es justo lo que se quiere transmitir. */}
-            <div
-              className="relative rounded-2xl p-7 font-mono"
-              style={{ background: AZUL_PROFUNDO, color: "#fff", boxShadow: "0 26px 60px -30px rgba(6,28,111,.6)" }}
-            >
-              <p className="text-[12px] font-bold uppercase tracking-[0.18em]" style={{ color: "rgba(255,255,255,.5)" }}>
+            <div className="relative rounded-2xl p-7 font-mono" style={{ background: NEGRO, color: "#fff", boxShadow: "0 26px 60px -30px rgba(11,11,14,.6)" }}>
+              <p className="text-[12px] font-bold uppercase tracking-[0.18em]" style={{ color: "rgba(255,255,255,.55)" }}>
                 Primer año
               </p>
               <dl className="mt-6 space-y-4 text-[15px]">
@@ -346,32 +281,35 @@ export function Web299LandingPage() {
                   <div key={l.k} className="flex items-baseline justify-between gap-4">
                     <dt>
                       {l.k}
-                      <span className="ml-2 text-[12px]" style={{ color: "rgba(255,255,255,.45)" }}>
+                      <span className="ml-2 text-[12px]" style={{ color: "rgba(255,255,255,.55)" }}>
                         {l.nota}
                       </span>
                     </dt>
-                    {/* Línea de puntos: es lo que hace que se lea como un tique
-                        y no como una tabla. */}
-                    <span aria-hidden="true" className="mx-2 flex-1 self-end border-b border-dashed" style={{ borderColor: "rgba(255,255,255,.22)" }} />
+                    <span aria-hidden="true" className="mx-2 flex-1 self-end border-b border-dashed" style={{ borderColor: "rgba(255,255,255,.25)" }} />
                     <dd className="font-bold tabular-nums">{l.v}</dd>
                   </div>
                 ))}
               </dl>
 
-              <div className="mt-7 border-t border-dashed pt-6" style={{ borderColor: "rgba(255,255,255,.25)" }}>
+              <div className="mt-7 border-t border-dashed pt-6" style={{ borderColor: "rgba(255,255,255,.28)" }}>
                 <div className="flex items-baseline justify-between gap-4">
-                  <span className="text-[13px] font-bold uppercase tracking-[0.12em]" style={{ color: "rgba(255,255,255,.6)" }}>
+                  <span className="text-[13px] font-bold uppercase tracking-[0.12em]" style={{ color: "rgba(255,255,255,.65)" }}>
                     Total
                   </span>
-                  <span className="text-[40px] font-extrabold leading-none tabular-nums tracking-tight" style={{ color: "rgba(255,255,255,.88)" }}>
+                  {/* El total en blanco, no en azul: azul sobre negro no se lee.
+                      El azul va en la banda de debajo, como relleno. */}
+                  <span className="text-[40px] font-extrabold leading-none tabular-nums tracking-tight">
                     {WEB_299_TOTAL_PRIMER_ANO}
                   </span>
                 </div>
               </div>
 
-              {/* Dentado del recibo. Círculos del color de la sección de abajo,
-                  medio fuera, que es cómo se recorta un borde rasgado sin
-                  imagen. */}
+              <div className="-mx-7 mt-6 px-7 py-2.5" style={{ background: AZUL }}>
+                <p className="text-center text-[13px] font-bold tracking-wide">Pago único por la web</p>
+              </div>
+
+              {/* Dentado del recibo: círculos del color de la sección de abajo,
+                  medio fuera, que es cómo se recorta un borde rasgado sin imagen. */}
               <div aria-hidden="true" className="absolute inset-x-0 -bottom-2 flex justify-between px-3">
                 {Array.from({ length: 16 }).map((_, i) => (
                   <span key={i} className="h-4 w-4 rounded-full" style={{ background: CREAM }} />
@@ -382,32 +320,33 @@ export function Web299LandingPage() {
         </Container>
       </section>
 
-      {/* LA ANATOMÍA. Sustituye a la lista de «qué incluye»: enseña las seis
-          secciones numeradas, que es la pregunta que de verdad se hace quien
-          compara 299€ con un presupuesto de 2.000€. */}
-      <section className="relative overflow-hidden" style={{ background: AZUL, color: "#fff" }}>
+      {/* LA ANATOMÍA: las seis secciones, numeradas. Responde sin que nadie
+          pregunte a «¿cuántas páginas son?». */}
+      <section className="relative overflow-hidden" style={{ background: NEGRO, color: "#fff" }}>
         <Container className="py-16 md:py-24">
           <div className="max-w-2xl">
             <h2 className="text-[32px] font-extrabold leading-[1.05] tracking-tight sm:text-[44px]">
               Qué lleva dentro,
               <br />
-              <span style={{ color: "rgba(255,255,255,.88)" }}>sección por sección</span>
+              <span className="inline-block" style={{ boxShadow: `inset 0 -0.2em 0 ${AZUL}` }}>
+                sección por sección
+              </span>
             </h2>
-            <p className="mt-5 text-[17px] leading-relaxed" style={{ color: "rgba(255,255,255,.8)" }}>
+            <p className="mt-6 text-[17px] leading-relaxed" style={{ color: "rgba(255,255,255,.85)" }}>
               Una sola página con menú que salta a cada bloque. Es el formato que mejor funciona
               cuando lo que quieres es que te llamen o te escriban.
             </p>
           </div>
 
-          <ol className="mt-12 grid gap-px overflow-hidden rounded-2xl sm:grid-cols-2 lg:grid-cols-3" style={{ background: "rgba(255,255,255,.12)" }}>
+          <ol className="mt-12 grid gap-px overflow-hidden rounded-2xl sm:grid-cols-2 lg:grid-cols-3" style={{ background: "rgba(255,255,255,.14)" }}>
             {WEB_299_SECCIONES.map((sec, i) => (
               <Reveal key={sec.n} delay={i * 0.06}>
-                <li className="h-full p-7" style={{ background: AZUL }}>
-                  <p className="text-[40px] font-extrabold leading-none tabular-nums tracking-tight" style={{ color: "rgba(255,255,255,.32)" }}>
+                <li className="h-full p-7" style={{ background: NEGRO }}>
+                  <p className="text-[40px] font-extrabold leading-none tabular-nums tracking-tight" style={{ color: "rgba(255,255,255,.3)" }}>
                     {sec.n}
                   </p>
                   <p className="mt-3 text-[19px] font-bold">{sec.titulo}</p>
-                  <p className="mt-2 text-[15px] leading-relaxed" style={{ color: "rgba(255,255,255,.78)" }}>
+                  <p className="mt-2 text-[15px] leading-relaxed" style={{ color: "rgba(255,255,255,.8)" }}>
                     {sec.que}
                   </p>
                 </li>
@@ -420,24 +359,24 @@ export function Web299LandingPage() {
               <span
                 key={i}
                 className="rounded-full px-4 py-2 text-[14px]"
-                style={{ background: "rgba(255,255,255,.12)", color: "rgba(255,255,255,.9)", border: "1px solid rgba(255,255,255,.22)" }}
+                style={{ background: "rgba(255,255,255,.08)", color: "rgba(255,255,255,.92)", border: "1px solid rgba(255,255,255,.18)" }}
               >
                 {i}
               </span>
             ))}
           </div>
 
-          {/* El «qué no incluye» va AQUÍ, pegado al «qué sí», y con el mismo
-              peso. Separarlo en otra sección es lo que hace que parezca que se
-              esconde, y es la conversación incómoda que acaba en la llamada. */}
-          <div className="mt-12 rounded-2xl p-7" style={{ background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.12)" }}>
-            <p className="text-[13px] font-bold uppercase tracking-[0.14em]" style={{ color: "rgba(255,255,255,.55)" }}>
+          {/* El «qué no incluye» va pegado al «qué sí» y con el mismo peso:
+              separarlo en otra sección es lo que hace que parezca que se esconde,
+              y es la conversación incómoda que acaba en la llamada. */}
+          <div className="mt-10 rounded-2xl p-7" style={{ background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.14)" }}>
+            <p className="text-[13px] font-bold uppercase tracking-[0.14em]" style={{ color: "rgba(255,255,255,.6)" }}>
               Lo que no entra
             </p>
             <ul className="mt-4 grid gap-x-8 gap-y-2.5 sm:grid-cols-2">
               {WEB_299_EXCLUDES.map((e) => (
-                <li key={e} className="flex items-start gap-2.5 text-[15px] leading-relaxed" style={{ color: "rgba(255,255,255,.78)" }}>
-                  <span aria-hidden="true" style={{ color: "rgba(255,255,255,.35)" }}>
+                <li key={e} className="flex items-start gap-2.5 text-[15px] leading-relaxed" style={{ color: "rgba(255,255,255,.8)" }}>
+                  <span aria-hidden="true" style={{ color: "rgba(255,255,255,.4)" }}>
                     —
                   </span>
                   <span>{e}</span>
@@ -470,13 +409,8 @@ export function Web299LandingPage() {
         </Container>
       </section>
 
-      {/* LA CRONOLOGÍA. Antes eran tres columnas con una regla encima, que es la
-          forma más sosa de contar un proceso. Ahora cuenta CUÁNDO: «cómo
-          funciona» es la pregunta de la agencia, «cuándo la tengo» es la del
-          cliente, y el plazo era un argumento de venta enterrado en un párrafo.
-
-          La línea se dibuja al entrar, los hitos aparecen en cascada y el
-          último late, que es donde se quiere que caiga el ojo. */}
+      {/* LA CRONOLOGÍA: cuenta CUÁNDO, no solo qué. «Cómo funciona» es la
+          pregunta de la agencia; «cuándo la tengo» es la del cliente. */}
       <section className="relative" style={{ background: CREAM }}>
         <Container className="pb-16 md:pb-24">
           <h2 className="max-w-2xl text-[32px] font-extrabold leading-[1.05] tracking-tight sm:text-[44px]">
@@ -486,46 +420,28 @@ export function Web299LandingPage() {
           </h2>
 
           <div className="relative mt-14">
-            {/* La línea. En escritorio va horizontal por detrás de los hitos; en
-                móvil se apaga y la cronología se lee en vertical, que es como
-                funciona el pulgar. */}
             <div
               aria-hidden="true"
               className="w299-linea absolute left-0 right-0 top-[11px] hidden h-[2px] md:block"
               style={{ background: `linear-gradient(to right, ${AZUL}, rgba(11,58,231,.18))` }}
             />
-
             <ol className="relative grid gap-10 md:grid-cols-3 md:gap-8">
               {WEB_299_STEPS.map((paso, i) => {
                 const ultimo = i === WEB_299_STEPS.length - 1;
                 return (
                   <Reveal key={paso.title} delay={0.25 + i * 0.16}>
                     <li className="relative pl-10 md:pl-0">
-                      {/* El hito. Relleno en el primero y el último —el que
-                          empieza y el que remata—, hueco en el intermedio. */}
                       <span
                         aria-hidden="true"
                         className={`absolute left-0 top-[3px] grid h-6 w-6 place-items-center rounded-full md:static md:mb-6 ${ultimo ? "w299-latido" : ""}`}
-                        style={{
-                          background: ultimo || i === 0 ? AZUL : CREAM,
-                          border: `2px solid ${AZUL}`,
-                        }}
+                        style={{ background: ultimo || i === 0 ? AZUL : CREAM, border: `2px solid ${AZUL}` }}
                       >
-                        <span
-                          className="h-1.5 w-1.5 rounded-full"
-                          style={{ background: ultimo || i === 0 ? "#fff" : AZUL }}
-                        />
+                        <span className="h-1.5 w-1.5 rounded-full" style={{ background: ultimo || i === 0 ? "#fff" : AZUL }} />
                       </span>
-
-                      <p
-                        className="text-[13px] font-bold uppercase tracking-[0.16em]"
-                        style={{ color: AZUL }}
-                      >
+                      <p className="text-[13px] font-bold uppercase tracking-[0.16em]" style={{ color: AZUL }}>
                         {paso.dia}
                       </p>
-                      <p className="mt-2 text-[22px] font-extrabold leading-tight sm:text-[24px]">
-                        {paso.title}
-                      </p>
+                      <p className="mt-2 text-[22px] font-extrabold leading-tight sm:text-[24px]">{paso.title}</p>
                       <p className="mt-2.5 max-w-sm text-[15px] leading-relaxed" style={{ color: "#3E4557" }}>
                         {paso.description}
                       </p>
@@ -538,12 +454,10 @@ export function Web299LandingPage() {
         </Container>
       </section>
 
-      {/* FAQS, en lista grande en vez de acordeón de tarjetas. */}
+      {/* FAQS en lista grande, con «+» que gira al abrir. */}
       <section className="relative" style={{ background: CREAM }}>
         <Container className="pb-16 md:pb-24">
-          <h2 className="text-[32px] font-extrabold leading-[1.05] tracking-tight sm:text-[44px]">
-            Dudas razonables
-          </h2>
+          <h2 className="text-[32px] font-extrabold leading-[1.05] tracking-tight sm:text-[44px]">Dudas razonables</h2>
           <div className="mt-10 border-t" style={{ borderColor: "rgba(11,16,32,.14)" }}>
             {WEB_299_FAQS.map((f) => (
               <details key={f.q} className="group border-b py-5" style={{ borderColor: "rgba(11,16,32,.14)" }}>
@@ -563,21 +477,18 @@ export function Web299LandingPage() {
       </section>
 
       {/* CIERRE */}
-      <section className="relative overflow-hidden" style={{ background: AZUL, color: "#fff" }}>
-        <div aria-hidden="true" className="pointer-events-none absolute -right-32 -top-28 h-[26rem] w-[26rem] rounded-full opacity-20 blur-3xl" style={{ background: AZUL }} />
+      <section className="relative overflow-hidden" style={{ background: NEGRO, color: "#fff" }}>
         <Container className="relative py-16 md:py-24">
           <div className="grid items-center gap-12 lg:grid-cols-[1fr_minmax(350px,400px)]">
             <div>
-              <h2 className="text-[32px] font-extrabold leading-[1.02] tracking-tight sm:text-[46px]">
-                ¿Empezamos?
-              </h2>
-              <p className="mt-5 max-w-lg text-[17px] leading-relaxed" style={{ color: "rgba(255,255,255,.82)" }}>
+              <h2 className="text-[32px] font-extrabold leading-[1.02] tracking-tight sm:text-[46px]">¿Empezamos?</h2>
+              <p className="mt-6 max-w-lg text-[17px] leading-relaxed" style={{ color: "rgba(255,255,255,.85)" }}>
                 Tu nombre, tu teléfono y tu correo. Te llamamos en menos de 24 horas, te damos fecha
                 y decides. En {WEB_299_DAYS} días laborables la puedes tener publicada.
               </p>
-              <p className="mt-8 text-[14px]" style={{ color: "rgba(255,255,255,.6)" }}>
+              <p className="mt-8 text-[14px]" style={{ color: "rgba(255,255,255,.65)" }}>
                 Consulta las{" "}
-                <a href={WEB_299_TERMS_PATH} className="underline" style={{ color: "rgba(255,255,255,.88)" }}>
+                <a href={WEB_299_TERMS_PATH} className="underline" style={{ color: "#fff" }}>
                   condiciones del servicio
                 </a>
                 .

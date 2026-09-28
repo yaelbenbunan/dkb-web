@@ -30,11 +30,11 @@ export const WEB_299_META_TITLE = `Página web profesional por ${WEB_299_PRICE} 
 export const WEB_299_META_DESCRIPTION = `Desarrollamos tu web de una página (one page) con 5 o 6 secciones por ${WEB_299_PRICE}, lista en ${WEB_299_DAYS} días laborables. Precio cerrado, sin cuotas mensuales. Alojamiento ${WEB_299_HOSTING}/año y dominio ${WEB_299_DOMAIN}/año aparte.`;
 
 /**
- * El coste REAL, sumado. Es el número que todo el mundo calcula a mano y que
- * ninguna landing de la competencia pone: 299 de la web más 100 de alojamiento
- * más 25 de dominio son 424€ el primer año, y 125€ los siguientes. Decirlo
- * nosotros quita la sensación de que hay algo escondido, y de paso el segundo
- * número (125€/año) es el argumento de verdad frente a una cuota mensual.
+ * El coste REAL. Es el número que todo el mundo calcula a mano y que ninguna
+ * landing de la competencia pone: 299 de la web más 100 de alojamiento más 25 de
+ * dominio son 424€ el primer año, y 125€ los siguientes. Decirlo nosotros quita
+ * la sensación de que hay algo escondido, y de paso el segundo número
+ * (125€/año) es el argumento de verdad frente a una cuota mensual.
  *
  * Se calculan aquí, de los mismos literales de arriba, para que no puedan
  * desincronizarse si cambia un precio.
