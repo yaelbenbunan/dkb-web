@@ -36,13 +36,23 @@ import {
  * sobre la tinta se queda en 4.4, por debajo del mínimo para texto pequeño, y
  * sobre crema se queda flojo. Cada variante va en su fondo.
  */
-const INK = "#0B1020";
+/**
+ * EL AZUL DE DINKBIT, el de verdad: #0b3ae7. Y la consecuencia importante es
+ * que el azul no es un detalle sobre un fondo negro, es LA SUPERFICIE OSCURA.
+ *
+ * Está medido: el azul como TEXTO sobre un casi negro (#0B1020, que es lo que
+ * tenía esta página) da 2.50:1, ilegible. El mismo azul como FONDO con blanco
+ * encima da 7.57:1, y sobre la crema como texto da 7.15:1. O sea que la manera
+ * de que el azul de marca mande en la página sin que nada quede ilegible es
+ * pintarlo entero y poner blanco encima — no salpicarlo sobre negro.
+ */
+const AZUL = "#0b3ae7";
+/** Para la segunda superficie oscura, y así dos secciones azules seguidas no se
+ *  confunden. Blanco encima da 14.96:1. */
+const AZUL_PROFUNDO = "#061c6f";
 const CREAM = "#FBF8F4";
-const ACCENT = "#187bef";
-/** Para texto sobre fondos CLAROS. */
-const ACCENT_DEEP = "#0F5FBD";
-/** Para texto sobre la tinta: sube el contraste de 4.4 a 7.3. */
-const ACCENT_ON_DARK = "#7DB0F7";
+/** Tinta para el texto sobre la crema. */
+const INK = "#0B1020";
 
 /**
  * Animaciones locales, en un `<style>` del propio componente y con prefijo
@@ -66,8 +76,8 @@ const ANIMACIONES = `
 .w299-linea { transform-origin: left center; animation: w299-linea 1.1s .15s cubic-bezier(.21,.47,.32,.98) both; }
 /* El último hito late: es «ya la tienes», y es donde se quiere que caiga el ojo. */
 @keyframes w299-latido {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(24,123,239,.55) }
-  70%      { box-shadow: 0 0 0 12px rgba(24,123,239,0) }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(11,58,231,.55) }
+  70%      { box-shadow: 0 0 0 12px rgba(11,58,231,0) }
 }
 .w299-latido { animation: w299-latido 2.4s ease-out infinite; }
 @media (prefers-reduced-motion: reduce) {
@@ -118,7 +128,7 @@ function WebMontandose() {
         {/* 01 Portada: titular + botón */}
         <div className="flex items-end gap-3">
           {bloque(0.15, "h-16 flex-1 rounded-lg", { background: "rgba(11,16,32,.85)" })}
-          {bloque(0.3, "h-8 w-20 rounded-lg", { background: ACCENT })}
+          {bloque(0.3, "h-8 w-20 rounded-lg", { background: AZUL })}
         </div>
         {/* 02 Servicios: tres tarjetas */}
         <div className="grid grid-cols-3 gap-2.5">
@@ -127,7 +137,7 @@ function WebMontandose() {
           {bloque(0.7, "h-14 rounded-lg", { background: "rgba(11,16,32,.10)" })}
         </div>
         {/* 03 Cómo trabajas */}
-        {bloque(0.9, "h-10 rounded-lg", { background: "rgba(24,123,239,.14)" })}
+        {bloque(0.9, "h-10 rounded-lg", { background: "rgba(11,58,231,.14)" })}
         {/* 04 Precios + 05 Dónde estás */}
         <div className="grid grid-cols-[1.6fr_1fr] gap-2.5">
           {bloque(1.05, "h-12 rounded-lg", { background: "rgba(11,16,32,.10)" })}
@@ -199,7 +209,7 @@ function TiraDeLogos() {
       />
     ));
   return (
-    <section className="relative" style={{ background: INK }}>
+    <section className="relative" style={{ background: AZUL_PROFUNDO }}>
       <div className="py-8 pb-16">
         <p className="mb-6 text-center text-[12px] font-bold uppercase tracking-[0.18em]" style={{ color: "rgba(255,255,255,.45)" }}>
           Ya trabajamos con
@@ -209,8 +219,8 @@ function TiraDeLogos() {
             {fila(false)}
             {fila(true)}
           </div>
-          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-16" style={{ background: `linear-gradient(to right, ${INK}, transparent)` }} />
-          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-16" style={{ background: `linear-gradient(to left, ${INK}, transparent)` }} />
+          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-16" style={{ background: `linear-gradient(to right, ${AZUL_PROFUNDO}, transparent)` }} />
+          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-16" style={{ background: `linear-gradient(to left, ${AZUL_PROFUNDO}, transparent)` }} />
         </div>
       </div>
       <Cut to={CREAM} shape="valley" />
@@ -243,24 +253,28 @@ export function Web299LandingPage() {
       {/* HERO. El precio es el protagonista TIPOGRÁFICO: a este tamaño, la cifra
           es la ilustración, y no hace falta ningún asset para que la página
           tenga una imagen fuerte. El formulario sigue arriba y a la vista. */}
-      <section className="relative overflow-hidden" style={{ background: INK, color: "#fff" }}>
-        <div aria-hidden="true" className="pointer-events-none absolute -left-40 -top-40 h-[32rem] w-[32rem] rounded-full opacity-25 blur-3xl" style={{ background: ACCENT }} />
+      <section className="relative overflow-hidden" style={{ background: AZUL, color: "#fff" }}>
+        <div aria-hidden="true" className="pointer-events-none absolute -left-40 -top-40 h-[32rem] w-[32rem] rounded-full opacity-25 blur-3xl" style={{ background: AZUL }} />
         <Container className="relative py-14 md:py-20">
           <div className="grid items-start gap-12 lg:grid-cols-[1.15fr_minmax(350px,400px)]">
             <div>
-              <p className="text-[13px] font-bold uppercase tracking-[0.14em]" style={{ color: ACCENT_ON_DARK }}>
+              <p className="text-[13px] font-bold uppercase tracking-[0.14em]" style={{ color: "rgba(255,255,255,.88)" }}>
                 Una página. Seis secciones. Un pago.
               </p>
 
-              <h1 className="mt-5 text-[40px] font-extrabold leading-[0.95] tracking-tight sm:text-[58px]">
-                Tu web hecha
+              <h1 className="mt-5 text-[34px] font-extrabold leading-[1.02] tracking-tight sm:text-[46px]">
+                Tu web optimizada para
                 <br />
-                por{" "}
-                {/* La cifra, enorme y con el símbolo pequeño: así el número
-                    manda y no compite con el euro. */}
+                convertir visitantes
+                <br />
+                en clientes{" "}
                 <span className="whitespace-nowrap">
-                  <span style={{ color: ACCENT_ON_DARK }}>299</span>
-                  <span className="text-[0.5em] align-super font-bold" style={{ color: ACCENT_ON_DARK }}>€</span>
+                  desde solo{" "}
+                  {/* La cifra, a cuerpo mayor que el resto del titular y con el
+                      símbolo pequeño: así el número manda dentro de la frase sin
+                      partirla en dos titulares. */}
+                  <span className="text-[1.35em] leading-none">299</span>
+                  <span className="text-[0.62em] align-super font-bold">€</span>
                 </span>
               </h1>
 
@@ -300,7 +314,7 @@ export function Web299LandingPage() {
               <h2 className="text-[32px] font-extrabold leading-[1.05] tracking-tight sm:text-[44px]">
                 Lo que cuesta,
                 <br />
-                <span style={{ color: ACCENT_DEEP }}>sumado</span>
+                <span style={{ color: AZUL }}>sumado</span>
               </h2>
               <p className="mt-5 max-w-lg text-[17px] leading-relaxed" style={{ color: "#3E4557" }}>
                 Nadie pone esta cuenta, así que la ponemos nosotros. El alojamiento y el dominio no
@@ -318,7 +332,7 @@ export function Web299LandingPage() {
                 como un recibo, que es justo lo que se quiere transmitir. */}
             <div
               className="relative rounded-2xl p-7 font-mono"
-              style={{ background: INK, color: "#fff", boxShadow: "0 26px 60px -30px rgba(11,16,32,.65)" }}
+              style={{ background: AZUL_PROFUNDO, color: "#fff", boxShadow: "0 26px 60px -30px rgba(6,28,111,.6)" }}
             >
               <p className="text-[12px] font-bold uppercase tracking-[0.18em]" style={{ color: "rgba(255,255,255,.5)" }}>
                 Primer año
@@ -349,7 +363,7 @@ export function Web299LandingPage() {
                   <span className="text-[13px] font-bold uppercase tracking-[0.12em]" style={{ color: "rgba(255,255,255,.6)" }}>
                     Total
                   </span>
-                  <span className="text-[40px] font-extrabold leading-none tabular-nums tracking-tight" style={{ color: ACCENT_ON_DARK }}>
+                  <span className="text-[40px] font-extrabold leading-none tabular-nums tracking-tight" style={{ color: "rgba(255,255,255,.88)" }}>
                     {WEB_299_TOTAL_PRIMER_ANO}
                   </span>
                 </div>
@@ -371,13 +385,13 @@ export function Web299LandingPage() {
       {/* LA ANATOMÍA. Sustituye a la lista de «qué incluye»: enseña las seis
           secciones numeradas, que es la pregunta que de verdad se hace quien
           compara 299€ con un presupuesto de 2.000€. */}
-      <section className="relative overflow-hidden" style={{ background: INK, color: "#fff" }}>
+      <section className="relative overflow-hidden" style={{ background: AZUL, color: "#fff" }}>
         <Container className="py-16 md:py-24">
           <div className="max-w-2xl">
             <h2 className="text-[32px] font-extrabold leading-[1.05] tracking-tight sm:text-[44px]">
               Qué lleva dentro,
               <br />
-              <span style={{ color: ACCENT_ON_DARK }}>sección por sección</span>
+              <span style={{ color: "rgba(255,255,255,.88)" }}>sección por sección</span>
             </h2>
             <p className="mt-5 text-[17px] leading-relaxed" style={{ color: "rgba(255,255,255,.8)" }}>
               Una sola página con menú que salta a cada bloque. Es el formato que mejor funciona
@@ -388,8 +402,8 @@ export function Web299LandingPage() {
           <ol className="mt-12 grid gap-px overflow-hidden rounded-2xl sm:grid-cols-2 lg:grid-cols-3" style={{ background: "rgba(255,255,255,.12)" }}>
             {WEB_299_SECCIONES.map((sec, i) => (
               <Reveal key={sec.n} delay={i * 0.06}>
-                <li className="h-full p-7" style={{ background: INK }}>
-                  <p className="text-[40px] font-extrabold leading-none tabular-nums tracking-tight" style={{ color: "rgba(125,176,247,.32)" }}>
+                <li className="h-full p-7" style={{ background: AZUL }}>
+                  <p className="text-[40px] font-extrabold leading-none tabular-nums tracking-tight" style={{ color: "rgba(255,255,255,.32)" }}>
                     {sec.n}
                   </p>
                   <p className="mt-3 text-[19px] font-bold">{sec.titulo}</p>
@@ -406,7 +420,7 @@ export function Web299LandingPage() {
               <span
                 key={i}
                 className="rounded-full px-4 py-2 text-[14px]"
-                style={{ background: "rgba(125,176,247,.12)", color: "rgba(255,255,255,.9)", border: "1px solid rgba(125,176,247,.22)" }}
+                style={{ background: "rgba(255,255,255,.12)", color: "rgba(255,255,255,.9)", border: "1px solid rgba(255,255,255,.22)" }}
               >
                 {i}
               </span>
@@ -441,7 +455,7 @@ export function Web299LandingPage() {
           <h2 className="max-w-2xl text-[32px] font-extrabold leading-[1.05] tracking-tight sm:text-[44px]">
             Webs que ya están
             <br />
-            <span style={{ color: ACCENT_DEEP }}>publicadas</span>
+            <span style={{ color: AZUL }}>publicadas</span>
           </h2>
           <p className="mt-5 max-w-lg text-[17px] leading-relaxed" style={{ color: "#3E4557" }}>
             Trabajos reales de negocios como el tuyo. Ninguna es una maqueta.
@@ -468,7 +482,7 @@ export function Web299LandingPage() {
           <h2 className="max-w-2xl text-[32px] font-extrabold leading-[1.05] tracking-tight sm:text-[44px]">
             De hoy a publicada,
             <br />
-            <span style={{ color: ACCENT_DEEP }}>en {WEB_299_DAYS} días</span>
+            <span style={{ color: AZUL }}>en {WEB_299_DAYS} días</span>
           </h2>
 
           <div className="relative mt-14">
@@ -478,7 +492,7 @@ export function Web299LandingPage() {
             <div
               aria-hidden="true"
               className="w299-linea absolute left-0 right-0 top-[11px] hidden h-[2px] md:block"
-              style={{ background: `linear-gradient(to right, ${ACCENT}, rgba(24,123,239,.18))` }}
+              style={{ background: `linear-gradient(to right, ${AZUL}, rgba(11,58,231,.18))` }}
             />
 
             <ol className="relative grid gap-10 md:grid-cols-3 md:gap-8">
@@ -493,19 +507,19 @@ export function Web299LandingPage() {
                         aria-hidden="true"
                         className={`absolute left-0 top-[3px] grid h-6 w-6 place-items-center rounded-full md:static md:mb-6 ${ultimo ? "w299-latido" : ""}`}
                         style={{
-                          background: ultimo || i === 0 ? ACCENT : CREAM,
-                          border: `2px solid ${ACCENT}`,
+                          background: ultimo || i === 0 ? AZUL : CREAM,
+                          border: `2px solid ${AZUL}`,
                         }}
                       >
                         <span
                           className="h-1.5 w-1.5 rounded-full"
-                          style={{ background: ultimo || i === 0 ? "#fff" : ACCENT }}
+                          style={{ background: ultimo || i === 0 ? "#fff" : AZUL }}
                         />
                       </span>
 
                       <p
                         className="text-[13px] font-bold uppercase tracking-[0.16em]"
-                        style={{ color: ACCENT_DEEP }}
+                        style={{ color: AZUL }}
                       >
                         {paso.dia}
                       </p>
@@ -535,7 +549,7 @@ export function Web299LandingPage() {
               <details key={f.q} className="group border-b py-5" style={{ borderColor: "rgba(11,16,32,.14)" }}>
                 <summary className="flex cursor-pointer list-none items-start justify-between gap-6 text-[18px] font-bold sm:text-[20px]">
                   <span>{f.q}</span>
-                  <span aria-hidden="true" className="mt-1 shrink-0 text-[22px] leading-none transition-transform group-open:rotate-45" style={{ color: ACCENT_DEEP }}>
+                  <span aria-hidden="true" className="mt-1 shrink-0 text-[22px] leading-none transition-transform group-open:rotate-45" style={{ color: AZUL }}>
                     +
                   </span>
                 </summary>
@@ -549,8 +563,8 @@ export function Web299LandingPage() {
       </section>
 
       {/* CIERRE */}
-      <section className="relative overflow-hidden" style={{ background: INK, color: "#fff" }}>
-        <div aria-hidden="true" className="pointer-events-none absolute -right-32 -top-28 h-[26rem] w-[26rem] rounded-full opacity-20 blur-3xl" style={{ background: ACCENT }} />
+      <section className="relative overflow-hidden" style={{ background: AZUL, color: "#fff" }}>
+        <div aria-hidden="true" className="pointer-events-none absolute -right-32 -top-28 h-[26rem] w-[26rem] rounded-full opacity-20 blur-3xl" style={{ background: AZUL }} />
         <Container className="relative py-16 md:py-24">
           <div className="grid items-center gap-12 lg:grid-cols-[1fr_minmax(350px,400px)]">
             <div>
@@ -563,7 +577,7 @@ export function Web299LandingPage() {
               </p>
               <p className="mt-8 text-[14px]" style={{ color: "rgba(255,255,255,.6)" }}>
                 Consulta las{" "}
-                <a href={WEB_299_TERMS_PATH} className="underline" style={{ color: ACCENT_ON_DARK }}>
+                <a href={WEB_299_TERMS_PATH} className="underline" style={{ color: "rgba(255,255,255,.88)" }}>
                   condiciones del servicio
                 </a>
                 .

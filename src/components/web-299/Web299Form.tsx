@@ -21,11 +21,11 @@ import { WEB_299_PRICE, WEB_299_TERMS_PATH } from "@/lib/web-299";
  * fondo Y su color.
  */
 const INK = "#0B1020";
-const ACCENT = "#187bef";
+const ACCENT = "#0b3ae7";
 const MUTED = "#5A6178";
 
 const inputClass =
-  "mt-1.5 block w-full rounded-xl border px-4 py-3 text-[16px] outline-none transition-colors focus:border-[#187bef]";
+  "mt-1.5 block w-full rounded-xl border px-4 py-3 text-[16px] outline-none transition-colors focus:border-[#0b3ae7]";
 const inputStyle = { borderColor: "rgba(11,16,32,.16)", color: INK, background: "#fff" } as const;
 
 function Campo({
