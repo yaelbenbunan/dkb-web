@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { Container } from "@/components/ui/Container";
+import { Reveal } from "@/components/ui/Reveal";
 import { Web299Form } from "./Web299Form";
 import {
   WEB_299_DAYS,
@@ -75,6 +76,110 @@ const MUESTRAS = [
   { src: "/img/casos/yebenes/desarrollo-web/01.png", alt: "Web de Yébenes" },
 ] as const;
 
+/**
+ * Marco de navegador alrededor de una captura. Plano y DE FRENTE, sin
+ * perspectiva ni inclinación: una captura suelta se lee como una imagen
+ * cualquiera, y con el marco se lee como una web que existe. La barra de
+ * título es puro CSS, así que no hace falta ningún asset.
+ */
+function Ventana({ src, alt }: { src: string; alt: string }) {
+  return (
+    <figure
+      className="overflow-hidden rounded-2xl"
+      style={{ border: "1px solid rgba(11,16,32,.12)", background: "#fff", boxShadow: "0 18px 40px -28px rgba(11,16,32,.45)" }}
+    >
+      <div
+        className="flex items-center gap-1.5 px-4 py-3"
+        style={{ background: "#F1EEE9", borderBottom: "1px solid rgba(11,16,32,.08)" }}
+      >
+        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: "#D9534F" }} />
+        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: "#E8B33C" }} />
+        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: "#4FA96A" }} />
+        <span
+          aria-hidden="true"
+          className="ml-2 h-4 flex-1 rounded"
+          style={{ background: "rgba(11,16,32,.06)" }}
+        />
+      </div>
+      <Image
+        src={src}
+        alt={alt}
+        width={800}
+        height={600}
+        className="h-auto w-full"
+        sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+      />
+    </figure>
+  );
+}
+
+/**
+ * Logos de clientes en movimiento, justo debajo del hero.
+ *
+ * Es lo primero que se mueve en la página, y va ahí porque el hero es texto y
+ * formulario: sin esto, lo primero que ve quien llega es una pantalla quieta.
+ * Doble juego de logos y `aria-hidden` en el segundo, que es lo que hace que el
+ * bucle no tenga costura sin repetirle el contenido a un lector de pantalla.
+ */
+const LOGOS = [
+  "adeslas", "benbunan-clinica-dental", "marina-padel", "viso-psicologos",
+  "reformas-servilucas", "phoenix-dental", "yebenes", "urolf",
+  "instituto-fich", "suites-alicante-plaza", "tectonica-design", "silbo",
+] as const;
+
+const LOGO_EXT: Record<string, string> = {
+  ajenjo: "png",
+  "marina-padel": "png",
+  "viso-psicologos": "png",
+  yebenes: "png",
+  "instituto-fich": "png",
+};
+
+function TiraDeLogos() {
+  const fila = (oculta: boolean) =>
+    LOGOS.map((slug) => (
+      <Image
+        key={`${slug}-${oculta ? "b" : "a"}`}
+        src={`/img/casos/${slug}/logo/negativo.${LOGO_EXT[slug] ?? "webp"}`}
+        alt={oculta ? "" : slug.replace(/-/g, " ")}
+        aria-hidden={oculta || undefined}
+        width={150}
+        height={48}
+        className="h-7 w-auto shrink-0 opacity-70 sm:h-8"
+      />
+    ));
+  return (
+    <section className="relative" style={{ background: INK }}>
+      <div className="py-8 pb-16">
+        <p
+          className="mb-6 text-center text-[12px] font-bold uppercase tracking-[0.18em]"
+          style={{ color: "rgba(255,255,255,.45)" }}
+        >
+          Ya trabajamos con
+        </p>
+        <div className="relative overflow-hidden">
+          <div className="animate-marquee flex w-max items-center gap-12 pr-12">
+            {fila(false)}
+            {fila(true)}
+          </div>
+          {/* Difuminado en los bordes para que los logos no aparezcan cortados. */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 left-0 w-16"
+            style={{ background: `linear-gradient(to right, ${INK}, transparent)` }}
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 right-0 w-16"
+            style={{ background: `linear-gradient(to left, ${INK}, transparent)` }}
+          />
+        </div>
+      </div>
+      <Cut to={CREAM} shape="valley" />
+    </section>
+  );
+}
+
 export function Web299LandingPage() {
   return (
     <div style={{ background: CREAM, color: INK }}>
@@ -108,8 +213,8 @@ export function Web299LandingPage() {
                 <span style={{ color: ACCENT_ON_DARK }}>por {WEB_299_PRICE}</span>
               </h1>
               <p className="mt-5 max-w-xl text-[17px] leading-relaxed sm:text-[19px]" style={{ color: "rgba(255,255,255,.82)" }}>
-                Pago único, sin cuotas mensuales por la web. Diseñada a partir de lo que nos cuentes
-                de tu negocio, no una plantilla rellenada.
+                Una sola página con 5 o 6 secciones, de las que se recorren haciendo scroll. Pago
+                único, sin cuotas mensuales, y con tus colores, tus textos y tus fotos.
               </p>
 
               <ul className="mt-8 space-y-3">
@@ -133,8 +238,9 @@ export function Web299LandingPage() {
             </div>
           </div>
         </Container>
-        <Cut to={CREAM} shape="valley" />
       </section>
+
+      <TiraDeLogos />
 
       {/* PRECIO, desglosado y arriba. Esconder el coste real hasta el final es
           lo que hace que la gente desconfíe, y aquí el precio ES el argumento. */}
@@ -149,16 +255,16 @@ export function Web299LandingPage() {
           </p>
 
           <div className="mt-10 grid gap-5 md:grid-cols-3">
-            {WEB_299_PRICING.map((p) => (
-              <div
-                key={p.label}
-                className="rounded-2xl p-7"
-                style={
-                  p.highlight
-                    ? { background: INK, color: "#fff", boxShadow: "0 20px 50px -24px rgba(11,16,32,.55)" }
-                    : { background: "#fff", border: "1px solid rgba(11,16,32,.10)" }
-                }
-              >
+            {WEB_299_PRICING.map((p, i) => (
+              <Reveal key={p.label} delay={i * 0.08} from="up" className="h-full">
+                <div
+                  className="h-full rounded-2xl p-7"
+                  style={
+                    p.highlight
+                      ? { background: INK, color: "#fff", boxShadow: "0 20px 50px -24px rgba(11,16,32,.55)" }
+                      : { background: "#fff", border: "1px solid rgba(11,16,32,.10)" }
+                  }
+                >
                 <p
                   className="text-[13px] font-bold uppercase tracking-[0.1em]"
                   style={{ color: p.highlight ? ACCENT_ON_DARK : "#5A6178" }}
@@ -180,6 +286,7 @@ export function Web299LandingPage() {
                   {p.detail}
                 </p>
               </div>
+              </Reveal>
             ))}
           </div>
         </Container>
@@ -195,21 +302,13 @@ export function Web299LandingPage() {
             Trabajos reales de negocios como el tuyo. Ninguna es una maqueta.
           </p>
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {MUESTRAS.map((m) => (
-              <div
-                key={m.src}
-                className="overflow-hidden rounded-2xl"
-                style={{ border: "1px solid rgba(11,16,32,.10)", background: CREAM }}
-              >
-                <Image
-                  src={m.src}
-                  alt={m.alt}
-                  width={800}
-                  height={600}
-                  className="h-auto w-full"
-                  sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                />
-              </div>
+            {MUESTRAS.map((m, i) => (
+              // El retraso escalonado hace que entren en cascada en vez de las
+              // seis de golpe, que es lo que hacía que la rejilla pareciera
+              // estática incluso moviéndose.
+              <Reveal key={m.src} delay={i * 0.08} scale>
+                <Ventana src={m.src} alt={m.alt} />
+              </Reveal>
             ))}
           </div>
         </Container>
@@ -271,7 +370,7 @@ export function Web299LandingPage() {
           </h2>
           <div className="mt-10 grid gap-6 md:grid-cols-3">
             {WEB_299_STEPS.map((s, i) => (
-              <div key={s.title}>
+              <Reveal key={s.title} delay={i * 0.1}>
                 <p
                   className="text-[56px] font-extrabold leading-none tracking-tight"
                   style={{ color: "rgba(125,176,247,.28)" }}
@@ -282,7 +381,7 @@ export function Web299LandingPage() {
                 <p className="mt-2 text-[16px] leading-relaxed" style={{ color: "rgba(255,255,255,.82)" }}>
                   {s.description}
                 </p>
-              </div>
+              </Reveal>
             ))}
           </div>
         </Container>

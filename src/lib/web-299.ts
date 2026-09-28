@@ -27,7 +27,7 @@ export const WEB_299_CAMPAIGN = "web-299";
 export const WEB_299_TERMS_PATH = "/condiciones-web-express";
 
 export const WEB_299_META_TITLE = `Página web profesional por ${WEB_299_PRICE} | dinkbit`;
-export const WEB_299_META_DESCRIPTION = `Desarrollamos tu página web por ${WEB_299_PRICE}, lista en ${WEB_299_DAYS} días laborables. Precio cerrado, sin cuotas mensuales. Alojamiento ${WEB_299_HOSTING}/año y dominio ${WEB_299_DOMAIN}/año aparte.`;
+export const WEB_299_META_DESCRIPTION = `Desarrollamos tu web de una página (one page) con 5 o 6 secciones por ${WEB_299_PRICE}, lista en ${WEB_299_DAYS} días laborables. Precio cerrado, sin cuotas mensuales. Alojamiento ${WEB_299_HOSTING}/año y dominio ${WEB_299_DOMAIN}/año aparte.`;
 
 /** Las tres líneas del hero. Cortas: se leen de un vistazo en el móvil. */
 export const WEB_299_HERO_BULLETS = [
@@ -46,7 +46,7 @@ export const WEB_299_PRICING = [
     label: "Tu página web",
     price: WEB_299_PRICE,
     period: "pago único",
-    detail: "El desarrollo completo. No hay cuota mensual por la web.",
+    detail: "Una sola página con 5 o 6 secciones, entera. No hay cuota mensual por la web.",
     highlight: true,
   },
   {
@@ -66,8 +66,8 @@ export const WEB_299_PRICING = [
 ] as const;
 
 export const WEB_299_INCLUDES = [
-  "Una página con hasta 6 secciones: quién eres, qué ofreces, cómo trabajas, precios, dónde estás y contacto.",
-  "Diseño hecho a partir de tus respuestas, no una plantilla rellenada.",
+  "Una sola página (one page) con 5 o 6 secciones: quién eres, qué ofreces, cómo trabajas, precios, dónde estás y contacto.",
+  "Diseño adaptado a tu negocio: tus colores, tus textos y tus fotos.",
   "Se ve bien en móvil, tablet y ordenador.",
   "Formulario de contacto que te llega a tu correo.",
   "Botón de WhatsApp y de llamada, para que te escriban en un toque.",
@@ -93,7 +93,7 @@ export const WEB_299_STEPS = [
   {
     title: "Nos cuentas tu negocio",
     description:
-      "Una conversación de veinte minutos y un cuestionario corto. De ahí sale el diseño: por eso no parece una plantilla.",
+      "Una conversación de veinte minutos y un cuestionario corto. Con eso elegimos la estructura y la adaptamos a lo que vendes.",
   },
   {
     title: "La tienes publicada",
@@ -105,6 +105,10 @@ export const WEB_299_FAQS = [
   {
     q: `¿El precio es ${WEB_299_PRICE} de verdad?`,
     a: `Sí, pago único por el desarrollo. Lo único que se paga aparte, y todos los años, es el alojamiento (${WEB_299_HOSTING}) y el dominio (${WEB_299_DOMAIN}). No hay cuota mensual por la web.`,
+  },
+  {
+    q: "¿Cuántas páginas son?",
+    a: "Una sola, de las que se recorren haciendo scroll (one page), con 5 o 6 secciones y un menú que salta a cada una. Es el formato que mejor funciona para un negocio que quiere que le llamen o le escriban; si necesitas varias páginas separadas, te lo presupuestamos aparte.",
   },
   {
     q: "¿Y si ya tengo dominio o alojamiento?",
