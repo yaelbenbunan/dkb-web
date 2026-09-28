@@ -29,50 +29,49 @@ export const WEB_299_TERMS_PATH = "/condiciones-web-express";
 export const WEB_299_META_TITLE = `Página web profesional por ${WEB_299_PRICE} | dinkbit`;
 export const WEB_299_META_DESCRIPTION = `Desarrollamos tu web de una página (one page) con 5 o 6 secciones por ${WEB_299_PRICE}, lista en ${WEB_299_DAYS} días laborables. Precio cerrado, sin cuotas mensuales. Alojamiento ${WEB_299_HOSTING}/año y dominio ${WEB_299_DOMAIN}/año aparte.`;
 
-/** Las tres líneas del hero. Cortas: se leen de un vistazo en el móvil. */
-export const WEB_299_HERO_BULLETS = [
-  `Precio cerrado de ${WEB_299_PRICE}, pago único`,
-  `Lista en ${WEB_299_DAYS} días laborables`,
-  "Sin cuotas mensuales por la web",
+/**
+ * El coste REAL, sumado. Es el número que todo el mundo calcula a mano y que
+ * ninguna landing de la competencia pone: 299 de la web más 100 de alojamiento
+ * más 25 de dominio son 424€ el primer año, y 125€ los siguientes. Decirlo
+ * nosotros quita la sensación de que hay algo escondido, y de paso el segundo
+ * número (125€/año) es el argumento de verdad frente a una cuota mensual.
+ *
+ * Se calculan aquí, de los mismos literales de arriba, para que no puedan
+ * desincronizarse si cambia un precio.
+ */
+const euros = (texto: string) => Number(texto.replace("€", ""));
+export const WEB_299_TOTAL_PRIMER_ANO = `${euros(WEB_299_PRICE) + euros(WEB_299_HOSTING) + euros(WEB_299_DOMAIN)}€`;
+export const WEB_299_TOTAL_SIGUIENTES = `${euros(WEB_299_HOSTING) + euros(WEB_299_DOMAIN)}€`;
+
+/**
+ * Las secciones de la one page, en el orden en que se recorren.
+ *
+ * Son la pieza central de la página: en vez de enumerar «qué incluye» en una
+ * lista, se enseña la página montándose sección a sección. El producto ES esto,
+ * así que mostrarlo explica mejor que describirlo — y responde de paso a
+ * «¿cuántas páginas son?» sin que nadie tenga que preguntarlo.
+ */
+export const WEB_299_SECCIONES = [
+  { n: "01", titulo: "Portada", que: "Quién eres y qué haces, en una frase que se entiende. Con el botón de contacto a la vista." },
+  { n: "02", titulo: "Servicios", que: "Lo que ofreces, ordenado y sin jerga. Lo que la gente viene a comprobar." },
+  { n: "03", titulo: "Cómo trabajas", que: "El proceso en tres o cuatro pasos. Es lo que quita el miedo a dar el paso." },
+  { n: "04", titulo: "Precios", que: "Si los enseñas, filtras. Y si no quieres enseñarlos, ponemos un rango." },
+  { n: "05", titulo: "Dónde estás", que: "Mapa, horario y cómo llegar. Lo primero que busca quien ya está decidido." },
+  { n: "06", titulo: "Contacto", que: "Formulario que te llega al correo, y botón de WhatsApp y de llamada." },
 ] as const;
 
 /**
- * El desglose, en tarjetas y sin letra pequeña. Va arriba, justo debajo del
- * hero: esconder el coste real hasta el final es lo que hace que la gente
- * desconfíe y se vaya, y aquí la ventaja competitiva ES el precio.
+ * Lo que se entrega ADEMÁS de las seis secciones (esas van en
+ * `WEB_299_SECCIONES`). Se separan a propósito: las secciones son la forma del
+ * producto y esto son las piezas que la hacen funcionar, y mezclarlas en una
+ * sola lista era lo que hacía que ninguna de las dos se leyera.
  */
-export const WEB_299_PRICING = [
-  {
-    label: "Tu página web",
-    price: WEB_299_PRICE,
-    period: "pago único",
-    detail: "Una sola página con 5 o 6 secciones, entera. No hay cuota mensual por la web.",
-    highlight: true,
-  },
-  {
-    label: "Alojamiento",
-    price: WEB_299_HOSTING,
-    period: "al año",
-    detail: "No incluido. Si quieres, lo gestionamos nosotros por ese precio.",
-    highlight: false,
-  },
-  {
-    label: "Dominio",
-    price: WEB_299_DOMAIN,
-    period: "al año",
-    detail: "No incluido. Tu dirección, del tipo tunegocio.es.",
-    highlight: false,
-  },
-] as const;
-
 export const WEB_299_INCLUDES = [
-  "Una sola página (one page) con 5 o 6 secciones: quién eres, qué ofreces, cómo trabajas, precios, dónde estás y contacto.",
-  "Diseño adaptado a tu negocio: tus colores, tus textos y tus fotos.",
   "Se ve bien en móvil, tablet y ordenador.",
   "Formulario de contacto que te llega a tu correo.",
   "Botón de WhatsApp y de llamada, para que te escriban en un toque.",
   "Aviso legal, política de privacidad y cookies.",
-  "Una ronda de cambios incluida.",
+  "Una ronda de cambios incluida antes de publicar.",
 ] as const;
 
 export const WEB_299_EXCLUDES = [
