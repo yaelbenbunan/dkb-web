@@ -9,6 +9,7 @@ import {
   kitDigitalLead,
   marketingLandingLead,
   promoVeranoLead,
+  web299Lead,
   webExpressLead,
 } from "../web-lead-origin";
 
@@ -349,5 +350,36 @@ describe("growthLead", () => {
       growthLead({ ...base, inversion: null, costePorPaciente: null, rama: "C" }).notes ?? "";
     expect(notes).toContain("no invierte todavía");
     expect(notes).toContain("Rama: C");
+  });
+});
+
+describe("web299Lead", () => {
+  const datos = { name: "Rocío", email: "rocio@example.com", phone: "637284836" };
+
+  test("deja escrito en la nota de qué landing vino y a qué precio", () => {
+    const row = web299Lead(datos);
+    // El precio en la nota no es decoración: con dos ofertas de web vivas a la
+    // vez (299€ y 459€), quien llame tiene que saber qué le prometió la página
+    // antes de descolgar.
+    expect(row.notes).toContain("299€");
+    expect(row.notes).toContain("Web 299");
+    expect(row).toMatchObject({ name: "Rocío", email: "rocio@example.com", phone: "637284836" });
+  });
+
+  test("sin UTMs es tráfico web con su campaña", () => {
+    const row = web299Lead(datos);
+    expect(row.channel).toBe("Web");
+    expect(row.campaign).toBe("web-299");
+  });
+
+  test("con UTMs de Meta gana el origen real del anuncio", () => {
+    const row = web299Lead(datos, { utmSource: "facebook", utmCampaign: "web-299-frio" });
+    expect(row.channel).toBe("Meta");
+    expect(row.campaign).toBe("web-299-frio");
+  });
+
+  test("el consentimiento viaja tal cual, incluido el no dado", () => {
+    expect(web299Lead({ ...datos, consent: true }).consent).toBe(true);
+    expect(web299Lead(datos).consent).toBeNull();
   });
 });

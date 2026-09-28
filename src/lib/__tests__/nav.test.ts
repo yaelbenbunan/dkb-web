@@ -15,6 +15,19 @@ describe("NAV_ITEMS", () => {
     );
   });
 
+  // «Imagina tu web» se saca del menú a propósito (28-09-2026): la página sigue
+  // existiendo y accesible por enlace directo, pero no se ofrece en la
+  // navegación. Sin este test, el enlace vuelve en el siguiente retoque del
+  // menú sin que nadie se dé cuenta de que se quitó por decisión.
+  test("«Imagina tu web» no se ofrece en el menú", () => {
+    // `readonly string[]` a propósito: con el `as const` de NAV_ITEMS, comparar
+    // el href contra una ruta que ya no está en la lista es un error de tipos
+    // («no overlap»). Eso es bueno —el tipo ya impide referenciarla— pero no
+    // sustituye a este test, que es lo que impide volver a AÑADIRLA al array.
+    const hrefs: readonly string[] = NAV_ITEMS.map((i) => i.href);
+    expect(hrefs).not.toContain("/imagina-tu-web");
+  });
+
   test("no hay hrefs duplicados", () => {
     const hrefs = NAV_ITEMS.map((i) => i.href);
     expect(new Set(hrefs).size).toBe(hrefs.length);

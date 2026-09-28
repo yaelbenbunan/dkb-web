@@ -67,6 +67,35 @@ export function attribution(
   return { channel, campaign: campaign || def.campaign };
 }
 
+/**
+ * Landing de web a precio cerrado de 299€ (`/web-299`).
+ *
+ * La nota lleva el PRECIO además del origen, y no por redundancia: con dos
+ * ofertas de web vivas a la vez —299€ genérica y 459€ por nicho— quien llame
+ * tiene que saber qué le prometió la página antes de descolgar. Sin eso, se
+ * llama a un lead de 299 hablándole de 459, o al revés.
+ */
+export function web299Lead(
+  d: {
+    name: string;
+    email: string;
+    phone: string;
+    consent?: boolean;
+  },
+  utm?: UtmInput,
+): WebhookLeadInput {
+  const { channel, campaign } = attribution(utm, { channel: "Web", campaign: "web-299" });
+  return {
+    name: d.name,
+    email: d.email,
+    phone: d.phone,
+    channel,
+    campaign,
+    consent: d.consent ?? null,
+    notes: "Origen: landing Web 299€ · Oferta: desarrollo web por 299€ (alojamiento y dominio aparte)",
+  };
+}
+
 export function homeHeroLead(
   d: {
     name: string;

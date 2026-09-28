@@ -48,6 +48,25 @@ export function homeHeroAutoresponder(input: {
   };
 }
 
+/**
+ * Landing de web a 299€. No repite el precio en el cuerpo a propósito: quien
+ * acaba de rellenar el formulario ya lo ha visto tres veces en la página, y
+ * repetirlo en el correo de «gracias» suena a que se le quiere vender otra vez.
+ * Lo que hace falta aquí es decirle cuándo le llamamos.
+ */
+export function web299Autoresponder(input: { name?: string | null }): BrandedEmailInput {
+  return {
+    subject: "Hemos recibido tus datos",
+    eyebrow: "Solicitud",
+    heading: "Gracias, te llamamos enseguida",
+    name: input.name,
+    intro:
+      "hemos recibido tus datos. Te contactamos **en menos de 24 horas** para que nos cuentes qué necesitas y darte una fecha de entrega.",
+    preheader: "Te contactamos en menos de 24 horas.",
+    cta: WHATSAPP_CTA,
+  };
+}
+
 /** Formulario de la página de contacto. */
 export function contactAutoresponder(input: { name?: string | null }): BrandedEmailInput {
   return {
