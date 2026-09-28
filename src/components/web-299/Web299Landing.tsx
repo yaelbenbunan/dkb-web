@@ -43,8 +43,6 @@ const ACCENT = "#187bef";
 const ACCENT_DEEP = "#0F5FBD";
 /** Para texto sobre la tinta: sube el contraste de 4.4 a 7.3. */
 const ACCENT_ON_DARK = "#7DB0F7";
-/** Verde del tique: el único color fuera de la paleta, y solo para el total. */
-const LIME = "#B9F05C";
 
 /**
  * Animaciones locales, en un `<style>` del propio componente y con prefijo
@@ -63,9 +61,20 @@ const ANIMACIONES = `
 .w299-bloque { opacity: 0; animation: w299-montar .55s cubic-bezier(.21,.47,.32,.98) forwards; }
 @keyframes w299-cursor { 0%, 49% { opacity: 1 } 50%, 100% { opacity: 0 } }
 .w299-cursor { animation: w299-cursor 1.1s step-end infinite; }
+/* La línea de la cronología se dibuja de izquierda a derecha al entrar en pantalla. */
+@keyframes w299-linea { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+.w299-linea { transform-origin: left center; animation: w299-linea 1.1s .15s cubic-bezier(.21,.47,.32,.98) both; }
+/* El último hito late: es «ya la tienes», y es donde se quiere que caiga el ojo. */
+@keyframes w299-latido {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(24,123,239,.55) }
+  70%      { box-shadow: 0 0 0 12px rgba(24,123,239,0) }
+}
+.w299-latido { animation: w299-latido 2.4s ease-out infinite; }
 @media (prefers-reduced-motion: reduce) {
   .w299-bloque { opacity: 1; animation: none; }
   .w299-cursor { animation: none; }
+  .w299-linea { transform: scaleX(1); animation: none; }
+  .w299-latido { animation: none; }
 }
 `;
 
@@ -96,9 +105,9 @@ function WebMontandose() {
         className="flex items-center gap-1.5 px-4 py-3"
         style={{ background: "#F1EEE9", borderBottom: "1px solid rgba(11,16,32,.08)" }}
       >
-        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: "#D9534F" }} />
-        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: "#E8B33C" }} />
-        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: "#4FA96A" }} />
+        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: "rgba(11,16,32,.22)" }} />
+        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: "rgba(11,16,32,.16)" }} />
+        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: "rgba(11,16,32,.10)" }} />
         <span className="ml-2 flex h-5 flex-1 items-center rounded px-2 text-[10px]" style={{ background: "#fff", color: "#8A91A6" }}>
           tunegocio.es
           <span className="w299-cursor ml-0.5" aria-hidden="true">|</span>
@@ -142,9 +151,9 @@ function Ventana({ src, alt }: { src: string; alt: string }) {
         className="flex items-center gap-1.5 px-4 py-3"
         style={{ background: "#F1EEE9", borderBottom: "1px solid rgba(11,16,32,.08)" }}
       >
-        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: "#D9534F" }} />
-        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: "#E8B33C" }} />
-        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: "#4FA96A" }} />
+        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: "rgba(11,16,32,.22)" }} />
+        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: "rgba(11,16,32,.16)" }} />
+        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: "rgba(11,16,32,.10)" }} />
         <span aria-hidden="true" className="ml-2 h-4 flex-1 rounded" style={{ background: "rgba(11,16,32,.06)" }} />
       </div>
       <Image src={src} alt={alt} width={800} height={600} className="h-auto w-full" sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" />
@@ -250,8 +259,8 @@ export function Web299LandingPage() {
                 {/* La cifra, enorme y con el símbolo pequeño: así el número
                     manda y no compite con el euro. */}
                 <span className="whitespace-nowrap">
-                  <span style={{ color: LIME }}>299</span>
-                  <span className="text-[0.5em] align-super font-bold" style={{ color: LIME }}>€</span>
+                  <span style={{ color: ACCENT_ON_DARK }}>299</span>
+                  <span className="text-[0.5em] align-super font-bold" style={{ color: ACCENT_ON_DARK }}>€</span>
                 </span>
               </h1>
 
@@ -340,7 +349,7 @@ export function Web299LandingPage() {
                   <span className="text-[13px] font-bold uppercase tracking-[0.12em]" style={{ color: "rgba(255,255,255,.6)" }}>
                     Total
                   </span>
-                  <span className="text-[40px] font-extrabold leading-none tabular-nums tracking-tight" style={{ color: LIME }}>
+                  <span className="text-[40px] font-extrabold leading-none tabular-nums tracking-tight" style={{ color: ACCENT_ON_DARK }}>
                     {WEB_299_TOTAL_PRIMER_ANO}
                   </span>
                 </div>
@@ -447,23 +456,70 @@ export function Web299LandingPage() {
         </Container>
       </section>
 
-      {/* PASOS, como una línea de tiempo horizontal con cifras enormes. */}
+      {/* LA CRONOLOGÍA. Antes eran tres columnas con una regla encima, que es la
+          forma más sosa de contar un proceso. Ahora cuenta CUÁNDO: «cómo
+          funciona» es la pregunta de la agencia, «cuándo la tengo» es la del
+          cliente, y el plazo era un argumento de venta enterrado en un párrafo.
+
+          La línea se dibuja al entrar, los hitos aparecen en cascada y el
+          último late, que es donde se quiere que caiga el ojo. */}
       <section className="relative" style={{ background: CREAM }}>
         <Container className="pb-16 md:pb-24">
-          <div className="grid gap-10 md:grid-cols-3 md:gap-6">
-            {WEB_299_STEPS.map((s, i) => (
-              <Reveal key={s.title} delay={i * 0.1}>
-                <div className="border-t-2 pt-6" style={{ borderColor: i === 0 ? ACCENT : "rgba(11,16,32,.14)" }}>
-                  <p className="text-[13px] font-bold uppercase tracking-[0.14em]" style={{ color: ACCENT_DEEP }}>
-                    Paso {i + 1}
-                  </p>
-                  <p className="mt-3 text-[21px] font-extrabold leading-tight">{s.title}</p>
-                  <p className="mt-2 text-[15px] leading-relaxed" style={{ color: "#3E4557" }}>
-                    {s.description}
-                  </p>
-                </div>
-              </Reveal>
-            ))}
+          <h2 className="max-w-2xl text-[32px] font-extrabold leading-[1.05] tracking-tight sm:text-[44px]">
+            De hoy a publicada,
+            <br />
+            <span style={{ color: ACCENT_DEEP }}>en {WEB_299_DAYS} días</span>
+          </h2>
+
+          <div className="relative mt-14">
+            {/* La línea. En escritorio va horizontal por detrás de los hitos; en
+                móvil se apaga y la cronología se lee en vertical, que es como
+                funciona el pulgar. */}
+            <div
+              aria-hidden="true"
+              className="w299-linea absolute left-0 right-0 top-[11px] hidden h-[2px] md:block"
+              style={{ background: `linear-gradient(to right, ${ACCENT}, rgba(24,123,239,.18))` }}
+            />
+
+            <ol className="relative grid gap-10 md:grid-cols-3 md:gap-8">
+              {WEB_299_STEPS.map((paso, i) => {
+                const ultimo = i === WEB_299_STEPS.length - 1;
+                return (
+                  <Reveal key={paso.title} delay={0.25 + i * 0.16}>
+                    <li className="relative pl-10 md:pl-0">
+                      {/* El hito. Relleno en el primero y el último —el que
+                          empieza y el que remata—, hueco en el intermedio. */}
+                      <span
+                        aria-hidden="true"
+                        className={`absolute left-0 top-[3px] grid h-6 w-6 place-items-center rounded-full md:static md:mb-6 ${ultimo ? "w299-latido" : ""}`}
+                        style={{
+                          background: ultimo || i === 0 ? ACCENT : CREAM,
+                          border: `2px solid ${ACCENT}`,
+                        }}
+                      >
+                        <span
+                          className="h-1.5 w-1.5 rounded-full"
+                          style={{ background: ultimo || i === 0 ? "#fff" : ACCENT }}
+                        />
+                      </span>
+
+                      <p
+                        className="text-[13px] font-bold uppercase tracking-[0.16em]"
+                        style={{ color: ACCENT_DEEP }}
+                      >
+                        {paso.dia}
+                      </p>
+                      <p className="mt-2 text-[22px] font-extrabold leading-tight sm:text-[24px]">
+                        {paso.title}
+                      </p>
+                      <p className="mt-2.5 max-w-sm text-[15px] leading-relaxed" style={{ color: "#3E4557" }}>
+                        {paso.description}
+                      </p>
+                    </li>
+                  </Reveal>
+                );
+              })}
+            </ol>
           </div>
         </Container>
       </section>

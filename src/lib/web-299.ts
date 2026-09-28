@@ -83,18 +83,31 @@ export const WEB_299_EXCLUDES = [
   "Diseño de logotipo.",
 ] as const;
 
+/**
+ * Los pasos llevan CUÁNDO, no solo qué. «Cómo funciona» es la pregunta que se
+ * hace la agencia; la que se hace el cliente es «cuándo la tengo», y el plazo
+ * es además un argumento de venta que estaba enterrado en un párrafo.
+ *
+ * Ojo con el último: los días laborables cuentan desde que llega el material,
+ * no desde el formulario, y así está dicho en su descripción. Prometer «tu web
+ * en 5 días» sin esa condición es la promesa que se incumple sola en cuanto el
+ * cliente tarda una semana en mandar las fotos.
+ */
 export const WEB_299_STEPS = [
   {
+    dia: "Hoy",
     title: "Nos dejas tus datos",
     description:
       "Nombre, teléfono y correo. Nada más. Te llamamos o te escribimos por WhatsApp, como prefieras.",
   },
   {
+    dia: "Día 1",
     title: "Nos cuentas tu negocio",
     description:
       "Una conversación de veinte minutos y un cuestionario corto. Con eso elegimos la estructura y la adaptamos a lo que vendes.",
   },
   {
+    dia: `+${WEB_299_DAYS} días`,
     title: "La tienes publicada",
     description: `En ${WEB_299_DAYS} días laborables desde que nos das el material. Con una ronda de cambios antes de publicar.`,
   },
