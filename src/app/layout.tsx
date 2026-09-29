@@ -10,6 +10,8 @@ import { GTM } from "@/components/analytics/GTM";
 import { GTMNoScript } from "@/components/analytics/GTMNoScript";
 import { LinkTracker } from "@/components/analytics/LinkTracker";
 import { UtmCapture } from "@/components/analytics/UtmCapture";
+import { CONTACT_INFO } from "@/lib/contact-info";
+import { getAllServices } from "@/lib/content";
 
 const sourceSans = Source_Sans_3({
   subsets: ["latin"],
@@ -90,28 +92,53 @@ export const metadata: Metadata = {
 
 const organizationSchema = {
   "@context": "https://schema.org",
-  "@type": "Organization",
+  // `ProfessionalService` en vez de `Organization` a secas: es un subtipo suyo,
+  // así que no se pierde nada, y además admite teléfono, dirección y zona de
+  // servicio como propiedades de primera. Los buscadores con IA construyen la
+  // ficha de un negocio a partir de eso.
+  "@type": "ProfessionalService",
+  // Ancla de la entidad. Que todos los esquemas del sitio apunten al MISMO `@id`
+  // es lo que permite a un buscador entender que el proveedor del servicio, el
+  // autor del artículo y la empresa de la portada son la misma cosa, en vez de
+  // tres organizaciones que se llaman igual.
+  "@id": `${SITE_URL}/#organizacion`,
   name: "dinkbit",
   legalName: "Dinkbit Marketing S.L.",
   url: SITE_URL,
   logo: `${SITE_URL}/icon.png`,
+  image: `${SITE_URL}/icon.png`,
   description: SITE_DESCRIPTION,
   foundingDate: "2010",
-  email: "admin-es@dinkbit.com",
+  // Los datos de contacto salen de CONTACT_INFO, que es la fuente que usan el
+  // pie del sitio, la página de contacto y los correos. Estaban duplicados a
+  // mano y habían divergido: aquí figuraba `admin-es@dinkbit.com` mientras el
+  // sitio entero publicaba `hola@dinkbit.es`. Para una IA que cruza fuentes,
+  // dos correos distintos para la misma empresa es justo la señal que hace que
+  // no se fíe de ninguno.
+  email: CONTACT_INFO.email,
+  telephone: CONTACT_INFO.phoneE164,
   areaServed: ["ES", "MX"],
   address: [
     {
       "@type": "PostalAddress",
-      streetAddress: "C/ Fuerteventura 4, Planta 3, Oficina 2",
+      streetAddress: "Calle Fuerteventura 4, Piso 3 — Oficina 2",
       addressLocality: "San Sebastián de los Reyes",
       addressRegion: "Madrid",
       postalCode: "28703",
       addressCountry: "ES",
     },
   ],
+  // `knowsAbout` es de las pocas propiedades que un modelo puede leer como «de
+  // esto sabe»: se deriva de los servicios publicados para que no se quede
+  // contando un catálogo que ya cambió.
+  knowsAbout: getAllServices().map((s) => s.title),
+  // Cuantos más perfiles verificables, más fácil es para una IA confirmar que
+  // habla del dinkbit correcto y no de otro negocio con nombre parecido.
   sameAs: [
-    "https://www.linkedin.com/company/dinkbit",
-    "https://www.instagram.com/dinkbit",
+    CONTACT_INFO.socials.linkedin,
+    CONTACT_INFO.socials.instagram,
+    CONTACT_INFO.socials.tiktok,
+    CONTACT_INFO.address.mapsUrl,
   ],
 };
 
@@ -121,7 +148,9 @@ const websiteSchema = {
   name: SITE_NAME,
   url: SITE_URL,
   inLanguage: "es-ES",
-  publisher: { "@type": "Organization", name: "dinkbit" },
+  // Apunta al `@id` de arriba en vez de repetir el nombre: así el sitio y la
+  // empresa son la misma entidad y no dos sueltas que coinciden en el nombre.
+  publisher: { "@id": `${SITE_URL}/#organizacion` },
 };
 
 export const viewport: Viewport = {
@@ -147,20 +176,14 @@ export default function RootLayout({
         <GTM />
       </head>
       <body>
-        <Script
-          id="ld-organization"
-          type="application/ld+json"
-          strategy="beforeInteractive"
-        >
-          {JSON.stringify(organizationSchema).replace(/</g, "\\u003c")}
-        </Script>
-        <Script
-          id="ld-website"
-          type="application/ld+json"
-          strategy="beforeInteractive"
-        >
-          {JSON.stringify(websiteSchema).replace(/</g, "\\u003c")}
-        </Script>
+        <script
+        id="ld-organization" type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema).replace(/</g, "\\u003c") }}
+      />
+        <script
+        id="ld-website" type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema).replace(/</g, "\\u003c") }}
+      />
         <GTMNoScript />
         <a
           href="#main-content"

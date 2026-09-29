@@ -1,6 +1,5 @@
 import Link from "next/link";
 import Image from "next/image";
-import Script from "next/script";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/Container";
 import { ServiceFaqs } from "@/components/servicios/ServiceFaqs";
@@ -100,29 +99,20 @@ export default async function ServiceDetail({
 
   return (
     <article>
-      <Script
-        id={`ld-service-${service.slug}`}
-        type="application/ld+json"
-        strategy="beforeInteractive"
-      >
-        {JSON.stringify(serviceSchema).replace(/</g, "\\u003c")}
-      </Script>
+      <script
+        id={`ld-service-${service.slug}`} type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema).replace(/</g, "\\u003c") }}
+      />
       {faqSchema && (
-        <Script
-          id={`ld-faq-${service.slug}`}
-          type="application/ld+json"
-          strategy="beforeInteractive"
-        >
-          {JSON.stringify(faqSchema).replace(/</g, "\\u003c")}
-        </Script>
+        <script
+        id={`ld-faq-${service.slug}`} type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema).replace(/</g, "\\u003c") }}
+      />
       )}
-      <Script
-        id={`ld-breadcrumb-${service.slug}`}
-        type="application/ld+json"
-        strategy="beforeInteractive"
-      >
-        {JSON.stringify(breadcrumbSchema).replace(/</g, "\\u003c")}
-      </Script>
+      <script
+        id={`ld-breadcrumb-${service.slug}`} type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema).replace(/</g, "\\u003c") }}
+      />
       {/* Hero del servicio: bg image + overlay azul + glow + línea inferior.
           La imagen es LA MISMA para los nueve servicios, y es deliberado: va
           al 45% de opacidad bajo un overlay azul, así que funciona de textura y

@@ -1,4 +1,3 @@
-import Script from "next/script";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/Container";
 import { CaseHeader } from "@/components/casos/CaseHeader";
@@ -103,20 +102,14 @@ export default async function CaseDetail({
 
   return (
     <article>
-      <Script
-        id={`ld-article-${caseStudy.slug}`}
-        type="application/ld+json"
-        strategy="beforeInteractive"
-      >
-        {JSON.stringify(articleSchema).replace(/</g, "\\u003c")}
-      </Script>
-      <Script
-        id={`ld-breadcrumb-${caseStudy.slug}`}
-        type="application/ld+json"
-        strategy="beforeInteractive"
-      >
-        {JSON.stringify(breadcrumbSchema).replace(/</g, "\\u003c")}
-      </Script>
+      <script
+        id={`ld-article-${caseStudy.slug}`} type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema).replace(/</g, "\\u003c") }}
+      />
+      <script
+        id={`ld-breadcrumb-${caseStudy.slug}`} type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema).replace(/</g, "\\u003c") }}
+      />
       <Container className="pt-8">
         <Breadcrumbs items={breadcrumbItems} />
       </Container>

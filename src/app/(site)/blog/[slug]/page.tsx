@@ -1,4 +1,3 @@
-import Script from "next/script";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/Container";
 import { PostHero } from "@/components/blog/PostHero";
@@ -98,20 +97,14 @@ export default async function BlogPostPage({
 
   return (
     <article>
-      <Script
-        id={`ld-article-${post.slug}`}
-        type="application/ld+json"
-        strategy="beforeInteractive"
-      >
-        {JSON.stringify(articleSchema).replace(/</g, "\\u003c")}
-      </Script>
-      <Script
-        id={`ld-breadcrumb-${post.slug}`}
-        type="application/ld+json"
-        strategy="beforeInteractive"
-      >
-        {JSON.stringify(breadcrumbSchema).replace(/</g, "\\u003c")}
-      </Script>
+      <script
+        id={`ld-article-${post.slug}`} type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema).replace(/</g, "\\u003c") }}
+      />
+      <script
+        id={`ld-breadcrumb-${post.slug}`} type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema).replace(/</g, "\\u003c") }}
+      />
 
       <Container className="pt-8">
         <Breadcrumbs items={breadcrumbItems} />

@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import Script from "next/script";
 import { Container } from "@/components/ui/Container";
 import { Reveal } from "@/components/ui/Reveal";
 import { CONTACT_INFO } from "@/lib/contact-info";
@@ -25,13 +24,10 @@ export function MarketingLandingPage({ landing }: Props) {
 
   return (
     <>
-      <Script
-        id={`ld-faq-${landing.key}`}
-        type="application/ld+json"
-        strategy="beforeInteractive"
-      >
-        {JSON.stringify(faqSchema).replace(/</g, "\\u003c")}
-      </Script>
+      <script
+        id={`ld-faq-${landing.key}`} type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema).replace(/</g, "\\u003c") }}
+      />
 
       {/* ───────── Hero con formulario ───────── */}
       <section className="relative isolate overflow-hidden bg-bg-deep pb-16 pt-12 md:pb-24 md:pt-16">
