@@ -102,10 +102,21 @@ const LOGO_EXT: Record<string, string> = {
 /**
  * Logos de clientes en movimiento.
  *
- * A TAMAÑO GRANDE: la primera versión los puso a 28px de alto y no se
- * distinguía ni uno, que es lo contrario de lo que busca una tira de logos —
- * si no se reconoce la marca, no hay prueba social, solo ruido gris. Ahora
- * ocupan el triple y van a opacidad plena.
+ * TRES COSAS que hacían que no se vieran, y las tres medidas sobre los ficheros
+ * de verdad, no supuestas:
+ *
+ * 1. Los ficheros son 358x287 —casi cuadrados—, y aquí se declaraban 320x110.
+ *    Next usa esa proporción para reservar el hueco, así que cada logo caía en
+ *    una caja de 140x48 y se renderizaba aplastado.
+ * 2. El lienzo lleva mucho margen transparente: la marca de Adeslas ocupa el 46%
+ *    del alto. Con una caja de 48px, el logo que se veía medía 22px. De ahí que
+ *    parecieran minúsculos aunque la caja fuera «grande».
+ * 3. `loading="lazy"` en una tira que se mueve sola: los que empiezan fuera del
+ *    viewport no se cargaban a tiempo y dejaban huecos en blanco.
+ *
+ * Los `negativo` son blancos (luminancia media 254/255), así que sobre el negro
+ * se ven solos y no hace falta el filtro `.client-logo-bw`, que además depende
+ * del tema del visitante y aquí el fondo es fijo.
  *
  * Doble juego de logos y `aria-hidden` en el segundo: así el bucle no tiene
  * costura y un lector de pantalla no lee la lista dos veces.
@@ -118,9 +129,10 @@ function TiraDeLogos() {
         src={`/img/casos/${slug}/logo/negativo.${LOGO_EXT[slug] ?? "webp"}`}
         alt={oculta ? "" : slug.replace(/-/g, " ")}
         aria-hidden={oculta || undefined}
-        width={320}
-        height={110}
-        className="h-12 w-auto shrink-0 sm:h-16 lg:h-20"
+        width={358}
+        height={287}
+        loading="eager"
+        className="h-20 w-auto shrink-0 object-contain sm:h-24 lg:h-28"
       />
     ));
   return (
