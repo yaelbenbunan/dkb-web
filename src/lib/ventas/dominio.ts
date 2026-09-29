@@ -91,6 +91,12 @@ export const RESULTADOS_LLAMADA = [
   "interesado",
   "pide_muestras",
   "no_interesa",
+  /** Se le localizó y se le explicó, pero no busca lo que ofrecemos. Distinto
+   *  de `no_interesa`, que sí lo entendió y dijo que no: este nunca fue un lead
+   *  válido, y por eso sale del embudo en vez de contar como oportunidad
+   *  perdida. Existía como fase desde el 24-09 pero solo se podía poner desde
+   *  el desplegable de la ficha; el momento en que se descubre es al teléfono. */
+  "fuera_de_perfil",
   "numero_erroneo",
 ] as const;
 export type ResultadoLlamada = (typeof RESULTADOS_LLAMADA)[number];
@@ -101,6 +107,7 @@ export const RESULTADO_LABELS: Record<ResultadoLlamada, string> = {
   interesado: "Interesado",
   pide_muestras: "Pide muestras",
   no_interesa: "No le interesa",
+  fuera_de_perfil: "No busca lo que ofrecemos",
   numero_erroneo: "Número erróneo",
 };
 
@@ -204,6 +211,7 @@ const DESTINO_LLAMADA: Record<ResultadoLlamada, Fase> = {
   interesado: "interesado",
   pide_muestras: "interesado",
   no_interesa: "no_interesa",
+  fuera_de_perfil: "fuera_de_perfil",
   numero_erroneo: "ilocalizable",
 };
 
@@ -231,8 +239,17 @@ export function seguimientoTrasLlamada(
   resultado: ResultadoLlamada,
   fecha: string | null,
 ): string | null {
-  return resultado === "no_interesa" || resultado === "numero_erroneo" ? null : fecha;
+  return CIERRAN_EL_LEAD.includes(resultado) ? null : fecha;
 }
+
+/** Resultados tras los que no queda nada que hacer con el lead, así que tampoco
+ *  puede quedarle un seguimiento pendiente: seguiría saliendo en la lista de
+ *  llamadas del día, que es justo de lo que se le quería sacar. */
+const CIERRAN_EL_LEAD: readonly ResultadoLlamada[] = [
+  "no_interesa",
+  "fuera_de_perfil",
+  "numero_erroneo",
+];
 
 /* -------------------------------------------------------------------------- */
 /* Normalización (idéntica a las columnas *_norm de la base de datos)         */

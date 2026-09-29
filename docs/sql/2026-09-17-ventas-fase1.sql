@@ -115,7 +115,8 @@ create table if not exists public.ventas_actividad (
     'llamada', 'nota', 'cambio_fase', 'muestras_enviadas', 'pedido_vinculado', 'lead_creado'
   )),
   resultado text check (resultado is null or resultado in (
-    'no_contesta', 'volver_a_llamar', 'interesado', 'pide_muestras', 'no_interesa', 'numero_erroneo'
+    'no_contesta', 'volver_a_llamar', 'interesado', 'pide_muestras', 'no_interesa',
+    'fuera_de_perfil', 'numero_erroneo'
   )),
   nota text,
   datos jsonb not null default '{}'::jsonb,

@@ -3,10 +3,13 @@ import {
   FASES,
   FASE_COLORES,
   FASE_LABELS,
+  RESULTADOS_LLAMADA,
+  RESULTADO_LABELS,
   TIPOS_NEGOCIO,
   TIPO_NEGOCIO_LABELS,
   esFaseActiva,
   faseTrasLlamada,
+  seguimientoTrasLlamada,
   tiposNegocioDeMarca,
 } from "../ventas/dominio";
 
@@ -67,5 +70,35 @@ describe("fases nuevas", () => {
       expect(FASE_LABELS[fase]).toBeTruthy();
       expect(FASE_COLORES[fase]).toBeTruthy();
     }
+  });
+});
+
+describe("descartar por «no busca lo que ofrecemos» desde la llamada", () => {
+  // La fase `fuera_de_perfil` existía desde el 24-09 pero no se podía poner más
+  // que entrando en la ficha del lead y usando el desplegable de fases. El
+  // momento en que de verdad se descubre es AL TELÉFONO —se le localiza, se le
+  // explica, y resulta que no busca esto—, así que tiene que ser un resultado
+  // de llamada como los demás.
+  it("es un resultado de llamada ofrecido en el formulario", () => {
+    expect(RESULTADOS_LLAMADA).toContain("fuera_de_perfil");
+    expect(RESULTADO_LABELS.fuera_de_perfil).toBeTruthy();
+  });
+
+  it("manda el lead a «Fuera de perfil», venga de donde venga", () => {
+    expect(faseTrasLlamada("nuevo", "fuera_de_perfil")).toBe("fuera_de_perfil");
+    expect(faseTrasLlamada("contactado", "fuera_de_perfil")).toBe("fuera_de_perfil");
+    expect(faseTrasLlamada("muestras", "fuera_de_perfil")).toBe("fuera_de_perfil");
+  });
+
+  it("no descarta a un cliente por una llamada", () => {
+    // Misma protección que el resto de resultados: quien ya compró no sale del
+    // embudo por marcar mal un desplegable.
+    expect(faseTrasLlamada("cliente", "fuera_de_perfil")).toBe("cliente");
+  });
+
+  it("cierra el seguimiento pendiente, como «no le interesa»", () => {
+    // Un lead descartado no puede seguir apareciendo en la lista de llamadas
+    // del día: es justo lo que se quería quitar de en medio.
+    expect(seguimientoTrasLlamada("fuera_de_perfil", "2026-10-05")).toBeNull();
   });
 });
