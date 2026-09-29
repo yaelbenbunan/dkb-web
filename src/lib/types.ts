@@ -6,11 +6,9 @@ export interface ServiceFaq {
 export interface Service {
   slug: string;
   title: string;
-  titleLong?: string;
   heroTitle?: string;
   heroSubtitle?: string;
   shortDescription: string;
-  heroImage?: string;
   order: number;
   intro?: string;
   bullets?: string[];

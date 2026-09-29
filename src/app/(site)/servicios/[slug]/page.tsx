@@ -123,7 +123,15 @@ export default async function ServiceDetail({
       >
         {JSON.stringify(breadcrumbSchema).replace(/</g, "\\u003c")}
       </Script>
-      {/* Hero del servicio: bg image + overlay azul + glow + línea inferior */}
+      {/* Hero del servicio: bg image + overlay azul + glow + línea inferior.
+          La imagen es LA MISMA para los nueve servicios, y es deliberado: va
+          al 45% de opacidad bajo un overlay azul, así que funciona de textura y
+          no de fotografía del servicio. Hubo un campo `heroImage` en el
+          frontmatter para tener una por servicio; se quitó el 29-09-2026 porque
+          nadie lo leía —esta línea manda— y siete de los nueve apuntaban a
+          ficheros que no existían. Si algún día se quiere una imagen por
+          servicio, hay que traer los ficheros Y leer el campo aquí: solo una de
+          las dos cosas deja el sitio como estaba. */}
       <header className="relative isolate overflow-hidden">
         <Image
           src="/img/servicios/hero-desarrollo-web1.webp"
