@@ -23,6 +23,16 @@ const config: NextConfig = {
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
   redirects: async () => [
+    // «Plataformas a medida» deja de ofrecerse: dinkbit se queda con el
+    // marketing de siempre. Su hueco lo ocupa GEO. La URL vieja estaba indexada,
+    // así que 301 a desarrollo web, que es lo más parecido que sí se sigue
+    // haciendo — mandarla a /servicios dejaría al visitante en una lista sin
+    // relación con lo que buscaba.
+    {
+      source: "/servicios/plataformas-a-medida",
+      destination: "/servicios/desarrollo-web",
+      permanent: true,
+    },
     // El servicio de IA y automatización se sustituye por el de anuncios en
     // ChatGPT y visibilidad en buscadores con IA. La URL vieja estaba indexada
     // y enlazada desde el menú de servicios, así que 301 y no se quita.
