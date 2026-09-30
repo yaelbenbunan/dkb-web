@@ -12,6 +12,8 @@ PORTADAS = [
     ("cover-plazos-web.webp",    "PLAZOS",      "2 semanas",      "de la primera llamada a verla publicada"),
     ("cover-seo-geo.webp",       "VISIBILIDAD", "SEO y GEO",      "de una lista de diez a una respuesta de tres"),
     ("cover-anuncios-ia.webp",   "PUBLICIDAD",  "Anuncios en IA", "poca competencia, y se puede medir"),
+    ("cover-estrategia.webp",    "ESTRATEGIA",  "7 preguntas",    "antes de decidir dónde invertir"),
+    ("cover-equipo.webp",        "EQUIPO",      "Desde 2010",     "un equipo propio en Madrid"),
 ]
 
 for nombre, antetitulo, titular, sub in PORTADAS:
