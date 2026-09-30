@@ -5,6 +5,8 @@ import { PartnersMarquee } from "@/components/home/PartnersMarquee";
 import { AboutFeatures } from "@/components/home/AboutFeatures";
 import { KitDigitalSection } from "@/components/home/KitDigitalSection";
 import { ServicesCarousel } from "@/components/home/ServicesCarousel";
+import { HomeFaq } from "@/components/home/HomeFaq";
+import { HOME_FAQS } from "@/lib/home-faqs";
 import { Reveal } from "@/components/ui/Reveal";
 import { getAllServices } from "@/lib/content";
 
@@ -35,8 +37,28 @@ export default function Home() {
     shortDescription: s.shortDescription,
   }));
 
+  /**
+   * `FAQPage` de la portada, con las MISMAS preguntas que se pintan debajo.
+   * Es de lo más citable que puede publicar una agencia: responde con datos
+   * concretos —un año, una ciudad, una cifra— a lo que la gente le pregunta a
+   * una IA sobre un proveedor antes de contactarlo.
+   */
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: HOME_FAQS.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema).replace(/</g, "\\u003c") }}
+      />
       <Hero />
       <Reveal>
         <PartnersMarquee
@@ -55,6 +77,9 @@ export default function Home() {
       </Reveal>
       <Reveal>
         <Testimonials />
+      </Reveal>
+      <Reveal>
+        <HomeFaq />
       </Reveal>
       <Reveal>
         <ContactSection />
