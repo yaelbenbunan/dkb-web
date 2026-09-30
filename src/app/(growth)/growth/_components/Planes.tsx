@@ -4,8 +4,8 @@ import { GROWTH_THEME as T } from "@/lib/growth-config";
  * Los dos planes, en dos tarjetas de precio.
  *
  * Cada tarjeta lleva la lista entera, con lo que no incluye en gris y tachado,
- * para que la diferencia se vea sin comparar columnas: canales e informe
- * mensual.
+ * para que la diferencia se vea sin comparar columnas: canales, publicaciones
+ * e informe mensual.
  *
  * **Los dos se venden igual de bien.** Mismo botón y mismo peso; el avanzado
  * solo lleva el borde turquesa y la etiqueta. Un básico apagado al lado de un
@@ -46,11 +46,16 @@ type Fila = { t: string; basico: Valor; avanzado: Valor; apagado?: boolean };
  * recordatorios, y todo eso sale: Growth es la landing, las campañas y el
  * análisis. Lo que distingue los planes son los canales —uno o dos— y el
  * informe mensual, que va solo en el avanzado.
+ *
+ * **Dinamización de redes en los dos desde el 30 de septiembre de 2026**, y el
+ * avanzado suma una publicación a la semana.
  */
 const FILAS: Fila[] = [
   { t: "Landing de captación", basico: true, avanzado: true },
   { t: "Campañas de publicidad", basico: "1 canal: Google o Meta", avanzado: "2 canales: Google y Meta" },
   { t: "Análisis y optimización de campañas", basico: true, avanzado: true },
+  { t: "Dinamización de redes sociales", basico: true, avanzado: true },
+  { t: "Publicaciones en redes", basico: false, avanzado: "4 al mes, una por semana" },
   { t: "Informe mensual de resultados", basico: false, avanzado: true },
   { t: "Reunión mensual online", basico: false, avanzado: true },
   // Las dos van DENTRO de la tabla y no en la letra pequeña. Son las dos

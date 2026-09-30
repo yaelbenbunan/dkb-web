@@ -25,6 +25,17 @@ describe("Planes", () => {
     expect(linea(container, "avanzado", "Campañas de publicidad").textContent).toContain("2 canales");
   });
 
+  test("dinamización de redes en los dos, y publicaciones solo en el avanzado", () => {
+    // Decidido el 30 de septiembre de 2026: una publicación a la semana.
+    const { container } = render(<Planes />);
+    for (const plan of ["basico", "avanzado"] as const) {
+      expect(within(linea(container, plan, "Dinamización de redes")).getByLabelText("Incluido")).toBeInTheDocument();
+    }
+    const t = "Publicaciones en redes";
+    expect(within(linea(container, "basico", t)).getByLabelText("No incluido")).toBeInTheDocument();
+    expect(linea(container, "avanzado", t).textContent).toContain("4 al mes");
+  });
+
   test("la landing de captación va en los dos", () => {
     const { container } = render(<Planes />);
     for (const plan of ["basico", "avanzado"] as const) {

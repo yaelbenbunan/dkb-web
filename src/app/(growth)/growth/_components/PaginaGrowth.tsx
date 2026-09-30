@@ -235,7 +235,7 @@ export function PaginaGrowth({ sector }: { sector: SectorGrowth }) {
             <Cabecera
               rotulo="Planes"
               titulo="Dos planes, sin letra pequeña"
-              texto="La diferencia está en los canales y en el informe mensual. Todo lo demás va en los dos."
+              texto="La diferencia está en los canales, las publicaciones y el informe mensual. Todo lo demás va en los dos."
             />
           </AlAparecer>
           <AlAparecer>
