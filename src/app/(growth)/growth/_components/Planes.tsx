@@ -30,7 +30,7 @@ const PLANES = [
     // Lo único de la antigua letra pequeña que no estaba ya en la tarjeta o en
     // las preguntas: con menos de 300 € repartidos en dos canales, ninguno de
     // los dos tiene presupuesto para estar activo todos los días del mes.
-    nota: "Recomendado con 300 € al mes o más de inversión en anuncios.",
+    nota: "Inversión publicitaria mínima recomendada: 300 €/mes",
   },
 ] as const;
 
