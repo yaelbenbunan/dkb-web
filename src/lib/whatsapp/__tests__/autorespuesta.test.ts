@@ -16,7 +16,7 @@ describe("verticalDeAnuncio", () => {
   it("el anuncio de la campaña de psicología manda el texto de psicología", () => {
     const anuncio = "120252112386740343";
     expect(verticalDeAnuncio(anuncio)).toBe("psicologia");
-    expect(textoAutorespuesta({ anuncio })).toContain("llenar la agenda de tu consulta");
+    expect(textoAutorespuesta({ anuncio })).toContain("Claro, te lo cuento");
     expect(opcionesAutorespuesta(anuncio)).toContain("Huecos en la agenda");
   });
 

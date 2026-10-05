@@ -126,8 +126,8 @@ export const SECUENCIA_PSICOLOGIA: Secuencia = {
     inicio: {
       tipo: "mensaje",
       texto:
-        "¡Hola! Soy Paula, de Growth. Gracias por interesarte en nuestro proceso para llenar la agenda de tu consulta.\n\n" +
-        "Para poder ofrecerte la mejor solución, cuéntanos: ¿cuál es el principal problema que estás teniendo?",
+        "¡Hola! Soy Paula, de Growth. Claro, te lo cuento 😊\n\n" +
+        "Para darte la respuesta que te sirve, dime: ¿cuál es el principal problema que estás teniendo?",
       // `avisar`/`fase` van AQUÍ, en el botón, y SIN `terminar` (ver la
       // cabecera: es el orden de `aplicarRuta` lo que lo obliga).
       botones: [

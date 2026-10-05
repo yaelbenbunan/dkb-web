@@ -65,9 +65,12 @@ export const CUERPO: Record<Vertical, string> = {
   dental:
     `¡Hola! Soy ${REMITENTE}, de Growth. Gracias por interesarte en nuestro proceso para llenar la agenda de tu clínica.\n\n` +
     PREGUNTA,
+  // Responde a la pregunta que el anuncio deja escrita («¿me contáis cómo
+  // hacéis para llenar la agenda de mi consulta?») en vez de repetirla: el
+  // saludo de Meta ya da las gracias y el lead ya ha nombrado la agenda.
   psicologia:
-    `¡Hola! Soy ${REMITENTE}, de Growth. Gracias por interesarte en nuestro proceso para llenar la agenda de tu consulta.\n\n` +
-    PREGUNTA,
+    `¡Hola! Soy ${REMITENTE}, de Growth. Claro, te lo cuento 😊\n\n` +
+    "Para darte la respuesta que te sirve, dime: ¿cuál es el principal problema que estás teniendo?",
   generico:
     `¡Hola! Soy ${REMITENTE}, de Growth. Gracias por interesarte en nuestro proceso para llenar tu agenda de pacientes nuevos.\n\n` +
     PREGUNTA,
