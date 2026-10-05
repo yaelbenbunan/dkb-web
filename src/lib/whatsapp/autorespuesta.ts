@@ -51,6 +51,7 @@ export function verticalDeAnuncio(anuncio: string | null): Vertical {
 }
 
 const PREGUNTA = "Para poder ofrecerte la mejor solución, cuéntanos: ¿cuál es el principal problema que estás teniendo?";
+const PREGUNTA_ANUNCIO = "Para darte la respuesta que te sirve, dime: ¿cuál es el principal problema que estás teniendo?";
 
 /**
  * Cuerpo del mensaje, por sector. Las opciones van aparte, como botones.
@@ -62,15 +63,13 @@ const PREGUNTA = "Para poder ofrecerte la mejor solución, cuéntanos: ¿cuál e
  * otro.
  */
 export const CUERPO: Record<Vertical, string> = {
-  dental:
-    `¡Hola! Soy ${REMITENTE}, de Growth. Gracias por interesarte en nuestro proceso para llenar la agenda de tu clínica.\n\n` +
-    PREGUNTA,
-  // Responde a la pregunta que el anuncio deja escrita («¿me contáis cómo
-  // hacéis para llenar la agenda de mi consulta?») en vez de repetirla: el
-  // saludo de Meta ya da las gracias y el lead ya ha nombrado la agenda.
-  psicologia:
-    `¡Hola! Soy ${REMITENTE}, de Growth. Claro, te lo cuento 😊\n\n` +
-    "Para darte la respuesta que te sirve, dime: ¿cuál es el principal problema que estás teniendo?",
+  // Dental y psicología responden a la pregunta que el anuncio deja escrita
+  // («¿me contáis cómo hacéis para llenar la agenda de mi clínica?») en vez de
+  // repetirla: el saludo de Meta ya da las gracias y el lead ya ha nombrado la
+  // agenda. Por eso los dos textos son hoy el mismo; lo que cambia son los
+  // botones.
+  dental: `¡Hola! Soy ${REMITENTE}, de Growth. Claro, te lo cuento 😊\n\n` + PREGUNTA_ANUNCIO,
+  psicologia: `¡Hola! Soy ${REMITENTE}, de Growth. Claro, te lo cuento 😊\n\n` + PREGUNTA_ANUNCIO,
   generico:
     `¡Hola! Soy ${REMITENTE}, de Growth. Gracias por interesarte en nuestro proceso para llenar tu agenda de pacientes nuevos.\n\n` +
     PREGUNTA,

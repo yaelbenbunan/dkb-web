@@ -23,8 +23,9 @@
  *
  * - **Dental habla de dinero en los cierres.** Lo caro no es llenar la
  *   agenda, es llenarla de pacientes que no acaban haciéndose el tratamiento.
- *   El saludo, en cambio, habla de llenar la agenda desde el 25-09-2026, como
- *   la landing de Growth y como `autorespuesta.ts`, del que es copia exacta.
+ *   El saludo no vende nada desde el 05-10-2026: responde a la pregunta que
+ *   el anuncio deja escrita («¿me contáis cómo hacéis para llenar la agenda de
+ *   mi clínica?») y es copia exacta del de `autorespuesta.ts`.
  * - **Psicología habla de huecos.** A una consulta no se le vende «ganar más»
  *   (decisión del 17-09-2026): la sesión tiene un precio que no se estira y un
  *   profesional solo atiende las horas que tiene. Lo que le cambia el mes son
@@ -76,8 +77,8 @@ export const SECUENCIA_DENTAL: Secuencia = {
     inicio: {
       tipo: "mensaje",
       texto:
-        "¡Hola! Soy Paula, de Growth. Gracias por interesarte en nuestro proceso para llenar la agenda de tu clínica.\n\n" +
-        "Para poder ofrecerte la mejor solución, cuéntanos: ¿cuál es el principal problema que estás teniendo?",
+        "¡Hola! Soy Paula, de Growth. Claro, te lo cuento 😊\n\n" +
+        "Para darte la respuesta que te sirve, dime: ¿cuál es el principal problema que estás teniendo?",
       // `avisar`/`fase` van AQUÍ, en el botón, y SIN `terminar` (ver la
       // cabecera: es el orden de `aplicarRuta` lo que lo obliga).
       botones: [
