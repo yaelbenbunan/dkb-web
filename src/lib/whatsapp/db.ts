@@ -326,25 +326,27 @@ export async function listConversacionesEnBot(marcaId: string, ahora: Date): Pro
 const UNICO_VIOLADO = "23505";
 
 /**
- * Apunta el recordatorio de una conversación ANTES de enviarlo y devuelve el
- * id de la fila, o `null` si ya estaba apuntado.
+ * Apunta el recordatorio número `numero` de una conversación ANTES de enviarlo
+ * y devuelve el id de la fila, o `null` si ya estaba apuntado.
  *
  * La reclamación es el propio `insert`: la fila nace con un `wamid`
- * provisional que depende solo de la conversación, y `wamid` tiene índice
- * único, así que de dos pasadas del cron que se pisen solo una inserta. Es lo
- * que garantiza un único recordatorio por conversación sin añadir una columna.
- * `cerrarRecordatorio` cambia después ese `wamid` por el real.
+ * provisional que depende solo de la conversación y del número, y `wamid`
+ * tiene índice único, así que de dos pasadas del cron que se pisen solo una
+ * inserta. Es lo que impide mandar el mismo recordatorio dos veces sin añadir
+ * una columna. `cerrarRecordatorio` cambia después ese `wamid` por el real; a
+ * partir de ahí lo que cuenta es la marca `payload.recordatorio`, que es por
+ * donde `recordatorioPendiente` sabe cuántos han salido ya.
  */
-export async function reclamarRecordatorio(conversacionId: string, texto: string): Promise<string | null> {
+export async function reclamarRecordatorio(conversacionId: string, numero: number, texto: string): Promise<string | null> {
   const r = await db()
     .from("ventas_mensajes")
     .insert({
       conversacion_id: conversacionId,
       direccion: "saliente",
-      wamid: `recordatorio:${conversacionId}`,
+      wamid: `recordatorio:${numero}:${conversacionId}`,
       texto,
       estado: "enviado",
-      payload: { recordatorio: true },
+      payload: { recordatorio: numero },
     })
     .select("id")
     .single();

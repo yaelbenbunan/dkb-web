@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   enHorario,
   enviarRecordatoriosPendientes,
-  TEXTO_RECORDATORIO,
-  tocaRecordatorio,
+  RECORDATORIOS,
+  recordatorioPendiente,
   type DepsRecordatorio,
   type MensajeParaRecordatorio,
 } from "../recordatorio";
@@ -23,6 +23,11 @@ const saludo = (horas: number, extra: Partial<MensajeParaRecordatorio> = {}): Me
   ...extra,
 });
 const entrante = (horas: number): MensajeParaRecordatorio => ({ direccion: "entrante", estado: "entregado", created_at: hace(horas) });
+/** Un recordatorio ya mandado: saliente con la marca que deja `reclamarRecordatorio`. */
+const recordatorio = (horas: number, numero = 1): MensajeParaRecordatorio => saludo(horas, { payload: { recordatorio: numero } });
+/** Lo que escribe una persona desde la bandeja: saliente sin marca. */
+const manual = (horas: number): MensajeParaRecordatorio => saludo(horas);
+const [PRIMERO, SEGUNDO] = RECORDATORIOS;
 
 describe("enHorario", () => {
   it("solo de 9:00 a 20:00 de Madrid, no del servidor", () => {
@@ -39,27 +44,59 @@ describe("enHorario", () => {
   });
 });
 
-describe("tocaRecordatorio", () => {
-  it("toca cuando el saludo lleva 3 h sin respuesta", () => {
-    expect(tocaRecordatorio([entrante(3.1), saludo(3)], MEDIODIA)).toBe(true);
+describe("recordatorioPendiente", () => {
+  it("son dos: a las 3 h y a las 8 h del saludo, con textos distintos y el calendario", () => {
+    expect(RECORDATORIOS.map((r) => r.horas)).toEqual([3, 8]);
+    expect(PRIMERO.texto).not.toBe(SEGUNDO.texto);
+    for (const r of RECORDATORIOS) expect(r.texto).toContain("https://calendar.app.google/");
+  });
+
+  it("toca el primero cuando el saludo lleva 3 h sin respuesta", () => {
+    expect(recordatorioPendiente([entrante(3.1), saludo(3)], MEDIODIA)).toEqual({ numero: 1, texto: PRIMERO.texto });
   });
 
   it("todavía no toca antes de las 3 h", () => {
-    expect(tocaRecordatorio([entrante(2.6), saludo(2.5)], MEDIODIA)).toBe(false);
+    expect(recordatorioPendiente([entrante(2.6), saludo(2.5)], MEDIODIA)).toBeNull();
+  });
+
+  it("toca el segundo a las 8 h del saludo, si el primero ya salió", () => {
+    expect(recordatorioPendiente([entrante(8), saludo(8), recordatorio(5)], MEDIODIA)).toEqual({ numero: 2, texto: SEGUNDO.texto });
+  });
+
+  it("entre el primero y las 8 h no toca nada", () => {
+    expect(recordatorioPendiente([entrante(6), saludo(6), recordatorio(3)], MEDIODIA)).toBeNull();
+  });
+
+  // Saludo a las 23:00: el primero se retrasa a las 9:00 y a esa hora ya han
+  // pasado más de 8 h. Sin separación mínima saldrían los dos seguidos.
+  it("deja 4 h entre uno y otro aunque el primero se retrasara por la noche", () => {
+    expect(recordatorioPendiente([entrante(10), saludo(10), recordatorio(0.1)], MEDIODIA)).toBeNull();
+    expect(recordatorioPendiente([entrante(14), saludo(14), recordatorio(4)], MEDIODIA)?.numero).toBe(2);
+  });
+
+  it("después del segundo no hay más", () => {
+    expect(recordatorioPendiente([entrante(30), saludo(30), recordatorio(27), recordatorio(22, 2)], MEDIODIA)).toBeNull();
+  });
+
+  it("un recordatorio que falló al enviarse cuenta como mandado: no se repite", () => {
+    const fallido = saludo(5, { estado: "fallido", payload: { recordatorio: 1 } });
+    expect(recordatorioPendiente([entrante(9), saludo(9), fallido], MEDIODIA)?.numero).toBe(2);
   });
 
   it("no toca si el lead contestó después del saludo", () => {
-    expect(tocaRecordatorio([entrante(5), saludo(5), entrante(4)], MEDIODIA)).toBe(false);
+    expect(recordatorioPendiente([entrante(5), saludo(5), entrante(4)], MEDIODIA)).toBeNull();
+    expect(recordatorioPendiente([entrante(9), saludo(9), recordatorio(6), entrante(5)], MEDIODIA)).toBeNull();
   });
 
-  it("no toca si ya salió otro mensaje: una persona escribió, o el recordatorio ya se mandó", () => {
-    expect(tocaRecordatorio([entrante(5), saludo(5), saludo(1)], MEDIODIA)).toBe(false);
+  it("no toca si una persona ya le escribió desde la bandeja", () => {
+    expect(recordatorioPendiente([entrante(5), saludo(5), manual(1)], MEDIODIA)).toBeNull();
+    expect(recordatorioPendiente([entrante(9), saludo(9), recordatorio(6), manual(5)], MEDIODIA)).toBeNull();
   });
 
   it("no toca si el saludo no llegó a enviarse, ni si no hay saludo", () => {
-    expect(tocaRecordatorio([entrante(5), saludo(5, { estado: "fallido" })], MEDIODIA)).toBe(false);
-    expect(tocaRecordatorio([entrante(5)], MEDIODIA)).toBe(false);
-    expect(tocaRecordatorio([], MEDIODIA)).toBe(false);
+    expect(recordatorioPendiente([entrante(5), saludo(5, { estado: "fallido" })], MEDIODIA)).toBeNull();
+    expect(recordatorioPendiente([entrante(5)], MEDIODIA)).toBeNull();
+    expect(recordatorioPendiente([], MEDIODIA)).toBeNull();
   });
 });
 
@@ -86,9 +123,10 @@ function depsFalsas(convs: ConvFalsa[], opts: { enviar?: DepsRecordatorio["envia
     async listMensajes(id) {
       return convs.find((c) => c.id === id)?.mensajes ?? [];
     },
-    async reclamar(conversacionId) {
-      if (reclamados.has(conversacionId)) return null;
-      reclamados.add(conversacionId);
+    async reclamar(conversacionId, numero) {
+      const clave = `${numero}:${conversacionId}`;
+      if (reclamados.has(clave)) return null;
+      reclamados.add(clave);
       return `msg-${conversacionId}`;
     },
     async enviarTexto(waId, texto) {
@@ -110,8 +148,7 @@ describe("enviarRecordatoriosPendientes", () => {
     const { deps, enviados, cerrados } = depsFalsas([pendiente("600111222")]);
 
     expect(await enviarRecordatoriosPendientes(deps, MEDIODIA)).toEqual({ enviados: 1, fallidos: 0 });
-    expect(enviados).toEqual([{ waId: "34600111222", texto: TEXTO_RECORDATORIO }]);
-    expect(TEXTO_RECORDATORIO).toContain("https://calendar.app.google/");
+    expect(enviados).toEqual([{ waId: "34600111222", texto: PRIMERO.texto }]);
     expect(cerrados).toEqual([{ mensajeId: "msg-600111222", wamid: "wamid.34600111222", error: undefined }]);
   });
 
@@ -144,7 +181,7 @@ describe("enviarRecordatoriosPendientes", () => {
   // lead reciba el mismo recordatorio dos veces.
   it("si otra pasada ya lo reclamó, no lo manda", async () => {
     const { deps, enviados, reclamados } = depsFalsas([pendiente("600111222")]);
-    reclamados.add("600111222");
+    reclamados.add("1:600111222");
 
     expect(await enviarRecordatoriosPendientes(deps, MEDIODIA)).toEqual({ enviados: 0, fallidos: 0 });
     expect(enviados).toHaveLength(0);
@@ -172,6 +209,15 @@ describe("enviarRecordatoriosPendientes", () => {
 
     expect(await enviarRecordatoriosPendientes(deps, MEDIODIA)).toEqual({ enviados: 1, fallidos: 1 });
     expect(enviados.map((e) => e.waId)).toEqual(["342"]);
+  });
+
+  it("manda el segundo, con su texto, a quien ya recibió el primero", async () => {
+    const conv: ConvFalsa = { ...pendiente("600111222"), mensajes: [entrante(9), saludo(9), recordatorio(6)] };
+    const { deps, enviados, reclamados } = depsFalsas([conv]);
+
+    expect(await enviarRecordatoriosPendientes(deps, MEDIODIA)).toEqual({ enviados: 1, fallidos: 0 });
+    expect(enviados).toEqual([{ waId: "34600111222", texto: SEGUNDO.texto }]);
+    expect([...reclamados]).toEqual(["2:600111222"]);
   });
 
   it("sin la marca dinkbit no hace nada", async () => {
