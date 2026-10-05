@@ -14,6 +14,7 @@ describe("leadDesdeAnuncio", () => {
     expect(r).toEqual({
       ok: true,
       campana: "Muestras gimnasios",
+      nota: "",
       lead: {
         negocio: "Gym Sol",
         contacto: "Laura Pérez",
@@ -25,6 +26,12 @@ describe("leadDesdeAnuncio", () => {
         tipo_negocio: null,
       },
     });
+  });
+
+  test("lo que no tiene columna propia viaja en la nota", () => {
+    const r = leadDesdeAnuncio({ negocio: "Clínica Sol", email: "a@b.es", nota: "  Horario: mediodía · Gabinetes: 4 · Anuncio: A3 - reel  " });
+    expect(r.ok && r.nota).toBe("Horario: mediodía · Gabinetes: 4 · Anuncio: A3 - reel");
+    expect(leadDesdeAnuncio({ negocio: "Clínica Sol", email: "a@b.es", notes: "x".repeat(5000) })).toMatchObject({ nota: "x".repeat(2000) });
   });
 
   test("sin nombre de negocio usa el de la persona", () => {

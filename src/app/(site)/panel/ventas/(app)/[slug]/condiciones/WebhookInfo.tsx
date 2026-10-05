@@ -21,7 +21,7 @@ export function WebhookInfo({ marcaId, slug, secreto }: { marcaId: string; slug:
       <p style={codigo}>https://www.dinkbit.es/api/ventas/leads/{slug}</p>
       <p style={codigo}>{visible ? secreto : "•".repeat(24)}</p>
       <p style={{ margin: "0 0 10px", fontSize: 12, color: "#64748b" }}>
-        Campos que entiende: negocio o company_name, contacto o full_name, telefono o phone_number, email, ciudad, tipo_negocio, campana o campaign_name.
+        Campos que entiende: negocio o company_name, contacto o full_name, telefono o phone_number, email, ciudad, tipo_negocio, campana o campaign_name, y nota para todo lo demás (horario, anuncio, respuestas del formulario).
       </p>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
         <button type="button" onClick={() => setVisible((v) => !v)} style={botonSecundario}>

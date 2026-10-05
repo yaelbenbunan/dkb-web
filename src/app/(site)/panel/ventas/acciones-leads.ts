@@ -65,7 +65,8 @@ export async function crearLeadManualAction(slug: string, _prev: ResultadoAccion
   if (!marca) return { ok: false, error: "Marca no encontrada." };
   const leido = leerDatosLead(fd);
   if (!leido.ok) return leido;
-  const res = await crearLeadManual({ marca, usuaria, datos: leido.datos });
+  const nota = String(fd.get("nota") ?? "").trim().slice(0, 2000);
+  const res = await crearLeadManual({ marca, usuaria, datos: leido.datos, nota });
   if (!res.ok) return res;
   refrescar(slug);
   redirect(`/panel/ventas/${slug}/leads/${res.leadId}`);

@@ -28,6 +28,10 @@ export function NuevoLeadForm({ slug }: { slug: string }) {
       <label style={etiqueta}>Ciudad<input name="ciudad" style={campo} /></label>
       <label style={etiqueta}>CIF<input name="cif" style={campo} /></label>
       <label style={etiqueta}>Web<input name="web" style={campo} /></label>
+      <label style={{ ...etiqueta, gridColumn: "1 / -1" }}>
+        Notas
+        <textarea name="nota" rows={2} maxLength={2000} style={{ ...campo, resize: "vertical" }} />
+      </label>
       <div style={{ gridColumn: "1 / -1", display: "flex", gap: 12, alignItems: "center" }}>
         <button type="submit" disabled={pendiente} style={botonPrimario}>Crear lead</button>
         <Mensaje resultado={resultado} />

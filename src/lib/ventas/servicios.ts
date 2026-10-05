@@ -198,7 +198,7 @@ export async function recibirLeadAnuncio(input: {
   }
   const leido = leadDesdeAnuncio(input.datos as Record<string, unknown>);
   if (!leido.ok) return { status: 400, body: { ok: false, error: leido.error } };
-  return guardarLeadEntrante({ marca, lead: leido.lead, campana: leido.campana, notaInicial: null });
+  return guardarLeadEntrante({ marca, lead: leido.lead, campana: leido.campana, notaInicial: leido.nota || null });
 }
 
 // Formularios web públicos: la ruta ya ha comprobado origen, trampa y límite.
@@ -221,6 +221,7 @@ export async function crearLeadManual(input: {
   marca: Marca;
   usuaria: Usuaria;
   datos: LeadNuevo;
+  nota?: string;
 }): Promise<{ ok: true; leadId: string } | { ok: false; error: string }> {
   const [existentes, exclusiones] = await Promise.all([listContactosLeads(input.marca.id), listExclusiones(input.marca.id)]);
   const clasificacion = clasificarLeads([input.datos], existentes, exclusiones);
@@ -239,7 +240,16 @@ export async function crearLeadManual(input: {
   });
   if (!res.ok || res.creados === 0) return { ok: false, error: "No se pudo crear el lead." };
   const lead = await buscarLeadPorContacto(input.marca.id, input.datos);
-  return lead ? { ok: true, leadId: lead.id } : { ok: false, error: "Lead creado, pero no se ha podido abrir. Búscalo en la lista." };
+  if (!lead) return { ok: false, error: "Lead creado, pero no se ha podido abrir. Búscalo en la lista." };
+  if (input.nota) {
+    // Sin que pueda tumbar el alta: el lead ya está guardado.
+    try {
+      await registrarActividad({ leadId: lead.id, usuariaId: input.usuaria.id, tipo: "nota", nota: input.nota });
+    } catch (error) {
+      console.error("crearLeadManual: no se pudo apuntar la nota inicial", error);
+    }
+  }
+  return { ok: true, leadId: lead.id };
 }
 
 export async function registrarLlamada(input: { usuaria: Usuaria; leadId: string; llamada: Llamada }): Promise<Escritura> {

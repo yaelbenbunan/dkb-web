@@ -120,6 +120,11 @@ describe("acciones de leads", () => {
     );
   });
 
+  test("alta manual pasa la nota al servicio, recortada", async () => {
+    await expect(crearLeadManualAction("hydrup", null, fd({ negocio: "Gym", telefono: "600111222", nota: "  Llamar por la tarde  " }))).rejects.toThrow("NEXT_REDIRECT");
+    expect(m.crearLeadManual).toHaveBeenCalledWith(expect.objectContaining({ nota: "Llamar por la tarde" }));
+  });
+
   test("asignar a una usuaria desactivada no se permite; vacío desasigna", async () => {
     m.getUsuaria.mockResolvedValue({ id: "u2", activa: false });
     expect((await asignarLeadAction("hydrup", "l1", "u2")).ok).toBe(false);

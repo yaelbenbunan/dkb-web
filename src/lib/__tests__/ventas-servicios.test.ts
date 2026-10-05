@@ -90,6 +90,21 @@ describe("recibirLeadAnuncio", () => {
     expect(m.crearLeads.mock.calls[0][0]).toMatchObject({ usuariaId: null, origen: "anuncio", origenDetalle: "Muestras", leads: [{ negocio: "Box X", excluido: false }] });
   });
 
+  test("lead nuevo con nota → queda como primera nota de su historial", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA);
+    m.crearLeads.mockResolvedValue({ ok: true, creados: 1 });
+    m.buscarLeadPorContacto.mockResolvedValue({ id: "l-new" });
+    await recibirLeadAnuncio({ slug: "hydrup", secreto: "secreto-largo", datos: { company_name: "Box X", email: "box@x.es", nota: "Horario: mediodía" } });
+    expect(m.registrarActividad).toHaveBeenCalledWith({ leadId: "l-new", usuariaId: null, tipo: "nota", nota: "Horario: mediodía" });
+  });
+
+  test("lead nuevo sin nota → no se apunta nada en el historial", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA);
+    m.crearLeads.mockResolvedValue({ ok: true, creados: 1 });
+    await recibirLeadAnuncio({ slug: "hydrup", secreto: "secreto-largo", datos: { company_name: "Box X", email: "box@x.es" } });
+    expect(m.registrarActividad).not.toHaveBeenCalled();
+  });
+
   test("lead de un cliente previo → se guarda marcado como excluido", async () => {
     m.getMarcaPorSlug.mockResolvedValue(MARCA);
     m.crearLeads.mockResolvedValue({ ok: true, creados: 1 });
@@ -204,6 +219,20 @@ describe("crearLeadManual", () => {
     m.buscarLeadPorContacto.mockResolvedValue({ id: "l9" });
     expect(await crearLeadManual({ marca: MARCA, usuaria: USUARIA, datos: DATOS })).toEqual({ ok: true, leadId: "l9" });
     expect(m.crearLeads.mock.calls[0][0]).toMatchObject({ origen: "manual", origenDetalle: null });
+  });
+
+  test("con nota, la deja en el historial a nombre de quien lo crea", async () => {
+    m.crearLeads.mockResolvedValue({ ok: true, creados: 1 });
+    m.buscarLeadPorContacto.mockResolvedValue({ id: "l9" });
+    expect(await crearLeadManual({ marca: MARCA, usuaria: USUARIA, datos: DATOS, nota: "Llamar por la tarde" })).toEqual({ ok: true, leadId: "l9" });
+    expect(m.registrarActividad).toHaveBeenCalledWith({ leadId: "l9", usuariaId: "u1", tipo: "nota", nota: "Llamar por la tarde" });
+  });
+
+  test("sin nota no apunta nada en el historial", async () => {
+    m.crearLeads.mockResolvedValue({ ok: true, creados: 1 });
+    m.buscarLeadPorContacto.mockResolvedValue({ id: "l9" });
+    await crearLeadManual({ marca: MARCA, usuaria: USUARIA, datos: DATOS });
+    expect(m.registrarActividad).not.toHaveBeenCalled();
   });
 
   test("rechaza excluidos y duplicados con un mensaje claro", async () => {

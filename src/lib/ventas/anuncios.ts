@@ -2,6 +2,10 @@
  * Convierte el cuerpo del webhook de anuncios (Zapier con Meta Lead Ads, o el
  * formulario de una landing) en un lead. Acepta los nombres de campo de Meta
  * y los nuestros en español, para no depender de cómo se configure el Zap.
+ *
+ * Lo que el lead no tiene como columna (horario para llamar, nombre del
+ * anuncio, respuestas propias de cada formulario) llega junto en `nota`, ya
+ * redactado en el Zap, y acaba como primera nota de su historial.
  */
 
 import { normalizarTelefono, parseTipoNegocio } from "./dominio";
@@ -10,11 +14,13 @@ import { EMAIL_RE, type LeadNuevo } from "./leads-csv";
 const MAX_CAMPO = 200;
 const MAX_TELEFONO = 40;
 const MAX_EMAIL = 254;
+// El mismo tope que las notas que se escriben a mano en la ficha (`validacion.ts`).
+const MAX_NOTA = 2000;
 
 export function leadDesdeAnuncio(
   datos: Record<string, unknown>,
 ):
-  | { ok: true; lead: LeadNuevo; campana: string }
+  | { ok: true; lead: LeadNuevo; campana: string; nota: string }
   | { ok: false; error: "falta_negocio" | "falta_contacto" | "email_invalido" } {
   const texto = (...claves: string[]): string => {
     for (const clave of claves) {
@@ -37,6 +43,7 @@ export function leadDesdeAnuncio(
   return {
     ok: true,
     campana: texto("campana", "campaign_name", "campaign"),
+    nota: texto("nota", "notas", "notes").slice(0, MAX_NOTA),
     lead: {
       negocio,
       contacto,
