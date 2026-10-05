@@ -45,8 +45,8 @@ export const VERTICAL_POR_ANUNCIO: Record<string, Vertical> = {
   // Campaña de captación de consultas de psicología (24-09-2026).
   "120252112386740343": "psicologia",
   // Campaña «Iniciar conversación - growth» (05-10-2026), un anuncio por sector.
-  "120252271246220343": "psicologia",
-  "120252271053920343": "dental",
+  "120252271546570343": "psicologia",
+  "120252271546580343": "dental",
 };
 
 export function verticalDeAnuncio(anuncio: string | null): Vertical {

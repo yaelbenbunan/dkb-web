@@ -5,14 +5,14 @@
 -- psicólogo no encontraba su guion y caía en la secuencia general de la marca,
 -- que desde hoy es la dental. El identificador anterior se conserva.
 --
--- El anuncio dental (120252271053920343) no se apunta en ninguna secuencia: lo
+-- El anuncio dental (120252271546580343) no se apunta en ninguna secuencia: lo
 -- recoge la general.
 --
 -- IDEMPOTENTE. Proyecto wnboyesnlrbtwfmhcxmc. Aplicado el 05-10-2026.
 
 update public.ventas_secuencias
-set anuncios = array_append(anuncios, '120252271246220343')
+set anuncios = array_append(anuncios, '120252271546570343')
 where nombre = 'Captación consultas de psicología'
-  and not ('120252271246220343' = any(anuncios));
+  and not ('120252271546570343' = any(anuncios));
 
 select nombre, estado, anuncios from public.ventas_secuencias order by nombre;
