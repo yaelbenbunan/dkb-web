@@ -306,6 +306,84 @@ export async function listMensajes(conversacionId: string): Promise<Mensaje[]> {
   return (r.data ?? []) as Mensaje[];
 }
 
+/* Recordatorio automático ------------------------------------------------- */
+
+/** Conversaciones que todavía lleva el bot y con la ventana abierta: las
+ *  únicas a las que `recordatorio.ts` puede tener algo que decir. */
+export async function listConversacionesEnBot(marcaId: string, ahora: Date): Promise<Conversacion[]> {
+  const r = await db()
+    .from("ventas_conversaciones")
+    .select("*")
+    .eq("marca_id", marcaId)
+    .eq("estado", "bot")
+    .gt("ventana_hasta", ahora.toISOString())
+    .order("ultimo_mensaje_at", { ascending: true })
+    .limit(200);
+  if (r.error) throw new Error(`[whatsapp/db] listConversacionesEnBot: ${r.error.message}`);
+  return (r.data ?? []) as Conversacion[];
+}
+
+const UNICO_VIOLADO = "23505";
+
+/**
+ * Apunta el recordatorio de una conversación ANTES de enviarlo y devuelve el
+ * id de la fila, o `null` si ya estaba apuntado.
+ *
+ * La reclamación es el propio `insert`: la fila nace con un `wamid`
+ * provisional que depende solo de la conversación, y `wamid` tiene índice
+ * único, así que de dos pasadas del cron que se pisen solo una inserta. Es lo
+ * que garantiza un único recordatorio por conversación sin añadir una columna.
+ * `cerrarRecordatorio` cambia después ese `wamid` por el real.
+ */
+export async function reclamarRecordatorio(conversacionId: string, texto: string): Promise<string | null> {
+  const r = await db()
+    .from("ventas_mensajes")
+    .insert({
+      conversacion_id: conversacionId,
+      direccion: "saliente",
+      wamid: `recordatorio:${conversacionId}`,
+      texto,
+      estado: "enviado",
+      payload: { recordatorio: true },
+    })
+    .select("id")
+    .single();
+  if (r.error) {
+    if (r.error.code === UNICO_VIOLADO) return null;
+    throw new Error(`[whatsapp/db] reclamarRecordatorio: ${r.error.message}`);
+  }
+  return (r.data as { id: string }).id;
+}
+
+/**
+ * Deja el recordatorio ya reclamado con el resultado del envío. Si se envió,
+ * pasa a llevar el `wamid` real, que es por donde Meta avisa luego de
+ * «entregado» y «leído». Si falló, se queda con el provisional y en
+ * `fallido`: se ve en la bandeja y no se reintenta solo.
+ */
+export async function cerrarRecordatorio(input: {
+  mensajeId: string;
+  conversacionId: string;
+  texto: string;
+  wamid: string | null;
+  error?: string;
+}): Promise<void> {
+  const cambios: Record<string, unknown> = input.error ? { estado: "fallido", error: input.error } : {};
+  if (input.wamid) cambios.wamid = input.wamid;
+  if (Object.keys(cambios).length > 0) {
+    const r = await db().from("ventas_mensajes").update(cambios).eq("id", input.mensajeId);
+    if (r.error) throw new Error(`[whatsapp/db] cerrarRecordatorio: ${r.error.message}`);
+  }
+
+  // Mismo resumen desnormalizado que mantiene `guardarSaliente`, y con el
+  // mismo criterio: best-effort, el mensaje ya está guardado.
+  const conv = await db()
+    .from("ventas_conversaciones")
+    .update({ ultimo_texto: input.texto, ultimo_mensaje_at: new Date().toISOString() })
+    .eq("id", input.conversacionId);
+  if (conv.error) console.error(`[whatsapp/db] cerrarRecordatorio (conversación): ${conv.error.message}`);
+}
+
 export async function setEstadoMensaje(
   wamid: string,
   estado: "entregado" | "leido" | "fallido",
