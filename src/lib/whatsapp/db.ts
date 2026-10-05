@@ -39,6 +39,9 @@ export interface Mensaje {
   texto: string | null;
   estado: "enviado" | "entregado" | "leido" | "fallido";
   error: string | null;
+  /** Entrante: el mensaje crudo de Meta. Saliente: `{ botones }` si se mandó
+   *  con botones (ver `botonesDePayload` en `bandeja.ts`). */
+  payload: unknown;
   created_at: string;
 }
 
@@ -260,6 +263,8 @@ export async function guardarSaliente(input: {
   wamid: string | null;
   texto: string;
   error?: string;
+  /** Rótulos de los botones con los que se mandó, si los llevaba. */
+  botones?: readonly string[];
 }): Promise<void> {
   // `wamid` puede ser null (envío simulado): el índice único de `wamid` NO es
   // parcial (los NULL nunca chocan entre sí en un índice único de Postgres),
@@ -275,6 +280,7 @@ export async function guardarSaliente(input: {
       texto: input.texto,
       estado: input.error ? "fallido" : "enviado",
       error: input.error ?? null,
+      ...(input.botones && input.botones.length > 0 ? { payload: { botones: [...input.botones] } } : {}),
     });
   if (error) throw new Error(`[whatsapp/db] guardarSaliente: ${error.message}`);
 
@@ -293,7 +299,7 @@ export async function guardarSaliente(input: {
 export async function listMensajes(conversacionId: string): Promise<Mensaje[]> {
   const r = await db()
     .from("ventas_mensajes")
-    .select("id, direccion, wamid, texto, estado, error, created_at")
+    .select("id, direccion, wamid, texto, estado, error, payload, created_at")
     .eq("conversacion_id", conversacionId)
     .order("created_at", { ascending: true });
   if (r.error) throw new Error(`[whatsapp/db] listMensajes: ${r.error.message}`);

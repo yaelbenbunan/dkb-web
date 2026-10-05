@@ -1,6 +1,6 @@
 import { requireUsuaria } from "@/lib/ventas/auth";
 import { listLeads } from "@/lib/ventas/db";
-import { etiquetaVentana, extracto } from "@/lib/whatsapp/bandeja";
+import { botonesDePayload, etiquetaVentana, extracto } from "@/lib/whatsapp/bandeja";
 import { getConversacionPorId, listConversaciones, listMensajes } from "@/lib/whatsapp/db";
 import { telefonoDeWaId, ventanaAbierta } from "@/lib/whatsapp/ventana";
 import { cargarMarca } from "../../../_componentes/cargarMarca";
@@ -60,6 +60,7 @@ export default async function ConversacionesPage({
           texto: m.texto,
           estado: m.estado,
           error: m.error,
+          botones: botonesDePayload(m.payload),
           createdAt: m.created_at,
         })),
       }

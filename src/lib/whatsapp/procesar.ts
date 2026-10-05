@@ -887,6 +887,7 @@ async function procesarMensaje(
                 wamid: resultado.ok ? resultado.wamid : null,
                 texto: entrada.texto,
                 error: resultado.ok ? undefined : resultado.error,
+                botones: entrada.botones,
               });
             }
           } catch (e) {
@@ -968,15 +969,13 @@ async function procesarMensaje(
         // Con botones en vez de texto: la respuesta del lead vuelve como
         // `button_reply` y `entrante.ts` la guarda igual que un texto, así que
         // queda en su ficha. Es además lo que más sube la tasa de respuesta.
-        const resultado = await deps.mensajero.enviarBotones(
-          mensaje.waId,
-          texto,
-          opcionesAutorespuesta(anuncio),
-        );
+        const opciones = opcionesAutorespuesta(anuncio);
+        const resultado = await deps.mensajero.enviarBotones(mensaje.waId, texto, opciones);
         await deps.guardarSaliente({
           conversacionId: conversacion.id,
           wamid: resultado.ok ? resultado.wamid : null,
           texto,
+          botones: opciones,
           // Un fallo de ENVÍO no tumba el procesado: el saliente queda con su
           // error para que se vea en la bandeja (esto no lanza, es un
           // resultado tipado de `enviarTexto`/`enviarBotones`).
@@ -1171,6 +1170,7 @@ async function procesarMensaje(
                   wamid: resultado.ok ? resultado.wamid : null,
                   texto: entrada.texto,
                   error: resultado.ok ? undefined : resultado.error,
+                  botones: entrada.botones,
                 });
               }
             } catch (e) {

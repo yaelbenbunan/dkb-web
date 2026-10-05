@@ -312,7 +312,7 @@ function depsFalsas(
 ) {
   const conversaciones = new Map<string, Conversacion>();
   const wamidsGuardados = new Set<string>();
-  const salientes: Array<{ conversacionId: string; wamid: string | null; texto: string; error?: string }> = [];
+  const salientes: Array<{ conversacionId: string; wamid: string | null; texto: string; error?: string; botones?: readonly string[] }> = [];
   const leadsPorTelefono = new Map<string, LeadFalso>();
   const estadosSeteados: Array<{ wamid: string; estado: string }> = [];
   const secuencias: SecuenciaRow[] = (opts.secuencias ?? []).map((s) => ({
@@ -473,7 +473,7 @@ function depsFalsas(
       return { nuevo: true };
     },
     async guardarSaliente(input) {
-      salientes.push({ conversacionId: input.conversacionId, wamid: input.wamid, texto: input.texto, error: input.error });
+      salientes.push({ conversacionId: input.conversacionId, wamid: input.wamid, texto: input.texto, error: input.error, botones: input.botones });
     },
     async setEstadoMensaje(wamid, estado) {
       estadosSeteados.push({ wamid, estado });
@@ -779,6 +779,9 @@ describe("procesarWebhook", () => {
     expect(enviosMensajero).toHaveLength(1);
     expect(enviosMensajero[0].metodo).toBe("botones");
     expect(enviosMensajero[0].opciones).toEqual(["Faltan pacientes", "No vuelven", "Boca a boca"]);
+    // Y se guardan con el saliente: la bandeja solo puede enseñar lo que
+    // quedó en la base, y sin esto no había forma de saber qué opciones vio.
+    expect(salientes[0].botones).toEqual(["Faltan pacientes", "No vuelven", "Boca a boca"]);
   });
 
   it("cae en la autorespuesta en código si ninguna secuencia sirve", async () => {
@@ -788,6 +791,7 @@ describe("procesarWebhook", () => {
     await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
 
     expect(salientes[0].texto).toContain("Growth");
+    expect(salientes[0].botones).toEqual(["Faltan pacientes", "No se quedan", "Solo boca a boca"]);
   });
 
   it("al caer al respaldo limpia el puntero de la secuencia anterior", async () => {

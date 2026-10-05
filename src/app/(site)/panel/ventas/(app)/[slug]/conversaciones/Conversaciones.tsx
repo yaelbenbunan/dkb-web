@@ -24,6 +24,8 @@ export interface MensajeHilo {
   texto: string | null;
   estado: Mensaje["estado"];
   error: string | null;
+  /** Rótulos de los botones que se mandaron con el mensaje; vacío si no llevaba. */
+  botones: string[];
   createdAt: string;
 }
 
@@ -112,6 +114,18 @@ function BurbujaMensaje({ mensaje }: { mensaje: MensajeHilo }) {
         }}
       >
         <div style={{ fontSize: 14, color: "#0f172a", whiteSpace: "pre-wrap" }}>{mensaje.texto ?? "(sin texto)"}</div>
+        {mensaje.botones.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {mensaje.botones.map((boton) => (
+              <span
+                key={boton}
+                style={{ fontSize: 12, fontWeight: 600, color: "#1d4ed8", background: "#fff", border: "1px solid #bfdbfe", borderRadius: 999, padding: "3px 10px" }}
+              >
+                {boton}
+              </span>
+            ))}
+          </div>
+        )}
         <div style={{ fontSize: 11, color: "#64748b" }}>{formatoFechaHora(mensaje.createdAt)}</div>
         {mensaje.estado === "fallido" && (
           <div style={{ fontSize: 12, color: "#b91c1c", fontWeight: 600 }}>No se pudo enviar{mensaje.error ? `: ${mensaje.error}` : "."}</div>

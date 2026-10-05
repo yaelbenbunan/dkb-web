@@ -21,6 +21,20 @@ export function extracto(texto: string | null): string {
 }
 
 /**
+ * Los rótulos de los botones que se mandaron con un saliente, tal como los
+ * dejó `guardarSaliente` en `payload.botones`. La bandeja solo guarda el texto
+ * del mensaje, así que sin esto no había forma de ver qué opciones recibió el
+ * lead. Cualquier otra forma —el mensaje crudo de Meta de un entrante, un
+ * saliente anterior a este campo— da lista vacía.
+ */
+export function botonesDePayload(payload: unknown): string[] {
+  if (typeof payload !== "object" || payload === null || Array.isArray(payload)) return [];
+  const botones = (payload as { botones?: unknown }).botones;
+  if (!Array.isArray(botones)) return [];
+  return botones.filter((b): b is string => typeof b === "string");
+}
+
+/**
  * Etiqueta de la ventana de 24/72 h para la bandeja: cuánto queda si está
  * abierta (en horas, o en minutos si queda menos de una), o el aviso de que
  * hace falta una plantilla aprobada si está cerrada o no hay ventana.

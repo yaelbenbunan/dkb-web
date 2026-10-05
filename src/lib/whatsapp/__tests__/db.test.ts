@@ -80,6 +80,16 @@ describe("guardarSaliente", () => {
     expect(patch).toMatchObject({ ultimo_texto: "hola" });
   });
 
+  it("guarda los botones que se mandaron, para que la bandeja los enseñe", async () => {
+    await guardarSaliente({ conversacionId: "c1", wamid: "w-out", texto: "hola", botones: ["Sí", "No"] });
+    expect(insertMock.mock.calls[0][0]).toMatchObject({ payload: { botones: ["Sí", "No"] } });
+  });
+
+  it("sin botones no escribe payload", async () => {
+    await guardarSaliente({ conversacionId: "c1", wamid: "w-out", texto: "hola" });
+    expect(insertMock.mock.calls[0][0]).not.toHaveProperty("payload");
+  });
+
   // Mismo criterio best-effort que guardarEntrante: el saliente ya está
   // guardado, así que un fallo al refrescar el resumen no debe lanzar.
   it("no lanza si falla el update del resumen de la conversación, solo lo registra", async () => {

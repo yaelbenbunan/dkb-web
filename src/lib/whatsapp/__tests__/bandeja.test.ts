@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { etiquetaVentana, extracto } from "../bandeja";
+import { botonesDePayload, etiquetaVentana, extracto } from "../bandeja";
 
 describe("extracto", () => {
   it("deja pasar los textos cortos", () => {
@@ -24,6 +24,20 @@ describe("extracto", () => {
     expect(res.length).toBe(81);
     expect(res.endsWith("…")).toBe(true);
     expect(res.slice(0, -1)).toBe(url.slice(0, 80));
+  });
+});
+
+describe("botonesDePayload", () => {
+  it("devuelve los rótulos que se guardaron con el saliente", () => {
+    expect(botonesDePayload({ botones: ["Faltan pacientes", "No vuelven"] })).toEqual(["Faltan pacientes", "No vuelven"]);
+  });
+
+  it("sin botones, o con un payload que no es el nuestro, no pinta nada", () => {
+    // Los entrantes guardan aquí el mensaje crudo de Meta y los salientes
+    // antiguos no guardaron nada: ninguno de los dos tiene `botones`.
+    for (const payload of [null, undefined, {}, "x", [], { botones: "x" }, { botones: [1, null] }, { type: "text" }]) {
+      expect(botonesDePayload(payload)).toEqual([]);
+    }
   });
 });
 
