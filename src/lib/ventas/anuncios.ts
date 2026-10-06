@@ -32,9 +32,9 @@ export function leadDesdeAnuncio(
   };
 
   const contacto = texto("contacto", "full_name", "nombre", "name").slice(0, MAX_CAMPO);
-  const negocio = (texto("negocio", "empresa", "company_name", "business_name") || contacto).slice(0, MAX_CAMPO);
+  const negocio = (texto("negocio", "empresa", "company_name", "company", "business_name") || contacto).slice(0, MAX_CAMPO);
   const telefono = texto("telefono", "phone_number", "phone", "movil").slice(0, MAX_TELEFONO);
-  const email = texto("email", "correo").slice(0, MAX_EMAIL);
+  const email = texto("email", "correo", "mail", "e-mail").slice(0, MAX_EMAIL);
 
   if (!negocio) return { ok: false, error: "falta_negocio" };
   if (!normalizarTelefono(telefono) && !email) return { ok: false, error: "falta_contacto" };

@@ -34,6 +34,13 @@ describe("leadDesdeAnuncio", () => {
     expect(leadDesdeAnuncio({ negocio: "Clínica Sol", email: "a@b.es", notes: "x".repeat(5000) })).toMatchObject({ nota: "x".repeat(2000) });
   });
 
+  // Las claves las escribe a mano quien monta el Zap: un `mail` o un `company`
+  // no pueden costar el email o el nombre del negocio de un lead ya pagado.
+  test("entiende las variantes cortas que se escriben en Zapier", () => {
+    const r = leadDesdeAnuncio({ name: "Rocío", company: "Basic Fit", phone: "+34660111222", mail: "rocio@gym.es" });
+    expect(r.ok && r.lead).toMatchObject({ contacto: "Rocío", negocio: "Basic Fit", telefono: "+34660111222", email: "rocio@gym.es" });
+  });
+
   test("sin nombre de negocio usa el de la persona", () => {
     const r = leadDesdeAnuncio({ nombre: "Pedro", telefono: "611222333" });
     expect(r.ok && r.lead.negocio).toBe("Pedro");
