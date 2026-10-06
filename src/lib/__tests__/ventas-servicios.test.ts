@@ -10,6 +10,7 @@ const m = vi.hoisted(() => ({
   getLead: vi.fn(),
   registrarActividad: vi.fn(),
   marcarLeadPromocionado: vi.fn(),
+  actualizarDatosLead: vi.fn(),
   createManualLead: vi.fn(),
 }));
 vi.mock("../ventas/db", () => m);
@@ -40,6 +41,7 @@ beforeEach(() => {
   m.listExclusiones.mockResolvedValue([{ email: "cliente@a.es", telefono: null, cif: null }]);
   m.crearLeads.mockResolvedValue({ ok: true, creados: 2 });
   m.registrarActividad.mockResolvedValue({ ok: true });
+  m.actualizarDatosLead.mockResolvedValue({ ok: true });
 });
 
 describe("importarLeadsCsv", () => {
@@ -119,6 +121,43 @@ describe("recibirLeadAnuncio", () => {
     expect(r).toEqual({ status: 200, body: { ok: true, duplicado: true } });
     expect(m.crearLeads).not.toHaveBeenCalled();
     expect(m.registrarActividad).toHaveBeenCalledWith(expect.objectContaining({ leadId: "l7", usuariaId: null, tipo: "nota" }));
+  });
+
+  const EXISTENTE = { id: "l7", negocio: "Ya", tipo_negocio: null, contacto: "Ana", telefono: null, email: "ya@a.es", ciudad: null, cif: null, web: null };
+
+  test("lead repetido → rellena lo que le faltaba, sin pisar lo que ya tenía", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA);
+    m.buscarLeadPorContacto.mockResolvedValue(EXISTENTE);
+    await recibirLeadAnuncio({
+      slug: "hydrup",
+      secreto: "secreto-largo",
+      datos: { negocio: "Otro nombre", contacto: "Otra", email: "ya@a.es", telefono: "600111222", tipo_negocio: "gimnasio", ciudad: "Madrid" },
+    });
+    expect(m.actualizarDatosLead).toHaveBeenCalledWith("l7", {
+      negocio: "Ya",
+      tipo_negocio: "gimnasio",
+      contacto: "Ana",
+      telefono: "600111222",
+      email: "ya@a.es",
+      ciudad: "Madrid",
+      cif: "",
+      web: "",
+    });
+  });
+
+  test("lead repetido que no trae nada nuevo → no se toca su ficha", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA);
+    m.buscarLeadPorContacto.mockResolvedValue(EXISTENTE);
+    await recibirLeadAnuncio({ slug: "hydrup", secreto: "secreto-largo", datos: { negocio: "Ya", email: "ya@a.es" } });
+    expect(m.actualizarDatosLead).not.toHaveBeenCalled();
+  });
+
+  test("lead repetido → si completar la ficha falla, responde 200 igual", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA);
+    m.buscarLeadPorContacto.mockResolvedValue(EXISTENTE);
+    m.actualizarDatosLead.mockRejectedValueOnce(new Error("db caída"));
+    const r = await recibirLeadAnuncio({ slug: "hydrup", secreto: "secreto-largo", datos: { negocio: "Ya", email: "ya@a.es", tipo_negocio: "gimnasio" } });
+    expect(r).toEqual({ status: 200, body: { ok: true, duplicado: true } });
   });
 
   test("un cuerpo que no es un objeto → 400", async () => {

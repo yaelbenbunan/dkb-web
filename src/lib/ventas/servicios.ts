@@ -6,6 +6,7 @@ import { datosParaEmbudo } from "../whatsapp/promocion";
 import { leadDesdeAnuncio } from "./anuncios";
 import { notaFormulario } from "./formulario-web";
 import {
+  actualizarDatosLead,
   actualizarSecuencia,
   buscarLeadPorContacto,
   crearLeads,
@@ -20,6 +21,7 @@ import {
   registrarActividad,
   registrarImportacion,
   type Escritura,
+  type Lead,
   type Marca,
   type Usuaria,
 } from "./db";
@@ -132,9 +134,34 @@ export async function autenticarWebhook(slug: string, secreto: string | null): P
 }
 
 /**
+ * Lo que un lead repetido trae y a la ficha le faltaba: tipo de negocio,
+ * contacto, teléfono, email, ciudad, CIF o web. Solo RELLENA huecos; nunca
+ * pisa un dato que ya estaba, que pudo haberlo corregido una persona. El
+ * nombre del negocio no se toca nunca. `null` si no hay nada que añadir.
+ */
+function completarDatos(existente: Lead, nuevo: LeadNuevo): LeadNuevo | null {
+  const rellenar = (actual: string | null, llega: string) => actual || llega;
+  const completo: LeadNuevo = {
+    negocio: existente.negocio,
+    tipo_negocio: existente.tipo_negocio ?? nuevo.tipo_negocio,
+    contacto: rellenar(existente.contacto, nuevo.contacto),
+    telefono: rellenar(existente.telefono, nuevo.telefono),
+    email: rellenar(existente.email, nuevo.email),
+    ciudad: rellenar(existente.ciudad, nuevo.ciudad),
+    cif: rellenar(existente.cif, nuevo.cif),
+    web: rellenar(existente.web, nuevo.web),
+  };
+  const cambia =
+    completo.tipo_negocio !== existente.tipo_negocio ||
+    (["contacto", "telefono", "email", "ciudad", "cif", "web"] as const).some((campo) => completo[campo] !== (existente[campo] ?? ""));
+  return cambia ? completo : null;
+}
+
+/**
  * Webhook de anuncios. Marca desconocida y secreto incorrecto responden igual
  * (401), para no revelar qué marcas existen. Un lead repetido no se duplica:
- * se apunta en su historial que ha vuelto a llegar. Un cliente previo se
+ * se apunta en su historial que ha vuelto a llegar y se rellena lo que a su
+ * ficha le faltaba (`completarDatos`). Un cliente previo se
  * guarda marcado como excluido, para que se vea que ha pedido información.
  */
 async function guardarLeadEntrante(input: {
@@ -157,6 +184,16 @@ async function guardarLeadEntrante(input: {
         tipo: "nota",
         nota: input.notaInicial ? `${vuelta}\n${input.notaInicial}` : vuelta,
       });
+      // Sin que pueda tumbar la respuesta: la vuelta ya quedó apuntada.
+      try {
+        const completo = completarDatos(existente, lead);
+        if (completo) {
+          const res = await actualizarDatosLead(existente.id, completo);
+          if (!res.ok) console.error("guardarLeadEntrante: no se pudo completar la ficha del lead repetido:", res.error);
+        }
+      } catch (error) {
+        console.error("guardarLeadEntrante: no se pudo completar la ficha del lead repetido", error);
+      }
     }
     return { status: 200, body: { ok: true, duplicado: true } };
   }
