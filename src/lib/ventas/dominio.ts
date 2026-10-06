@@ -128,6 +128,7 @@ export const TIPOS_NEGOCIO = [
   "gimnasio",
   "box_crossfit",
   "club_deportivo",
+  "estudio",
   "fisioterapia",
   "farmacia",
   "tienda_deporte",
@@ -141,9 +142,10 @@ export const TIPO_NEGOCIO_LABELS: Record<TipoNegocio, string> = {
   clinica_dental: "Clínica dental",
   psicologia: "Psicología",
   estetica: "Centro de estética",
-  gimnasio: "Gimnasio",
+  gimnasio: "Gimnasio / centro fitness",
   box_crossfit: "Box / CrossFit",
-  club_deportivo: "Club deportivo",
+  club_deportivo: "Club de pádel / tenis / raqueta",
+  estudio: "Estudio (yoga, pilates, boxeo)",
   fisioterapia: "Fisioterapia",
   farmacia: "Farmacia / parafarmacia",
   tienda_deporte: "Tienda de deporte",
@@ -165,11 +167,21 @@ export const TIPO_NEGOCIO_LABELS: Record<TipoNegocio, string> = {
  * sean muchas, esto quiere ser una columna configurable desde el panel.
  */
 const TIPOS_POR_MARCA: Record<string, readonly TipoNegocio[]> = {
-  dinkbit: ["clinica_dental", "psicologia", "estetica", "fisioterapia", "empresa", "otro"],
+  // Los sectores de Growth (`growth-sectores.ts`).
+  dinkbit: ["clinica_dental", "psicologia", "estetica", "fisioterapia", "otro"],
+  // Primero las cuatro opciones del formulario «B2B - genérico» de Meta, en su
+  // orden; después los otros puntos de venta que se trabajan por lista.
+  hydrup: ["gimnasio", "box_crossfit", "club_deportivo", "estudio", "fisioterapia", "farmacia", "tienda_deporte", "herbolario", "otro"],
 };
 
-export function tiposNegocioDeMarca(slug: string): readonly TipoNegocio[] {
-  return TIPOS_POR_MARCA[slug] ?? TIPOS_NEGOCIO;
+/**
+ * `actual` es el tipo que ya tiene el lead que se está editando: si su marca
+ * no lo ofrece (un lead antiguo, o uno importado), se añade a la lista. Sin
+ * eso el desplegable lo enseñaría como «—» y guardar la ficha lo borraría.
+ */
+export function tiposNegocioDeMarca(slug: string, actual?: TipoNegocio | null): readonly TipoNegocio[] {
+  const tipos = TIPOS_POR_MARCA[slug] ?? TIPOS_NEGOCIO;
+  return actual && !tipos.includes(actual) ? [...tipos, actual] : tipos;
 }
 
 export const ROLES = ["admin", "comercial"] as const;
@@ -285,7 +297,42 @@ const SINONIMOS_TIPO: Record<string, TipoNegocio> = {
   tiendadedeportes: "tienda_deporte",
   tienda: "tienda_deporte",
   herboristeria: "herbolario",
+  dental: "clinica_dental",
+  dentista: "clinica_dental",
+  odontologia: "clinica_dental",
+  psicologo: "psicologia",
+  psicologa: "psicologia",
+  estudio: "estudio",
 };
+
+/**
+ * Para lo que no es una etiqueta exacta: la respuesta de un formulario de
+ * Meta llega con el texto entero de la opción («gimnasio/centro_fitness»,
+ * «estudio_(yoga,_pilates,_boxeo,_etc.)»), y ese texto lo redacta quien monta
+ * el formulario. Se mira por lo que CONTIENE la clave ya normalizada (sin
+ * tildes, espacios ni signos), en orden: «crossfit» va antes que «gimnasio»
+ * para que un «gimnasio de crossfit» caiga en el box.
+ */
+const TIPO_POR_FRAGMENTO: ReadonlyArray<[string, TipoNegocio]> = [
+  ["crossfit", "box_crossfit"],
+  ["funcional", "box_crossfit"],
+  ["padel", "club_deportivo"],
+  ["tenis", "club_deportivo"],
+  ["raqueta", "club_deportivo"],
+  ["clubdeportivo", "club_deportivo"],
+  ["yoga", "estudio"],
+  ["pilates", "estudio"],
+  ["estudio", "estudio"],
+  ["gimnasio", "gimnasio"],
+  ["fitness", "gimnasio"],
+  ["dental", "clinica_dental"],
+  ["dentista", "clinica_dental"],
+  ["psicolog", "psicologia"],
+  ["fisio", "fisioterapia"],
+  ["estetica", "estetica"],
+  ["farmacia", "farmacia"],
+  ["herbol", "herbolario"],
+];
 
 const ALIAS_TIPO: Record<string, TipoNegocio> = (() => {
   const mapa: Record<string, TipoNegocio> = { ...SINONIMOS_TIPO };
@@ -299,7 +346,7 @@ const ALIAS_TIPO: Record<string, TipoNegocio> = (() => {
 export function parseTipoNegocio(raw: string): TipoNegocio | null {
   const clave = normalizeKey(raw);
   if (!clave) return null;
-  return ALIAS_TIPO[clave] ?? null;
+  return ALIAS_TIPO[clave] ?? TIPO_POR_FRAGMENTO.find(([fragmento]) => clave.includes(fragmento))?.[1] ?? null;
 }
 
 export function slugify(nombre: string): string {

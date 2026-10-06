@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { actualizarLeadAction } from "../../../../acciones-leads";
 import type { Lead } from "@/lib/ventas/db";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
-import { TIPOS_NEGOCIO, TIPO_NEGOCIO_LABELS } from "@/lib/ventas/dominio";
+import { TIPO_NEGOCIO_LABELS, tiposNegocioDeMarca } from "@/lib/ventas/dominio";
 import { Mensaje } from "../../../../_componentes/Mensaje";
 import { botonPrimario, campo, etiqueta, tarjeta, titulo } from "../../../../_componentes/estilos";
 
@@ -24,7 +24,7 @@ export function DatosLead({ slug, lead }: { slug: string; lead: Lead }) {
         Tipo de negocio
         <select name="tipo_negocio" defaultValue={lead.tipo_negocio ?? ""} style={campo}>
           <option value="">—</option>
-          {TIPOS_NEGOCIO.map((t) => (
+          {tiposNegocioDeMarca(slug, lead.tipo_negocio).map((t) => (
             <option key={t} value={t}>{TIPO_NEGOCIO_LABELS[t]}</option>
           ))}
         </select>

@@ -10,21 +10,32 @@ import {
   esFaseActiva,
   faseTrasLlamada,
   seguimientoTrasLlamada,
+  parseTipoNegocio,
   tiposNegocioDeMarca,
 } from "../ventas/dominio";
 
 describe("tiposNegocioDeMarca", () => {
-  it("ofrece a dinkbit tipos de clínica, no de gimnasio", () => {
-    const tipos = tiposNegocioDeMarca("dinkbit");
-    expect(tipos).toContain("clinica_dental");
-    expect(tipos).toContain("psicologia");
-    expect(tipos).not.toContain("gimnasio");
-    expect(tipos).not.toContain("herbolario");
+  it("ofrece a dinkbit solo tipos de clínica", () => {
+    expect(tiposNegocioDeMarca("dinkbit")).toEqual(["clinica_dental", "psicologia", "estetica", "fisioterapia", "otro"]);
+  });
+
+  it("ofrece a hydrup los centros de su formulario primero, y ninguno de clínica", () => {
+    const tipos = tiposNegocioDeMarca("hydrup");
+    // Las cuatro opciones del formulario «B2B - genérico» de Meta, en su orden.
+    expect(tipos.slice(0, 4)).toEqual(["gimnasio", "box_crossfit", "club_deportivo", "estudio"]);
+    expect(tipos.at(-1)).toBe("otro");
+    expect(tipos).not.toContain("clinica_dental");
+    expect(tipos).not.toContain("psicologia");
   });
 
   it("ofrece el catálogo entero a una marca que no tiene lista propia", () => {
-    expect(tiposNegocioDeMarca("hydrup")).toEqual(TIPOS_NEGOCIO);
     expect(tiposNegocioDeMarca("una-marca-nueva")).toEqual(TIPOS_NEGOCIO);
+  });
+
+  it("si el lead ya tiene un tipo que su marca no ofrece, se sigue ofreciendo para no perderlo al guardar", () => {
+    expect(tiposNegocioDeMarca("dinkbit", "gimnasio")).toContain("gimnasio");
+    expect(tiposNegocioDeMarca("dinkbit", "clinica_dental")).toEqual(tiposNegocioDeMarca("dinkbit"));
+    expect(tiposNegocioDeMarca("dinkbit", null)).toEqual(tiposNegocioDeMarca("dinkbit"));
   });
 
   it("solo devuelve tipos del catálogo, para que la validación los acepte", () => {
@@ -39,6 +50,36 @@ describe("tiposNegocioDeMarca", () => {
     for (const tipo of TIPOS_NEGOCIO) {
       expect(TIPO_NEGOCIO_LABELS[tipo]).toBeTruthy();
     }
+  });
+});
+
+describe("parseTipoNegocio", () => {
+  it("entiende las respuestas del formulario de Hydrup tal como las manda Meta", () => {
+    expect(parseTipoNegocio("gimnasio/centro_fitness")).toBe("gimnasio");
+    expect(parseTipoNegocio("box_de_crossfit_/entrenamiento_funcional")).toBe("box_crossfit");
+    expect(parseTipoNegocio("club_de_pádel/tenis/_raqueta")).toBe("club_deportivo");
+    expect(parseTipoNegocio("estudio_(yoga,_pilates,_boxeo,_etc.)")).toBe("estudio");
+    expect(parseTipoNegocio("otro")).toBe("otro");
+  });
+
+  it("y las mismas escritas como se leen en el formulario", () => {
+    expect(parseTipoNegocio("Gimnasio/centro fitness")).toBe("gimnasio");
+    expect(parseTipoNegocio("Box de CrossFit /entrenamiento funcional")).toBe("box_crossfit");
+    expect(parseTipoNegocio("Club de pádel/tenis/ raqueta")).toBe("club_deportivo");
+    expect(parseTipoNegocio("Estudio (yoga, pilates, boxeo, etc.)")).toBe("estudio");
+  });
+
+  it("entiende los tipos de clínica escritos de varias formas", () => {
+    expect(parseTipoNegocio("clinica_dental")).toBe("clinica_dental");
+    expect(parseTipoNegocio("Clínica dental")).toBe("clinica_dental");
+    expect(parseTipoNegocio("dentista")).toBe("clinica_dental");
+    expect(parseTipoNegocio("Psicólogo")).toBe("psicologia");
+    expect(parseTipoNegocio("consulta de psicología")).toBe("psicologia");
+  });
+
+  it("lo que no reconoce se queda sin tipo, no en uno inventado", () => {
+    expect(parseTipoNegocio("")).toBeNull();
+    expect(parseTipoNegocio("panadería")).toBeNull();
   });
 });
 
