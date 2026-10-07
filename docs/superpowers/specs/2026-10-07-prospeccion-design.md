@@ -129,8 +129,8 @@ campañas: debe leerse como un correo de persona a persona.
   esquema que `unsubscribe-token.ts`. Marca el prospecto como `baja` y añade el
   email a la lista de supresión.
 - **Rebotes y quejas**: el webhook de Resend ya existente reconoce los correos
-  de prospección por una etiqueta (`tipo=prospeccion`, `prospect_id`) y marca
-  `rebotado` o `baja`, añadiendo a supresión.
+  de prospección porque su id de mensaje está guardado en `prospects.resend_id`,
+  y marca `rebotado` o `baja`, añadiendo a supresión.
 - **Supresión**: antes de cada envío se comprueba email y dominio contra
   `prospect_suppressions`, y que el email no pertenezca ya a un lead del CRM
   (a esos se les escribe por los cauces normales).
@@ -159,7 +159,8 @@ el `service_role` desde el servidor, como el resto del panel.
 identificador del acto de BORME; único junto a `source`), `name`, `sector`,
 `address`, `city`, `province`, `phone`, `website`, `email`, `email_kind`
 (`generica` | `personal`), `rating`, `reviews`, `extra` (jsonb: objeto social,
-fecha de constitución…), `status`, `enriched_at`, `template_id`, `sent_at`,
+fecha de constitución…), `status`, `contact_note` (por qué quedó sin contacto),
+`enriched_at`, `template_id`, `sent_at`,
 `resend_id`, `send_error`, `lead_id`, `created_at`.
 
 Estados: `nuevo` (sin enriquecer) → `listo` (con email) | `sin_contacto` →
@@ -178,7 +179,7 @@ primaria), `kind` (`email` | `dominio`), `reason` (`baja` | `rebote` | `queja` |
 
 ## Convertir en lead
 
-Crea una fila en `leads` con nombre, email, teléfono, web y ciudad del
+Crea una fila en `imagina_leads` con nombre, email, teléfono, web y ciudad del
 prospecto, canal «Prospección» (se añade a la lista de canales) y
 `consent = null`: que haya respondido no es consentimiento para campañas.
 Guarda `lead_id` en el prospecto y lo pasa a `respondido`. Si ya hay un lead con
