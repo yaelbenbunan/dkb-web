@@ -57,7 +57,7 @@ function escapar(s: string): string {
 /** Texto plano → HTML mínimo: escapado, URLs enlazadas y saltos de línea. */
 export function textoAHtml(texto: string): string {
   return escapar(texto)
-    .replace(/https?:\/\/[^\s<]+/g, (url) => {
+    .replace(/https?:\/\/(?:[^\s<&]|&amp;)+/g, (url) => {
       const cola = url.match(/[.,;:!?)]+$/)?.[0] ?? "";
       const limpia = cola ? url.slice(0, -cola.length) : url;
       return `<a href="${limpia}">${limpia}</a>${cola}`;

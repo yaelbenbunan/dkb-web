@@ -56,6 +56,18 @@ describe("textoAHtml", () => {
       'Mira <a href="https://dinkbit.es/web?a=1&amp;b=2">https://dinkbit.es/web?a=1&amp;b=2</a>.',
     );
   });
+
+  test("una URL entre comillas no rompe su enlace", () => {
+    expect(textoAHtml('Mira "https://dinkbit.es/web" hoy')).toBe(
+      'Mira &quot;<a href="https://dinkbit.es/web">https://dinkbit.es/web</a>&quot; hoy',
+    );
+  });
+
+  test("una URL entre ángulos no rompe su enlace", () => {
+    expect(textoAHtml("Web: <https://dinkbit.es>")).toBe(
+      'Web: &lt;<a href="https://dinkbit.es">https://dinkbit.es</a>&gt;',
+    );
+  });
 });
 
 describe("datosDeProspecto", () => {
