@@ -22,18 +22,26 @@ export function Plantillas({
   function guardar(e: React.FormEvent) {
     e.preventDefault();
     startTransition(async () => {
-      const r = await guardarPlantillaAction(borrador);
-      onAviso({ ok: r.ok, texto: r.ok ? r.mensaje : r.error });
-      if (r.ok) setBorrador(VACIA);
+      try {
+        const r = await guardarPlantillaAction(borrador);
+        onAviso({ ok: r.ok, texto: r.ok ? r.mensaje : r.error });
+        if (r.ok) setBorrador(VACIA);
+      } catch {
+        onAviso({ ok: false, texto: "No se pudo guardar la plantilla. Vuelve a intentarlo." });
+      }
     });
   }
 
   function borrar(t: ProspectTemplateRow) {
     if (!window.confirm(`¿Borrar la plantilla «${t.name}»?`)) return;
     startTransition(async () => {
-      const r = await borrarPlantillaAction(t.id);
-      onAviso({ ok: r.ok, texto: r.ok ? r.mensaje : r.error });
-      if (borrador.id === t.id) setBorrador(VACIA);
+      try {
+        const r = await borrarPlantillaAction(t.id);
+        onAviso({ ok: r.ok, texto: r.ok ? r.mensaje : r.error });
+        if (borrador.id === t.id) setBorrador(VACIA);
+      } catch {
+        onAviso({ ok: false, texto: "No se pudo borrar la plantilla. Vuelve a intentarlo." });
+      }
     });
   }
 

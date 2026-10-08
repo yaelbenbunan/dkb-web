@@ -20,6 +20,7 @@ import { enriquecerWeb } from "@/lib/prospeccion/enriquecer";
 import { enviarProspectos, type ErrorEnvio } from "@/lib/prospeccion/enviar";
 import { buscarEnPlaces } from "@/lib/prospeccion/places";
 import { TEXTO_BLOQUEO } from "@/lib/prospeccion/reglas-envio";
+import { resumirOmitidos } from "@/lib/prospeccion/resumen-envio";
 
 const RUTA = "/panel/prospeccion";
 const TANDA = 10;
@@ -111,17 +112,15 @@ export async function enviarAction(
   revalidatePath(RUTA);
   if (!r.ok) return { ok: false, error: TEXTO_ERROR[r.error ?? "fallo_resend"] };
 
-  const motivos = [
-    ...new Set(r.omitidos.map((o) => TEXTO_ERROR[o.motivo] + (o.detalle ? `: ${o.detalle}` : "."))),
-  ];
+  const resumen = resumirOmitidos(r.omitidos, TEXTO_ERROR);
   if (r.enviados === 0) {
-    return { ok: false, error: `No se envió ninguno. ${motivos.join(" ")}` };
+    return { ok: false, error: `No se envió ninguno. ${resumen}`.trim() };
   }
   return {
     ok: true,
     mensaje:
       `${r.enviados} enviado${r.enviados === 1 ? "" : "s"}.` +
-      (r.omitidos.length > 0 ? ` ${r.omitidos.length} sin enviar: ${motivos.join(" ")}` : ""),
+      (r.omitidos.length > 0 ? ` ${r.omitidos.length} sin enviar. ${resumen}` : ""),
   };
 }
 

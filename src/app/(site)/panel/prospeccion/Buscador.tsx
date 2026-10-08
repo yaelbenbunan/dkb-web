@@ -30,15 +30,24 @@ export function Buscador({
     e.preventDefault();
     onAviso(null);
     setFase("buscando");
-    const r = await buscarAction(categoria, ciudad);
-    if (!r.ok) {
+    let searchId: string;
+    try {
+      const r = await buscarAction(categoria, ciudad);
+      if (!r.ok) {
+        setFase(null);
+        onAviso({ ok: false, texto: r.error });
+        return;
+      }
+      onAviso({ ok: true, texto: r.mensaje });
+      searchId = r.searchId;
+    } catch {
       setFase(null);
-      onAviso({ ok: false, texto: r.error });
+      router.refresh();
+      onAviso({ ok: false, texto: "La búsqueda se interrumpió. Vuelve a intentarlo." });
       return;
     }
-    onAviso({ ok: true, texto: r.mensaje });
 
-    await revisarWebs([r.searchId]);
+    await revisarWebs([searchId]);
   }
 
   /** Emails: tandas de diez hasta que no quede ninguna empresa por mirar. */
@@ -46,16 +55,31 @@ export function Buscador({
     setFase("emails");
     setProgreso({ hechos: 0, total: 0 });
     let hechos = 0;
-    for (const searchId of searchIds) {
-      for (let i = 0; i < MAX_TANDAS; i++) {
-        const t = await enriquecerTandaAction(searchId);
-        hechos += t.procesados;
-        setProgreso({ hechos, total: hechos + t.restantes });
-        if (t.restantes === 0) break;
+    let quedan = 0;
+    let sinTerminar = 0;
+    try {
+      for (const searchId of searchIds) {
+        quedan = 0;
+        for (let i = 0; i < MAX_TANDAS; i++) {
+          const t = await enriquecerTandaAction(searchId);
+          hechos += t.procesados;
+          quedan = t.restantes;
+          setProgreso({ hechos, total: hechos + t.restantes });
+          if (t.restantes === 0) break;
+        }
+        sinTerminar += quedan;
       }
+      onAviso(
+        sinTerminar > 0
+          ? { ok: false, texto: `Se revisaron ${hechos} webs, pero quedan empresas sin revisar. Puedes retomarlo desde el enlace de abajo.` }
+          : { ok: true, texto: `Revisión terminada: ${hechos} web${hechos === 1 ? "" : "s"} revisada${hechos === 1 ? "" : "s"}.` },
+      );
+    } catch {
+      onAviso({ ok: false, texto: "La revisión de webs se interrumpió. Lo ya revisado está guardado; puedes retomarla." });
+    } finally {
+      setFase(null);
+      router.refresh();
     }
-    setFase(null);
-    router.refresh();
   }
 
   const porRevisar = pendientes.reduce((suma, p) => suma + p.n, 0);

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { FILTROS_VACIOS, filtrarProspectos, type FiltrosProspectos } from "@/lib/prospeccion/filtros";
 import {
@@ -50,6 +51,7 @@ export function TablaProspectos({
   const [plantillaId, setPlantillaId] = useState(plantillas[0]?.id ?? "");
   const [from, setFrom] = useState(remitentes[0] ?? "");
   const [abierta, setAbierta] = useState<string | null>(null);
+  const router = useRouter();
   const [pendiente, startTransition] = useTransition();
 
   const visibles = useMemo(() => filtrarProspectos(prospectos, filtros), [prospectos, filtros]);
@@ -73,9 +75,14 @@ export function TablaProspectos({
   function ejecutar(accion: () => Promise<{ ok: true; mensaje: string } | { ok: false; error: string }>) {
     onAviso(null);
     startTransition(async () => {
-      const r = await accion();
-      onAviso({ ok: r.ok, texto: r.ok ? r.mensaje : r.error });
-      if (r.ok) setSeleccion(new Set());
+      try {
+        const r = await accion();
+        onAviso({ ok: r.ok, texto: r.ok ? r.mensaje : r.error });
+        if (r.ok) setSeleccion(new Set());
+      } catch {
+        onAviso({ ok: false, texto: "No se pudo completar. Revisa el estado de la lista antes de repetirlo." });
+        router.refresh();
+      }
     });
   }
 
