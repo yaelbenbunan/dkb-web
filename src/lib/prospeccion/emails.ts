@@ -127,10 +127,39 @@ export function extraerEmails(html: string): string[] {
   return [...limpios];
 }
 
+/** Plataformas que alojan webs de terceros en un subdominio suyo: que la web
+ *  esté en `negocio.wixsite.com` no hace del negocio las direcciones de
+ *  `wixsite.com`. */
+const PLATAFORMAS = new Set([
+  "wixsite.com",
+  "wix.com",
+  "wordpress.com",
+  "blogspot.com",
+  "webnode.es",
+  "webnode.com",
+  "jimdofree.com",
+  "jimdosite.com",
+  "weebly.com",
+  "squarespace.com",
+  "godaddysites.com",
+  "negocio.site",
+  "business.site",
+  "shopify.com",
+  "myshopify.com",
+  "github.io",
+  "netlify.app",
+  "vercel.app",
+]);
+
+/** El dominio del email es del negocio si es el de su web o un subdominio suyo,
+ *  o si la web es un subdominio del dominio del email y ese dominio no es una
+ *  plataforma de alojamiento. */
 function esPropio(dominioEmail: string, dominioWeb: string): boolean {
   const a = sinWww(dominioEmail);
   const b = sinWww(dominioWeb);
-  return a === b || a.endsWith(`.${b}`) || b.endsWith(`.${a}`);
+  if (a === b || a.endsWith(`.${b}`)) return true;
+  if (!b.endsWith(`.${a}`)) return false;
+  return ![...PLATAFORMAS].some((p) => a === p || a.endsWith(`.${p}`));
 }
 
 function obtenerEtiquetaPrincipal(dominio: string): string {

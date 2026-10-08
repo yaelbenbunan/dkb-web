@@ -4,6 +4,8 @@ import type { ProspectoNuevo } from "./tipos";
 const URL_BUSQUEDA = "https://places.googleapis.com/v1/places:searchText";
 const MAX_PAGINAS = 3;
 const POR_PAGINA = 20;
+/** Sin límite, una llamada colgada dejaría la acción esperando hasta que la corte la plataforma. */
+const ESPERA_MS = 10000;
 
 /** Solo los campos que se guardan: Places cobra según lo que se pide. */
 const CAMPOS = [
@@ -100,6 +102,7 @@ export async function buscarEnPlaces(
           "X-Goog-FieldMask": CAMPOS,
         },
         body: JSON.stringify(pageToken ? { ...base, pageToken } : base),
+        signal: AbortSignal.timeout(ESPERA_MS),
       });
       if (!res.ok) {
         const cuerpo = await res.text().catch(() => "");

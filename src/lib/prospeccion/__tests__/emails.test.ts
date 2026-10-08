@@ -57,6 +57,13 @@ describe("elegirEmail", () => {
     expect(elegirEmail(["info@bar.es"], "reservas.bar.es")?.email).toBe("info@bar.es");
   });
 
+  test("una web alojada en una plataforma no hace suyas las direcciones de la plataforma", () => {
+    expect(elegirEmail(["info@wixsite.com"], "negocio.wixsite.com")).toBeNull();
+    expect(elegirEmail(["support@myshopify.com"], "www.tienda.myshopify.com")).toBeNull();
+    // La dirección del propio subdominio sí es del negocio.
+    expect(elegirEmail(["info@negocio.wixsite.com"], "negocio.wixsite.com")?.email).toBe("info@negocio.wixsite.com");
+  });
+
   test("sin candidatas devuelve null", () => {
     expect(elegirEmail([], "bar.es")).toBeNull();
   });

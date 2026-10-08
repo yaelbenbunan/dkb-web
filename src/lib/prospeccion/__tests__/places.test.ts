@@ -92,6 +92,9 @@ describe("buscarEnPlaces", () => {
       pageSize: 20,
     });
     expect(JSON.parse(f.mock.calls[1][1].body).pageToken).toBe("t2");
+    // Cada llamada lleva su propio límite de tiempo.
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+    expect(f.mock.calls[1][1].signal).toBeInstanceOf(AbortSignal);
   });
 
   test("no pasa de tres páginas", async () => {
