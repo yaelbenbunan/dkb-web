@@ -231,17 +231,26 @@ export async function enviadosDesde(desde: Date): Promise<number> {
   return count ?? 0;
 }
 
-export async function marcarEstado(ids: string[], status: EstadoProspecto): Promise<void> {
+/** Cambia el estado de los prospectos. Con `desde`, solo los que están ahora en
+ *  uno de esos estados; sin él, aplica desde cualquiera (la baja lo necesita). */
+export async function marcarEstado(
+  ids: string[],
+  status: EstadoProspecto,
+  desde?: EstadoProspecto[],
+): Promise<void> {
   if (ids.length === 0) return;
   const sb = getSupabaseAdmin();
   if (!sb) return;
-  const { error } = await sb.from(PROSPECTOS).update({ status }).in("id", ids);
+  let consulta = sb.from(PROSPECTOS).update({ status }).in("id", ids);
+  if (desde) consulta = consulta.in("status", desde);
+  const { error } = await consulta;
   if (error) aviso("marcarEstado", error.message);
 }
 
 /** Marca el prospecto al que se le mandó ese mensaje de Resend. Devuelve su
  *  email (para añadirlo a la lista de supresión) o null si el mensaje no era de
- *  prospección. */
+ *  prospección. El estado solo cambia si la fila sigue en «enviado»: un rebote
+ *  tardío no debe pisar a quien ya respondió. El email se devuelve igualmente. */
 export async function marcarPorResendId(
   resendId: string,
   status: "rebotado" | "baja",
@@ -250,14 +259,22 @@ export async function marcarPorResendId(
   if (!sb) return null;
   const { data, error } = await sb
     .from(PROSPECTOS)
-    .update({ status })
+    .select("email")
     .eq("resend_id", resendId)
-    .select("email");
+    .limit(1);
   if (error) {
     aviso("marcarPorResendId", error.message);
     return null;
   }
-  return (data as Array<{ email: string | null }> | null)?.[0]?.email ?? null;
+  const fila = (data as Array<{ email: string | null }> | null)?.[0];
+  if (!fila) return null;
+  const { error: errorUpdate } = await sb
+    .from(PROSPECTOS)
+    .update({ status })
+    .eq("resend_id", resendId)
+    .eq("status", "enviado");
+  if (errorUpdate) aviso("marcarPorResendId", errorUpdate.message);
+  return fila.email ?? null;
 }
 
 export async function enlazarLead(id: string, leadId: string): Promise<void> {

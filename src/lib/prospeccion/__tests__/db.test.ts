@@ -5,7 +5,7 @@ vi.mock("../../supabase-admin", () => ({
   getSupabaseAdmin: () => ({ from: fromMock }),
 }));
 
-import { guardarProspectos, reclamarParaEnvio } from "../db";
+import { guardarProspectos, marcarEstado, marcarPorResendId, reclamarParaEnvio } from "../db";
 
 /** Cadena de supabase-js de mentira: cada método devuelve la misma cadena y
  *  al hacer `await` resuelve con `resultado`. */
@@ -54,5 +54,45 @@ describe("guardarProspectos", () => {
   test("sin filas no toca la base", async () => {
     expect(await guardarProspectos("s1", [])).toBe(0);
     expect(fromMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("marcarPorResendId", () => {
+  test("devuelve el email y solo cambia filas que siguen en «enviado»", async () => {
+    const lectura = cadena({ data: [{ email: "info@bar.es" }] });
+    const escritura = cadena({});
+    fromMock.mockReturnValueOnce(lectura).mockReturnValueOnce(escritura);
+    expect(await marcarPorResendId("r1", "rebotado")).toBe("info@bar.es");
+    expect(lectura.select).toHaveBeenCalledWith("email");
+    expect(lectura.eq).toHaveBeenCalledWith("resend_id", "r1");
+    expect(escritura.update).toHaveBeenCalledWith({ status: "rebotado" });
+    expect(escritura.eq).toHaveBeenCalledWith("resend_id", "r1");
+    expect(escritura.eq).toHaveBeenCalledWith("status", "enviado");
+  });
+
+  test("devuelve null y no actualiza si ningún prospecto tiene ese id", async () => {
+    const lectura = cadena({ data: [] });
+    fromMock.mockReturnValueOnce(lectura);
+    expect(await marcarPorResendId("nada", "baja")).toBeNull();
+    expect(fromMock).toHaveBeenCalledTimes(1);
+    expect(lectura.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("marcarEstado", () => {
+  test("con `desde` solo cambia las filas que están en esos estados", async () => {
+    const c = cadena({});
+    fromMock.mockReturnValue(c);
+    await marcarEstado(["a", "b"], "descartado", ["listo", "nuevo"]);
+    expect(c.in).toHaveBeenCalledWith("id", ["a", "b"]);
+    expect(c.in).toHaveBeenCalledWith("status", ["listo", "nuevo"]);
+  });
+
+  test("sin `desde` el filtro es solo por ids", async () => {
+    const c = cadena({});
+    fromMock.mockReturnValue(c);
+    await marcarEstado(["a"], "baja");
+    expect(c.in).toHaveBeenCalledTimes(1);
+    expect(c.in).toHaveBeenCalledWith("id", ["a"]);
   });
 });
