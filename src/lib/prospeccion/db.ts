@@ -381,6 +381,38 @@ export async function suprimir(
   if (error) aviso("suprimir", error.message);
 }
 
+/** Da de baja a un prospecto: lo marca y veta su dirección. Devuelve `false`
+ *  si algo no se pudo guardar, para que la página de baja no confirme una baja
+ *  que no existe. Un prospecto que ya no está cuenta como hecha: no queda nadie
+ *  a quien escribir. */
+export async function darDeBaja(id: string): Promise<boolean> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return false;
+  const leido = await sb.from(PROSPECTOS).select("email").eq("id", id).limit(1);
+  if (leido.error) {
+    aviso("darDeBaja", leido.error.message);
+    return false;
+  }
+  const fila = (leido.data as Array<{ email: string | null }> | null)?.[0];
+  if (!fila) return true;
+
+  const marcado = await sb.from(PROSPECTOS).update({ status: "baja" }).eq("id", id);
+  if (marcado.error) {
+    aviso("darDeBaja", marcado.error.message);
+    return false;
+  }
+  const email = (fila.email ?? "").trim().toLowerCase();
+  if (!email) return true;
+  const vetado = await sb
+    .from(SUPRESIONES)
+    .upsert([{ value: email, kind: "email", reason: "baja" }], { onConflict: "value", ignoreDuplicates: true });
+  if (vetado.error) {
+    aviso("darDeBaja", vetado.error.message);
+    return false;
+  }
+  return true;
+}
+
 /** Lee todas las filas de una columna, de 1000 en 1000: el máximo por defecto
  *  de PostgREST recortaría en silencio una lista más larga. Solo una página
  *  vacía marca el final: si el servidor devuelve menos filas de las pedidas,

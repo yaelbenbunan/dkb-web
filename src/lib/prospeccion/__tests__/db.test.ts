@@ -7,6 +7,7 @@ vi.mock("../../supabase-admin", () => ({
 
 import {
   borrarPlantilla,
+  darDeBaja,
   emailsDeLeads,
   enlazarLead,
   enviadosDesde,
@@ -240,5 +241,44 @@ describe("lecturas que fallan en cerrado", () => {
     expect(await listarSuprimidos()).toBeNull();
     expect(await emailsDeLeads()).toBeNull();
     expect(await enviadosDesde(new Date())).toBeNull();
+  });
+});
+
+describe("darDeBaja", () => {
+  test("marca la baja y veta el email", async () => {
+    const leer = cadena({ data: [{ email: "Info@Bar.es" }] });
+    const marcar = cadena({});
+    const vetar = cadena({});
+    fromMock.mockReturnValueOnce(leer).mockReturnValueOnce(marcar).mockReturnValueOnce(vetar);
+    expect(await darDeBaja("p1")).toBe(true);
+    expect(marcar.update).toHaveBeenCalledWith({ status: "baja" });
+    expect(marcar.eq).toHaveBeenCalledWith("id", "p1");
+    expect(vetar.upsert).toHaveBeenCalledWith(
+      [{ value: "info@bar.es", kind: "email", reason: "baja" }],
+      expect.anything(),
+    );
+  });
+
+  test("un prospecto que ya no existe cuenta como baja hecha", async () => {
+    fromMock.mockReturnValueOnce(cadena({ data: [] }));
+    expect(await darDeBaja("p1")).toBe(true);
+    expect(fromMock).toHaveBeenCalledTimes(1);
+  });
+
+  test("si no se puede leer, marcar o vetar, devuelve false", async () => {
+    const fallo = { error: { message: "caída" } };
+    fromMock.mockReturnValueOnce(cadena(fallo));
+    expect(await darDeBaja("p1")).toBe(false);
+
+    fromMock.mockReset();
+    fromMock.mockReturnValueOnce(cadena({ data: [{ email: "a@b.es" }] })).mockReturnValueOnce(cadena(fallo));
+    expect(await darDeBaja("p1")).toBe(false);
+
+    fromMock.mockReset();
+    fromMock
+      .mockReturnValueOnce(cadena({ data: [{ email: "a@b.es" }] }))
+      .mockReturnValueOnce(cadena({}))
+      .mockReturnValueOnce(cadena(fallo));
+    expect(await darDeBaja("p1")).toBe(false);
   });
 });

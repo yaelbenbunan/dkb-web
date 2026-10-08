@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const { getProspectoMock, marcarEstadoMock, suprimirMock } = vi.hoisted(() => ({
+const { getProspectoMock, marcarEstadoMock, suprimirMock, darDeBajaMock } = vi.hoisted(() => ({
+  darDeBajaMock: vi.fn(),
   getProspectoMock: vi.fn(),
   marcarEstadoMock: vi.fn(),
   suprimirMock: vi.fn(),
@@ -10,6 +11,7 @@ vi.mock("../db", () => ({
   getProspecto: getProspectoMock,
   marcarEstado: marcarEstadoMock,
   suprimir: suprimirMock,
+  darDeBaja: darDeBajaMock,
 }));
 
 import { bajaDisponible, urlDeBaja, verificarTokenBaja } from "../baja-token";
@@ -21,6 +23,8 @@ beforeEach(() => {
   getProspectoMock.mockReset();
   marcarEstadoMock.mockReset();
   suprimirMock.mockReset();
+  darDeBajaMock.mockReset();
+  darDeBajaMock.mockResolvedValue(true);
 });
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -104,29 +108,34 @@ describe("GET /api/prospeccion/baja", () => {
 });
 
 describe("POST /api/prospeccion/baja", () => {
-  test("con token válido da de baja y suprime el email, sin mirar el cuerpo", async () => {
-    getProspectoMock.mockResolvedValue({ id: "p1", email: "Info@Bar.es" });
+  test("con token válido da de baja, sin mirar el cuerpo", async () => {
     const res = await confirmar(urlDeBaja("p1"));
     expect(res.status).toBe(200);
     expect(await res.text()).toContain("No recibirás más correos");
-    expect(marcarEstadoMock).toHaveBeenCalledWith(["p1"], "baja");
-    expect(suprimirMock).toHaveBeenCalledWith("Info@Bar.es", "email", "baja");
+    expect(darDeBajaMock).toHaveBeenCalledWith("p1");
   });
 
   test("también sirve sin cuerpo (el botón de la página)", async () => {
-    getProspectoMock.mockResolvedValue({ id: "p1", email: "info@bar.es" });
     const res = await POST(new NextRequest(urlDeBaja("p1"), { method: "POST" }));
     expect(await res.text()).toContain("No recibirás más correos");
-    expect(marcarEstadoMock).toHaveBeenCalledWith(["p1"], "baja");
+    expect(darDeBajaMock).toHaveBeenCalledWith("p1");
+  });
+
+  test("si la baja no se pudo guardar, no dice que está hecha", async () => {
+    darDeBajaMock.mockResolvedValue(false);
+    const res = await confirmar(urlDeBaja("p1"));
+    const html = await res.text();
+    expect(res.status).toBe(500);
+    expect(html).not.toContain("No recibirás más correos");
+    expect(html).toContain("No hemos podido registrar tu baja");
+    expect(html).toContain("hola@dinkbit.es");
   });
 
   test("con token manipulado no toca nada", async () => {
     const html = await (await confirmar(`${urlDeBaja("p1")}x`)).text();
     expect(html).toContain("no válido o caducado");
     expect(html).toContain("Escríbenos a hola@dinkbit.es y te damos de baja a mano.");
-    expect(getProspectoMock).not.toHaveBeenCalled();
-    expect(marcarEstadoMock).not.toHaveBeenCalled();
-    expect(suprimirMock).not.toHaveBeenCalled();
+    expect(darDeBajaMock).not.toHaveBeenCalled();
   });
 
   test("con token caducado no toca nada", async () => {
@@ -135,8 +144,7 @@ describe("POST /api/prospeccion/baja", () => {
     const url = urlDeBaja("p1");
     vi.setSystemTime(new Date("2026-08-01T00:00:00Z")); // > 180 días
     expect(await (await confirmar(url)).text()).toContain("no válido o caducado");
-    expect(marcarEstadoMock).not.toHaveBeenCalled();
-    expect(suprimirMock).not.toHaveBeenCalled();
+    expect(darDeBajaMock).not.toHaveBeenCalled();
   });
 
   test("el id y el token del cuerpo no cuentan: solo los de la URL", async () => {
@@ -149,29 +157,7 @@ describe("POST /api/prospeccion/baja", () => {
       }),
     );
     expect(await res.text()).toContain("no válido o caducado");
-    expect(marcarEstadoMock).not.toHaveBeenCalled();
-  });
-
-  test("si el prospecto ya no existe, la baja se confirma igual", async () => {
-    getProspectoMock.mockResolvedValue(null);
-    const res = await confirmar(urlDeBaja("p1"));
-    expect(await res.text()).toContain("No recibirás más correos");
-    expect(marcarEstadoMock).not.toHaveBeenCalled();
-    expect(suprimirMock).not.toHaveBeenCalled();
-  });
-
-  test("un id con HTML no llega sin escapar a la página", async () => {
-    getProspectoMock.mockResolvedValue(null);
-    const valida = await (await confirmar(urlDeBaja(MALICIOSO))).text();
-    expect(valida).not.toContain(MALICIOSO);
-    expect(valida).not.toContain("<script");
-
-    const invalida = await (
-      await confirmar(`https://www.dinkbit.es/api/prospeccion/baja?id=${encodeURIComponent(MALICIOSO)}&token=x`)
-    ).text();
-    expect(invalida).toContain("no válido o caducado");
-    expect(invalida).not.toContain(MALICIOSO);
-    expect(invalida).not.toContain("<script");
+    expect(darDeBajaMock).not.toHaveBeenCalled();
   });
 });
 

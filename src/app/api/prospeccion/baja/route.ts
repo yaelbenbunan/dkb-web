@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { verificarTokenBaja } from "@/lib/prospeccion/baja-token";
-import { getProspecto, marcarEstado, suprimir } from "@/lib/prospeccion/db";
+import { darDeBaja } from "@/lib/prospeccion/db";
 
 // Enlace de baja de los correos de prospección. Abrirlo (GET) solo pregunta:
 // los filtros de correo visitan los enlaces por su cuenta, y una baja hecha en
@@ -18,10 +18,10 @@ const escaparHtml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 
 /** `cuerpo` es HTML ya compuesto aquí: nada de la petición entra sin escapar. */
-function page(titulo: string, cuerpo = "") {
+function page(titulo: string, cuerpo = "", status = 200) {
   return new NextResponse(
     `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><body style="font-family:system-ui;background:#f1f5f9;color:#0f172a;text-align:center;padding:64px 20px;"><h1 style="font-size:22px;">${titulo}</h1>${cuerpo}<p><a href="https://www.dinkbit.es" style="color:#187bef;">dinkbit.es</a></p></body>`,
-    { status: 200, headers: { "content-type": "text/html; charset=utf-8" } },
+    { status, headers: { "content-type": "text/html; charset=utf-8" } },
   );
 }
 
@@ -53,10 +53,14 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const c = credenciales(req);
   if (!c) return noValido();
-  const prospecto = await getProspecto(c.id);
-  if (prospecto) {
-    await marcarEstado([c.id], "baja");
-    if (prospecto.email) await suprimir(prospecto.email, "email", "baja");
+  // Si no se pudo guardar, se dice: confirmar una baja que no existe es peor
+  // que un error, y el 500 hace que el cliente de correo lo reintente.
+  if (!(await darDeBaja(c.id))) {
+    return page(
+      "No hemos podido registrar tu baja.",
+      "<p>Vuelve a intentarlo en unos minutos o escríbenos a hola@dinkbit.es y te damos de baja a mano.</p>",
+      500,
+    );
   }
   return page("Hecho. No recibirás más correos nuestros.");
 }
