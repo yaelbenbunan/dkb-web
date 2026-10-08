@@ -4,6 +4,7 @@ import {
   resendEventStatus,
   resendCampaignEventStatus,
 } from "@/lib/resend-webhook";
+import { marcarPorResendId, suprimir } from "@/lib/prospeccion/db";
 import { setLeadEmailStatusByMessageId, setCampaignRecipientStatusByMessageId } from "@/lib/imagina-leads";
 
 // Recibe los eventos de entrega de Resend (Svix) y actualiza el estado del email
@@ -45,6 +46,14 @@ export async function POST(req: NextRequest) {
   if (messageId && leadStatus) await setLeadEmailStatusByMessageId(messageId, leadStatus);
   if (messageId && recipientStatus) {
     await setCampaignRecipientStatusByMessageId(messageId, recipientStatus);
+  }
+  // Correos de prospección: se reconocen porque su id de Resend está guardado
+  // en el prospecto. Un rebote o una queja lo sacan de circulación y vetan la
+  // dirección para siempre.
+  if (messageId && (leadStatus === "bounced" || leadStatus === "complained")) {
+    const queja = leadStatus === "complained";
+    const email = await marcarPorResendId(messageId, queja ? "baja" : "rebotado");
+    if (email) await suprimir(email, "email", queja ? "queja" : "rebote");
   }
   // 200 con firma válida aunque no case ninguna fila → evita reintentos de Resend.
   return NextResponse.json({ ok: true });
