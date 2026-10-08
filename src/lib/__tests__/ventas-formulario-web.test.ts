@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  avisoFormulario,
   crearLimitador,
   esEnvioBot,
   notaFormulario,
@@ -65,5 +66,42 @@ describe("crearLimitador", () => {
     expect(permitir("ip1", 0)).toBe(true);
     expect(permitir("ip1", 500)).toBe(false);
     expect(permitir("ip1", 1001)).toBe(true);
+  });
+});
+
+describe("avisoFormulario", () => {
+  test("Hydrup recibe en info@ todo lo que mandó el formulario", () => {
+    const aviso = avisoFormulario("hydrup", {
+      negocio: "Gym Prueba",
+      contacto: "Ana Ruiz",
+      telefono: "600 111 222",
+      email: "ana@gym.es",
+      ciudad: "Madrid",
+      cif: "B12345678",
+      comentarios: "SOLICITUD DE MUESTRAS\nDirección: Calle Mayor 1, 28001 Madrid",
+    });
+    expect(aviso?.to).toEqual(["info@drinkhydrup.com"]);
+    expect(aviso?.subject).toBe("Formulario web (landing B2B) — Gym Prueba");
+    expect(aviso?.replyTo).toBe("ana@gym.es");
+    expect(aviso?.text).toBe(
+      [
+        "Centro: Gym Prueba",
+        "Contacto: Ana Ruiz",
+        "Teléfono: 600 111 222",
+        "Email: ana@gym.es",
+        "Ciudad: Madrid",
+        "CIF: B12345678",
+        "",
+        "SOLICITUD DE MUESTRAS",
+        "Dirección: Calle Mayor 1, 28001 Madrid",
+      ].join("\n"),
+    );
+  });
+  test("sin email válido no hay a quién responder", () => {
+    expect(avisoFormulario("hydrup", { negocio: "Gym", telefono: "600111222" })?.replyTo).toBeUndefined();
+    expect(avisoFormulario("hydrup", { negocio: "Gym", email: "no-es-email" })?.replyTo).toBeUndefined();
+  });
+  test("una marca sin destinatarios no manda nada", () => {
+    expect(avisoFormulario("otra", { negocio: "Gym" })).toBeNull();
   });
 });
