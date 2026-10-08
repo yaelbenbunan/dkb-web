@@ -44,7 +44,17 @@ export interface ResultadoEnvio {
   omitidos: Array<{ id: string; motivo: ErrorEnvio; detalle?: string }>;
 }
 
-const RESPONDER_A = process.env.PROSPECT_REPLY_TO ?? "hola@dinkbit.es";
+/** Se lee al enviar, no al cargar el módulo; una variable vacía (como viene en
+ *  `.env.example`) cuenta como no puesta. */
+const responderA = () => process.env.PROSPECT_REPLY_TO?.trim() || "hola@dinkbit.es";
+
+/** ¿Es seguro que Resend NO aceptó el correo? Solo con un rechazo explícito
+ *  (HTTP 4xx). El SDK no lanza cuando falla la red: devuelve un error con
+ *  `statusCode: null`, y ahí —igual que con un 5xx— el correo pudo salir. */
+function rechazoSeguro(error: { statusCode?: number | null }): boolean {
+  const codigo = error.statusCode;
+  return typeof codigo === "number" && codigo >= 400 && codigo < 500;
+}
 
 const PIE =
   "Le escribe dinkbit (dinkbit.es · hola@dinkbit.es). Hemos encontrado esta dirección publicada en su web. " +
@@ -166,17 +176,25 @@ export async function enviarProspectos(
     let incierto: string | null = null;
     let resendId: string | null = null;
     try {
-      const { data, error } = await resend.emails.send({
-        from: formatFromHeader(null, from),
-        to: (p.email as string).trim(),
-        replyTo: RESPONDER_A,
-        subject: asunto.texto,
-        html,
-        text,
-        headers: { "List-Unsubscribe": `<${baja}>` },
-      });
-      if (error) detalle = error.message;
-      else resendId = data?.id ?? null;
+      const { data, error } = await resend.emails.send(
+        {
+          from: formatFromHeader(null, from),
+          to: (p.email as string).trim(),
+          replyTo: responderA(),
+          subject: asunto.texto,
+          html,
+          text,
+          headers: {
+            "List-Unsubscribe": `<${baja}>`,
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
+        },
+        // Si un reintento llega a Resend con el primero ya aceptado, no sale otro correo.
+        { idempotencyKey: `prospecto-${id}` },
+      );
+      if (!error) resendId = data?.id ?? null;
+      else if (rechazoSeguro(error)) detalle = error.message;
+      else incierto = error.message || "Resend no respondió";
     } catch (err) {
       // Si la llamada lanza, el correo pudo haber salido: no se deshace nada.
       incierto = err instanceof Error ? err.message : String(err);

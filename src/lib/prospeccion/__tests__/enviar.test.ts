@@ -68,6 +68,8 @@ describe("enviarProspectos", () => {
     expect(correo.text).toContain("/api/prospeccion/baja?id=p1&token=");
     expect(correo.html).toContain("/api/prospeccion/baja?id=p1&amp;token=");
     expect(correo.headers["List-Unsubscribe"]).toMatch(/^<https:\/\/www\.dinkbit\.es\/api\/prospeccion\/baja\?id=p1&token=.+>$/);
+    expect(correo.headers["List-Unsubscribe-Post"]).toBe("List-Unsubscribe=One-Click");
+    expect(sendMock.mock.calls[0][1]).toEqual({ idempotencyKey: "prospecto-p1" });
     expect(db.registrarEnvio).toHaveBeenCalledWith("p1", { resendId: "re_1", templateId: "t1" });
   });
 
@@ -107,13 +109,57 @@ describe("enviarProspectos", () => {
     expect(sendMock).not.toHaveBeenCalled();
   });
 
-  test("si Resend falla, deshace el reclamo y no cuenta como enviado", async () => {
-    sendMock.mockResolvedValue({ data: null, error: { message: "domain not verified" } });
+  test("si Resend rechaza el envío (4xx), deshace el reclamo y no cuenta como enviado", async () => {
+    sendMock.mockResolvedValue({ data: null, error: { statusCode: 422, message: "domain not verified" } });
     const r = await enviarProspectos(["p1"], "t1", { from: FROM });
     expect(r.enviados).toBe(0);
     expect(r.omitidos).toEqual([{ id: "p1", motivo: "fallo_resend", detalle: "domain not verified" }]);
     expect(db.revertirEnvio).toHaveBeenCalledWith("p1", "domain not verified");
     expect(db.registrarEnvio).not.toHaveBeenCalled();
+    expect(db.anotarEnvioIncierto).not.toHaveBeenCalled();
+  });
+
+  // El SDK de Resend no lanza si falla la red: devuelve un error sin código HTTP.
+  test.each([
+    ["sin código HTTP (fallo de red)", null],
+    ["sin campo statusCode", undefined],
+    ["con un 503", 503],
+    ["con un 500", 500],
+  ])("un error de Resend %s es un resultado incierto: no se deshace el reclamo", async (_caso, statusCode) => {
+    sendMock.mockResolvedValue({
+      data: null,
+      error: { name: "application_error", statusCode, message: "Unable to fetch data." },
+    });
+    const r = await enviarProspectos(["p1"], "t1", { from: FROM });
+    expect(r.enviados).toBe(0);
+    expect(r.omitidos).toEqual([{ id: "p1", motivo: "resultado_incierto", detalle: "Unable to fetch data." }]);
+    expect(db.revertirEnvio).not.toHaveBeenCalled();
+    expect(db.registrarEnvio).not.toHaveBeenCalled();
+    expect(db.anotarEnvioIncierto).toHaveBeenCalledWith("p1", "Unable to fetch data.", "t1");
+  });
+
+  test("un error de red de Resend gasta cupo y recuerda la dirección en la tanda", async () => {
+    vi.stubEnv("PROSPECT_DAILY_LIMIT", "5");
+    db.prospectosPorIds.mockResolvedValue([
+      prospecto({ id: "a", email: "info@mismo.es" }),
+      prospecto({ id: "b", email: "Info@Mismo.es" }),
+    ]);
+    sendMock.mockResolvedValueOnce({ data: null, error: { name: "application_error", statusCode: null, message: "red" } });
+    const r = await enviarProspectos(["a", "b"], "t1", { from: FROM });
+    expect(r.omitidos.map((o) => o.motivo)).toEqual(["resultado_incierto", "email_repetido"]);
+    expect(sendMock).toHaveBeenCalledTimes(1);
+  });
+
+  test("con PROSPECT_REPLY_TO vacío responde a hola@dinkbit.es", async () => {
+    vi.stubEnv("PROSPECT_REPLY_TO", "");
+    await enviarProspectos(["p1"], "t1", { from: FROM });
+    expect(sendMock.mock.calls[0][0].replyTo).toBe("hola@dinkbit.es");
+  });
+
+  test("PROSPECT_REPLY_TO se lee al enviar", async () => {
+    vi.stubEnv("PROSPECT_REPLY_TO", " ventas@dinkbit.es ");
+    await enviarProspectos(["p1"], "t1", { from: FROM });
+    expect(sendMock.mock.calls[0][0].replyTo).toBe("ventas@dinkbit.es");
   });
 
   test("si Resend lanza, el resultado es incierto: no se deshace el reclamo", async () => {
@@ -256,7 +302,7 @@ describe("enviarProspectos", () => {
       prospecto({ id: "b", email: "info@b.es" }),
     ]);
     sendMock
-      .mockResolvedValueOnce({ data: null, error: { message: "x" } })
+      .mockResolvedValueOnce({ data: null, error: { statusCode: 422, message: "x" } })
       .mockResolvedValueOnce({ data: { id: "re_2" }, error: null });
     const r = await enviarProspectos(["a", "b"], "t1", { from: FROM });
     expect(r.enviados).toBe(1);
