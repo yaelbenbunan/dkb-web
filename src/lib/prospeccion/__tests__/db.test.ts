@@ -5,13 +5,21 @@ vi.mock("../../supabase-admin", () => ({
   getSupabaseAdmin: () => ({ from: fromMock }),
 }));
 
-import { guardarProspectos, marcarEstado, marcarPorResendId, reclamarParaEnvio } from "../db";
+import {
+  emailsDeLeads,
+  enviadosDesde,
+  guardarProspectos,
+  listarSuprimidos,
+  marcarEstado,
+  marcarPorResendId,
+  reclamarParaEnvio,
+} from "../db";
 
 /** Cadena de supabase-js de mentira: cada método devuelve la misma cadena y
  *  al hacer `await` resuelve con `resultado`. */
 function cadena(resultado: { data?: unknown; error?: { message: string } | null; count?: number }) {
   const c: Record<string, unknown> = {};
-  for (const m of ["update", "upsert", "insert", "select", "eq", "in", "gte", "order", "limit"]) {
+  for (const m of ["update", "upsert", "insert", "select", "eq", "in", "gte", "order", "limit", "range", "ilike", "not"]) {
     c[m] = vi.fn(() => c);
   }
   c.then = (ok: (v: unknown) => unknown) => Promise.resolve({ error: null, ...resultado }).then(ok);
@@ -94,5 +102,24 @@ describe("marcarEstado", () => {
     await marcarEstado(["a"], "baja");
     expect(c.in).toHaveBeenCalledTimes(1);
     expect(c.in).toHaveBeenCalledWith("id", ["a"]);
+  });
+});
+
+describe("lecturas que fallan en cerrado", () => {
+  test("listarSuprimidos lee todas las páginas, en minúsculas", async () => {
+    const llena = Array.from({ length: 1000 }, (_, i) => ({ value: `x${i}@a.es` }));
+    fromMock
+      .mockReturnValueOnce(cadena({ data: llena }))
+      .mockReturnValueOnce(cadena({ data: [{ value: "Ultimo@B.es" }] }));
+    const r = await listarSuprimidos();
+    expect(r?.size).toBe(1001);
+    expect(r?.has("ultimo@b.es")).toBe(true);
+  });
+
+  test("devuelven null si la consulta falla", async () => {
+    fromMock.mockReturnValue(cadena({ error: { message: "boom" } }));
+    expect(await listarSuprimidos()).toBeNull();
+    expect(await emailsDeLeads()).toBeNull();
+    expect(await enviadosDesde(new Date())).toBeNull();
   });
 });

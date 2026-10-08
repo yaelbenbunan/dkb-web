@@ -4,6 +4,20 @@ import { datosDeProspecto, renderPlantilla, textoAHtml } from "../plantilla";
 const datos = { empresa: "Bar Pepe", ciudad: "Madrid", sector: "Restaurante", web: "barpepe.es" };
 
 describe("renderPlantilla", () => {
+  test.each(["Hola {{nombre empresa}}", "Hola {{empresa}", "Hola empresa}}"])(
+    "una variable mal escrita (%s) no sale",
+    (texto) => {
+      const r = renderPlantilla(texto, datos);
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.faltan).toContain("variable mal escrita");
+    },
+  );
+
+  test("un nombre de empresa con dobles llaves se bloquea, del lado seguro", () => {
+    const r = renderPlantilla("Hola {{empresa}}", { ...datos, empresa: "Bar {{X}}" });
+    expect(r).toEqual({ ok: false, faltan: ["variable mal escrita"] });
+  });
+
   test("sustituye las variables, con o sin espacios y sin distinguir mayúsculas", () => {
     expect(renderPlantilla("Hola {{empresa}} de {{ ciudad }} ({{SECTOR}})", datos)).toEqual({
       ok: true,

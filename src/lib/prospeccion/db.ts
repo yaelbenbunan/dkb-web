@@ -205,8 +205,9 @@ export async function registrarEnvio(
 }
 
 /** Deshace un reclamo cuyo envío falló: vuelve a «listo», sin fecha de envío
- *  (para que no cuente en el tope diario) y con el error a la vista. */
-export async function revertirEnvio(id: string, motivo: string): Promise<void> {
+ *  (para que no cuente en el tope diario) y con el error a la vista, si lo hay.
+ *  Con `motivo` null, la fila se libera sin rastro de error. */
+export async function revertirEnvio(id: string, motivo: string | null): Promise<void> {
   const sb = getSupabaseAdmin();
   if (!sb) return;
   const { error } = await sb
@@ -217,18 +218,51 @@ export async function revertirEnvio(id: string, motivo: string): Promise<void> {
   if (error) aviso("revertirEnvio", error.message);
 }
 
-export async function enviadosDesde(desde: Date): Promise<number> {
+/** Anota que no se sabe si el correo salió (la llamada a Resend lanzó). No toca
+ *  el estado ni `sent_at`: la fila sigue «enviado» para no escribir dos veces. */
+export async function anotarEnvioIncierto(id: string, detalle: string, templateId: string): Promise<void> {
   const sb = getSupabaseAdmin();
-  if (!sb) return 0;
+  if (!sb) return;
+  const { error } = await sb
+    .from(PROSPECTOS)
+    .update({ send_error: `Resultado incierto: ${detalle}`, template_id: templateId })
+    .eq("id", id);
+  if (error) aviso("anotarEnvioIncierto", error.message);
+}
+
+/** Envíos desde `desde`; null si no se pudo contar (quien decide no debe
+ *  tomarlo por cero). */
+export async function enviadosDesde(desde: Date): Promise<number | null> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return null;
   const { count, error } = await sb
     .from(PROSPECTOS)
     .select("id", { count: "exact", head: true })
     .gte("sent_at", desde.toISOString());
   if (error) {
     aviso("enviadosDesde", error.message);
-    return 0;
+    return null;
   }
   return count ?? 0;
+}
+
+/** ¿Se escribió ya a esa dirección desde cualquier ficha? null si no se pudo
+ *  comprobar. */
+export async function yaContactado(email: string): Promise<boolean | null> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return null;
+  const patron = email.trim().replace(/[\\%_]/g, (c) => `\\${c}`);
+  const { data, error } = await sb
+    .from(PROSPECTOS)
+    .select("id")
+    .ilike("email", patron)
+    .not("sent_at", "is", null)
+    .limit(1);
+  if (error) {
+    aviso("yaContactado", error.message);
+    return null;
+  }
+  return (data?.length ?? 0) > 0;
 }
 
 /** Cambia el estado de los prospectos. Con `desde`, solo los que están ahora en
@@ -304,16 +338,40 @@ export async function suprimir(
   if (error) aviso("suprimir", error.message);
 }
 
-/** Emails y dominios vetados, en minúsculas. */
-export async function listarSuprimidos(): Promise<Set<string>> {
+const PAGINA = 1000;
+
+/** Lee todas las filas de una columna, de 1000 en 1000: el máximo por defecto
+ *  de PostgREST recortaría en silencio una lista más larga. null si falla. */
+async function leerColumna(tabla: string, columna: string, donde: string): Promise<string[] | null> {
   const sb = getSupabaseAdmin();
-  if (!sb) return new Set();
-  const { data, error } = await sb.from(SUPRESIONES).select("value").limit(10000);
-  if (error) {
-    aviso("listarSuprimidos", error.message);
-    return new Set();
+  if (!sb) return null;
+  const valores: string[] = [];
+  for (let desde = 0; ; desde += PAGINA) {
+    const { data, error } = await sb
+      .from(tabla)
+      .select(columna)
+      .order(columna)
+      .range(desde, desde + PAGINA - 1);
+    if (error) {
+      aviso(donde, error.message);
+      return null;
+    }
+    const filas = (data ?? []) as unknown as Array<Record<string, string | null>>;
+    for (const f of filas) if (f[columna]) valores.push(f[columna] as string);
+    if (filas.length < PAGINA) return valores;
   }
-  return new Set(((data ?? []) as Array<{ value: string }>).map((f) => f.value));
+}
+
+/** Emails y dominios vetados, en minúsculas; null si no se pudo leer la lista. */
+export async function listarSuprimidos(): Promise<Set<string> | null> {
+  const v = await leerColumna(SUPRESIONES, "value", "listarSuprimidos");
+  return v && new Set(v.map((x) => x.trim().toLowerCase()));
+}
+
+/** Emails de todos los leads del CRM, en minúsculas; null si no se pudo leer. */
+export async function emailsDeLeads(): Promise<Set<string> | null> {
+  const v = await leerColumna(LEADS, "email", "emailsDeLeads");
+  return v && new Set(v.map((x) => x.trim().toLowerCase()).filter(Boolean));
 }
 
 // Plantillas --------------------------------------------------------------

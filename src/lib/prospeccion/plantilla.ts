@@ -43,6 +43,9 @@ export function renderPlantilla(
     }
     return valor;
   });
+  // Lo que queda con llaves dobles es una variable mal escrita (`{{nombre empresa}}`,
+  // `{{empresa}`): no sale. También bloquea un dato que las lleve, a propósito.
+  if (/\{\{|\}\}/.test(salida)) faltan.push("variable mal escrita");
   return faltan.length > 0 ? { ok: false, faltan } : { ok: true, texto: salida };
 }
 

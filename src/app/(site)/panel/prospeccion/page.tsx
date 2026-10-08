@@ -32,7 +32,7 @@ export default async function ProspeccionPage() {
         prospectos={prospectos}
         busquedas={busquedas}
         plantillas={plantillas}
-        enviadosHoy={enviadosHoy}
+        enviadosHoy={enviadosHoy ?? 0}
         limite={limiteDiario()}
         remitentes={remitentesProspeccion()}
         placesConfigurado={!!process.env.GOOGLE_PLACES_API_KEY}

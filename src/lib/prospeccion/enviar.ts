@@ -1,9 +1,10 @@
 import "server-only";
 import { Resend } from "resend";
 import { formatFromHeader } from "../email-from";
-import { listLeadContacts } from "../imagina-leads";
 import { bajaDisponible, urlDeBaja } from "./baja-token";
 import {
+  anotarEnvioIncierto,
+  emailsDeLeads,
   enviadosDesde,
   getPlantilla,
   listarSuprimidos,
@@ -11,6 +12,7 @@ import {
   reclamarParaEnvio,
   registrarEnvio,
   revertirEnvio,
+  yaContactado,
 } from "./db";
 import { datosDeProspecto, renderPlantilla, textoAHtml } from "./plantilla";
 import {
@@ -30,7 +32,10 @@ export type ErrorEnvio =
   | "tope_diario"
   | "faltan_datos"
   | "ya_reclamado"
-  | "fallo_resend";
+  | "fallo_resend"
+  | "error_datos"
+  | "resultado_incierto"
+  | "email_repetido";
 
 export interface ResultadoEnvio {
   ok: boolean;
@@ -81,24 +86,26 @@ export async function enviarProspectos(
   const plantilla = await getPlantilla(plantillaId);
   if (!plantilla) return fallo("plantilla_no_encontrada");
 
-  const [filas, suprimidos, contactos, yaEnviados] = await Promise.all([
+  const inicioDia = inicioDelDiaMadrid(new Date());
+  const [filas, suprimidos, emailsLeads, yaEnviados] = await Promise.all([
     prospectosPorIds(ids),
     listarSuprimidos(),
-    listLeadContacts(),
-    enviadosDesde(inicioDelDiaMadrid(new Date())),
+    emailsDeLeads(),
+    enviadosDesde(inicioDia),
   ]);
+  // Sin estos tres datos no se puede decidir: ante la duda, no se envía.
+  if (!suprimidos || !emailsLeads || yaEnviados === null) return fallo("error_datos");
   const porId = new Map(filas.map((p) => [p.id, p]));
   const ctx = {
     suprimidos,
-    emailsDeLeads: new Set(
-      contactos.map((c) => (c.email ?? "").trim().toLowerCase()).filter(Boolean),
-    ),
+    emailsDeLeads: emailsLeads,
     confirmarPersonal: o.confirmarPersonal === true && ids.length === 1,
   };
 
   const resend = new Resend(process.env.RESEND_API_KEY ?? "");
   const resultado: ResultadoEnvio = { ok: true, enviados: 0, omitidos: [] };
   let cupo = limiteDiario() - yaEnviados;
+  const escritos = new Set<string>();
 
   for (const id of ids) {
     const p = porId.get(id);
@@ -125,14 +132,38 @@ export async function enviarProspectos(
       continue;
     }
 
+    const direccion = (p.email as string).trim().toLowerCase();
+    if (escritos.has(direccion)) {
+      resultado.omitidos.push({ id, motivo: "email_repetido" });
+      continue;
+    }
+    const contactado = await yaContactado(direccion);
+    if (contactado === null) {
+      resultado.omitidos.push({ id, motivo: "error_datos" });
+      continue;
+    }
+    if (contactado) {
+      resultado.omitidos.push({ id, motivo: "email_repetido" });
+      continue;
+    }
+
     if (!(await reclamarParaEnvio(id))) {
       resultado.omitidos.push({ id, motivo: "ya_reclamado" });
+      continue;
+    }
+    // Otra petición pudo reclamar a la vez: la fila ya cuenta en el recuento,
+    // así que si el total pasa del tope (o no se sabe), se suelta.
+    const total = await enviadosDesde(inicioDia);
+    if (total === null || total > limiteDiario()) {
+      await revertirEnvio(id, null);
+      resultado.omitidos.push({ id, motivo: "tope_diario" });
       continue;
     }
 
     const baja = urlDeBaja(id);
     const { html, text } = componerCorreo(cuerpo.texto, baja);
     let detalle: string | null = null;
+    let incierto: string | null = null;
     let resendId: string | null = null;
     try {
       const { data, error } = await resend.emails.send({
@@ -147,7 +178,16 @@ export async function enviarProspectos(
       if (error) detalle = error.message;
       else resendId = data?.id ?? null;
     } catch (err) {
-      detalle = err instanceof Error ? err.message : String(err);
+      // Si la llamada lanza, el correo pudo haber salido: no se deshace nada.
+      incierto = err instanceof Error ? err.message : String(err);
+    }
+
+    if (incierto !== null) {
+      escritos.add(direccion);
+      cupo -= 1;
+      await anotarEnvioIncierto(id, incierto, plantilla.id);
+      resultado.omitidos.push({ id, motivo: "resultado_incierto", detalle: incierto });
+      continue;
     }
 
     if (detalle !== null) {
@@ -157,6 +197,7 @@ export async function enviarProspectos(
     }
     await registrarEnvio(id, { resendId, templateId: plantilla.id });
     resultado.enviados += 1;
+    escritos.add(direccion);
     cupo -= 1;
   }
 

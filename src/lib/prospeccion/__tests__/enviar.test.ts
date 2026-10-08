@@ -11,15 +11,15 @@ const db = vi.hoisted(() => ({
   prospectosPorIds: vi.fn(),
   getPlantilla: vi.fn(),
   listarSuprimidos: vi.fn(),
+  emailsDeLeads: vi.fn(),
+  yaContactado: vi.fn(),
+  anotarEnvioIncierto: vi.fn(),
   enviadosDesde: vi.fn(),
   reclamarParaEnvio: vi.fn(),
   registrarEnvio: vi.fn(),
   revertirEnvio: vi.fn(),
 }));
 vi.mock("../db", () => db);
-
-const { listLeadContactsMock } = vi.hoisted(() => ({ listLeadContactsMock: vi.fn() }));
-vi.mock("../../imagina-leads", () => ({ listLeadContacts: listLeadContactsMock }));
 
 import { componerCorreo, enviarProspectos } from "../enviar";
 
@@ -42,13 +42,13 @@ beforeEach(() => {
   vi.stubEnv("PROMO_TOKEN_SECRET", "secreto");
   for (const f of Object.values(db)) f.mockReset();
   sendMock.mockReset();
-  listLeadContactsMock.mockReset();
   db.getPlantilla.mockResolvedValue(plantilla);
   db.prospectosPorIds.mockResolvedValue([prospecto()]);
   db.listarSuprimidos.mockResolvedValue(new Set());
   db.enviadosDesde.mockResolvedValue(0);
   db.reclamarParaEnvio.mockResolvedValue(true);
-  listLeadContactsMock.mockResolvedValue([]);
+  db.emailsDeLeads.mockResolvedValue(new Set());
+  db.yaContactado.mockResolvedValue(false);
   sendMock.mockResolvedValue({ data: { id: "re_1" }, error: null });
 });
 afterEach(() => vi.unstubAllEnvs());
@@ -116,11 +116,87 @@ describe("enviarProspectos", () => {
     expect(db.registrarEnvio).not.toHaveBeenCalled();
   });
 
-  test("si Resend lanza, también deshace el reclamo", async () => {
+  test("si Resend lanza, el resultado es incierto: no se deshace el reclamo", async () => {
     sendMock.mockRejectedValue(new Error("timeout"));
     const r = await enviarProspectos(["p1"], "t1", { from: FROM });
-    expect(r.omitidos[0]).toMatchObject({ motivo: "fallo_resend", detalle: "timeout" });
-    expect(db.revertirEnvio).toHaveBeenCalledWith("p1", "timeout");
+    expect(r.enviados).toBe(0);
+    expect(r.omitidos).toEqual([{ id: "p1", motivo: "resultado_incierto", detalle: "timeout" }]);
+    expect(db.revertirEnvio).not.toHaveBeenCalled();
+    expect(db.registrarEnvio).not.toHaveBeenCalled();
+    expect(db.anotarEnvioIncierto).toHaveBeenCalledWith("p1", "timeout", "t1");
+  });
+
+  test("un resultado incierto sigue gastando cupo", async () => {
+    vi.stubEnv("PROSPECT_DAILY_LIMIT", "1");
+    db.prospectosPorIds.mockResolvedValue([
+      prospecto({ id: "a", email: "info@a.es" }),
+      prospecto({ id: "b", email: "info@b.es" }),
+    ]);
+    sendMock.mockRejectedValueOnce(new Error("timeout"));
+    const r = await enviarProspectos(["a", "b"], "t1", { from: FROM });
+    expect(r.omitidos.map((o) => o.motivo)).toEqual(["resultado_incierto", "tope_diario"]);
+    expect(sendMock).toHaveBeenCalledTimes(1);
+  });
+
+  test.each(["listarSuprimidos", "emailsDeLeads", "enviadosDesde"] as const)(
+    "si %s no se puede consultar, falla en cerrado sin reclamar ni enviar",
+    async (nombre) => {
+      db[nombre].mockResolvedValue(null);
+      const r = await enviarProspectos(["p1"], "t1", { from: FROM });
+      expect(r).toEqual({ ok: false, error: "error_datos", enviados: 0, omitidos: [] });
+      expect(db.reclamarParaEnvio).not.toHaveBeenCalled();
+      expect(sendMock).not.toHaveBeenCalled();
+    },
+  );
+
+  test("tope bajo concurrencia: si tras reclamar ya se pasó el tope, libera la fila", async () => {
+    vi.stubEnv("PROSPECT_DAILY_LIMIT", "30");
+    db.enviadosDesde.mockResolvedValueOnce(0).mockResolvedValueOnce(31);
+    const r = await enviarProspectos(["p1"], "t1", { from: FROM });
+    expect(r.enviados).toBe(0);
+    expect(r.omitidos).toEqual([{ id: "p1", motivo: "tope_diario" }]);
+    expect(db.revertirEnvio).toHaveBeenCalledWith("p1", null);
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  test("tope bajo concurrencia: si no se puede recontar tras reclamar, libera la fila", async () => {
+    db.enviadosDesde.mockResolvedValueOnce(0).mockResolvedValueOnce(null);
+    const r = await enviarProspectos(["p1"], "t1", { from: FROM });
+    expect(r.omitidos).toEqual([{ id: "p1", motivo: "tope_diario" }]);
+    expect(db.revertirEnvio).toHaveBeenCalledWith("p1", null);
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  test("dos fichas con la misma dirección en un envío: solo se escribe a la primera", async () => {
+    db.prospectosPorIds.mockResolvedValue([
+      prospecto({ id: "a", email: "Info@Mismo.es" }),
+      prospecto({ id: "b", email: "info@mismo.es" }),
+    ]);
+    const r = await enviarProspectos(["a", "b"], "t1", { from: FROM });
+    expect(r.enviados).toBe(1);
+    expect(r.omitidos).toEqual([{ id: "b", motivo: "email_repetido" }]);
+    expect(db.reclamarParaEnvio).toHaveBeenCalledTimes(1);
+  });
+
+  test("una dirección ya contactada desde otra ficha no se reclama", async () => {
+    db.yaContactado.mockResolvedValue(true);
+    const r = await enviarProspectos(["p1"], "t1", { from: FROM });
+    expect(r.omitidos).toEqual([{ id: "p1", motivo: "email_repetido" }]);
+    expect(db.reclamarParaEnvio).not.toHaveBeenCalled();
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  test("si no se puede comprobar el historial de una dirección, solo esa fila falla", async () => {
+    db.prospectosPorIds.mockResolvedValue([
+      prospecto({ id: "a", email: "info@a.es" }),
+      prospecto({ id: "b", email: "info@b.es" }),
+    ]);
+    db.yaContactado.mockResolvedValueOnce(null).mockResolvedValueOnce(false);
+    const r = await enviarProspectos(["a", "b"], "t1", { from: FROM });
+    expect(r.enviados).toBe(1);
+    expect(r.omitidos).toEqual([{ id: "a", motivo: "error_datos" }]);
+    expect(db.reclamarParaEnvio).toHaveBeenCalledTimes(1);
+    expect(db.reclamarParaEnvio).toHaveBeenCalledWith("b");
   });
 
   test("no reclama la fila si a la plantilla le falta un dato", async () => {
@@ -137,7 +213,7 @@ describe("enviarProspectos", () => {
       prospecto({ id: "b", email: "info@b.es" }),
     ]);
     db.listarSuprimidos.mockResolvedValue(new Set(["info@a.es"]));
-    listLeadContactsMock.mockResolvedValue([{ email: "INFO@b.es", phone: null }]);
+    db.emailsDeLeads.mockResolvedValue(new Set(["info@b.es"]));
     const r = await enviarProspectos(["a", "b"], "t1", { from: FROM });
     expect(r.enviados).toBe(0);
     expect(r.omitidos).toEqual([

@@ -35,6 +35,9 @@ const TEXTO_ERROR: Record<ErrorEnvio, string> = {
   faltan_datos: "A la empresa le falta un dato que la plantilla usa",
   ya_reclamado: "Ya se le estaba enviando.",
   fallo_resend: "Resend rechazó el envío",
+  error_datos: "No se pudo comprobar la lista de bajas, los leads o el tope de hoy. No se ha enviado; vuelve a intentarlo.",
+  resultado_incierto: "No se sabe si el correo llegó a salir. Queda marcado como enviado para no escribir dos veces",
+  email_repetido: "Ya se escribió a esa dirección desde otra ficha.",
   sin_baja: "No se puede firmar el enlace de baja (falta PROMO_TOKEN_SECRET o RESEND_API_KEY): no se envía.",
 };
 
