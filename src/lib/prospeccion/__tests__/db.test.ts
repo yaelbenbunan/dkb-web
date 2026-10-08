@@ -54,8 +54,8 @@ describe("guardarProspectos", () => {
     const c = cadena({ data: [{ id: "a" }] });
     fromMock.mockReturnValue(c);
     const nuevos = await guardarProspectos("s1", [
-      { source: "places", external_id: "x", name: "Uno", sector: null, address: null, city: null, province: null, phone: null, website: null, rating: null, reviews: null },
-      { source: "places", external_id: "y", name: "Dos", sector: null, address: null, city: null, province: null, phone: null, website: null, rating: null, reviews: null },
+      { source: "osm", external_id: "x", name: "Uno", sector: null, address: null, city: null, province: null, phone: null, website: null, rating: null, reviews: null },
+      { source: "osm", external_id: "y", name: "Dos", sector: null, address: null, city: null, province: null, phone: null, website: null, rating: null, reviews: null },
     ]);
     expect(nuevos).toBe(1);
     expect(c.upsert).toHaveBeenCalledWith(
@@ -71,7 +71,7 @@ describe("guardarProspectos", () => {
 
   test("si la inserción falla devuelve null, no un cero que parecería «todas repetidas»", async () => {
     fromMock.mockReturnValue(cadena({ data: null, error: { message: "relation does not exist" } }));
-    const fila = { source: "places" as const, external_id: "x", name: "Uno", sector: null, address: null, city: null, province: null, phone: null, website: null, rating: null, reviews: null };
+    const fila = { source: "osm" as const, external_id: "x", name: "Uno", sector: null, address: null, city: null, province: null, phone: null, website: null, rating: null, reviews: null };
     expect(await guardarProspectos("s1", [fila])).toBeNull();
   });
 });

@@ -18,9 +18,10 @@ import {
   marcarEstado,
   pendientesDeEnriquecer,
 } from "@/lib/prospeccion/db";
-import { enriquecerWeb } from "@/lib/prospeccion/enriquecer";
+import { categoriaPorClave } from "@/lib/prospeccion/categorias";
+import { enriquecerProspecto } from "@/lib/prospeccion/enriquecer";
 import { enviarProspectos, type ErrorEnvio } from "@/lib/prospeccion/enviar";
-import { buscarEnPlaces } from "@/lib/prospeccion/places";
+import { buscarEnOsm, type ErrorOsm } from "@/lib/prospeccion/osm";
 import { TEXTO_BLOQUEO } from "@/lib/prospeccion/reglas-envio";
 import { resumirOmitidos } from "@/lib/prospeccion/resumen-envio";
 import { ESTADOS_DESCARTABLES } from "@/lib/prospeccion/tipos";
@@ -61,24 +62,28 @@ const TEXTO_ERROR: Record<ErrorEnvio, string> = {
   sin_baja: "No se puede firmar el enlace de baja (falta PROMO_TOKEN_SECRET o RESEND_API_KEY): no se envía.",
 };
 
+const ERROR_BUSQUEDA: Record<ErrorOsm, string> = {
+  categoria_desconocida: "Ese tipo de negocio no está en la lista.",
+  ciudad_no_encontrada: "No encuentro ese municipio en España. Revisa cómo está escrito.",
+  error_api: "OpenStreetMap no ha respondido. Espera un minuto y vuelve a intentarlo.",
+};
+
 export async function buscarAction(
   categoria: string,
   ciudad: string,
 ): Promise<{ ok: true; searchId: string; mensaje: string } | { ok: false; error: string }> {
   if (!(await haySesion())) return SIN_SESION;
-  const cat = categoria.trim().slice(0, 80);
+  const cat = categoriaPorClave(categoria);
   const ciu = ciudad.trim().slice(0, 80);
-  if (!cat || !ciu) return { ok: false, error: "Indica qué buscar y en qué ciudad." };
+  if (!cat || !ciu) return { ok: false, error: "Elige qué buscar y escribe la ciudad." };
 
-  const searchId = await crearBusqueda("places", { categoria: cat, ciudad: ciu });
+  // En la búsqueda se guarda el nombre legible: es lo que enseña el filtro.
+  const searchId = await crearBusqueda("osm", { categoria: cat.texto, clave: cat.clave, ciudad: ciu });
   if (!searchId) return { ok: false, error: "No se pudo guardar la búsqueda." };
 
-  const r = await buscarEnPlaces({ categoria: cat, ciudad: ciu });
+  const r = await buscarEnOsm({ categoria: cat.clave, ciudad: ciu });
   if (!r.ok) {
-    const error =
-      r.error === "sin_clave"
-        ? "Falta configurar GOOGLE_PLACES_API_KEY."
-        : `Google Places devolvió un error (${r.detalle ?? "sin detalle"}).`;
+    const error = ERROR_BUSQUEDA[r.error];
     await cerrarBusqueda(searchId, { status: "error", error });
     revalidatePath(RUTA);
     return { ok: false, error };
@@ -113,7 +118,7 @@ export async function enriquecerTandaAction(
   const tanda = await pendientesDeEnriquecer(searchId, TANDA);
   await Promise.all(
     tanda.map(async (p) => {
-      const r = await enriquecerWeb(p.website).catch(() => ({
+      const r = await enriquecerProspecto(p).catch(() => ({
         email: null,
         tipo: null,
         nota: "La web no responde.",

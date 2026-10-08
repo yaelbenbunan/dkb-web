@@ -2,26 +2,25 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { CATEGORIAS } from "@/lib/prospeccion/categorias";
 import { botonPrimario, campo, etiqueta, tarjeta, titulo } from "../_componentes/estilos";
 import { buscarAction, enriquecerTandaAction } from "./actions";
 import type { Aviso } from "./Prospeccion";
 
-/** 60 empresas en tandas de 10 son 6 vueltas; el margen cubre reintentos. Con
+/** 120 empresas en tandas de 10 son 12 vueltas; el margen cubre reintentos. Con
  *  tope, un fallo que no deje avanzar no convierte el bucle en infinito. */
-const MAX_TANDAS = 12;
+const MAX_TANDAS = 16;
 
 export function Buscador({
-  placesConfigurado,
   pendientes,
   onAviso,
 }: {
-  placesConfigurado: boolean;
   /** Búsquedas con empresas aún sin revisar (se cerró la pestaña a medias). */
   pendientes: Array<{ searchId: string; n: number }>;
   onAviso: (a: Aviso | null) => void;
 }) {
   const router = useRouter();
-  const [categoria, setCategoria] = useState("");
+  const [categoria, setCategoria] = useState(CATEGORIAS[0].clave);
   const [ciudad, setCiudad] = useState("");
   const [fase, setFase] = useState<null | "buscando" | "emails">(null);
   const [progreso, setProgreso] = useState({ hechos: 0, total: 0 });
@@ -87,21 +86,20 @@ export function Buscador({
   return (
     <form onSubmit={buscar} style={{ ...tarjeta, display: "flex", flexDirection: "column", gap: 12 }}>
       <h2 style={titulo}>Buscar negocios</h2>
-      {!placesConfigurado && (
-        <p style={{ margin: 0, fontSize: 13, color: "#b91c1c" }}>
-          Falta configurar <code>GOOGLE_PLACES_API_KEY</code>: la búsqueda no está disponible.
-        </p>
-      )}
       <div style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
         <label style={etiqueta}>
           Qué buscar
-          <input style={{ ...campo, width: 240 }} value={categoria} onChange={(e) => setCategoria(e.target.value)} placeholder="restaurante, clínica dental…" required maxLength={80} />
+          <select style={{ ...campo, width: 240 }} value={categoria} onChange={(e) => setCategoria(e.target.value)}>
+            {CATEGORIAS.map((c) => (
+              <option key={c.clave} value={c.clave}>{c.texto}</option>
+            ))}
+          </select>
         </label>
         <label style={etiqueta}>
           Ciudad
-          <input style={{ ...campo, width: 200 }} value={ciudad} onChange={(e) => setCiudad(e.target.value)} placeholder="Madrid" required maxLength={80} />
+          <input style={{ ...campo, width: 200 }} value={ciudad} onChange={(e) => setCiudad(e.target.value)} placeholder="Getafe" required maxLength={80} />
         </label>
-        <button type="submit" disabled={!placesConfigurado || fase !== null} style={{ ...botonPrimario, opacity: !placesConfigurado || fase !== null ? 0.6 : 1 }}>
+        <button type="submit" disabled={fase !== null} style={{ ...botonPrimario, opacity: fase !== null ? 0.6 : 1 }}>
           {fase === "buscando" ? "Buscando…" : fase === "emails" ? "Buscando emails…" : "Buscar"}
         </button>
         {fase === "emails" && progreso.total > 0 && (
@@ -123,7 +121,8 @@ export function Buscador({
         </p>
       )}
       <p style={{ margin: 0, fontSize: 12, color: "#64748b" }}>
-        Hasta 60 negocios por búsqueda. Después se lee la web de cada uno para encontrar su email.
+        Hasta 120 negocios por búsqueda, por municipio. Después se lee la web de cada uno para encontrar su email. Datos de negocios ©{" "}
+        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" style={{ color: "#64748b" }}>colaboradores de OpenStreetMap</a>.
       </p>
     </form>
   );

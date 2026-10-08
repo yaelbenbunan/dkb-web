@@ -18,7 +18,7 @@ export const ESTADOS_DESCARTABLES: EstadoProspecto[] = ESTADOS_PROSPECTO.filter(
   (e) => e !== "baja" && e !== "rebotado" && e !== "descartado",
 );
 
-export type FuenteProspecto = "places" | "borme";
+export type FuenteProspecto = "osm" | "borme";
 export type TipoEmail = "generica" | "personal";
 
 export interface ProspectRow {
@@ -60,6 +60,8 @@ export interface ProspectoNuevo {
   province: string | null;
   phone: string | null;
   website: string | null;
+  /** Email que la propia fuente publica (OSM lo trae a veces). */
+  email?: string | null;
   rating: number | null;
   reviews: number | null;
 }

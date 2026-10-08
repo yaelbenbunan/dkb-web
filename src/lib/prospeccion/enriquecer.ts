@@ -46,3 +46,20 @@ export async function enriquecerWeb(
     ? { email: mejor.email, tipo: mejor.tipo, nota: null }
     : sinEmail("La web no publica ningún email.");
 }
+
+/** Igual que {@link enriquecerWeb}, pero aprovecha el email que la propia
+ *  fuente publica (OpenStreetMap lo trae a veces): si es del negocio, no hace
+ *  falta leer su web. Sin web con la que comparar, el dominio del propio email
+ *  hace de referencia. */
+export async function enriquecerProspecto(
+  p: { website: string | null; email: string | null },
+  leer: LectorPagina = leerPaginaSegura,
+): Promise<ResultadoEnriquecer> {
+  const publicados = extraerEmails(p.email ?? "");
+  if (publicados.length > 0) {
+    const web = p.website ? normalizeUrl(p.website) : null;
+    const mejor = elegirEmail(publicados, web?.hostname ?? publicados[0].split("@")[1]);
+    if (mejor) return { email: mejor.email, tipo: mejor.tipo, nota: null };
+  }
+  return enriquecerWeb(p.website, leer);
+}

@@ -3,9 +3,9 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 const m = vi.hoisted(() => ({
   cookieGet: vi.fn(),
   verifySessionToken: vi.fn(),
-  buscarEnPlaces: vi.fn(),
+  buscarEnOsm: vi.fn(),
   enviarProspectos: vi.fn(),
-  enriquecerWeb: vi.fn(),
+  enriquecerProspecto: vi.fn(),
   createManualLead: vi.fn(),
   db: {
     borrarPlantilla: vi.fn(),
@@ -31,9 +31,9 @@ vi.mock("@/lib/panel-auth", () => ({
 }));
 vi.mock("@/lib/imagina-leads", () => ({ createManualLead: m.createManualLead }));
 vi.mock("@/lib/prospeccion/db", () => m.db);
-vi.mock("@/lib/prospeccion/enriquecer", () => ({ enriquecerWeb: m.enriquecerWeb }));
+vi.mock("@/lib/prospeccion/enriquecer", () => ({ enriquecerProspecto: m.enriquecerProspecto }));
 vi.mock("@/lib/prospeccion/enviar", () => ({ enviarProspectos: m.enviarProspectos }));
-vi.mock("@/lib/prospeccion/places", () => ({ buscarEnPlaces: m.buscarEnPlaces }));
+vi.mock("@/lib/prospeccion/osm", () => ({ buscarEnOsm: m.buscarEnOsm }));
 
 import * as acciones from "@/app/(site)/panel/prospeccion/actions";
 
@@ -47,10 +47,10 @@ function sesion(valida: boolean) {
 beforeEach(() => {
   vi.clearAllMocks();
   for (const f of Object.values(m.db)) f.mockReset();
-  m.buscarEnPlaces.mockReset();
+  m.buscarEnOsm.mockReset();
   m.enviarProspectos.mockReset();
   m.db.crearBusqueda.mockResolvedValue("s1");
-  m.buscarEnPlaces.mockResolvedValue({ ok: true, prospectos: [{ external_id: "x" }, { external_id: "y" }] });
+  m.buscarEnOsm.mockResolvedValue({ ok: true, prospectos: [{ external_id: "x" }, { external_id: "y" }] });
   m.db.guardarProspectos.mockResolvedValue(2);
 });
 
@@ -58,8 +58,8 @@ describe("sin sesión del panel, las acciones no hacen nada", () => {
   beforeEach(() => sesion(false));
 
   test("buscarAction no llama a Google", async () => {
-    expect(await acciones.buscarAction("restaurante", "Madrid")).toEqual(CADUCADA);
-    expect(m.buscarEnPlaces).not.toHaveBeenCalled();
+    expect(await acciones.buscarAction("restaurantes", "Madrid")).toEqual(CADUCADA);
+    expect(m.buscarEnOsm).not.toHaveBeenCalled();
     expect(m.db.crearBusqueda).not.toHaveBeenCalled();
   });
 
@@ -71,7 +71,7 @@ describe("sin sesión del panel, las acciones no hacen nada", () => {
   test("enriquecerTandaAction no lee ninguna web y corta el bucle del cliente", async () => {
     expect(await acciones.enriquecerTandaAction("s1")).toEqual({ procesados: 0, restantes: 0 });
     expect(m.db.pendientesDeEnriquecer).not.toHaveBeenCalled();
-    expect(m.enriquecerWeb).not.toHaveBeenCalled();
+    expect(m.enriquecerProspecto).not.toHaveBeenCalled();
   });
 
   test("el resto tampoco toca la base de datos", async () => {
@@ -100,26 +100,26 @@ describe("sin sesión del panel, las acciones no hacen nada", () => {
 
   test("una cookie presente pero no válida tampoco vale", async () => {
     m.cookieGet.mockReturnValue({ value: "caducada" });
-    expect(await acciones.buscarAction("restaurante", "Madrid")).toEqual(CADUCADA);
+    expect(await acciones.buscarAction("restaurantes", "Madrid")).toEqual(CADUCADA);
     expect(m.cookieGet).toHaveBeenCalledWith("panel_session");
     expect(m.verifySessionToken).toHaveBeenCalledWith("caducada");
-    expect(m.buscarEnPlaces).not.toHaveBeenCalled();
+    expect(m.buscarEnOsm).not.toHaveBeenCalled();
   });
 });
 
 describe("con sesión", () => {
   beforeEach(() => sesion(true));
 
-  test("buscarAction llega a Places y cuenta las nuevas", async () => {
-    const r = await acciones.buscarAction("restaurante", "Madrid");
-    expect(m.buscarEnPlaces).toHaveBeenCalledWith({ categoria: "restaurante", ciudad: "Madrid" });
+  test("buscarAction llega a OpenStreetMap y cuenta las nuevas", async () => {
+    const r = await acciones.buscarAction("restaurantes", "Madrid");
+    expect(m.buscarEnOsm).toHaveBeenCalledWith({ categoria: "restaurantes", ciudad: "Madrid" });
     expect(r).toEqual({ ok: true, searchId: "s1", mensaje: "2 empresas encontradas: 2 nuevas." });
   });
 
   test("buscarAction: si no se pueden guardar las empresas, lo dice y cierra la búsqueda con error", async () => {
     m.db.guardarProspectos.mockResolvedValue(null);
     const error = "No se pudieron guardar las empresas encontradas. ¿Está ejecutada la migración de prospección?";
-    expect(await acciones.buscarAction("restaurante", "Madrid")).toEqual({ ok: false, error });
+    expect(await acciones.buscarAction("restaurantes", "Madrid")).toEqual({ ok: false, error });
     expect(m.db.cerrarBusqueda).toHaveBeenCalledWith("s1", { status: "error", error });
   });
 

@@ -23,7 +23,6 @@ export function Prospeccion(props: {
   enviadosHoy: number;
   limite: number;
   remitentes: string[];
-  placesConfigurado: boolean;
 }) {
   const [vista, setVista] = useState<"empresas" | "plantillas">("empresas");
   const [aviso, setAviso] = useState<Aviso | null>(null);
@@ -63,7 +62,7 @@ export function Prospeccion(props: {
 
       {vista === "empresas" ? (
         <>
-          <Buscador placesConfigurado={props.placesConfigurado} pendientes={pendientes} onAviso={setAviso} />
+          <Buscador pendientes={pendientes} onAviso={setAviso} />
           <TablaProspectos
             prospectos={props.prospectos}
             busquedas={props.busquedas}

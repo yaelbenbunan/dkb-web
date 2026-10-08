@@ -2,7 +2,7 @@ import { describe, expect, test, vi } from "vitest";
 
 vi.mock("../../fetch-seguro", () => ({ leerPaginaSegura: vi.fn() }));
 
-import { enriquecerWeb, type LectorPagina } from "../enriquecer";
+import { enriquecerProspecto, enriquecerWeb, type LectorPagina } from "../enriquecer";
 
 /** Lector de mentira: un mapa de URL → HTML. */
 function lector(paginas: Record<string, string>): LectorPagina & { mock: { calls: unknown[][] } } {
@@ -79,5 +79,43 @@ describe("enriquecerWeb", () => {
     expect((await enriquecerWeb("javascript:alert(1)", leer)).nota).toBe("La web no responde.");
     expect((await enriquecerWeb("http://localhost/admin", leer)).nota).toBe("La web no responde.");
     expect(leer).not.toHaveBeenCalled();
+  });
+});
+
+describe("enriquecerProspecto", () => {
+  test("si la fuente ya publica un email del negocio, lo usa sin leer la web", async () => {
+    const leer = lector({});
+    expect(await enriquecerProspecto({ website: "https://bar.es", email: " Info@Bar.es " }, leer)).toEqual({
+      email: "info@bar.es",
+      tipo: "generica",
+      nota: null,
+    });
+    expect(leer).not.toHaveBeenCalled();
+  });
+
+  test("vale aunque el negocio no tenga web", async () => {
+    expect(await enriquecerProspecto({ website: null, email: "reservas@bar.es" }, lector({}))).toEqual({
+      email: "reservas@bar.es",
+      tipo: "generica",
+      nota: null,
+    });
+  });
+
+  test("un email personal publicado se marca como personal", async () => {
+    expect((await enriquecerProspecto({ website: null, email: "juan.perez@bar.es" }, lector({}))).tipo).toBe("personal");
+  });
+
+  test("si el email publicado es de un tercero o no es válido, busca en la web", async () => {
+    const leer = lector({ "https://bar.es/": "hola@bar.es" });
+    expect((await enriquecerProspecto({ website: "bar.es", email: "info@agenciaweb.com" }, leer)).email).toBe("hola@bar.es");
+    expect((await enriquecerProspecto({ website: "bar.es", email: "no es un email" }, leer)).email).toBe("hola@bar.es");
+  });
+
+  test("sin email publicado se comporta como enriquecerWeb", async () => {
+    expect(await enriquecerProspecto({ website: null, email: null }, lector({}))).toEqual({
+      email: null,
+      tipo: null,
+      nota: "Sin web.",
+    });
   });
 });
