@@ -133,15 +133,32 @@ function esPropio(dominioEmail: string, dominioWeb: string): boolean {
   return a === b || a.endsWith(`.${b}`) || b.endsWith(`.${a}`);
 }
 
-function tipoDe(local: string, propio: boolean): TipoEmail {
+function obtenerEtiquetaPrincipal(dominio: string): string {
+  const sinPrefijo = sinWww(dominio);
+  const primera = sinPrefijo.split(".")[0];
+  return primera.toLowerCase();
+}
+
+function tipoDe(local: string, propio: boolean, dominioWeb: string): TipoEmail {
   const primera = local.split(/[._-]/)[0].replace(/[0-9]+$/, "");
   if (GENERICAS.has(primera)) return "generica";
+
+  // Para direcciones no propias (proveedores gratuitos), se considera genérica
+  // si el local part contiene la etiqueta principal del dominio (3+ caracteres)
+  if (!propio) {
+    const etiqueta = obtenerEtiquetaPrincipal(dominioWeb);
+    if (etiqueta.length >= 3 && local.toLowerCase().includes(etiqueta)) {
+      return "generica";
+    }
+    return "personal";
+  }
+
   // nombre.apellido
   if (/^[a-z]+[._-][a-z]+$/.test(local)) return "personal";
+
   // Una sola palabra desconocida en el dominio del negocio (`juan@bar.es`)
-  // suele ser una persona; en Gmail (`restaurantebar@gmail.com`) suele ser el
-  // buzón del negocio. Ante la duda en dominio propio, personal: pide confirmar.
-  return propio ? "personal" : "generica";
+  // suele ser una persona. Ante la duda en dominio propio, personal: pide confirmar.
+  return "personal";
 }
 
 /** La mejor dirección para escribir a ese negocio, o null si no hay ninguna que
@@ -149,15 +166,15 @@ function tipoDe(local: string, propio: boolean): TipoEmail {
  *  descartan: suelen ser de la agencia que hizo la web. */
 export function elegirEmail(
   emails: string[],
-  dominioWeb: string | null,
+  dominioWeb: string,
 ): { email: string; tipo: TipoEmail } | null {
   const candidatas = emails
     .map((email) => {
       const [local, dominio] = email.split("@");
-      const propio = dominioWeb ? esPropio(dominio, dominioWeb) : true;
+      const propio = esPropio(dominio, dominioWeb);
       const gratuito = GRATUITOS.has(dominio);
       if (!propio && !gratuito) return null;
-      const tipo = tipoDe(local, propio);
+      const tipo = tipoDe(local, propio, dominioWeb);
       const orden = tipo === "generica" ? (propio ? 0 : 1) : propio ? 2 : 3;
       return { email, tipo, orden };
     })

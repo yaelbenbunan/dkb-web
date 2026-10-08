@@ -60,6 +60,27 @@ describe("elegirEmail", () => {
   test("sin candidatas devuelve null", () => {
     expect(elegirEmail([], "bar.es")).toBeNull();
   });
+
+  test("Gmail sin nombre del negocio es personal, no genérica", () => {
+    expect(elegirEmail(["juan@gmail.com"], "bar.es")?.tipo).toBe("personal");
+    expect(elegirEmail(["mariagarcia@hotmail.com"], "bar.es")?.tipo).toBe("personal");
+    expect(elegirEmail(["maria.lopez88@gmail.com"], "bar.es")?.tipo).toBe("personal");
+  });
+
+  test("Gmail con nombre del negocio (3+ caracteres) es genérica", () => {
+    expect(elegirEmail(["barpepe.madrid@gmail.com"], "www.barpepe.es")?.tipo).toBe("generica");
+  });
+
+  test("etiqueta de dominio muy corta (< 3 caracteres) no hace genérica", () => {
+    expect(elegirEmail(["laura@gmail.com"], "la.es")?.tipo).toBe("personal");
+  });
+
+  test("una dirección personal en el dominio del negocio gana a Gmail no relacionado", () => {
+    expect(elegirEmail(["disenador@gmail.com", "juan@bar.es"], "bar.es")).toEqual({
+      email: "juan@bar.es",
+      tipo: "personal",
+    });
+  });
 });
 
 describe("enlacesDeContacto", () => {
