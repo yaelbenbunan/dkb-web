@@ -1,9 +1,8 @@
 import "server-only";
-import dns from "node:dns";
-import type { LookupFunction } from "node:net";
 import { Agent, fetch as undiciFetch } from "undici";
 import sharp from "sharp";
-import { isBlockedHost, isBlockedIp, normalizeUrl } from "./website-extract-guard";
+import { crearAgenteSeguro, leerHtml } from "./fetch-seguro";
+import { isBlockedHost, normalizeUrl } from "./website-extract-guard";
 
 export interface WebsiteExtract {
   /** Resolved, normalized URL we actually fetched. */
@@ -26,40 +25,6 @@ const MAX_IMAGE_BYTES = 3_000_000; // cap image download used only to measure si
 /** A hero background needs real width; anything narrower looks soft/stretched,
  *  so we drop it and fall back to the curated stock photos. */
 const MIN_IMAGE_WIDTH = 700;
-
-/** Custom DNS resolver for undici. Runs for EVERY connection the dispatcher
- *  opens — the initial request and each redirect hop — and rejects the
- *  connection if any resolved address is in a blocked range. Because undici
- *  connects to exactly the address we return here, there is no resolve→connect
- *  TOCTOU gap (no DNS-rebinding window). */
-const ssrfLookup: LookupFunction = (hostname, options, callback) => {
-  dns.lookup(hostname, { ...options, all: true }, (err, addresses) => {
-    if (err) {
-      callback(err, "", 0);
-      return;
-    }
-    const list = addresses as dns.LookupAddress[];
-    if (list.length === 0) {
-      callback(new Error("No address resolved"), "", 0);
-      return;
-    }
-    const blocked = list.find((a) => isBlockedIp(a.address));
-    if (blocked) {
-      callback(
-        new Error(`Blocked by SSRF guard: ${blocked.address}`),
-        "",
-        0,
-      );
-      return;
-    }
-    // Respect the shape undici asked for.
-    if ((options as dns.LookupAllOptions).all) {
-      callback(null, list as unknown as string, 0);
-    } else {
-      callback(null, list[0].address, list[0].family);
-    }
-  });
-};
 
 function decodeEntities(s: string): string {
   return s
@@ -169,44 +134,17 @@ export async function extractWebsite(
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  const dispatcher = new Agent({
-    connect: { lookup: ssrfLookup },
-    headersTimeout: FETCH_TIMEOUT_MS,
-    bodyTimeout: FETCH_TIMEOUT_MS,
-  });
+  const dispatcher = crearAgenteSeguro(FETCH_TIMEOUT_MS);
 
   try {
-    const res = await undiciFetch(url, {
-      method: "GET",
-      redirect: "follow", // each hop re-connects through ssrfLookup → revalidated
+    const pagina = await leerHtml(url, {
+      agente: dispatcher,
       signal: controller.signal,
-      dispatcher,
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; DinkbitPreviewBot/1.0)",
-        Accept: "text/html,application/xhtml+xml",
-      },
+      maxBytes: MAX_BYTES,
+      userAgent: "Mozilla/5.0 (compatible; DinkbitPreviewBot/1.0)",
     });
-    if (!res.ok || !res.body) return null;
-    const contentType = res.headers.get("content-type") ?? "";
-    if (!contentType.includes("html")) return null;
-
-    // Final URL host re-check (defense in depth; the lookup already vetted the
-    // IP of every hop).
-    const finalUrl = new URL(res.url || url.toString());
-    if (isBlockedHost(finalUrl.hostname)) return null;
-
-    // Read at most MAX_BYTES so a giant page can't exhaust memory.
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let html = "";
-    let received = 0;
-    while (received < MAX_BYTES) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      received += value.byteLength;
-      html += decoder.decode(value, { stream: true });
-    }
-    await reader.cancel().catch(() => {});
+    if (!pagina) return null;
+    const { html, urlFinal: finalUrl } = pagina;
 
     const extracted = extractFromHtml(html, finalUrl);
 
