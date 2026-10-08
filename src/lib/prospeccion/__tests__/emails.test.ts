@@ -69,6 +69,7 @@ describe("elegirEmail", () => {
 
   test("Gmail con nombre del negocio (3+ caracteres) es genérica", () => {
     expect(elegirEmail(["barpepe.madrid@gmail.com"], "www.barpepe.es")?.tipo).toBe("generica");
+    expect(elegirEmail(["info@gmail.com"], "bar.es")?.tipo).toBe("generica");
   });
 
   test("etiqueta de dominio muy corta (< 3 caracteres) no hace genérica", () => {

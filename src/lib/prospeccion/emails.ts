@@ -150,14 +150,10 @@ function tipoDe(local: string, propio: boolean, dominioWeb: string): TipoEmail {
     if (etiqueta.length >= 3 && local.toLowerCase().includes(etiqueta)) {
       return "generica";
     }
-    return "personal";
   }
 
-  // nombre.apellido
-  if (/^[a-z]+[._-][a-z]+$/.test(local)) return "personal";
-
-  // Una sola palabra desconocida en el dominio del negocio (`juan@bar.es`)
-  // suele ser una persona. Ante la duda en dominio propio, personal: pide confirmar.
+  // Una dirección de un dominio del negocio o una de proveedor gratuito sin
+  // coincidencia con el nombre del negocio: suele ser personal.
   return "personal";
 }
 
