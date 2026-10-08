@@ -12,7 +12,7 @@ vi.mock("../db", () => ({
   suprimir: suprimirMock,
 }));
 
-import { urlDeBaja, verificarTokenBaja } from "../baja-token";
+import { bajaDisponible, urlDeBaja, verificarTokenBaja } from "../baja-token";
 import { verifyUnsubscribeToken } from "../../unsubscribe-token";
 import { GET } from "@/app/api/prospeccion/baja/route";
 
@@ -82,5 +82,14 @@ describe("GET /api/prospeccion/baja", () => {
     const res = await pedir(urlDeBaja("p1"));
     expect(await res.text()).toContain("No recibirás más correos");
     expect(suprimirMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("bajaDisponible", () => {
+  test("es true con secreto y false sin ninguno", () => {
+    expect(bajaDisponible()).toBe(true);
+    vi.stubEnv("PROMO_TOKEN_SECRET", "");
+    vi.stubEnv("RESEND_API_KEY", "");
+    expect(bajaDisponible()).toBe(false);
   });
 });
