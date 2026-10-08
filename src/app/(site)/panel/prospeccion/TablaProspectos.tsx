@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { FILTROS_VACIOS, filtrarProspectos, type FiltrosProspectos } from "@/lib/prospeccion/filtros";
 import {
+  ESTADOS_DESCARTABLES,
   ESTADOS_PROSPECTO,
   type EstadoProspecto,
   type ProspectRow,
@@ -59,8 +60,8 @@ export function TablaProspectos({
   const elegidas = visibles.filter((p) => seleccion.has(p.id));
   // En un envío múltiple solo entran las listas con buzón genérico.
   const enviables = elegidas.filter((p) => p.status === "listo" && p.email_kind !== "personal");
-  // Solo se descarta lo que aún no se ha contactado: lo enviado conserva su historia.
-  const descartables = elegidas.filter((p) => p.status === "nuevo" || p.status === "listo" || p.status === "sin_contacto");
+  // Se descarta desde cualquier estado menos baja y rebotado, que no se pisan.
+  const descartables = elegidas.filter((p) => ESTADOS_DESCARTABLES.includes(p.status));
   const puedeEnviar = remitentes.length > 0 && !!plantilla && cupo > 0;
 
   const cambiar = (parcial: Partial<FiltrosProspectos>) => setFiltros((f) => ({ ...f, ...parcial }));

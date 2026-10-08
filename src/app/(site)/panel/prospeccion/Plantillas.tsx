@@ -38,7 +38,7 @@ export function Plantillas({
       try {
         const r = await borrarPlantillaAction(t.id);
         onAviso({ ok: r.ok, texto: r.ok ? r.mensaje : r.error });
-        if (borrador.id === t.id) setBorrador(VACIA);
+        if (r.ok && borrador.id === t.id) setBorrador(VACIA);
       } catch {
         onAviso({ ok: false, texto: "No se pudo borrar la plantilla. Vuelve a intentarlo." });
       }

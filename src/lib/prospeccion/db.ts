@@ -69,14 +69,14 @@ export async function listarBusquedas(limit = 50): Promise<ProspectSearchRow[]> 
 /** Guarda las empresas de una búsqueda. Las que ya existían (misma fuente e
  *  identificador) no se tocan: conservan su estado y su historial de envío, así
  *  que una empresa ya contactada no vuelve a aparecer como nueva. Devuelve
- *  cuántas eran realmente nuevas. */
+ *  cuántas eran realmente nuevas, o null si no se pudieron guardar. */
 export async function guardarProspectos(
   searchId: string,
   nuevos: ProspectoNuevo[],
-): Promise<number> {
+): Promise<number | null> {
   if (nuevos.length === 0) return 0;
   const sb = getSupabaseAdmin();
-  if (!sb) return 0;
+  if (!sb) return null;
   const filas = nuevos.map((p) => ({ ...p, search_id: searchId, status: "nuevo" }));
   const { data, error } = await sb
     .from(PROSPECTOS)
@@ -84,36 +84,62 @@ export async function guardarProspectos(
     .select("id");
   if (error) {
     aviso("guardarProspectos", error.message);
-    return 0;
+    return null;
   }
   return data?.length ?? 0;
 }
 
-export async function listarProspectos(limit = 2000): Promise<ProspectRow[]> {
+const PAGINA = 1000;
+const MAX_LISTA = 5000;
+/** Ids por consulta: un `.in()` viaja en la URL y con cientos de uuid no cabe. */
+const TROZO_IDS = 100;
+
+function trocear<T>(lista: T[], n: number): T[][] {
+  const trozos: T[][] = [];
+  for (let i = 0; i < lista.length; i += n) trozos.push(lista.slice(i, i + n));
+  return trozos;
+}
+
+/** Las empresas más recientes, hasta 5000. Se leen por páginas porque PostgREST
+ *  no devuelve más de 1000 filas por consulta por mucho que se le pidan; el
+ *  segundo orden (`id`) evita que una fila salte de página entre dos lecturas.
+ *  Si una página falla se devuelve lo leído hasta ahí. */
+export async function listarProspectos(max = MAX_LISTA): Promise<ProspectRow[]> {
   const sb = getSupabaseAdmin();
   if (!sb) return [];
-  const { data, error } = await sb
-    .from(PROSPECTOS)
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(limit);
-  if (error) {
-    aviso("listarProspectos", error.message);
-    return [];
+  const filas: ProspectRow[] = [];
+  while (filas.length < max) {
+    const { data, error } = await sb
+      .from(PROSPECTOS)
+      .select("*")
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range(filas.length, filas.length + PAGINA - 1);
+    if (error) {
+      aviso("listarProspectos", error.message);
+      break;
+    }
+    const pagina = (data ?? []) as ProspectRow[];
+    if (pagina.length === 0) break;
+    filas.push(...pagina);
   }
-  return (data ?? []) as ProspectRow[];
+  return filas.slice(0, max);
 }
 
 export async function prospectosPorIds(ids: string[]): Promise<ProspectRow[]> {
   if (ids.length === 0) return [];
   const sb = getSupabaseAdmin();
   if (!sb) return [];
-  const { data, error } = await sb.from(PROSPECTOS).select("*").in("id", ids);
-  if (error) {
-    aviso("prospectosPorIds", error.message);
-    return [];
+  const filas: ProspectRow[] = [];
+  for (const trozo of trocear(ids, TROZO_IDS)) {
+    const { data, error } = await sb.from(PROSPECTOS).select("*").in("id", trozo);
+    if (error) {
+      aviso("prospectosPorIds", error.message);
+      return [];
+    }
+    filas.push(...((data ?? []) as ProspectRow[]));
   }
-  return (data ?? []) as ProspectRow[];
+  return filas;
 }
 
 export async function getProspecto(id: string): Promise<ProspectRow | null> {
@@ -218,7 +244,8 @@ export async function revertirEnvio(id: string, motivo: string | null): Promise<
   if (error) aviso("revertirEnvio", error.message);
 }
 
-/** Anota que no se sabe si el correo salió (la llamada a Resend lanzó). No toca
+/** Anota que no se sabe si el correo salió (la llamada a Resend lanzó, se quedó
+ *  sin respuesta o devolvió un 5xx). No toca
  *  el estado ni `sent_at`: la fila sigue «enviado» para no escribir dos veces. */
 export async function anotarEnvioIncierto(id: string, detalle: string, templateId: string): Promise<void> {
   const sb = getSupabaseAdmin();
@@ -266,19 +293,31 @@ export async function yaContactado(email: string): Promise<boolean | null> {
 }
 
 /** Cambia el estado de los prospectos. Con `desde`, solo los que están ahora en
- *  uno de esos estados; sin él, aplica desde cualquiera (la baja lo necesita). */
+ *  uno de esos estados; sin él, aplica desde cualquiera (la baja lo necesita).
+ *  Devuelve cuántas filas cambió de verdad, o null si algún trozo falló (los
+ *  demás trozos se intentan igualmente). */
 export async function marcarEstado(
   ids: string[],
   status: EstadoProspecto,
   desde?: EstadoProspecto[],
-): Promise<void> {
-  if (ids.length === 0) return;
+): Promise<number | null> {
+  if (ids.length === 0) return 0;
   const sb = getSupabaseAdmin();
-  if (!sb) return;
-  let consulta = sb.from(PROSPECTOS).update({ status }).in("id", ids);
-  if (desde) consulta = consulta.in("status", desde);
-  const { error } = await consulta;
-  if (error) aviso("marcarEstado", error.message);
+  if (!sb) return null;
+  let cambiadas = 0;
+  let fallo = false;
+  for (const trozo of trocear(ids, TROZO_IDS)) {
+    let consulta = sb.from(PROSPECTOS).update({ status }).in("id", trozo);
+    if (desde) consulta = consulta.in("status", desde);
+    const { data, error } = await consulta.select("id");
+    if (error) {
+      aviso("marcarEstado", error.message);
+      fallo = true;
+      continue;
+    }
+    cambiadas += data?.length ?? 0;
+  }
+  return fallo ? null : cambiadas;
 }
 
 /** Marca el prospecto al que se le mandó ese mensaje de Resend. Devuelve su
@@ -311,13 +350,17 @@ export async function marcarPorResendId(
   return fila.email ?? null;
 }
 
+/** Enlaza el prospecto con su lead del CRM. Solo desde «enviado» o
+ *  «respondido»: una pestaña desactualizada no debe convertir una baja o un
+ *  rebote en «respondió». */
 export async function enlazarLead(id: string, leadId: string): Promise<void> {
   const sb = getSupabaseAdmin();
   if (!sb) return;
   const { error } = await sb
     .from(PROSPECTOS)
     .update({ lead_id: leadId, status: "respondido" })
-    .eq("id", id);
+    .eq("id", id)
+    .in("status", ["enviado", "respondido"]);
   if (error) aviso("enlazarLead", error.message);
 }
 
@@ -338,15 +381,16 @@ export async function suprimir(
   if (error) aviso("suprimir", error.message);
 }
 
-const PAGINA = 1000;
-
 /** Lee todas las filas de una columna, de 1000 en 1000: el máximo por defecto
- *  de PostgREST recortaría en silencio una lista más larga. null si falla. */
+ *  de PostgREST recortaría en silencio una lista más larga. Solo una página
+ *  vacía marca el final: si el servidor devuelve menos filas de las pedidas,
+ *  una página corta no es la última, y dar la lista de bajas por completa ahí
+ *  sería fallar en abierto. null si falla. */
 async function leerColumna(tabla: string, columna: string, donde: string): Promise<string[] | null> {
   const sb = getSupabaseAdmin();
   if (!sb) return null;
   const valores: string[] = [];
-  for (let desde = 0; ; desde += PAGINA) {
+  for (let desde = 0; ; ) {
     const { data, error } = await sb
       .from(tabla)
       .select(columna)
@@ -357,8 +401,9 @@ async function leerColumna(tabla: string, columna: string, donde: string): Promi
       return null;
     }
     const filas = (data ?? []) as unknown as Array<Record<string, string | null>>;
+    if (filas.length === 0) return valores;
     for (const f of filas) if (f[columna]) valores.push(f[columna] as string);
-    if (filas.length < PAGINA) return valores;
+    desde += filas.length;
   }
 }
 
@@ -421,11 +466,15 @@ export async function guardarPlantilla(p: {
   return true;
 }
 
-export async function borrarPlantilla(id: string): Promise<void> {
+export async function borrarPlantilla(id: string): Promise<boolean> {
   const sb = getSupabaseAdmin();
-  if (!sb) return;
+  if (!sb) return false;
   const { error } = await sb.from(PLANTILLAS).delete().eq("id", id);
-  if (error) aviso("borrarPlantilla", error.message);
+  if (error) {
+    aviso("borrarPlantilla", error.message);
+    return false;
+  }
+  return true;
 }
 
 // Leads del CRM -----------------------------------------------------------

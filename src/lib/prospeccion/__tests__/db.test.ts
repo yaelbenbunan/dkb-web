@@ -6,12 +6,16 @@ vi.mock("../../supabase-admin", () => ({
 }));
 
 import {
+  borrarPlantilla,
   emailsDeLeads,
+  enlazarLead,
   enviadosDesde,
   guardarProspectos,
+  listarProspectos,
   listarSuprimidos,
   marcarEstado,
   marcarPorResendId,
+  prospectosPorIds,
   reclamarParaEnvio,
 } from "../db";
 
@@ -19,7 +23,7 @@ import {
  *  al hacer `await` resuelve con `resultado`. */
 function cadena(resultado: { data?: unknown; error?: { message: string } | null; count?: number }) {
   const c: Record<string, unknown> = {};
-  for (const m of ["update", "upsert", "insert", "select", "eq", "in", "gte", "order", "limit", "range", "ilike", "not"]) {
+  for (const m of ["update", "upsert", "insert", "delete", "select", "eq", "in", "gte", "order", "limit", "range", "ilike", "not"]) {
     c[m] = vi.fn(() => c);
   }
   c.then = (ok: (v: unknown) => unknown) => Promise.resolve({ error: null, ...resultado }).then(ok);
@@ -63,6 +67,45 @@ describe("guardarProspectos", () => {
     expect(await guardarProspectos("s1", [])).toBe(0);
     expect(fromMock).not.toHaveBeenCalled();
   });
+
+  test("si la inserción falla devuelve null, no un cero que parecería «todas repetidas»", async () => {
+    fromMock.mockReturnValue(cadena({ data: null, error: { message: "relation does not exist" } }));
+    const fila = { source: "places" as const, external_id: "x", name: "Uno", sector: null, address: null, city: null, province: null, phone: null, website: null, rating: null, reviews: null };
+    expect(await guardarProspectos("s1", [fila])).toBeNull();
+  });
+});
+
+describe("prospectosPorIds", () => {
+  test("pide los ids de 100 en 100 y junta las filas", async () => {
+    const ids = Array.from({ length: 250 }, (_, i) => `p${i}`);
+    const cadenas = [cadena({ data: [{ id: "a" }] }), cadena({ data: [{ id: "b" }] }), cadena({ data: [{ id: "c" }] })];
+    for (const c of cadenas) fromMock.mockReturnValueOnce(c);
+    expect((await prospectosPorIds(ids)).map((p) => p.id)).toEqual(["a", "b", "c"]);
+    expect(fromMock).toHaveBeenCalledTimes(3);
+    expect(cadenas[0].in).toHaveBeenCalledWith("id", ids.slice(0, 100));
+    expect(cadenas[2].in).toHaveBeenCalledWith("id", ids.slice(200));
+  });
+});
+
+describe("listarProspectos", () => {
+  const pagina = (n: number, desde: number) => Array.from({ length: n }, (_, i) => ({ id: `p${desde + i}` }));
+
+  test("lee de 1000 en 1000, las más recientes primero y en orden estable", async () => {
+    const cadenas = [cadena({ data: pagina(1000, 0) }), cadena({ data: pagina(200, 1000) }), cadena({ data: [] })];
+    for (const c of cadenas) fromMock.mockReturnValueOnce(c);
+    expect(await listarProspectos()).toHaveLength(1200);
+    expect(cadenas[0].order).toHaveBeenNthCalledWith(1, "created_at", { ascending: false });
+    expect(cadenas[0].order).toHaveBeenNthCalledWith(2, "id");
+    expect(cadenas[0].range).toHaveBeenCalledWith(0, 999);
+    expect(cadenas[1].range).toHaveBeenCalledWith(1000, 1999);
+    expect(cadenas[2].range).toHaveBeenCalledWith(1200, 2199);
+  });
+
+  test("se detiene en 5000 filas", async () => {
+    fromMock.mockImplementation(() => cadena({ data: pagina(1000, 0) }));
+    expect(await listarProspectos()).toHaveLength(5000);
+    expect(fromMock).toHaveBeenCalledTimes(5);
+  });
 });
 
 describe("marcarPorResendId", () => {
@@ -103,17 +146,93 @@ describe("marcarEstado", () => {
     expect(c.in).toHaveBeenCalledTimes(1);
     expect(c.in).toHaveBeenCalledWith("id", ["a"]);
   });
+
+  test("devuelve cuántas filas cambió de verdad", async () => {
+    const c = cadena({ data: [{ id: "a" }] });
+    fromMock.mockReturnValue(c);
+    expect(await marcarEstado(["a", "b"], "descartado", ["listo"])).toBe(1);
+    expect(c.select).toHaveBeenCalledWith("id");
+  });
+
+  test("parte 250 ids en 3 llamadas y suma lo cambiado", async () => {
+    const ids = Array.from({ length: 250 }, (_, i) => `p${i}`);
+    const filas = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `x${i}` }));
+    const cadenas = [cadena({ data: filas(100) }), cadena({ data: filas(70) }), cadena({ data: filas(50) })];
+    for (const c of cadenas) fromMock.mockReturnValueOnce(c);
+    expect(await marcarEstado(ids, "descartado", ["listo"])).toBe(220);
+    expect(fromMock).toHaveBeenCalledTimes(3);
+    expect(cadenas[0].in).toHaveBeenCalledWith("id", ids.slice(0, 100));
+    expect(cadenas[1].in).toHaveBeenCalledWith("id", ids.slice(100, 200));
+    expect(cadenas[2].in).toHaveBeenCalledWith("id", ids.slice(200));
+    for (const c of cadenas) expect(c.in).toHaveBeenCalledWith("status", ["listo"]);
+  });
+
+  test("devuelve null si un trozo falla", async () => {
+    const ids = Array.from({ length: 250 }, (_, i) => `p${i}`);
+    fromMock
+      .mockReturnValueOnce(cadena({ data: [{ id: "a" }] }))
+      .mockReturnValueOnce(cadena({ data: null, error: { message: "boom" } }))
+      .mockReturnValueOnce(cadena({ data: [{ id: "c" }] }));
+    expect(await marcarEstado(ids, "descartado")).toBeNull();
+  });
+
+  test("sin ids no toca la base", async () => {
+    expect(await marcarEstado([], "descartado")).toBe(0);
+    expect(fromMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("enlazarLead", () => {
+  test("solo enlaza una fila a la que ya se le escribió", async () => {
+    const c = cadena({});
+    fromMock.mockReturnValue(c);
+    await enlazarLead("p1", "lead1");
+    expect(c.update).toHaveBeenCalledWith({ lead_id: "lead1", status: "respondido" });
+    expect(c.eq).toHaveBeenCalledWith("id", "p1");
+    expect(c.in).toHaveBeenCalledWith("status", ["enviado", "respondido"]);
+  });
+});
+
+describe("borrarPlantilla", () => {
+  test("dice si se pudo borrar", async () => {
+    fromMock.mockReturnValueOnce(cadena({}));
+    expect(await borrarPlantilla("t1")).toBe(true);
+    fromMock.mockReturnValueOnce(cadena({ error: { message: "boom" } }));
+    expect(await borrarPlantilla("t1")).toBe(false);
+  });
 });
 
 describe("lecturas que fallan en cerrado", () => {
   test("listarSuprimidos lee todas las páginas, en minúsculas", async () => {
     const llena = Array.from({ length: 1000 }, (_, i) => ({ value: `x${i}@a.es` }));
-    fromMock
-      .mockReturnValueOnce(cadena({ data: llena }))
-      .mockReturnValueOnce(cadena({ data: [{ value: "Ultimo@B.es" }] }));
+    const cadenas = [cadena({ data: llena }), cadena({ data: [{ value: "Ultimo@B.es" }] }), cadena({ data: [] })];
+    for (const c of cadenas) fromMock.mockReturnValueOnce(c);
     const r = await listarSuprimidos();
     expect(r?.size).toBe(1001);
     expect(r?.has("ultimo@b.es")).toBe(true);
+    expect(fromMock).toHaveBeenCalledTimes(3);
+    expect(cadenas[2].range).toHaveBeenCalledWith(1001, 2000);
+  });
+
+  // Si el servidor recorta las páginas por debajo de 1000, una página corta no
+  // es la última: parar ahí dejaría fuera parte de la lista de bajas.
+  test("una página corta no es el final: sigue hasta una vacía, sin saltarse filas", async () => {
+    const corta = (desde: number) => Array.from({ length: 500 }, (_, i) => ({ value: `x${desde + i}@a.es` }));
+    const cadenas = [cadena({ data: corta(0) }), cadena({ data: corta(500) }), cadena({ data: [{ value: "fin@a.es" }] }), cadena({ data: [] })];
+    for (const c of cadenas) fromMock.mockReturnValueOnce(c);
+    const r = await listarSuprimidos();
+    expect(r?.size).toBe(1001);
+    expect(r?.has("fin@a.es")).toBe(true);
+    expect(cadenas[1].range).toHaveBeenCalledWith(500, 1499);
+    expect(cadenas[2].range).toHaveBeenCalledWith(1000, 1999);
+  });
+
+  test("si falla una página posterior, no devuelve una lista a medias", async () => {
+    const llena = Array.from({ length: 1000 }, (_, i) => ({ value: `x${i}@a.es` }));
+    fromMock
+      .mockReturnValueOnce(cadena({ data: llena }))
+      .mockReturnValueOnce(cadena({ data: null, error: { message: "boom" } }));
+    expect(await listarSuprimidos()).toBeNull();
   });
 
   test("devuelven null si la consulta falla", async () => {

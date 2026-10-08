@@ -17,6 +17,8 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 export const dynamic = "force-dynamic";
+// Las acciones de esta página son largas: una tanda lee hasta 30 páginas web con 6 s de espera cada una, y un envío múltiple va correo a correo.
+export const maxDuration = 60;
 
 export default async function ProspeccionPage() {
   const [prospectos, busquedas, plantillas, enviadosHoy] = await Promise.all([

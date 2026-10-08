@@ -12,6 +12,12 @@ export const ESTADOS_PROSPECTO = [
 ] as const;
 export type EstadoProspecto = (typeof ESTADOS_PROSPECTO)[number];
 
+/** Estados desde los que se puede descartar a mano: todos menos los que dejan
+ *  constancia de una baja o de un rebote, que no se pisan nunca. */
+export const ESTADOS_DESCARTABLES: EstadoProspecto[] = ESTADOS_PROSPECTO.filter(
+  (e) => e !== "baja" && e !== "rebotado" && e !== "descartado",
+);
+
 export type FuenteProspecto = "places" | "borme";
 export type TipoEmail = "generica" | "personal";
 
