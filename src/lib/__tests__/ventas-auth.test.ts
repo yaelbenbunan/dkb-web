@@ -94,6 +94,33 @@ describe("helpers por marca", () => {
     });
   });
 
+  describe("slug inexistente frente a ajeno", () => {
+    test("la clienta recibe lo mismo en ambos casos (no se revelan marcas ajenas)", async () => {
+      sesionDe({ id: "u1", rol: "cliente", activa: true, marca_id: "m1" });
+      getMarcaPorSlugMock.mockResolvedValue({ id: "m2", slug: "dinkbit" });
+      const ajena = await accesoMarcaAccion("dinkbit", "leads");
+      getMarcaPorSlugMock.mockResolvedValue(null);
+      const inexistente = await accesoMarcaAccion("nada", "leads");
+      expect(inexistente).toEqual({ ok: false, error: "No tienes permiso para esto." });
+      expect(inexistente).toEqual(ajena);
+    });
+    test("la clienta es redirigida igual en la página, exista o no la marca", async () => {
+      sesionDe({ id: "u1", rol: "cliente", activa: true, marca_id: "m1" });
+      getMarcaPorSlugMock.mockResolvedValue({ id: "m2", slug: "dinkbit" });
+      await expect(requireAccesoMarca("dinkbit", "leads")).rejects.toThrow("NEXT_REDIRECT:/panel/ventas?aviso=permiso");
+      getMarcaPorSlugMock.mockResolvedValue(null);
+      await expect(requireAccesoMarca("nada", "leads")).rejects.toThrow("NEXT_REDIRECT:/panel/ventas?aviso=permiso");
+    });
+    test("admin y comercial siguen viendo el 404 en la página", async () => {
+      getMarcaPorSlugMock.mockResolvedValue(null);
+      for (const rol of ["admin", "comercial"]) {
+        sesionDe({ id: "u1", rol, activa: true, marca_id: null });
+        await expect(requireAccesoMarca("nada", "leads")).rejects.toThrow("NEXT_NOT_FOUND");
+        expect(await accesoMarcaAccion("nada", "leads")).toEqual({ ok: false, error: "Marca no encontrada." });
+      }
+    });
+  });
+
   describe("requireAccesoMarca", () => {
     test("clienta en sección prohibida: redirige al panel con aviso", async () => {
       sesionDe({ id: "u1", rol: "cliente", activa: true, marca_id: "m1" });

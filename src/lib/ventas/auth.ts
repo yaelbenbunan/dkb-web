@@ -43,11 +43,21 @@ export async function requireUsuaria(rol?: "admin" | "equipo"): Promise<Usuaria>
   return usuaria as Usuaria;
 }
 
+/** Admin y comercial ven todas las marcas, así que para ellas un slug que no existe
+ *  es un error legítimo. Para cualquier otro rol (la clienta) se responde igual que
+ *  ante una marca ajena: si no, el 404 delataría qué marcas existen. */
+function veTodasLasMarcas(usuaria: Usuaria): boolean {
+  return usuaria.rol === "admin" || usuaria.rol === "comercial";
+}
+
 /** Para páginas bajo /panel/ventas/[slug]: usuaria + marca, o redirige. */
 export async function requireAccesoMarca(slug: string, seccion: SeccionMarca): Promise<{ usuaria: Usuaria; marca: Marca }> {
   const usuaria = await requireUsuaria();
   const marca = await getMarcaPorSlug(slug);
-  if (!marca) notFound();
+  if (!marca) {
+    if (!veTodasLasMarcas(usuaria)) redirect("/panel/ventas?aviso=permiso");
+    notFound();
+  }
   if (evaluarAccesoMarca(usuaria, marca.id, seccion) !== "ok") redirect("/panel/ventas?aviso=permiso");
   return { usuaria, marca };
 }
@@ -59,7 +69,7 @@ export async function accesoMarcaAccion(
 ): Promise<{ ok: true; usuaria: Usuaria; marca: Marca } | { ok: false; error: string }> {
   const usuaria = await requireUsuaria();
   const marca = await getMarcaPorSlug(slug);
-  if (!marca) return { ok: false, error: "Marca no encontrada." };
+  if (!marca) return { ok: false, error: veTodasLasMarcas(usuaria) ? "Marca no encontrada." : "No tienes permiso para esto." };
   if (evaluarAccesoMarca(usuaria, marca.id, seccion) !== "ok") return { ok: false, error: "No tienes permiso para esto." };
   return { ok: true, usuaria, marca };
 }
