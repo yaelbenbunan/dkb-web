@@ -184,9 +184,9 @@ export function tiposNegocioDeMarca(slug: string, actual?: TipoNegocio | null): 
   return actual && !tipos.includes(actual) ? [...tipos, actual] : tipos;
 }
 
-export const ROLES = ["admin", "comercial"] as const;
+export const ROLES = ["admin", "comercial", "cliente"] as const;
 export type Rol = (typeof ROLES)[number];
-export const ROL_LABELS: Record<Rol, string> = { admin: "Admin", comercial: "Comercial" };
+export const ROL_LABELS: Record<Rol, string> = { admin: "Admin", comercial: "Comercial", cliente: "Cliente" };
 
 export const ORIGENES = ["lista", "anuncio", "manual"] as const;
 export type Origen = (typeof ORIGENES)[number];

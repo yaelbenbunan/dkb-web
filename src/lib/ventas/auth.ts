@@ -1,10 +1,10 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ventasAuthConfig } from "./auth-config";
-import { getUsuaria, type Usuaria } from "./db";
-import { evaluarAcceso } from "./rutas";
+import { getMarcaPorSlug, getUsuaria, type Marca, type Usuaria } from "./db";
+import { evaluarAcceso, evaluarAccesoMarca, type SeccionMarca } from "./rutas";
 
 export async function crearClienteSesion() {
   const config = ventasAuthConfig();
@@ -35,10 +35,31 @@ export async function getUsuariaActual(): Promise<Usuaria | null> {
 }
 
 /** Para páginas y server actions: devuelve la usuaria o redirige. */
-export async function requireUsuaria(rol?: "admin"): Promise<Usuaria> {
+export async function requireUsuaria(rol?: "admin" | "equipo"): Promise<Usuaria> {
   const usuaria = await getUsuariaActual();
   const acceso = evaluarAcceso(usuaria, rol);
   if (acceso === "login") redirect("/panel/ventas/login");
   if (acceso === "permiso") redirect("/panel/ventas?aviso=permiso");
   return usuaria as Usuaria;
+}
+
+/** Para páginas bajo /panel/ventas/[slug]: usuaria + marca, o redirige. */
+export async function requireAccesoMarca(slug: string, seccion: SeccionMarca): Promise<{ usuaria: Usuaria; marca: Marca }> {
+  const usuaria = await requireUsuaria();
+  const marca = await getMarcaPorSlug(slug);
+  if (!marca) notFound();
+  if (evaluarAccesoMarca(usuaria, marca.id, seccion) !== "ok") redirect("/panel/ventas?aviso=permiso");
+  return { usuaria, marca };
+}
+
+/** Para server actions: sin sesión redirige; sin permiso o sin marca devuelve el error. */
+export async function accesoMarcaAccion(
+  slug: string,
+  seccion: SeccionMarca,
+): Promise<{ ok: true; usuaria: Usuaria; marca: Marca } | { ok: false; error: string }> {
+  const usuaria = await requireUsuaria();
+  const marca = await getMarcaPorSlug(slug);
+  if (!marca) return { ok: false, error: "Marca no encontrada." };
+  if (evaluarAccesoMarca(usuaria, marca.id, seccion) !== "ok") return { ok: false, error: "No tienes permiso para esto." };
+  return { ok: true, usuaria, marca };
 }

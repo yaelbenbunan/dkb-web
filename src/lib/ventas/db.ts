@@ -28,6 +28,7 @@ export interface Usuaria {
   nombre: string;
   email: string;
   rol: Rol;
+  marca_id: string | null;
   activa: boolean;
   created_at: string;
 }
@@ -190,6 +191,11 @@ export async function listMarcas(): Promise<Marca[]> {
 export async function getMarcaPorSlug(slug: string): Promise<Marca | null> {
   const r = await db().from("ventas_marcas").select("*").eq("slug", slug).maybeSingle();
   return comprobar(r as Respuesta<Marca>, "getMarcaPorSlug");
+}
+
+export async function getMarcaPorId(id: string): Promise<Marca | null> {
+  const r = await db().from("ventas_marcas").select("*").eq("id", id).maybeSingle();
+  return comprobar(r as Respuesta<Marca>, "getMarcaPorId");
 }
 
 export async function crearMarca(m: { nombre: string; slug: string }): Promise<{ ok: true; marca: Marca } | { ok: false; error: string }> {

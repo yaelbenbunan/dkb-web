@@ -24,8 +24,25 @@ export function destinoTrasLogin(raw: unknown): string {
 
 export type Acceso = "ok" | "login" | "permiso";
 
-export function evaluarAcceso(usuaria: { rol: string; activa: boolean } | null, rol?: "admin"): Acceso {
+/** «equipo» = admin o comercial: lo que la clienta nunca debe tocar. */
+export function evaluarAcceso(usuaria: { rol: string; activa: boolean } | null, rol?: "admin" | "equipo"): Acceso {
   if (!usuaria || !usuaria.activa) return "login";
   if (rol === "admin" && usuaria.rol !== "admin") return "permiso";
+  if (rol === "equipo" && usuaria.rol !== "admin" && usuaria.rol !== "comercial") return "permiso";
   return "ok";
+}
+
+export type SeccionMarca = "resumen" | "tablero" | "leads" | "tareas" | "secuencias" | "conversaciones" | "condiciones";
+
+/** Lo único que ve una usuaria con rol «cliente», y solo en su marca. */
+export const SECCIONES_CLIENTE: readonly SeccionMarca[] = ["resumen", "tablero", "leads", "tareas"];
+
+export function evaluarAccesoMarca(
+  usuaria: { rol: string; activa: boolean; marca_id: string | null } | null,
+  marcaId: string,
+  seccion: SeccionMarca,
+): Acceso {
+  if (!usuaria || !usuaria.activa) return "login";
+  if (usuaria.rol !== "cliente") return "ok";
+  return usuaria.marca_id === marcaId && SECCIONES_CLIENTE.includes(seccion) ? "ok" : "permiso";
 }
