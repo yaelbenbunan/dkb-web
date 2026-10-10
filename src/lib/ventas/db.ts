@@ -218,6 +218,16 @@ export async function regenerarSecretoWebhook(id: string): Promise<Escritura> {
   return escritura(await db().from("ventas_marcas").update({ webhook_secret: secreto }).eq("id", id), "regenerarSecretoWebhook");
 }
 
+/** La nota con texto más reciente de cada lead de la marca (de cualquier tipo de actividad). */
+export async function listUltimasNotas(marcaId: string): Promise<Map<string, { texto: string; fecha: string }>> {
+  type Fila = { lead_id: string; nota: string; created_at: string };
+  const filas = await todas<Fila>(
+    (d, h) => db().rpc("ventas_ultimas_notas", { p_marca_id: marcaId }).order("lead_id").range(d, h) as PromiseLike<Respuesta<Fila[]>>,
+    "listUltimasNotas",
+  );
+  return new Map(filas.map((f) => [f.lead_id, { texto: f.nota, fecha: f.created_at }]));
+}
+
 /* Exclusiones ------------------------------------------------------------- */
 
 export async function listExclusiones(marcaId: string): Promise<Exclusion[]> {

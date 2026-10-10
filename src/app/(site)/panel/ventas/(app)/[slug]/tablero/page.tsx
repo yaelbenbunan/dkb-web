@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { requireAccesoMarca } from "@/lib/ventas/auth";
-import { listLeads, listUsuarias } from "@/lib/ventas/db";
+import { listLeads, listUltimasNotas, listUsuarias } from "@/lib/ventas/db";
 import { TIPO_NEGOCIO_LABELS } from "@/lib/ventas/dominio";
-import { ahoraMadrid } from "@/lib/ventas/metricas";
+import { ahoraMadrid, formatoFechaHora } from "@/lib/ventas/metricas";
 import { estadoSeguimiento, iniciales } from "@/lib/ventas/tablero";
 import { MarcaCabecera } from "../../../_componentes/MarcaCabecera";
 import { Tablero, type TarjetaLead } from "./Tablero";
@@ -21,9 +21,10 @@ export default async function TableroPage({
   const q = (sp.q ?? "").trim().toLowerCase();
   const ahora = ahoraMadrid();
 
-  const [todos, usuarias] = await Promise.all([
+  const [todos, usuarias, notas] = await Promise.all([
     listLeads(marca.id, { asignadaA: mias ? usuaria.id : undefined }),
     listUsuarias(),
+    listUltimasNotas(marca.id),
   ]);
   const nombres = new Map(usuarias.map((u) => [u.id, u.nombre]));
 
@@ -33,6 +34,7 @@ export default async function TableroPage({
     .filter((l) => !q || [l.negocio, l.ciudad, l.contacto].some((v) => v?.toLowerCase().includes(q)))
     .map((l) => {
       const nombre = l.asignada_a ? nombres.get(l.asignada_a) : undefined;
+      const nota = notas.get(l.id);
       return {
         id: l.id,
         negocio: l.negocio,
@@ -44,6 +46,8 @@ export default async function TableroPage({
         proximo_seguimiento: l.proximo_seguimiento,
         proximo_seguimiento_hora: l.proximo_seguimiento_hora ?? null,
         created_at: l.created_at,
+        // DD/MM en hora de Madrid: los 5 primeros caracteres de «DD/MM/YYYY, HH:MM».
+        ultima_nota: nota ? { texto: nota.texto, fecha: formatoFechaHora(nota.fecha).slice(0, 5) } : null,
         asignada: nombre ? { nombre, iniciales: iniciales(nombre) } : null,
       };
     });

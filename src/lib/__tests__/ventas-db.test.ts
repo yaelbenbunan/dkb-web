@@ -10,7 +10,7 @@ vi.mock("../supabase-admin", () => ({
   getSupabaseAdmin: () => ({ rpc: rpcMock, from: fromMock, auth: { admin: authAdmin } }),
 }));
 
-import { crearLeads, registrarActividad, crearUsuariaCompleta, listLeads, listSecuencias } from "../ventas/db";
+import { crearLeads, registrarActividad, crearUsuariaCompleta, listLeads, listSecuencias, listUltimasNotas } from "../ventas/db";
 
 const LEAD = { negocio: "Gym", tipo_negocio: null, contacto: "", telefono: "600111222", email: "", ciudad: "", cif: "", web: "", excluido: false };
 
@@ -118,5 +118,23 @@ describe("listSecuencias", () => {
     fromMock.mockReset().mockReturnValue(builder);
     const filas = await listSecuencias("m1");
     expect(filas[0].anuncios).toEqual(["120252112386740343"]);
+  });
+});
+
+describe("listUltimasNotas", () => {
+  test("devuelve un mapa por lead y pagina", async () => {
+    const range = vi.fn().mockResolvedValue({
+      data: [
+        { lead_id: "l1", nota: "Llamar el martes", created_at: "2026-10-05T09:00:00Z" },
+        { lead_id: "l2", nota: "Pide catálogo", created_at: "2026-10-06T09:00:00Z" },
+      ],
+      error: null,
+    });
+    const order = vi.fn(() => ({ range }));
+    rpcMock.mockReset().mockReturnValue({ order });
+    const notas = await listUltimasNotas("m1");
+    expect(rpcMock).toHaveBeenCalledWith("ventas_ultimas_notas", { p_marca_id: "m1" });
+    expect(notas.get("l1")).toEqual({ texto: "Llamar el martes", fecha: "2026-10-05T09:00:00Z" });
+    expect(notas.size).toBe(2);
   });
 });

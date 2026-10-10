@@ -62,6 +62,7 @@ export interface TarjetaLead {
   proximo_seguimiento: string | null;
   proximo_seguimiento_hora: string | null;
   created_at: string;
+  ultima_nota: { texto: string; fecha: string } | null;
   asignada: { nombre: string; iniciales: string } | null;
 }
 
@@ -394,6 +395,29 @@ function Tarjeta({
             </span>
           )}
         </div>
+      )}
+
+      {lead.ultima_nota && (
+        <p
+          title={lead.ultima_nota.texto}
+          style={{
+            margin: 0,
+            fontSize: 12,
+            lineHeight: 1.35,
+            color: "#334155",
+            background: "#f8fafc",
+            borderRadius: 6,
+            padding: "5px 7px",
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+            overflowWrap: "anywhere",
+          }}
+        >
+          <span style={{ color: "#64748b", fontWeight: 600 }}>{lead.ultima_nota.fecha} · </span>
+          {lead.ultima_nota.texto}
+        </p>
       )}
 
       <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 6 }}>
