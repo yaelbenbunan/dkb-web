@@ -22,7 +22,7 @@ export function EliminarLead({ slug, leadId, negocio }: { slug: string; leadId: 
   return (
     <form action={accion} style={{ ...tarjeta, borderColor: "#fecaca", display: "flex", flexDirection: "column", gap: 10 }}>
       <p style={{ margin: 0, fontSize: 13, color: "#7f1d1d" }}>
-        Se borra el lead con todo su historial y sus conversaciones de WhatsApp. No se puede deshacer y deja de contar en el resumen y el embudo.
+        Se borra el lead con todo su historial, sus conversaciones de WhatsApp y las tareas ligadas a él. No se puede deshacer y deja de contar en el resumen y el embudo.
       </p>
       <label style={etiqueta}>
         Escribe «{negocio}» para confirmar

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireAccesoMarca } from "@/lib/ventas/auth";
 import { listLeads, listLlamadasMarca, listTareasMarca, listUsuarias } from "@/lib/ventas/db";
+import { esFaseActiva } from "@/lib/ventas/dominio";
 import { esAsignableEnMarca } from "@/lib/ventas/rutas";
 import { ahoraMadrid } from "@/lib/ventas/metricas";
 import { agruparTareas, contarPrimerContacto, leadsQuePidenMuestras, tareasAutomaticas, tareasManuales, type SeccionTarea } from "@/lib/ventas/tareas";
@@ -42,6 +43,11 @@ export default async function TareasPage({
   // Solo a quien se le puede asignar en esta marca; `nombres` sigue con todas para mostrar responsables.
   const activas = usuarias.filter((u) => esAsignableEnMarca(u, marca.id)).map((u) => ({ id: u.id, nombre: u.nombre }));
   const nombres = Object.fromEntries(usuarias.map((u) => [u.id, u.nombre]));
+  // Solo leads en fase activa, por nombre: una tarea sobre un lead cerrado no tiene dónde verse.
+  const leadsParaTarea = leads
+    .filter((l) => esFaseActiva(l.fase))
+    .sort((a, b) => a.negocio.localeCompare(b.negocio, "es"))
+    .map((l) => ({ id: l.id, negocio: l.negocio }));
   // «de» filtra por responsable: «yo», el id de una usuaria, o vacío para todas.
   const de = sp.de === "yo" ? usuaria.id : activas.some((u) => u.id === sp.de) ? sp.de : undefined;
 
@@ -84,7 +90,7 @@ export default async function TareasPage({
           <Link href={url({ hechas: verHechas ? undefined : "1" })} style={{ ...chip(verHechas), marginLeft: "auto" }}>Hechas (30 días)</Link>
         </div>
 
-        <NuevaTareaForm slug={slug} usuarias={activas} leads={leads.map((l) => ({ id: l.id, negocio: l.negocio }))} yo={usuaria.id} />
+        <NuevaTareaForm slug={slug} usuarias={activas} leads={leadsParaTarea} yo={usuaria.id} />
 
         {sinContactar > 0 && (
           <Link href={`/panel/ventas/${slug}/leads?fase=nuevo`} style={{ ...tarjeta, textDecoration: "none", color: "#0f172a", fontSize: 14 }}>

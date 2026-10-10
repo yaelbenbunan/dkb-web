@@ -63,6 +63,15 @@ describe("acciones de usuarias", () => {
     expect(m.crearUsuariaCompleta).not.toHaveBeenCalled();
   });
 
+  test("crea una clienta con una marca que existe y le pasa el marca_id", async () => {
+    const MARCA_ID = "3f0c2a4e-1b2c-4d5e-8f90-123456789abc";
+    m.getMarcaPorId.mockResolvedValue({ id: MARCA_ID, slug: "hydrup" });
+    const r = await crearUsuariaAction(null, fd({ nombre: "Ana", email: "Ana@Hydrup.es", password: "1234567890ab", rol: "cliente", marca_id: MARCA_ID }));
+    expect(r.ok).toBe(true);
+    expect(m.getMarcaPorId).toHaveBeenCalledWith(MARCA_ID);
+    expect(m.crearUsuariaCompleta).toHaveBeenCalledWith({ nombre: "Ana", email: "ana@hydrup.es", password: "1234567890ab", rol: "cliente", marca_id: MARCA_ID });
+  });
+
   test("una admin no puede desactivarse a sí misma", async () => {
     expect(await setUsuariaActivaAction("a1", false)).toEqual({ ok: false, error: "No puedes desactivar tu propia cuenta." });
     expect(m.setUsuariaActiva).not.toHaveBeenCalled();
