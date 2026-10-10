@@ -1,9 +1,8 @@
-import { requireUsuaria } from "@/lib/ventas/auth";
+import { requireAccesoMarca } from "@/lib/ventas/auth";
 import { listLeads } from "@/lib/ventas/db";
 import { botonesDePayload, etiquetaVentana, extracto } from "@/lib/whatsapp/bandeja";
 import { getConversacionPorId, listConversaciones, listMensajes } from "@/lib/whatsapp/db";
 import { telefonoDeWaId, ventanaAbierta } from "@/lib/whatsapp/ventana";
-import { cargarMarca } from "../../../_componentes/cargarMarca";
 import { MarcaCabecera } from "../../../_componentes/MarcaCabecera";
 import { Conversaciones, type Hilo, type TarjetaConversacion } from "./Conversaciones";
 
@@ -25,9 +24,8 @@ export default async function ConversacionesPage({
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ c?: string }>;
 }) {
-  await requireUsuaria();
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
-  const marca = await cargarMarca(slug);
+  const { usuaria, marca } = await requireAccesoMarca(slug, "conversaciones");
 
   const [conversaciones, leads] = await Promise.all([listConversaciones(marca.id), listLeads(marca.id)]);
   const nombres = new Map(leads.map((l) => [l.id, l.contacto || l.negocio]));
@@ -68,7 +66,7 @@ export default async function ConversacionesPage({
 
   return (
     <div>
-      <MarcaCabecera marca={marca} activa="conversaciones" />
+      <MarcaCabecera marca={marca} activa="conversaciones" rol={usuaria.rol} />
       <Conversaciones slug={slug} conversaciones={lista} hilo={hilo} />
     </div>
   );

@@ -63,6 +63,13 @@ describe("evaluarAccesoMarca", () => {
     expect(evaluarAccesoMarca({ ...cliente, marca_id: null }, "m1", "leads")).toBe("permiso");
   });
 
+  test("un rol desconocido no entra en ninguna sección", () => {
+    const invitada = { rol: "invitada", activa: true, marca_id: "m1" };
+    for (const s of ["resumen", "tablero", "leads", "tareas", "secuencias", "conversaciones", "condiciones"] as const) {
+      expect(evaluarAccesoMarca(invitada, "m1", s)).toBe("permiso");
+    }
+  });
+
   test("sin sesión o desactivada va al login", () => {
     expect(evaluarAccesoMarca(null, "m1", "leads")).toBe("login");
     expect(evaluarAccesoMarca({ ...cliente, activa: false }, "m1", "leads")).toBe("login");

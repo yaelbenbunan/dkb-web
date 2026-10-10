@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireUsuaria } from "@/lib/ventas/auth";
+import { requireAccesoMarca } from "@/lib/ventas/auth";
 import { getLead, listActividadLead, listUsuarias } from "@/lib/ventas/db";
 import { ORIGEN_LABELS } from "@/lib/ventas/dominio";
 import { describirActividad } from "@/lib/ventas/historial";
 import { formatoFecha, formatoFechaHora } from "@/lib/ventas/metricas";
-import { cargarMarca } from "../../../../_componentes/cargarMarca";
 import { FaseEtiqueta } from "../../../../_componentes/FaseEtiqueta";
 import { MarcaCabecera } from "../../../../_componentes/MarcaCabecera";
 import { tarjeta, titulo } from "../../../../_componentes/estilos";
@@ -14,9 +13,8 @@ import { Asignacion } from "./Asignacion";
 import { DatosLead } from "./DatosLead";
 
 export default async function FichaLeadPage({ params }: { params: Promise<{ slug: string; id: string }> }) {
-  await requireUsuaria();
   const { slug, id } = await params;
-  const marca = await cargarMarca(slug);
+  const { usuaria, marca } = await requireAccesoMarca(slug, "leads");
   const lead = await getLead(id);
   if (!lead || lead.marca_id !== marca.id) notFound();
 
@@ -26,7 +24,7 @@ export default async function FichaLeadPage({ params }: { params: Promise<{ slug
 
   return (
     <div>
-      <MarcaCabecera marca={marca} activa="leads" />
+      <MarcaCabecera marca={marca} activa="leads" rol={usuaria.rol} />
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
         <Link href={`/panel/ventas/${slug}/leads`} style={{ fontSize: 13, color: "#64748b", textDecoration: "none" }}>← Leads</Link>
         <h2 style={{ margin: 0, fontSize: 22 }}>{lead.negocio}</h2>

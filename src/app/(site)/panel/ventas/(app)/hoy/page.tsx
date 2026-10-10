@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireUsuaria } from "@/lib/ventas/auth";
-import { listSeguimientosUsuaria, type LeadConMarca } from "@/lib/ventas/db";
+import { getMarcaPorId, listSeguimientosUsuaria, type LeadConMarca } from "@/lib/ventas/db";
 import { TIPO_NEGOCIO_LABELS } from "@/lib/ventas/dominio";
 import { agruparSeguimientos, formatoFecha, hoyMadrid } from "@/lib/ventas/metricas";
 import { FaseEtiqueta } from "../../_componentes/FaseEtiqueta";
@@ -44,6 +45,10 @@ function Tabla({ leads, mostrarFecha }: { leads: LeadConMarca[]; mostrarFecha: b
 
 export default async function MiDiaPage() {
   const usuaria = await requireUsuaria();
+  if (usuaria.rol === "cliente") {
+    const marca = usuaria.marca_id ? await getMarcaPorId(usuaria.marca_id) : null;
+    redirect(marca ? `/panel/ventas/${marca.slug}` : "/panel/ventas/login?aviso=sin-marca");
+  }
   const hoy = hoyMadrid();
   const grupos = agruparSeguimientos(await listSeguimientosUsuaria(usuaria.id, hoy), hoy);
 

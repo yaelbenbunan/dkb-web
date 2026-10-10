@@ -1,8 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireUsuaria } from "@/lib/ventas/auth";
-import { getMarcaPorSlug } from "@/lib/ventas/db";
+import { accesoMarcaAccion } from "@/lib/ventas/auth";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
 import { getConversacionPorId, guardarSaliente } from "@/lib/whatsapp/db";
 import { crearMensajero } from "@/lib/whatsapp/mensajero";
@@ -14,7 +13,7 @@ const LARGO_MAXIMO = 1024;
  * Responde a una conversación de WhatsApp desde la bandeja.
  *
  * El `slug` va delante, igual que en el resto de acciones del panel
- * (`leadDeMarca` en `acciones-leads.ts`): sirve para resolver la marca y, con
+ * (`accesoALead` en `acciones-leads.ts`): sirve para resolver la marca y, con
  * ella, comprobar que la conversación es suya. Esa comprobación —y la de la
  * ventana— se hace SIEMPRE con lo que dice la base de datos (`getConversacionPorId`,
  * una búsqueda puntual, no un escaneo de las hasta 500 conversaciones de la
@@ -22,14 +21,14 @@ const LARGO_MAXIMO = 1024;
  * navegador no es una barrera, es solo una ayuda visual.
  */
 export async function responder(slug: string, conversacionId: string, texto: string): Promise<ResultadoAccion> {
-  await requireUsuaria();
+  // Primero el permiso: una clienta no llega a la bandeja ni llamando a mano.
+  const acceso = await accesoMarcaAccion(slug, "conversaciones");
+  if (!acceso.ok) return acceso;
+  const marca = acceso.marca;
 
   const limpio = texto.trim();
   if (!limpio) return { ok: false, error: "Escribe algo antes de enviar." };
   if (limpio.length > LARGO_MAXIMO) return { ok: false, error: `El mensaje no puede pasar de ${LARGO_MAXIMO} caracteres.` };
-
-  const marca = await getMarcaPorSlug(slug);
-  if (!marca) return { ok: false, error: "Marca no encontrada." };
 
   const conversacion = await getConversacionPorId(conversacionId);
   if (!conversacion || conversacion.marca_id !== marca.id) return { ok: false, error: "Conversación no encontrada." };

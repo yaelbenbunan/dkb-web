@@ -1,17 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireUsuaria } from "@/lib/ventas/auth";
+import { requireAccesoMarca } from "@/lib/ventas/auth";
 import { getSecuencia } from "@/lib/ventas/db";
 import { parsearSecuencia } from "@/lib/ventas/secuencias";
-import { cargarMarca } from "../../../../_componentes/cargarMarca";
 import { MarcaCabecera } from "../../../../_componentes/MarcaCabecera";
 import { tarjeta } from "../../../../_componentes/estilos";
 import { EditorSecuencia } from "./EditorSecuencia";
 
 export default async function EditorSecuenciaPage({ params }: { params: Promise<{ slug: string; id: string }> }) {
-  const usuaria = await requireUsuaria();
   const { slug, id } = await params;
-  const marca = await cargarMarca(slug);
+  const { usuaria, marca } = await requireAccesoMarca(slug, "secuencias");
   const fila = await getSecuencia(id);
   if (!fila || fila.marca_id !== marca.id) notFound();
 
@@ -19,7 +17,7 @@ export default async function EditorSecuenciaPage({ params }: { params: Promise<
 
   return (
     <div>
-      <MarcaCabecera marca={marca} activa="secuencias" />
+      <MarcaCabecera marca={marca} activa="secuencias" rol={usuaria.rol} />
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <Link href={`/panel/ventas/${slug}/secuencias`} style={{ fontSize: 13, color: "#64748b", textDecoration: "none" }}>← Secuencias</Link>
 

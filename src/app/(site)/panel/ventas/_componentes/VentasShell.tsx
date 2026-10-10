@@ -35,8 +35,12 @@ export function VentasShell({ usuaria, children }: { usuaria: Usuaria; children:
         <nav style={{ display: "flex", alignItems: "baseline", gap: 18, flexWrap: "wrap" }}>
           <span style={{ fontWeight: 800, letterSpacing: 2, color: "#187bef", textTransform: "uppercase", fontSize: 12 }}>dinkbit</span>
           <strong style={{ fontSize: 16 }}>Ventas B2B</strong>
-          <Link href="/panel/ventas" style={enlace}>Panel</Link>
-          <Link href="/panel/ventas/hoy" style={enlace}>Mi día</Link>
+          {usuaria.rol !== "cliente" && (
+            <>
+              <Link href="/panel/ventas" style={enlace}>Panel</Link>
+              <Link href="/panel/ventas/hoy" style={enlace}>Mi día</Link>
+            </>
+          )}
           {usuaria.rol === "admin" && <Link href="/panel/ventas/usuarias" style={enlace}>Usuarias</Link>}
         </nav>
         <form action={ventasLogout} style={{ display: "flex", alignItems: "center", gap: 10 }}>

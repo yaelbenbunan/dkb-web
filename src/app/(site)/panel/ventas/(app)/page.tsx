@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireUsuaria } from "@/lib/ventas/auth";
-import { listMarcas } from "@/lib/ventas/db";
+import { getMarcaPorId, listMarcas } from "@/lib/ventas/db";
 import { hoyMadrid } from "@/lib/ventas/metricas";
 import { cargarPanelMarca, mesDeConsulta } from "@/lib/ventas/paneles";
 import { EmbudoVista } from "../_componentes/EmbudoVista";
@@ -19,6 +20,10 @@ function Cifra({ texto, valor, alerta = false }: { texto: string; valor: number;
 
 export default async function PanelVentasPage({ searchParams }: { searchParams: Promise<{ aviso?: string; mes?: string }> }) {
   const usuaria = await requireUsuaria();
+  if (usuaria.rol === "cliente") {
+    const marca = usuaria.marca_id ? await getMarcaPorId(usuaria.marca_id) : null;
+    redirect(marca ? `/panel/ventas/${marca.slug}` : "/panel/ventas/login?aviso=sin-marca");
+  }
   const sp = await searchParams;
   const mes = mesDeConsulta(sp.mes);
   const hoy = hoyMadrid();

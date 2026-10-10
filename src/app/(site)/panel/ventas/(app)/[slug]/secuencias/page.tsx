@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { requireUsuaria } from "@/lib/ventas/auth";
+import { requireAccesoMarca } from "@/lib/ventas/auth";
 import { listSecuencias, type SecuenciaRow } from "@/lib/ventas/db";
 import { formatoFechaHora } from "@/lib/ventas/metricas";
 import { parsearSecuencia } from "@/lib/ventas/secuencias";
-import { cargarMarca } from "../../../_componentes/cargarMarca";
 import { MarcaCabecera } from "../../../_componentes/MarcaCabecera";
 import { tarjeta, td, th } from "../../../_componentes/estilos";
 import { AccionesSecuencia } from "./AccionesSecuencia";
@@ -31,15 +30,14 @@ function EstadoEtiqueta({ estado }: { estado: SecuenciaRow["estado"] }) {
 }
 
 export default async function SecuenciasPage({ params }: { params: Promise<{ slug: string }> }) {
-  const usuaria = await requireUsuaria();
   const { slug } = await params;
-  const marca = await cargarMarca(slug);
+  const { usuaria, marca } = await requireAccesoMarca(slug, "secuencias");
   const admin = usuaria.rol === "admin";
   const filas = await listSecuencias(marca.id);
 
   return (
     <div>
-      <MarcaCabecera marca={marca} activa="secuencias" />
+      <MarcaCabecera marca={marca} activa="secuencias" rol={usuaria.rol} />
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <p style={{ margin: 0, fontSize: 13, color: "#1e40af", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8, padding: "8px 12px" }}>
           Todavía no se envía nada: esto sirve para escribir y probar la conversación.

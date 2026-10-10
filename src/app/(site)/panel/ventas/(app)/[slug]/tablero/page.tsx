@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { requireUsuaria } from "@/lib/ventas/auth";
+import { requireAccesoMarca } from "@/lib/ventas/auth";
 import { listLeads, listUsuarias } from "@/lib/ventas/db";
 import { TIPO_NEGOCIO_LABELS } from "@/lib/ventas/dominio";
 import { hoyMadrid } from "@/lib/ventas/metricas";
 import { estadoSeguimiento, iniciales } from "@/lib/ventas/tablero";
-import { cargarMarca } from "../../../_componentes/cargarMarca";
 import { MarcaCabecera } from "../../../_componentes/MarcaCabecera";
 import { Tablero, type TarjetaLead } from "./Tablero";
 
@@ -15,9 +14,8 @@ export default async function TableroPage({
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ mias?: string; atrasados?: string; q?: string }>;
 }) {
-  const usuaria = await requireUsuaria();
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
-  const marca = await cargarMarca(slug);
+  const { usuaria, marca } = await requireAccesoMarca(slug, "tablero");
   const mias = sp.mias === "1";
   const atrasados = sp.atrasados === "1";
   const q = (sp.q ?? "").trim().toLowerCase();
@@ -69,7 +67,7 @@ export default async function TableroPage({
 
   return (
     <div>
-      <MarcaCabecera marca={marca} activa="tablero" />
+      <MarcaCabecera marca={marca} activa="tablero" rol={usuaria.rol} />
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
           <Link href={filtro({ mias: undefined, atrasados: undefined, q: undefined })} style={chip(!mias && !atrasados && !q)}>Todos</Link>

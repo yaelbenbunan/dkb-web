@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const m = vi.hoisted(() => ({
-  requireUsuaria: vi.fn(),
-  getMarcaPorSlug: vi.fn(),
+  accesoMarcaAccion: vi.fn(),
   getLead: vi.fn(),
   getUsuaria: vi.fn(),
   actualizarDatosLead: vi.fn(),
@@ -21,9 +20,8 @@ const m = vi.hoisted(() => ({
     throw new Error(`NEXT_REDIRECT:${url}`);
   }),
 }));
-vi.mock("@/lib/ventas/auth", () => ({ requireUsuaria: m.requireUsuaria }));
+vi.mock("@/lib/ventas/auth", () => ({ accesoMarcaAccion: m.accesoMarcaAccion }));
 vi.mock("@/lib/ventas/db", () => ({
-  getMarcaPorSlug: m.getMarcaPorSlug,
   getLead: m.getLead,
   getUsuaria: m.getUsuaria,
   actualizarDatosLead: m.actualizarDatosLead,
@@ -70,8 +68,7 @@ function fd(campos: Record<string, string>) {
 
 beforeEach(() => {
   Object.values(m).forEach((f) => f.mockClear());
-  m.requireUsuaria.mockReset().mockResolvedValue(USUARIA);
-  m.getMarcaPorSlug.mockReset().mockResolvedValue(MARCA);
+  m.accesoMarcaAccion.mockReset().mockResolvedValue({ ok: true, usuaria: USUARIA, marca: MARCA });
   m.getLead.mockReset().mockResolvedValue(LEAD);
   m.getUsuaria.mockReset().mockResolvedValue({ id: "u2", activa: true });
   for (const f of [m.actualizarDatosLead, m.asignarLead, m.registrarLlamada, m.marcarMuestrasEnviadas, m.anadirNota, m.cambiarFaseManual, m.moverLead, m.pasarLeadAlEmbudo]) {
@@ -83,7 +80,7 @@ beforeEach(() => {
 
 describe("acciones de leads", () => {
   test("sin sesión no se ejecuta ninguna", async () => {
-    m.requireUsuaria.mockRejectedValue(new Error("NEXT_REDIRECT"));
+    m.accesoMarcaAccion.mockRejectedValue(new Error("NEXT_REDIRECT"));
     await expect(importarLeadsAction("hydrup", null, fd({ csv: "x" }))).rejects.toThrow();
     await expect(registrarLlamadaAction("hydrup", "l1", null, fd({ resultado: "no_contesta" }))).rejects.toThrow();
     await expect(asignarLeadAction("hydrup", "l1", "u2")).rejects.toThrow();
@@ -150,18 +147,18 @@ describe("acciones de leads", () => {
     expect(await previsualizarLeadsAction("hydrup", "negocio\nGym")).toEqual({ ok: true, previa });
     expect(m.previsualizarImportacion).toHaveBeenCalledWith({ marca: MARCA, csv: "negocio\nGym" });
 
-    m.getMarcaPorSlug.mockResolvedValue(null);
+    m.accesoMarcaAccion.mockResolvedValue({ ok: false, error: "Marca no encontrada." });
     expect(await previsualizarLeadsAction("nope", "x")).toEqual({ ok: false, error: "Marca no encontrada." });
 
     m.previsualizarImportacion.mockClear();
-    m.requireUsuaria.mockRejectedValue(new Error("NEXT_REDIRECT"));
+    m.accesoMarcaAccion.mockRejectedValue(new Error("NEXT_REDIRECT"));
     await expect(previsualizarLeadsAction("hydrup", "x")).rejects.toThrow();
     expect(m.previsualizarImportacion).not.toHaveBeenCalled();
   });
 
   describe("moverLeadAction (tablero)", () => {
     test("exige sesión", async () => {
-      m.requireUsuaria.mockRejectedValue(new Error("NEXT_REDIRECT"));
+      m.accesoMarcaAccion.mockRejectedValue(new Error("NEXT_REDIRECT"));
       await expect(moverLeadAction("hydrup", "l1", "contactado")).rejects.toThrow();
       expect(m.moverLead).not.toHaveBeenCalled();
     });
@@ -192,7 +189,7 @@ describe("acciones de leads", () => {
 
   describe("pasarAlEmbudoAction", () => {
     test("exige sesión", async () => {
-      m.requireUsuaria.mockRejectedValue(new Error("NEXT_REDIRECT"));
+      m.accesoMarcaAccion.mockRejectedValue(new Error("NEXT_REDIRECT"));
       await expect(pasarAlEmbudoAction("dinkbit", "l1", null, new FormData())).rejects.toThrow();
       expect(m.pasarLeadAlEmbudo).not.toHaveBeenCalled();
     });
@@ -205,14 +202,14 @@ describe("acciones de leads", () => {
     });
 
     test("un lead de otra marca da no encontrado", async () => {
-      m.getMarcaPorSlug.mockResolvedValue(MARCA_DINKBIT);
+      m.accesoMarcaAccion.mockResolvedValue({ ok: true, usuaria: USUARIA, marca: MARCA_DINKBIT });
       m.getLead.mockResolvedValue({ ...LEAD, marca_id: "otra" });
       expect(await pasarAlEmbudoAction("dinkbit", "l1", null, new FormData())).toEqual({ ok: false, error: "Lead no encontrado." });
       expect(m.pasarLeadAlEmbudo).not.toHaveBeenCalled();
     });
 
     test("delega con la usuaria de la sesión y refresca la marca", async () => {
-      m.getMarcaPorSlug.mockResolvedValue(MARCA_DINKBIT);
+      m.accesoMarcaAccion.mockResolvedValue({ ok: true, usuaria: USUARIA, marca: MARCA_DINKBIT });
       m.getLead.mockResolvedValue({ ...LEAD, marca_id: "m2" });
       m.pasarLeadAlEmbudo.mockResolvedValue({ ok: true, mensaje: "Lead pasado al embudo principal." });
       expect(await pasarAlEmbudoAction("dinkbit", "l1", null, new FormData())).toEqual({ ok: true, mensaje: "Lead pasado al embudo principal." });
@@ -221,11 +218,49 @@ describe("acciones de leads", () => {
     });
 
     test("si el servicio falla se devuelve su error y no se refresca", async () => {
-      m.getMarcaPorSlug.mockResolvedValue(MARCA_DINKBIT);
+      m.accesoMarcaAccion.mockResolvedValue({ ok: true, usuaria: USUARIA, marca: MARCA_DINKBIT });
       m.getLead.mockResolvedValue({ ...LEAD, marca_id: "m2" });
       m.pasarLeadAlEmbudo.mockResolvedValue({ ok: false, error: "No se pudo crear el lead en el embudo principal." });
       expect(await pasarAlEmbudoAction("dinkbit", "l1", null, new FormData())).toEqual({ ok: false, error: "No se pudo crear el lead en el embudo principal." });
       expect(m.revalidatePath).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe("acceso por marca", () => {
+  const SIN_PERMISO = { ok: false, error: "No tienes permiso para esto." };
+
+  test("ninguna acción de leads escribe si el acceso a la marca falla", async () => {
+    m.accesoMarcaAccion.mockResolvedValue(SIN_PERMISO);
+    m.getLead.mockResolvedValue(LEAD);
+
+    expect(await moverLeadAction("dinkbit", "l1", "contactado")).toEqual(SIN_PERMISO);
+    expect(await notaAction("dinkbit", "l1", null, fd({ nota: "hola" }))).toEqual(SIN_PERMISO);
+    expect(await registrarLlamadaAction("dinkbit", "l1", null, fd({ resultado: "interesado" }))).toEqual(SIN_PERMISO);
+    expect(await cambiarFaseAction("dinkbit", "l1", null, fd({ fase: "cliente" }))).toEqual(SIN_PERMISO);
+    expect(await asignarLeadAction("dinkbit", "l1", "u2")).toEqual(SIN_PERMISO);
+    expect(await actualizarLeadAction("dinkbit", "l1", null, fd({ negocio: "X", telefono: "600000000" }))).toEqual(SIN_PERMISO);
+    expect(await crearLeadManualAction("dinkbit", null, fd({ negocio: "X", telefono: "600000000" }))).toEqual(SIN_PERMISO);
+    expect(await muestrasEnviadasAction("dinkbit", "l1", null, fd({ nota: "x" }))).toEqual(SIN_PERMISO);
+    expect(await pasarAlEmbudoAction("dinkbit", "l1", null, new FormData())).toEqual(SIN_PERMISO);
+    expect(await previsualizarLeadsAction("dinkbit", "x")).toEqual(SIN_PERMISO);
+    expect(await importarLeadsAction("dinkbit", null, fd({ csv: "x" }))).toEqual({ ok: false, error: SIN_PERMISO.error, errores: [] });
+
+    for (const escritura of [
+      m.moverLead, m.anadirNota, m.registrarLlamada, m.cambiarFaseManual, m.asignarLead, m.actualizarDatosLead,
+      m.crearLeadManual, m.marcarMuestrasEnviadas, m.pasarLeadAlEmbudo, m.importarLeadsCsv, m.previsualizarImportacion,
+    ]) {
+      expect(escritura).not.toHaveBeenCalled();
+    }
+  });
+
+  test("las acciones piden la sección «leads» (o «tablero» al mover)", async () => {
+    m.getLead.mockResolvedValue(LEAD);
+    m.anadirNota.mockResolvedValue({ ok: true });
+    m.moverLead.mockResolvedValue({ ok: true });
+    await notaAction("hydrup", "l1", null, fd({ nota: "hola" }));
+    expect(m.accesoMarcaAccion).toHaveBeenLastCalledWith("hydrup", "leads");
+    await moverLeadAction("hydrup", "l1", "contactado");
+    expect(m.accesoMarcaAccion).toHaveBeenLastCalledWith("hydrup", "tablero");
   });
 });

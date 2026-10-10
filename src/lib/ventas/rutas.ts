@@ -43,6 +43,8 @@ export function evaluarAccesoMarca(
   seccion: SeccionMarca,
 ): Acceso {
   if (!usuaria || !usuaria.activa) return "login";
-  if (usuaria.rol !== "cliente") return "ok";
+  // Lista cerrada: un rol que no conocemos no hereda el acceso total.
+  if (usuaria.rol === "admin" || usuaria.rol === "comercial") return "ok";
+  if (usuaria.rol !== "cliente") return "permiso";
   return usuaria.marca_id === marcaId && SECCIONES_CLIENTE.includes(seccion) ? "ok" : "permiso";
 }

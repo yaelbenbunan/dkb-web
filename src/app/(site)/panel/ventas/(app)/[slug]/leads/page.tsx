@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { requireUsuaria } from "@/lib/ventas/auth";
+import { requireAccesoMarca } from "@/lib/ventas/auth";
 import { listLeads, listUsuarias } from "@/lib/ventas/db";
 import { FASES, FASE_LABELS, ORIGEN_LABELS, TIPO_NEGOCIO_LABELS, esFase, esFaseActiva } from "@/lib/ventas/dominio";
 import { formatoFecha, hoyMadrid } from "@/lib/ventas/metricas";
-import { cargarMarca } from "../../../_componentes/cargarMarca";
 import { FaseEtiqueta } from "../../../_componentes/FaseEtiqueta";
 import { MarcaCabecera } from "../../../_componentes/MarcaCabecera";
 import { tarjeta, td, th } from "../../../_componentes/estilos";
@@ -17,9 +16,8 @@ export default async function LeadsPage({
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ fase?: string; mias?: string; q?: string }>;
 }) {
-  const usuaria = await requireUsuaria();
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
-  const marca = await cargarMarca(slug);
+  const { usuaria, marca } = await requireAccesoMarca(slug, "leads");
   const fase = esFase(sp.fase) ? sp.fase : undefined;
   const mias = sp.mias === "1";
   const q = (sp.q ?? "").trim().toLowerCase();
@@ -54,7 +52,7 @@ export default async function LeadsPage({
 
   return (
     <div>
-      <MarcaCabecera marca={marca} activa="leads" />
+      <MarcaCabecera marca={marca} activa="leads" rol={usuaria.rol} />
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
           <Link href={filtro({ fase: undefined })} style={chip(!fase)}>Todas</Link>

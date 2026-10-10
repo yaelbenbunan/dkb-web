@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { requireUsuaria } from "@/lib/ventas/auth";
+import { requireAccesoMarca } from "@/lib/ventas/auth";
 import { FASES, FASE_LABELS } from "@/lib/ventas/dominio";
 import { hoyMadrid } from "@/lib/ventas/metricas";
 import { cargarPanelMarca, mesDeConsulta } from "@/lib/ventas/paneles";
-import { cargarMarca } from "../../_componentes/cargarMarca";
 import { EmbudoVista } from "../../_componentes/EmbudoVista";
 import { FaseEtiqueta } from "../../_componentes/FaseEtiqueta";
 import { MarcaCabecera } from "../../_componentes/MarcaCabecera";
@@ -17,9 +16,8 @@ export default async function MarcaResumenPage({
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ mes?: string }>;
 }) {
-  await requireUsuaria();
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
-  const marca = await cargarMarca(slug);
+  const { usuaria, marca } = await requireAccesoMarca(slug, "resumen");
   const mes = mesDeConsulta(sp.mes);
   const { embudo, resumen } = await cargarPanelMarca(marca, mes, hoyMadrid());
 
@@ -33,7 +31,7 @@ export default async function MarcaResumenPage({
 
   return (
     <div>
-      <MarcaCabecera marca={marca} activa="resumen" />
+      <MarcaCabecera marca={marca} activa="resumen" rol={usuaria.rol} />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16 }}>
         <section style={tarjeta}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
