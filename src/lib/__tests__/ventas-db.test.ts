@@ -10,7 +10,7 @@ vi.mock("../supabase-admin", () => ({
   getSupabaseAdmin: () => ({ rpc: rpcMock, from: fromMock, auth: { admin: authAdmin } }),
 }));
 
-import { crearLeads, registrarActividad, crearUsuariaCompleta, listLeads, listSecuencias, listUltimasNotas } from "../ventas/db";
+import { crearLeads, registrarActividad, crearUsuariaCompleta, listLeads, listSecuencias, listUltimasNotas, actualizarTarea } from "../ventas/db";
 
 const LEAD = { negocio: "Gym", tipo_negocio: null, contacto: "", telefono: "600111222", email: "", ciudad: "", cif: "", web: "", excluido: false };
 
@@ -136,5 +136,38 @@ describe("listUltimasNotas", () => {
     expect(rpcMock).toHaveBeenCalledWith("ventas_ultimas_notas", { p_marca_id: "m1" });
     expect(notas.get("l1")).toEqual({ texto: "Llamar el martes", fecha: "2026-10-05T09:00:00Z" });
     expect(notas.size).toBe(2);
+  });
+});
+
+describe("actualizarTarea", () => {
+  function conUpdate() {
+    const eq = vi.fn().mockResolvedValue({ error: null });
+    const update = vi.fn(() => ({ eq }));
+    fromMock.mockReset().mockReturnValue({ update });
+    return { update, eq };
+  }
+
+  test("marcar hecha escribe cuándo y quién", async () => {
+    const { update, eq } = conUpdate();
+    expect(await actualizarTarea("t1", { hecha: { por: "u1" } })).toEqual({ ok: true });
+    const fila = (update.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+    expect(fila.hecha_por).toBe("u1");
+    expect(typeof fila.hecha_at).toBe("string");
+    expect(fila).not.toHaveProperty("asignada_a");
+    expect(eq).toHaveBeenCalledWith("id", "t1");
+  });
+
+  test("deshacer pone cuándo y quién a null", async () => {
+    const { update } = conUpdate();
+    await actualizarTarea("t1", { hecha: null });
+    expect(update).toHaveBeenCalledWith({ hecha_at: null, hecha_por: null });
+  });
+
+  test("reasignar solo toca asignada_a", async () => {
+    const { update } = conUpdate();
+    await actualizarTarea("t1", { asignadaA: "u2" });
+    expect(update).toHaveBeenCalledWith({ asignada_a: "u2" });
+    await actualizarTarea("t1", { asignadaA: null });
+    expect(update).toHaveBeenLastCalledWith({ asignada_a: null });
   });
 });

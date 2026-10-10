@@ -10,6 +10,7 @@ import {
   leerLlamada,
   leerNotaSeguimiento,
   leerCambioFase,
+  leerNuevaTarea,
 } from "../ventas/validacion";
 
 function fd(campos: Record<string, string>): FormData {
@@ -163,5 +164,18 @@ describe("hora de seguimiento", () => {
   });
   test.each(["9:5", "25:00", "12:60", "tarde"])("hora «%s» no válida", (hora) => {
     expect(leerLlamada(fd({ resultado: "interesado", nota: "", proximo_seguimiento: "2026-10-20", proximo_seguimiento_hora: hora }))).toEqual({ ok: false, error: "Hora de seguimiento no válida." });
+  });
+});
+
+describe("leerNuevaTarea", () => {
+  test("solo el título es obligatorio", () => {
+    expect(leerNuevaTarea(fd({ titulo: " Mandar catálogo " }))).toEqual({ ok: true, datos: { titulo: "Mandar catálogo", vence: null, vence_hora: null, asignada_a: null, lead_id: null } });
+    expect(leerNuevaTarea(fd({ titulo: "  " }))).toEqual({ ok: false, error: "Escribe qué hay que hacer." });
+  });
+  test("hora sin fecha: error", () => {
+    expect(leerNuevaTarea(fd({ titulo: "x", vence_hora: "10:00" }))).toEqual({ ok: false, error: "Para poner hora hace falta la fecha." });
+  });
+  test("título de más de 200 caracteres: error", () => {
+    expect(leerNuevaTarea(fd({ titulo: "a".repeat(201) }))).toEqual({ ok: false, error: "El título es demasiado largo." });
   });
 });

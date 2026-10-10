@@ -283,3 +283,32 @@ export function leerCambioFase(fd: FormData): Leido<CambioFase> {
     nota: campo(fd, "nota"),
   });
 }
+
+export interface NuevaTarea {
+  titulo: string;
+  vence: string | null;
+  vence_hora: string | null;
+  asignada_a: string | null;
+  lead_id: string | null;
+}
+
+export function leerNuevaTarea(fd: FormData): Leido<NuevaTarea> {
+  const r = leer(
+    z.object({
+      titulo: z.string().min(1, "Escribe qué hay que hacer.").max(200, "El título es demasiado largo."),
+      vence: proximoSchema,
+      vence_hora: horaSchema,
+      asignada_a: z.uuid("Responsable no válida.").nullable(),
+      lead_id: z.uuid("Lead no válido.").nullable(),
+    }),
+    {
+      titulo: campo(fd, "titulo"),
+      vence: campo(fd, "vence") || null,
+      vence_hora: campo(fd, "vence_hora") || null,
+      asignada_a: campo(fd, "asignada_a") || null,
+      lead_id: campo(fd, "lead_id") || null,
+    },
+  );
+  if (r.ok && r.datos.vence_hora && !r.datos.vence) return { ok: false, error: "Para poner hora hace falta la fecha." };
+  return r;
+}

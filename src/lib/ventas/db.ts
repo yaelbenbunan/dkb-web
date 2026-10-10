@@ -14,6 +14,7 @@ import {
   type TipoNegocio,
 } from "./dominio";
 import type { Contacto, LeadNuevo } from "./leads-csv";
+import type { TareaManual } from "./tareas";
 import type { Condiciones, NuevaExclusion, NuevaUsuaria } from "./validacion";
 
 /**
@@ -442,6 +443,84 @@ export async function listSeguimientosUsuaria(usuariaId: string, hasta: string):
         .order("proximo_seguimiento")
         .range(d, h) as PromiseLike<Respuesta<LeadConMarca[]>>,
     "listSeguimientosUsuaria",
+  );
+}
+
+/* Tareas -------------------------------------------------------------------- */
+
+export async function listTareasMarca(marcaId: string, opciones: { hechasDesde?: string } = {}): Promise<TareaManual[]> {
+  return todas((d, h) => {
+    let q = db().from("ventas_tareas").select("*").eq("marca_id", marcaId);
+    q = opciones.hechasDesde ? q.or(`hecha_at.is.null,hecha_at.gte.${opciones.hechasDesde}`) : q.is("hecha_at", null);
+    return q.order("created_at").range(d, h) as PromiseLike<Respuesta<TareaManual[]>>;
+  }, "listTareasMarca");
+}
+
+export async function listTareasUsuaria(usuariaId: string): Promise<(TareaManual & { marca: { nombre: string; slug: string } | null })[]> {
+  return todas(
+    (d, h) =>
+      db()
+        .from("ventas_tareas")
+        .select("*, marca:ventas_marcas(nombre,slug)")
+        .eq("asignada_a", usuariaId)
+        .is("hecha_at", null)
+        .not("vence", "is", null)
+        .order("vence")
+        .range(d, h) as PromiseLike<Respuesta<(TareaManual & { marca: { nombre: string; slug: string } | null })[]>>,
+    "listTareasUsuaria",
+  );
+}
+
+export async function getTarea(id: string): Promise<TareaManual | null> {
+  const r = await db().from("ventas_tareas").select("*").eq("id", id).maybeSingle();
+  return comprobar(r as Respuesta<TareaManual>, "getTarea");
+}
+
+export async function crearTarea(t: {
+  marcaId: string;
+  leadId: string | null;
+  titulo: string;
+  vence: string | null;
+  venceHora: string | null;
+  asignadaA: string | null;
+  creadaPor: string;
+}): Promise<Escritura> {
+  return escritura(
+    await db().from("ventas_tareas").insert({
+      marca_id: t.marcaId,
+      lead_id: t.leadId,
+      titulo: t.titulo,
+      vence: t.vence,
+      vence_hora: t.venceHora,
+      asignada_a: t.asignadaA,
+      creada_por: t.creadaPor,
+    }),
+    "crearTarea",
+  );
+}
+
+export async function actualizarTarea(id: string, cambios: { hecha?: { por: string } | null; asignadaA?: string | null }): Promise<Escritura> {
+  const fila: Record<string, unknown> = {};
+  if (cambios.hecha !== undefined) {
+    fila.hecha_at = cambios.hecha ? new Date().toISOString() : null;
+    fila.hecha_por = cambios.hecha ? cambios.hecha.por : null;
+  }
+  if (cambios.asignadaA !== undefined) fila.asignada_a = cambios.asignadaA;
+  return escritura(await db().from("ventas_tareas").update(fila).eq("id", id), "actualizarTarea");
+}
+
+/** Llamadas de la marca, de la más antigua a la más reciente (lo que espera `leadsQuePidenMuestras`). */
+export async function listLlamadasMarca(marcaId: string): Promise<{ lead_id: string; resultado: string | null }[]> {
+  return todas(
+    (d, h) =>
+      db()
+        .from("ventas_actividad")
+        .select("lead_id,resultado")
+        .eq("marca_id", marcaId)
+        .eq("tipo", "llamada")
+        .order("created_at")
+        .range(d, h) as PromiseLike<Respuesta<{ lead_id: string; resultado: string | null }[]>>,
+    "listLlamadasMarca",
   );
 }
 
