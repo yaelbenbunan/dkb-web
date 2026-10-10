@@ -516,3 +516,13 @@ export async function registrarImportacion(fila: {
   // El registro es informativo: si falla, los leads ya están guardados.
   if (r.error) console.error("[ventas/db] registrarImportacion:", r.error.message);
 }
+
+/** Borrado definitivo: lead, historial, tareas y conversaciones. Solo de la marca dada. */
+export async function eliminarLeads(marcaId: string, leadIds: string[]): Promise<{ ok: true; borrados: number } | { ok: false; error: string }> {
+  const { data, error } = await db().rpc("ventas_eliminar_leads", { p_marca_id: marcaId, p_lead_ids: leadIds });
+  if (error) {
+    console.error("[ventas/db] eliminarLeads:", error.message);
+    return { ok: false, error: "No se pudo eliminar. Vuelve a intentarlo." };
+  }
+  return { ok: true, borrados: Number(data ?? 0) };
+}

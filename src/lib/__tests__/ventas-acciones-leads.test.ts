@@ -6,6 +6,7 @@ const m = vi.hoisted(() => ({
   getUsuaria: vi.fn(),
   actualizarDatosLead: vi.fn(),
   asignarLead: vi.fn(),
+  eliminarLeads: vi.fn(),
   importarLeadsCsv: vi.fn(),
   previsualizarImportacion: vi.fn(),
   crearLeadManual: vi.fn(),
@@ -26,6 +27,7 @@ vi.mock("@/lib/ventas/db", () => ({
   getUsuaria: m.getUsuaria,
   actualizarDatosLead: m.actualizarDatosLead,
   asignarLead: m.asignarLead,
+  eliminarLeads: m.eliminarLeads,
 }));
 vi.mock("@/lib/ventas/servicios", () => ({
   importarLeadsCsv: m.importarLeadsCsv,
@@ -53,6 +55,7 @@ import {
   cambiarFaseAction,
   moverLeadAction,
   pasarAlEmbudoAction,
+  eliminarLeadAction,
 } from "@/app/(site)/panel/ventas/acciones-leads";
 
 const USUARIA = { id: "u1", rol: "comercial", activa: true };
@@ -262,5 +265,48 @@ describe("acceso por marca", () => {
     expect(m.accesoMarcaAccion).toHaveBeenLastCalledWith("hydrup", "leads");
     await moverLeadAction("hydrup", "l1", "contactado");
     expect(m.accesoMarcaAccion).toHaveBeenLastCalledWith("hydrup", "tablero");
+  });
+});
+
+describe("eliminarLeadAction", () => {
+  const ADMIN = { id: "a1", rol: "admin", activa: true };
+  const confirmacion = (texto: string) => fd({ confirmacion: texto });
+
+  test("solo admin: una comercial o una clienta no borran", async () => {
+    m.getLead.mockResolvedValue({ ...LEAD, negocio: "Bar Paco" });
+    for (const rol of ["comercial", "cliente"]) {
+      m.accesoMarcaAccion.mockResolvedValue({ ok: true, usuaria: { id: "u1", rol, activa: true }, marca: MARCA });
+      expect(await eliminarLeadAction("hydrup", "l1", null, confirmacion("Bar Paco"))).toEqual({ ok: false, error: "Solo una admin puede eliminar leads." });
+    }
+    expect(m.eliminarLeads).not.toHaveBeenCalled();
+  });
+
+  test("lead de otra marca: no encontrado", async () => {
+    m.accesoMarcaAccion.mockResolvedValue({ ok: true, usuaria: ADMIN, marca: MARCA });
+    m.getLead.mockResolvedValue({ ...LEAD, marca_id: "m2", negocio: "Bar Paco" });
+    expect(await eliminarLeadAction("hydrup", "l1", null, confirmacion("Bar Paco"))).toEqual({ ok: false, error: "Lead no encontrado." });
+    expect(m.eliminarLeads).not.toHaveBeenCalled();
+  });
+
+  test("la confirmación tiene que ser el nombre del negocio", async () => {
+    m.accesoMarcaAccion.mockResolvedValue({ ok: true, usuaria: ADMIN, marca: MARCA });
+    m.getLead.mockResolvedValue({ ...LEAD, negocio: "Bar Paco" });
+    expect(await eliminarLeadAction("hydrup", "l1", null, confirmacion("bar"))).toEqual({ ok: false, error: "Escribe el nombre del negocio tal cual para confirmar." });
+    expect(m.eliminarLeads).not.toHaveBeenCalled();
+  });
+
+  test("borra con la marca del lead y vuelve a la lista", async () => {
+    m.accesoMarcaAccion.mockResolvedValue({ ok: true, usuaria: ADMIN, marca: MARCA });
+    m.getLead.mockResolvedValue({ ...LEAD, negocio: "Bar Paco" });
+    m.eliminarLeads.mockResolvedValue({ ok: true, borrados: 1 });
+    await expect(eliminarLeadAction("hydrup", "l1", null, confirmacion("  bar paco "))).rejects.toThrow("NEXT_REDIRECT:/panel/ventas/hydrup/leads");
+    expect(m.eliminarLeads).toHaveBeenCalledWith("m1", ["l1"]);
+  });
+
+  test("si la base no borra nada, se dice", async () => {
+    m.accesoMarcaAccion.mockResolvedValue({ ok: true, usuaria: ADMIN, marca: MARCA });
+    m.getLead.mockResolvedValue({ ...LEAD, negocio: "Bar Paco" });
+    m.eliminarLeads.mockResolvedValue({ ok: true, borrados: 0 });
+    expect(await eliminarLeadAction("hydrup", "l1", null, confirmacion("Bar Paco"))).toEqual({ ok: false, error: "Lead no encontrado." });
   });
 });

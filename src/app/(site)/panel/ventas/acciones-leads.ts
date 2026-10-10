@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { accesoMarcaAccion } from "@/lib/ventas/auth";
-import { actualizarDatosLead, asignarLead, getLead, getUsuaria } from "@/lib/ventas/db";
+import { actualizarDatosLead, asignarLead, eliminarLeads, getLead, getUsuaria } from "@/lib/ventas/db";
 import { esFase, MARCA_DINKBIT_SLUG } from "@/lib/ventas/dominio";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
 import type { SeccionMarca } from "@/lib/ventas/rutas";
@@ -166,4 +166,20 @@ export async function moverLeadAction(slug: string, leadId: string, fase: string
   if (!res.ok) return res;
   refrescar(slug);
   return { ok: true };
+}
+
+/** Ficha → «Eliminar lead». Definitivo y solo de admin. */
+export async function eliminarLeadAction(slug: string, leadId: string, _prev: ResultadoAccion | null, fd: FormData): Promise<ResultadoAccion> {
+  const acceso = await accesoALead(slug, leadId);
+  if (!acceso.ok) return acceso;
+  if (acceso.usuaria.rol !== "admin") return { ok: false, error: "Solo una admin puede eliminar leads." };
+  const escrito = String(fd.get("confirmacion") ?? "").trim().toLowerCase();
+  if (escrito !== acceso.lead.negocio.trim().toLowerCase()) {
+    return { ok: false, error: "Escribe el nombre del negocio tal cual para confirmar." };
+  }
+  const res = await eliminarLeads(acceso.marca.id, [leadId]);
+  if (!res.ok) return res;
+  if (res.borrados === 0) return NO_ENCONTRADO;
+  refrescar(slug);
+  redirect(`/panel/ventas/${slug}/leads`);
 }

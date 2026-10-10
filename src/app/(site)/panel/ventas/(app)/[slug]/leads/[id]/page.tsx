@@ -11,6 +11,7 @@ import { tarjeta, titulo } from "../../../../_componentes/estilos";
 import { AccionesLead } from "./AccionesLead";
 import { Asignacion } from "./Asignacion";
 import { DatosLead } from "./DatosLead";
+import { EliminarLead } from "./EliminarLead";
 
 export default async function FichaLeadPage({ params }: { params: Promise<{ slug: string; id: string }> }) {
   const { slug, id } = await params;
@@ -43,6 +44,7 @@ export default async function FichaLeadPage({ params }: { params: Promise<{ slug
             <Asignacion slug={slug} leadId={lead.id} asignadaA={lead.asignada_a} usuarias={activas} />
           </section>
           <DatosLead slug={slug} lead={lead} />
+          {usuaria.rol === "admin" && <EliminarLead slug={slug} leadId={lead.id} negocio={lead.negocio} />}
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
