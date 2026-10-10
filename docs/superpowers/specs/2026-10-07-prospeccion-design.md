@@ -15,7 +15,8 @@ plantilla, sin salir del panel y sin poner en riesgo el dominio de las campañas
 
 ## Decisiones tomadas
 
-- **Dos fuentes desde el inicio**: Google Places (negocios locales) y BORME
+- **Dos fuentes desde el inicio**: OpenStreetMap (negocios locales; al principio
+  iba a ser Google Places, ver más abajo) y BORME
   (sociedades recién constituidas).
 - **Redacción con plantilla y variables**, sin IA.
 - **Prospectos en tablas propias**, separados de `leads`: no han dado
@@ -50,15 +51,26 @@ login que el resto del panel.
 
 ## Fuentes
 
-### Google Places
+### OpenStreetMap (sustituye a Google Places)
 
-Places API (New), Text Search: `"{categoría} en {ciudad}"`, con
-`regionCode=ES` y `languageCode=es`. Campos pedidos: id, nombre, dirección,
-teléfono, web, tipo principal, valoración y nº de reseñas. Se paginan hasta
-3 páginas (60 resultados) por búsqueda.
+**Cambio del 2026-10-08.** El diseño original usaba Google Places. Al ir a
+activarlo se leyeron las condiciones de Google Maps Platform para el EEE: la
+cláusula 3.3.2 prohíbe «copiar y guardar nombres de negocios y direcciones» y
+extraer contenido de Maps para usarlo fuera del servicio, que es exactamente lo
+que hace esta pestaña. Se descarta Places y se usa OpenStreetMap, cuyos datos
+son abiertos (ODbL) y se pueden guardar citando la fuente.
 
-Clave en `GOOGLE_PLACES_API_KEY`, solo servidor. Sin clave, la pestaña lo dice y
-la fuente queda deshabilitada.
+Dos pasos: Nominatim localiza el municipio (solo España) y Overpass devuelve los
+negocios con nombre dentro de su área. Sin clave y sin coste. Se pide por
+municipio y por tipo de negocio de una lista cerrada (`categorias.ts`), porque
+OSM clasifica con etiquetas (`amenity=restaurant`) y no con texto libre. Hasta
+120 negocios por búsqueda, primero los que tienen web o email.
+
+Cuando OSM ya trae el email del negocio se usa directamente, sin leer la web.
+
+Contrapartida: OSM tiene menos negocios que Google y parte de sus datos están
+anticuados (webs que ya no existen). El pie del buscador cita la fuente, como
+exige la licencia.
 
 ### BORME
 
@@ -66,8 +78,10 @@ Datos abiertos del BOE: sumario diario → PDF de la Sección A de la provincia
 elegida → extracción de los actos de «Constitución» (denominación, objeto
 social, domicilio, fecha).
 
-Como BORME no trae contacto, cada sociedad se busca después en Places por
-denominación + municipio. Si hay coincidencia razonable de nombre, se toman web
+Como BORME no trae contacto, hay que localizar después la web de cada sociedad.
+El plan original era buscarla en Places por denominación + municipio; descartado
+Places, cómo hacerlo queda por decidir en la fase 2 (una sociedad recién creada
+rara vez está en OpenStreetMap). Si hay coincidencia razonable de nombre, se toman web
 y teléfono; si no, queda «sin contacto».
 
 **Riesgo principal del proyecto.** Los actos están en PDF y el formato hay que
@@ -152,10 +166,10 @@ Proyecto Supabase `dinkbit-leads`. Migración en
 `docs/sql/2026-10-07-prospeccion.sql`. RLS activado sin políticas: solo accede
 el `service_role` desde el servidor, como el resto del panel.
 
-**`prospect_searches`** — `id`, `source` (`places` | `borme`), `params` (jsonb),
+**`prospect_searches`** — `id`, `source` (`osm` | `borme`), `params` (jsonb),
 `status` (`buscando` | `lista` | `error`), `error`, `total`, `created_at`.
 
-**`prospects`** — `id`, `search_id`, `source`, `external_id` (ID de Places o
+**`prospects`** — `id`, `search_id`, `source`, `external_id` (tipo/id de OpenStreetMap o
 identificador del acto de BORME; único junto a `source`), `name`, `sector`,
 `address`, `city`, `province`, `phone`, `website`, `email`, `email_kind`
 (`generica` | `personal`), `rating`, `reviews`, `extra` (jsonb: objeto social,
@@ -194,7 +208,8 @@ Lógica pura, probada sin red:
 | `emails.ts` | Extraer y clasificar direcciones a partir de HTML |
 | `plantilla.ts` | Sustituir variables, detectar las que faltan, texto → HTML |
 | `reglas-envio.ts` | Si un prospecto es enviable y por qué no; tope diario |
-| `places.ts` | Montar la petición y normalizar la respuesta de Places |
+| `categorias.ts` | Tipos de negocio que se pueden buscar y sus etiquetas de OSM |
+| `osm.ts` | Localizar el municipio, pedir sus negocios y normalizarlos |
 | `borme.ts` | Sumario → PDF de provincia → actos de constitución |
 | `baja-token.ts` | Token de baja para prospectos |
 
@@ -213,7 +228,7 @@ Ruta de baja en `src/app/api/prospeccion/baja/route.ts`.
 
 ## Errores
 
-- Places sin clave, con cuota agotada o con error: la búsqueda queda en `error`
+- OpenStreetMap sin respuesta, o municipio no encontrado: la búsqueda queda en `error`
   con el mensaje visible; no se guardan resultados a medias.
 - Una web que no responde o está bloqueada por la guardia: el prospecto queda
   `sin_contacto` con el motivo, y la tanda sigue.
@@ -229,18 +244,17 @@ Vitest, como el resto del repo, con las APIs externas simuladas:
   prioridad genérica/personal.
 - `plantilla`: sustitución, variable ausente, escape de HTML.
 - `reglas-envio`: cada motivo de bloqueo y el tope en el cambio de día.
-- `places` y `borme`: sobre respuestas y un PDF reales guardados como fixtures.
+- `osm` y `borme`: sobre respuestas y un PDF reales guardados como fixtures.
 - `enviar`: no hay doble envío, reversión si Resend falla, supresión respetada.
 - Ruta de baja: token válido, caducado y manipulado.
 
 ## Fases
 
-1. **Places, enriquecimiento, plantillas y envío.** Entregable y útil por sí
+1. **OpenStreetMap, enriquecimiento, plantillas y envío.** Entregable y útil por sí
    sola.
 2. **BORME**, empezando por la prueba de parseo.
 
 ## Requisitos externos
 
-- Clave de Google Places API con facturación activa (`GOOGLE_PLACES_API_KEY`).
 - Subdominio de envío verificado en Resend y `PROSPECT_SENDERS` configurada.
 - Ejecutar la migración SQL en Supabase.

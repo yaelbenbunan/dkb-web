@@ -81,6 +81,7 @@ const CHANNEL_COLORS: Record<string, string> = {
   TikTok: "#0f172a",
   landing: "#0d9488",
   Web: "#475569",
+  "Prospección": "#7c3aed",
 };
 
 // Canales seleccionables en el panel. Incluye los valores que ya generan los
@@ -93,6 +94,7 @@ const CHANNEL_OPTIONS = [
   "LinkedIn",
   "TikTok",
   "landing",
+  "Prospección",
 ];
 
 /** Safe http(s) URL or null — never linkify javascript:/data: values. */

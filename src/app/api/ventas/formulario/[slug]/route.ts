@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { crearLimitador, esEnvioBot, origenPermitido } from "@/lib/ventas/formulario-web";
+import { Resend } from "resend";
+import { avisoFormulario, crearLimitador, esEnvioBot, origenPermitido } from "@/lib/ventas/formulario-web";
 import { recibirLeadFormulario } from "@/lib/ventas/servicios";
 
 // Entrada pública de leads desde formularios web de las marcas (p. ej. la landing
@@ -8,6 +9,22 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const permitir = crearLimitador({ max: 5, ventanaMs: 10 * 60 * 1000 });
+
+// Copia por email a la marca. Sin que pueda tumbar la respuesta: el lead ya está guardado.
+async function avisarPorEmail(slug: string, datos: Record<string, unknown>): Promise<void> {
+  const aviso = avisoFormulario(slug, datos);
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!aviso || !apiKey) return;
+  try {
+    const { error } = await new Resend(apiKey).emails.send({
+      from: process.env.CONTACT_EMAIL_FROM ?? "onboarding@resend.dev",
+      ...aviso,
+    });
+    if (error) console.error("formulario web: no se pudo enviar el aviso por email:", error);
+  } catch (error) {
+    console.error("formulario web: no se pudo enviar el aviso por email", error);
+  }
+}
 
 function cors(origin: string): Record<string, string> {
   return {
@@ -59,5 +76,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   }
 
   const res = await recibirLeadFormulario({ slug, datos });
+  if (res.body.ok) await avisarPorEmail(slug, datos as Record<string, unknown>);
   return NextResponse.json({ ok: res.body.ok, ...(res.body.ok ? {} : { error: res.body.error }) }, { status: res.status, headers });
 }

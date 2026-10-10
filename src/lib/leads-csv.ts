@@ -34,6 +34,7 @@ export const CSV_CHANNELS = [
   "LinkedIn",
   "TikTok",
   "landing",
+  "Prospección",
 ] as const;
 
 /** Nº máximo de filas por importación: evita bloquear el panel con un fichero
