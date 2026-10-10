@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUsuaria } from "@/lib/ventas/auth";
-import { crearUsuariaCompleta, getUsuaria, setPasswordUsuaria, setUsuariaActiva } from "@/lib/ventas/db";
+import { crearUsuariaCompleta, getMarcaPorId, getUsuaria, setPasswordUsuaria, setUsuariaActiva } from "@/lib/ventas/db";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
 import { leerNuevaUsuaria, leerPassword } from "@/lib/ventas/validacion";
 
@@ -13,6 +13,8 @@ export async function crearUsuariaAction(_prev: ResultadoAccion | null, fd: Form
   await requireUsuaria("admin");
   const leido = leerNuevaUsuaria(fd);
   if (!leido.ok) return leido;
+  // El formulario solo ofrece marcas existentes, pero la acción se puede llamar a mano.
+  if (leido.datos.marca_id && !(await getMarcaPorId(leido.datos.marca_id))) return { ok: false, error: "Esa marca no existe." };
   const res = await crearUsuariaCompleta(leido.datos);
   if (!res.ok) return res;
   revalidatePath(RUTA);

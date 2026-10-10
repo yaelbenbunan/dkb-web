@@ -1,13 +1,14 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { crearUsuariaAction } from "../../acciones-usuarias";
-import { ROLES, ROL_LABELS } from "@/lib/ventas/dominio";
+import { ROLES, ROL_LABELS, type Rol } from "@/lib/ventas/dominio";
 import { Mensaje } from "../../_componentes/Mensaje";
 import { botonPrimario, campo, etiqueta, tarjeta, titulo } from "../../_componentes/estilos";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
 
-export function NuevaUsuariaForm() {
+export function NuevaUsuariaForm({ marcas }: { marcas: { id: string; nombre: string }[] }) {
+  const [rol, setRol] = useState<Rol>("comercial");
   const [resultado, accion, pendiente] = useActionState<ResultadoAccion | null, FormData>(crearUsuariaAction, null);
   return (
     <form action={accion} style={{ ...tarjeta, display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
@@ -26,12 +27,24 @@ export function NuevaUsuariaForm() {
       </label>
       <label style={{ ...etiqueta, flex: "0 1 140px" }}>
         Rol
-        <select name="rol" defaultValue="comercial" style={campo}>
+        <select name="rol" value={rol} onChange={(e) => setRol(e.target.value as Rol)} style={campo}>
           {ROLES.map((r) => (
             <option key={r} value={r}>{ROL_LABELS[r]}</option>
           ))}
         </select>
       </label>
+      {rol === "cliente" && (
+        <label style={etiqueta}>
+          Marca
+          <select name="marca_id" required defaultValue="" style={campo}>
+            <option value="" disabled>Elige la marca…</option>
+            {marcas.map((m) => (
+              <option key={m.id} value={m.id}>{m.nombre}</option>
+            ))}
+          </select>
+          <span style={{ fontSize: 12, fontWeight: 400, color: "#64748b" }}>Solo verá Resumen, Tablero, Leads y Tareas de esta marca.</span>
+        </label>
+      )}
       <button type="submit" disabled={pendiente} style={{ ...botonPrimario, opacity: pendiente ? 0.6 : 1 }}>
         {pendiente ? "Creando…" : "Crear cuenta"}
       </button>

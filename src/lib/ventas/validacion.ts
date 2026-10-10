@@ -57,6 +57,8 @@ export interface NuevaUsuaria {
   email: string;
   password: string;
   rol: Rol;
+  /** Solo la clienta lleva marca; el resto, null (lo exige también un CHECK en la base). */
+  marca_id: string | null;
 }
 
 const passwordSchema = z.string().min(10, "La contraseña necesita al menos 10 caracteres.");
@@ -66,20 +68,27 @@ export function leerPassword(raw: string): Leido<string> {
 }
 
 export function leerNuevaUsuaria(fd: FormData): Leido<NuevaUsuaria> {
-  return leer(
+  const r = leer(
     z.object({
       nombre: z.string().min(2, "Pon el nombre.").max(60, "Nombre demasiado largo."),
       email: z.string().toLowerCase().pipe(z.email("Email no válido.")),
       password: passwordSchema,
       rol: z.enum(ROLES, { message: "Elige un rol." }),
+      marca_id: z.uuid("Marca no válida.").nullable(),
     }),
     {
       nombre: campo(fd, "nombre"),
       email: campo(fd, "email"),
       password: String(fd.get("password") ?? ""),
       rol: campo(fd, "rol"),
+      marca_id: campo(fd, "marca_id") || null,
     },
   );
+  if (!r.ok) return r;
+  // La marca solo cuenta para la clienta: a las demás se les descarta aunque llegue.
+  if (r.datos.rol !== "cliente") return { ok: true, datos: { ...r.datos, marca_id: null } };
+  if (!r.datos.marca_id) return { ok: false, error: "Elige la marca de la clienta." };
+  return r;
 }
 
 /* Marcas -------------------------------------------------------------------- */

@@ -69,14 +69,14 @@ describe("crearUsuariaCompleta", () => {
   test("si falla el perfil, borra la cuenta de Auth para no dejarla huérfana", async () => {
     authAdmin.createUser.mockResolvedValue({ data: { user: { id: "u9" } }, error: null });
     fromMock.mockReturnValue({ insert: vi.fn().mockResolvedValue({ error: { message: "dup" } }) });
-    const r = await crearUsuariaCompleta({ nombre: "Paula", email: "p@d.com", password: "1234567890", rol: "comercial" });
+    const r = await crearUsuariaCompleta({ nombre: "Paula", email: "p@d.com", password: "1234567890", rol: "comercial", marca_id: null });
     expect(r.ok).toBe(false);
     expect(authAdmin.deleteUser).toHaveBeenCalledWith("u9");
   });
 
   test("email repetido en Auth da un mensaje claro", async () => {
     authAdmin.createUser.mockResolvedValue({ data: { user: null }, error: { message: "A user with this email address has already been registered" } });
-    expect(await crearUsuariaCompleta({ nombre: "Paula", email: "p@d.com", password: "1234567890", rol: "comercial" })).toEqual({
+    expect(await crearUsuariaCompleta({ nombre: "Paula", email: "p@d.com", password: "1234567890", rol: "comercial", marca_id: null })).toEqual({
       ok: false,
       error: "Ya existe una cuenta con ese email.",
     });

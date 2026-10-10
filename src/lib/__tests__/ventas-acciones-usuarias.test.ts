@@ -6,6 +6,7 @@ const m = vi.hoisted(() => ({
   setUsuariaActiva: vi.fn(),
   setPasswordUsuaria: vi.fn(),
   getUsuaria: vi.fn(),
+  getMarcaPorId: vi.fn(),
   revalidatePath: vi.fn(),
 }));
 vi.mock("@/lib/ventas/auth", () => ({ requireUsuaria: m.requireUsuaria }));
@@ -14,6 +15,7 @@ vi.mock("@/lib/ventas/db", () => ({
   setUsuariaActiva: m.setUsuariaActiva,
   setPasswordUsuaria: m.setPasswordUsuaria,
   getUsuaria: m.getUsuaria,
+  getMarcaPorId: m.getMarcaPorId,
 }));
 vi.mock("next/cache", () => ({ revalidatePath: m.revalidatePath }));
 
@@ -51,7 +53,14 @@ describe("acciones de usuarias", () => {
   test("crea la usuaria con los datos validados", async () => {
     const r = await crearUsuariaAction(null, fd({ nombre: "Paula", email: "Paula@Dinkbit.com", password: "1234567890", rol: "comercial" }));
     expect(r.ok).toBe(true);
-    expect(m.crearUsuariaCompleta).toHaveBeenCalledWith({ nombre: "Paula", email: "paula@dinkbit.com", password: "1234567890", rol: "comercial" });
+    expect(m.crearUsuariaCompleta).toHaveBeenCalledWith({ nombre: "Paula", email: "paula@dinkbit.com", password: "1234567890", rol: "comercial", marca_id: null });
+  });
+
+  test("no crea una clienta con una marca que no existe", async () => {
+    m.getMarcaPorId.mockResolvedValue(null);
+    const r = await crearUsuariaAction(null, fd({ nombre: "Ana", email: "ana@hydrup.es", password: "1234567890ab", rol: "cliente", marca_id: "3f0c2a4e-1b2c-4d5e-8f90-123456789abc" }));
+    expect(r).toEqual({ ok: false, error: "Esa marca no existe." });
+    expect(m.crearUsuariaCompleta).not.toHaveBeenCalled();
   });
 
   test("una admin no puede desactivarse a sí misma", async () => {

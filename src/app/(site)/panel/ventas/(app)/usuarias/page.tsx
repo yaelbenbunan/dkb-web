@@ -1,5 +1,5 @@
 import { requireUsuaria } from "@/lib/ventas/auth";
-import { listUsuarias } from "@/lib/ventas/db";
+import { listMarcas, listUsuarias } from "@/lib/ventas/db";
 import { ROL_LABELS } from "@/lib/ventas/dominio";
 import { tarjeta, td, th, titulo } from "../../_componentes/estilos";
 import { AccionesUsuaria } from "./AccionesUsuaria";
@@ -7,11 +7,13 @@ import { NuevaUsuariaForm } from "./NuevaUsuariaForm";
 
 export default async function UsuariasPage() {
   await requireUsuaria("admin");
-  const usuarias = await listUsuarias();
+  const [usuarias, marcas] = await Promise.all([listUsuarias(), listMarcas()]);
+  const nombreMarca = new Map(marcas.map((m) => [m.id, m.nombre]));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <NuevaUsuariaForm />
+      {/* Solo id y nombre: la marca completa lleva el secreto del webhook. */}
+      <NuevaUsuariaForm marcas={marcas.map(({ id, nombre }) => ({ id, nombre }))} />
       <section style={tarjeta}>
         <h2 style={titulo}>Usuarias ({usuarias.length})</h2>
         <div style={{ overflowX: "auto" }}>
@@ -30,7 +32,9 @@ export default async function UsuariasPage() {
                 <tr key={u.id}>
                   <td style={td}>{u.nombre}</td>
                   <td style={td}>{u.email}</td>
-                  <td style={td}>{ROL_LABELS[u.rol]}</td>
+                  <td style={td}>{ROL_LABELS[u.rol]}
+                    {u.rol === "cliente" && u.marca_id ? ` · ${nombreMarca.get(u.marca_id) ?? "marca desconocida"}` : ""}
+                  </td>
                   <td style={{ ...td, color: u.activa ? "#16a34a" : "#b91c1c", fontWeight: 600 }}>{u.activa ? "Activa" : "Desactivada"}</td>
                   <td style={td}>
                     <AccionesUsuaria id={u.id} activa={u.activa} />

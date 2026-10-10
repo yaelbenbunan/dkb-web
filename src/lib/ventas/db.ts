@@ -158,7 +158,7 @@ export async function crearUsuariaCompleta(u: NuevaUsuaria): Promise<{ ok: true;
     const repetido = /already|registered|exists/i.test(error?.message ?? "");
     return { ok: false, error: repetido ? "Ya existe una cuenta con ese email." : "No se pudo crear la cuenta." };
   }
-  const perfil = await sb.from("ventas_usuarias").insert({ id: data.user.id, nombre: u.nombre, email: u.email, rol: u.rol });
+  const perfil = await sb.from("ventas_usuarias").insert({ id: data.user.id, nombre: u.nombre, email: u.email, rol: u.rol, marca_id: u.marca_id });
   if (perfil.error) {
     // Sin perfil la cuenta no sirve para nada: se deshace para poder reintentar.
     await sb.auth.admin.deleteUser(data.user.id);

@@ -31,10 +31,26 @@ describe("eurosACentimos", () => {
   });
 });
 
+describe("leerNuevaUsuaria con rol cliente", () => {
+  const base = { nombre: "Ana", email: "ana@hydrup.es", password: "1234567890ab" };
+  const UUID = "3f0c2a4e-1b2c-4d5e-8f90-123456789abc";
+
+  test("cliente con marca: se guarda la marca", () => {
+    expect(leerNuevaUsuaria(fd({ ...base, rol: "cliente", marca_id: UUID }))).toEqual({ ok: true, datos: { ...base, rol: "cliente", marca_id: UUID } });
+  });
+  test("cliente sin marca: error", () => {
+    expect(leerNuevaUsuaria(fd({ ...base, rol: "cliente" }))).toEqual({ ok: false, error: "Elige la marca de la clienta." });
+  });
+  test("comercial: la marca se ignora aunque venga", () => {
+    const r = leerNuevaUsuaria(fd({ ...base, rol: "comercial", marca_id: UUID }));
+    expect(r.ok && r.datos.marca_id).toBeNull();
+  });
+});
+
 describe("leerNuevaUsuaria", () => {
   test("normaliza el email y valida contraseña y rol", () => {
     const ok = leerNuevaUsuaria(fd({ nombre: "Paula", email: " Paula@Dinkbit.com ", password: "1234567890", rol: "comercial" }));
-    expect(ok).toEqual({ ok: true, datos: { nombre: "Paula", email: "paula@dinkbit.com", password: "1234567890", rol: "comercial" } });
+    expect(ok).toEqual({ ok: true, datos: { nombre: "Paula", email: "paula@dinkbit.com", password: "1234567890", rol: "comercial", marca_id: null } });
     expect(leerNuevaUsuaria(fd({ nombre: "Paula", email: "x@y.es", password: "corta", rol: "comercial" }))).toMatchObject({ ok: false });
     expect(leerNuevaUsuaria(fd({ nombre: "Paula", email: "x@y.es", password: "1234567890", rol: "jefa" }))).toMatchObject({ ok: false });
   });
