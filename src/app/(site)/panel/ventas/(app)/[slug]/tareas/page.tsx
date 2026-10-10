@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireAccesoMarca } from "@/lib/ventas/auth";
 import { listLeads, listLlamadasMarca, listTareasMarca, listUsuarias } from "@/lib/ventas/db";
+import { esAsignableEnMarca } from "@/lib/ventas/rutas";
 import { ahoraMadrid } from "@/lib/ventas/metricas";
 import { agruparTareas, contarPrimerContacto, leadsQuePidenMuestras, tareasAutomaticas, tareasManuales, type SeccionTarea } from "@/lib/ventas/tareas";
 import { MarcaCabecera } from "../../../_componentes/MarcaCabecera";
@@ -38,7 +39,8 @@ export default async function TareasPage({
     listTareasMarca(marca.id, verHechas ? { hechasDesde: haceTreintaDias() } : {}),
     listUsuarias(),
   ]);
-  const activas = usuarias.filter((u) => u.activa).map((u) => ({ id: u.id, nombre: u.nombre }));
+  // Solo a quien se le puede asignar en esta marca; `nombres` sigue con todas para mostrar responsables.
+  const activas = usuarias.filter((u) => esAsignableEnMarca(u, marca.id)).map((u) => ({ id: u.id, nombre: u.nombre }));
   const nombres = Object.fromEntries(usuarias.map((u) => [u.id, u.nombre]));
   // «de» filtra por responsable: «yo», el id de una usuaria, o vacío para todas.
   const de = sp.de === "yo" ? usuaria.id : activas.some((u) => u.id === sp.de) ? sp.de : undefined;

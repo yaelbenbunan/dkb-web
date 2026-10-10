@@ -32,6 +32,14 @@ export function evaluarAcceso(usuaria: { rol: string; activa: boolean } | null, 
   return "ok";
 }
 
+/** A quién se le puede asignar un lead o una tarea de una marca. Una clienta solo
+ *  de la suya: si no, vería (y podría asignarse) nombres de otras marcas. */
+export function esAsignableEnMarca(usuaria: { rol: string; activa: boolean; marca_id: string | null }, marcaId: string): boolean {
+  if (!usuaria.activa) return false;
+  if (usuaria.rol === "admin" || usuaria.rol === "comercial") return true;
+  return usuaria.rol === "cliente" && usuaria.marca_id === marcaId;
+}
+
 export type SeccionMarca = "resumen" | "tablero" | "leads" | "tareas" | "secuencias" | "conversaciones" | "condiciones";
 
 /** Lo único que ve una usuaria con rol «cliente», y solo en su marca. */

@@ -73,7 +73,7 @@ beforeEach(() => {
   Object.values(m).forEach((f) => f.mockClear());
   m.accesoMarcaAccion.mockReset().mockResolvedValue({ ok: true, usuaria: USUARIA, marca: MARCA });
   m.getLead.mockReset().mockResolvedValue(LEAD);
-  m.getUsuaria.mockReset().mockResolvedValue({ id: "u2", activa: true });
+  m.getUsuaria.mockReset().mockResolvedValue({ id: "u2", rol: "comercial", activa: true, marca_id: null });
   for (const f of [m.actualizarDatosLead, m.asignarLead, m.registrarLlamada, m.marcarMuestrasEnviadas, m.anadirNota, m.cambiarFaseManual, m.moverLead, m.pasarLeadAlEmbudo]) {
     f.mockReset().mockResolvedValue({ ok: true });
   }
@@ -126,10 +126,19 @@ describe("acciones de leads", () => {
   });
 
   test("asignar a una usuaria desactivada no se permite; vacío desasigna", async () => {
-    m.getUsuaria.mockResolvedValue({ id: "u2", activa: false });
+    m.getUsuaria.mockResolvedValue({ id: "u2", rol: "comercial", activa: false, marca_id: null });
     expect((await asignarLeadAction("hydrup", "l1", "u2")).ok).toBe(false);
     await asignarLeadAction("hydrup", "l1", "");
     expect(m.asignarLead).toHaveBeenCalledWith("l1", null);
+  });
+
+  test("no se asigna a una clienta de otra marca; a una de la misma sí", async () => {
+    m.getUsuaria.mockResolvedValue({ id: "u3", rol: "cliente", activa: true, marca_id: "m2" });
+    expect(await asignarLeadAction("hydrup", "l1", "u3")).toEqual({ ok: false, error: "Esa usuaria no existe o está desactivada." });
+    expect(m.asignarLead).not.toHaveBeenCalled();
+    m.getUsuaria.mockResolvedValue({ id: "u3", rol: "cliente", activa: true, marca_id: "m1" });
+    expect((await asignarLeadAction("hydrup", "l1", "u3")).ok).toBe(true);
+    expect(m.asignarLead).toHaveBeenCalledWith("l1", "u3");
   });
 
   test("editar datos, muestras, nota y fase validan y delegan", async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { clasificarRutaPanel, destinoTrasLogin, evaluarAcceso, evaluarAccesoMarca } from "../ventas/rutas";
+import { clasificarRutaPanel, destinoTrasLogin, esAsignableEnMarca, evaluarAcceso, evaluarAccesoMarca } from "../ventas/rutas";
 
 describe("clasificarRutaPanel", () => {
   test("separa ventas del panel de leads", () => {
@@ -84,5 +84,25 @@ describe("evaluarAcceso con rol «equipo»", () => {
   });
   test("la clienta nunca pasa por admin", () => {
     expect(evaluarAcceso({ rol: "cliente", activa: true }, "admin")).toBe("permiso");
+  });
+});
+
+describe("esAsignableEnMarca", () => {
+  const u = (rol: string, activa = true, marca_id: string | null = null) => ({ rol, activa, marca_id });
+  test("admin y comercial activas se pueden asignar en cualquier marca", () => {
+    expect(esAsignableEnMarca(u("admin"), "m1")).toBe(true);
+    expect(esAsignableEnMarca(u("comercial"), "m1")).toBe(true);
+  });
+  test("la clienta solo en su marca", () => {
+    expect(esAsignableEnMarca(u("cliente", true, "m1"), "m1")).toBe(true);
+    expect(esAsignableEnMarca(u("cliente", true, "m2"), "m1")).toBe(false);
+    expect(esAsignableEnMarca(u("cliente", true, null), "m1")).toBe(false);
+  });
+  test("desactivada nunca, ni siendo admin", () => {
+    expect(esAsignableEnMarca(u("admin", false), "m1")).toBe(false);
+    expect(esAsignableEnMarca(u("cliente", false, "m1"), "m1")).toBe(false);
+  });
+  test("un rol desconocido no", () => {
+    expect(esAsignableEnMarca(u("invitada", true, "m1"), "m1")).toBe(false);
   });
 });

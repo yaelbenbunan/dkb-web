@@ -6,7 +6,7 @@ import { accesoMarcaAccion } from "@/lib/ventas/auth";
 import { actualizarDatosLead, asignarLead, eliminarLeads, getLead, getUsuaria } from "@/lib/ventas/db";
 import { esFase, MARCA_DINKBIT_SLUG } from "@/lib/ventas/dominio";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
-import type { SeccionMarca } from "@/lib/ventas/rutas";
+import { esAsignableEnMarca, type SeccionMarca } from "@/lib/ventas/rutas";
 import {
   anadirNota,
   cambiarFaseManual,
@@ -90,7 +90,7 @@ export async function asignarLeadAction(slug: string, leadId: string, usuariaId:
   if (!acceso.ok) return acceso;
   if (usuariaId) {
     const destino = await getUsuaria(usuariaId);
-    if (!destino?.activa) return { ok: false, error: "Esa usuaria no existe o está desactivada." };
+    if (!destino || !esAsignableEnMarca(destino, acceso.marca.id)) return { ok: false, error: "Esa usuaria no existe o está desactivada." };
   }
   const res = await asignarLead(leadId, usuariaId || null);
   if (!res.ok) return res;

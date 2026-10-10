@@ -5,6 +5,7 @@ import { getLead, listActividadLead, listUsuarias } from "@/lib/ventas/db";
 import { ORIGEN_LABELS } from "@/lib/ventas/dominio";
 import { describirActividad } from "@/lib/ventas/historial";
 import { formatoFechaHora, formatoSeguimiento } from "@/lib/ventas/metricas";
+import { esAsignableEnMarca } from "@/lib/ventas/rutas";
 import { FaseEtiqueta } from "../../../../_componentes/FaseEtiqueta";
 import { MarcaCabecera } from "../../../../_componentes/MarcaCabecera";
 import { tarjeta, titulo } from "../../../../_componentes/estilos";
@@ -21,7 +22,8 @@ export default async function FichaLeadPage({ params }: { params: Promise<{ slug
 
   const [actividad, usuarias] = await Promise.all([listActividadLead(lead.id), listUsuarias()]);
   const nombres = Object.fromEntries(usuarias.map((u) => [u.id, u.nombre]));
-  const activas = usuarias.filter((u) => u.activa).map((u) => ({ id: u.id, nombre: u.nombre }));
+  // Solo a quien se le puede asignar en esta marca: una clienta no ve nombres de otras marcas.
+  const activas = usuarias.filter((u) => esAsignableEnMarca(u, lead.marca_id)).map((u) => ({ id: u.id, nombre: u.nombre }));
 
   return (
     <div>
