@@ -7,11 +7,12 @@ import type { ResultadoAccion } from "@/lib/ventas/resultado";
 import { Mensaje } from "../../../_componentes/Mensaje";
 import { botonPrimario, campo, etiqueta, tarjeta, titulo } from "../../../_componentes/estilos";
 
-export function NuevoLeadForm({ slug }: { slug: string }) {
+// `enDialogo`: el diálogo ya pone la tarjeta y el título, aquí sobran.
+export function NuevoLeadForm({ slug, enDialogo = false }: { slug: string; enDialogo?: boolean }) {
   const [resultado, accion, pendiente] = useActionState<ResultadoAccion | null, FormData>(crearLeadManualAction.bind(null, slug), null);
   return (
-    <form action={accion} style={{ ...tarjeta, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-      <h2 style={{ ...titulo, gridColumn: "1 / -1", margin: 0 }}>Añadir lead a mano</h2>
+    <form action={accion} style={{ ...(enDialogo ? {} : tarjeta), display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+      {!enDialogo && <h2 style={{ ...titulo, gridColumn: "1 / -1", margin: 0 }}>Añadir lead a mano</h2>}
       <label style={etiqueta}>Negocio<input name="negocio" required style={campo} /></label>
       <label style={etiqueta}>
         Tipo

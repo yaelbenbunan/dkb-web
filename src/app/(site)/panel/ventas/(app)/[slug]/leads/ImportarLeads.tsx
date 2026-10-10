@@ -8,7 +8,8 @@ import { botonPrimario, botonSecundario, campo, etiqueta, tarjeta, titulo } from
 
 const MAX_LISTADOS = 10;
 
-export function ImportarLeads({ slug }: { slug: string }) {
+// `enDialogo`: el diálogo ya pone la tarjeta y el título, aquí sobran.
+export function ImportarLeads({ slug, enDialogo = false }: { slug: string; enDialogo?: boolean }) {
   const [csv, setCsv] = useState("");
   const [nombreFichero, setNombreFichero] = useState("");
   // Lectura local: se ve al instante y sirve de reserva mientras responde el servidor.
@@ -67,8 +68,8 @@ export function ImportarLeads({ slug }: { slug: string }) {
   );
 
   return (
-    <form action={accion} style={{ ...tarjeta, display: "flex", flexDirection: "column", gap: 12 }}>
-      <h2 style={{ ...titulo, margin: 0 }}>Importar lista (CSV)</h2>
+    <form action={accion} style={{ ...(enDialogo ? {} : tarjeta), display: "flex", flexDirection: "column", gap: 12 }}>
+      {!enDialogo && <h2 style={{ ...titulo, margin: 0 }}>Importar lista (CSV)</h2>}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
         <label style={{ ...etiqueta, flex: "1 1 220px" }}>
           Fichero

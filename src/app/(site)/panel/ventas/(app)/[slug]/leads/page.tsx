@@ -7,8 +7,7 @@ import { estadoSeguimiento } from "@/lib/ventas/tablero";
 import { FaseEtiqueta } from "../../../_componentes/FaseEtiqueta";
 import { MarcaCabecera } from "../../../_componentes/MarcaCabecera";
 import { tarjeta, td, th } from "../../../_componentes/estilos";
-import { ImportarLeads } from "./ImportarLeads";
-import { NuevoLeadForm } from "./NuevoLeadForm";
+import { BotonesLeads } from "./BotonesLeads";
 
 export default async function LeadsPage({
   params,
@@ -61,11 +60,14 @@ export default async function LeadsPage({
             <Link key={f} href={filtro({ fase: f })} style={chip(fase === f)}>{FASE_LABELS[f]}</Link>
           ))}
           <Link href={filtro({ mias: mias ? undefined : "1" })} style={chip(mias)}>Solo mías</Link>
-          <form action={`/panel/ventas/${slug}/leads`} style={{ marginLeft: "auto" }}>
-            {fase && <input type="hidden" name="fase" value={fase} />}
-            {mias && <input type="hidden" name="mias" value="1" />}
-            <input name="q" defaultValue={q} placeholder="Buscar negocio, ciudad…" style={{ padding: "6px 10px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 13 }} />
-          </form>
+          <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <form action={`/panel/ventas/${slug}/leads`}>
+              {fase && <input type="hidden" name="fase" value={fase} />}
+              {mias && <input type="hidden" name="mias" value="1" />}
+              <input name="q" defaultValue={q} placeholder="Buscar negocio, ciudad…" style={{ padding: "6px 10px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 13 }} />
+            </form>
+            <BotonesLeads slug={slug} />
+          </div>
         </div>
 
         <section style={{ ...tarjeta, padding: 0, overflowX: "auto" }}>
@@ -114,8 +116,6 @@ export default async function LeadsPage({
         </section>
         <p style={{ margin: 0, fontSize: 13, color: "#64748b" }}>{leads.length} leads</p>
 
-        <ImportarLeads slug={slug} />
-        <NuevoLeadForm slug={slug} />
       </div>
     </div>
   );
