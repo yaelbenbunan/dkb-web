@@ -1,9 +1,15 @@
 -- Ventas B2B: rol «cliente», hora de seguimiento, tareas, última nota y borrado
 -- de leads. Spec: docs/superpowers/specs/2026-10-09-ventas-tareas-rol-cliente-design.md
 --
--- Ejecutar una vez en el SQL Editor de Supabase (proyecto wnboyesnlrbtwfmhcxmc),
--- ANTES de desplegar el código. Es idempotente y compatible con el código ya
--- desplegado: el parámetro nuevo de ventas_registrar_actividad tiene default.
+-- Ejecutar una vez en el SQL Editor de Supabase (proyecto wnboyesnlrbtwfmhcxmc)
+-- y comprobar que ha ido bien ANTES de integrar la rama en main, no solo antes
+-- de desplegar: el código nuevo NO funciona sin esta migración («Mi día», el
+-- tablero, las tareas, el alta de usuarias y registrar actividad fallarían).
+-- Es idempotente, y va en una transacción: o se aplica entera o no se aplica.
+-- El parámetro nuevo de ventas_registrar_actividad tiene default, así que el
+-- código antiguo sigue funcionando con la migración ya aplicada.
+
+begin;
 
 -- 1. Rol «cliente» ligado a una marca --------------------------------------
 alter table public.ventas_usuarias drop constraint if exists ventas_usuarias_rol_check;
@@ -151,3 +157,9 @@ begin
 end $$;
 revoke execute on function public.ventas_eliminar_leads(uuid, uuid[]) from public, anon, authenticated;
 grant execute on function public.ventas_eliminar_leads(uuid, uuid[]) to service_role;
+
+-- PostgREST cachea las firmas de las funciones y aquí se ha hecho drop de una
+-- (ventas_registrar_actividad): sin recargar, seguiría buscando la antigua.
+notify pgrst, 'reload schema';
+
+commit;
