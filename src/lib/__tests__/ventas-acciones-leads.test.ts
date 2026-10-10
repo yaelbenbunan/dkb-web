@@ -107,7 +107,7 @@ describe("acciones de leads", () => {
     expect(m.registrarLlamada).toHaveBeenCalledWith({
       usuaria: USUARIA,
       leadId: "l1",
-      llamada: { resultado: "interesado", nota: "Quiere precios", proximo_seguimiento: "2026-09-22" },
+      llamada: { resultado: "interesado", nota: "Quiere precios", proximo_seguimiento: "2026-09-22", proximo_seguimiento_hora: null },
     });
   });
 
@@ -133,7 +133,7 @@ describe("acciones de leads", () => {
     await actualizarLeadAction("hydrup", "l1", null, fd({ negocio: "Gym", email: "a@b.es" }));
     expect(m.actualizarDatosLead).toHaveBeenCalledWith("l1", expect.objectContaining({ negocio: "Gym", email: "a@b.es" }));
     await muestrasEnviadasAction("hydrup", "l1", null, fd({ nota: "Pack 6", proximo_seguimiento: "" }));
-    expect(m.marcarMuestrasEnviadas).toHaveBeenCalledWith({ usuaria: USUARIA, leadId: "l1", datos: { nota: "Pack 6", proximo_seguimiento: null } });
+    expect(m.marcarMuestrasEnviadas).toHaveBeenCalledWith({ usuaria: USUARIA, leadId: "l1", datos: { nota: "Pack 6", proximo_seguimiento: null, proximo_seguimiento_hora: null } });
     await notaAction("hydrup", "l1", null, fd({ nota: "Hola", proximo_seguimiento: "" }));
     expect(m.anadirNota).toHaveBeenCalled();
     expect((await cambiarFaseAction("hydrup", "l1", null, fd({ fase: "inventada" }))).ok).toBe(false);

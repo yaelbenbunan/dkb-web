@@ -20,13 +20,19 @@ const PESTANAS: { clave: Pestana; texto: string }[] = [
  *  principal del CRM: es la única cuyos leads llevan `channel: "WhatsApp"`. */
 const PESTANA_EMBUDO = { clave: "embudo" as const, texto: "Pasar al embudo" };
 
-function Seguimiento({ actual }: { actual: string | null }) {
+function Seguimiento({ actual, hora }: { actual: string | null; hora: string | null }) {
   return (
-    <label style={etiqueta}>
-      Próximo seguimiento
-      <input name="proximo_seguimiento" type="date" defaultValue={actual ?? ""} style={campo} />
-      <span style={{ fontSize: 12, fontWeight: 400, color: "#64748b" }}>Déjala vacía para quitar el seguimiento.</span>
-    </label>
+    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+      <label style={{ ...etiqueta, flex: "1 1 160px" }}>
+        Próximo seguimiento
+        <input name="proximo_seguimiento" type="date" defaultValue={actual ?? ""} style={campo} />
+      </label>
+      <label style={{ ...etiqueta, flex: "0 1 120px" }}>
+        Hora (opcional)
+        <input name="proximo_seguimiento_hora" type="time" defaultValue={hora?.slice(0, 5) ?? ""} style={campo} />
+      </label>
+      <span style={{ flexBasis: "100%", fontSize: 12, color: "#64748b" }}>Deja la fecha vacía para quitar el seguimiento.</span>
+    </div>
   );
 }
 
@@ -44,11 +50,13 @@ export function AccionesLead({
   leadId,
   fase,
   proximoSeguimiento,
+  proximoSeguimientoHora,
 }: {
   slug: string;
   leadId: string;
   fase: Fase;
   proximoSeguimiento: string | null;
+  proximoSeguimientoHora: string | null;
 }) {
   const [pestana, setPestana] = useState<Pestana>("llamada");
   const [rLlamada, aLlamada, pLlamada] = useActionState<ResultadoAccion | null, FormData>(registrarLlamadaAction.bind(null, slug, leadId), null);
@@ -86,7 +94,7 @@ export function AccionesLead({
             ))}
           </fieldset>
           <Nota />
-          <Seguimiento actual={proximoSeguimiento} />
+          <Seguimiento actual={proximoSeguimiento} hora={proximoSeguimientoHora} />
           <p style={{ margin: 0, fontSize: 12, color: "#64748b" }}>
             «No le interesa» y «Número erróneo» cierran el lead y borran el seguimiento.
           </p>
@@ -100,7 +108,7 @@ export function AccionesLead({
       {pestana === "muestras" && (
         <form action={aMuestras} style={formulario}>
           <Nota />
-          <Seguimiento actual={proximoSeguimiento} />
+          <Seguimiento actual={proximoSeguimiento} hora={proximoSeguimientoHora} />
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <button type="submit" disabled={pMuestras} style={botonPrimario}>Apuntar envío de muestras</button>
             <Mensaje resultado={rMuestras} />
@@ -111,7 +119,7 @@ export function AccionesLead({
       {pestana === "nota" && (
         <form action={aNota} style={formulario}>
           <Nota requerida />
-          <Seguimiento actual={proximoSeguimiento} />
+          <Seguimiento actual={proximoSeguimiento} hora={proximoSeguimientoHora} />
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <button type="submit" disabled={pNota} style={botonPrimario}>Añadir nota</button>
             <Mensaje resultado={rNota} />

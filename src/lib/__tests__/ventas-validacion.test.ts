@@ -132,18 +132,36 @@ describe("leerLlamada y compañía", () => {
   test("llamada con seguimiento", () => {
     expect(leerLlamada(fd({ resultado: "volver_a_llamar", nota: " Llamar tarde ", proximo_seguimiento: "2026-09-20" }))).toEqual({
       ok: true,
-      datos: { resultado: "volver_a_llamar", nota: "Llamar tarde", proximo_seguimiento: "2026-09-20" },
+      datos: { resultado: "volver_a_llamar", nota: "Llamar tarde", proximo_seguimiento: "2026-09-20", proximo_seguimiento_hora: null },
     });
   });
 
   test("sin resultado es error; fecha vacía es null", () => {
     expect(leerLlamada(fd({ resultado: "" }))).toMatchObject({ ok: false });
-    expect(leerLlamada(fd({ resultado: "no_contesta", proximo_seguimiento: "" }))).toMatchObject({ ok: true, datos: { proximo_seguimiento: null } });
+    expect(leerLlamada(fd({ resultado: "no_contesta", proximo_seguimiento: "" }))).toMatchObject({ ok: true, datos: { proximo_seguimiento: null, proximo_seguimiento_hora: null } });
   });
 
   test("nota y cambio de fase", () => {
-    expect(leerNotaSeguimiento(fd({ nota: "Hola", proximo_seguimiento: "" }))).toEqual({ ok: true, datos: { nota: "Hola", proximo_seguimiento: null } });
+    expect(leerNotaSeguimiento(fd({ nota: "Hola", proximo_seguimiento: "" }))).toEqual({ ok: true, datos: { nota: "Hola", proximo_seguimiento: null, proximo_seguimiento_hora: null } });
     expect(leerCambioFase(fd({ fase: "perdido", nota: "Cerró el local" }))).toEqual({ ok: true, datos: { fase: "perdido", nota: "Cerró el local" } });
     expect(leerCambioFase(fd({ fase: "otra" }))).toMatchObject({ ok: false });
+  });
+});
+
+describe("hora de seguimiento", () => {
+  test("fecha y hora válidas", () => {
+    const r = leerNotaSeguimiento(fd({ nota: "x", proximo_seguimiento: "2026-10-20", proximo_seguimiento_hora: "16:30" }));
+    expect(r).toEqual({ ok: true, datos: { nota: "x", proximo_seguimiento: "2026-10-20", proximo_seguimiento_hora: "16:30" } });
+  });
+  test("sin hora queda en null", () => {
+    const r = leerNotaSeguimiento(fd({ nota: "x", proximo_seguimiento: "2026-10-20" }));
+    expect(r.ok && r.datos.proximo_seguimiento_hora).toBeNull();
+  });
+  test("hora sin fecha: error", () => {
+    expect(leerNotaSeguimiento(fd({ nota: "x", proximo_seguimiento_hora: "16:30" }))).toEqual({ ok: false, error: "Para poner hora hace falta la fecha." });
+    expect(leerLlamada(fd({ resultado: "interesado", proximo_seguimiento_hora: "16:30" }))).toEqual({ ok: false, error: "Para poner hora hace falta la fecha." });
+  });
+  test.each(["9:5", "25:00", "12:60", "tarde"])("hora «%s» no válida", (hora) => {
+    expect(leerLlamada(fd({ resultado: "interesado", nota: "", proximo_seguimiento: "2026-10-20", proximo_seguimiento_hora: hora }))).toEqual({ ok: false, error: "Hora de seguimiento no válida." });
   });
 });

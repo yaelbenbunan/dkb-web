@@ -80,16 +80,39 @@ describe("siguienteFase", () => {
 });
 
 describe("estadoSeguimiento", () => {
+  const AHORA = { fecha: HOY, hora: "10:00" };
+
   test("atrasado, hoy o futuro en fases activas", () => {
-    expect(estadoSeguimiento("2026-09-16", "contactado", HOY)).toBe("atrasado");
-    expect(estadoSeguimiento("2026-09-17", "interesado", HOY)).toBe("hoy");
-    expect(estadoSeguimiento("2026-09-18", "muestras", HOY)).toBe("futuro");
+    expect(estadoSeguimiento("2026-09-16", null, "contactado", AHORA)).toBe("atrasado");
+    expect(estadoSeguimiento("2026-09-17", null, "interesado", AHORA)).toBe("hoy");
+    expect(estadoSeguimiento("2026-09-18", null, "muestras", AHORA)).toBe("futuro");
   });
 
   test("sin fecha o en fase cerrada no hay estado", () => {
-    expect(estadoSeguimiento(null, "nuevo", HOY)).toBeNull();
-    expect(estadoSeguimiento("2026-09-01", "cliente", HOY)).toBeNull();
-    expect(estadoSeguimiento("2026-09-01", "perdido", HOY)).toBeNull();
+    expect(estadoSeguimiento(null, null, "nuevo", AHORA)).toBeNull();
+    expect(estadoSeguimiento("2026-09-01", null, "cliente", AHORA)).toBeNull();
+    expect(estadoSeguimiento("2026-09-01", null, "perdido", AHORA)).toBeNull();
+  });
+});
+
+describe("estadoSeguimiento con hora", () => {
+  const ahora = { fecha: "2026-10-20", hora: "10:01" };
+  test("sin fecha o en fase cerrada no hay estado", () => {
+    expect(estadoSeguimiento(null, null, "nuevo", ahora)).toBeNull();
+    expect(estadoSeguimiento("2026-10-19", null, "cliente", ahora)).toBeNull();
+  });
+  test("días anteriores y posteriores", () => {
+    expect(estadoSeguimiento("2026-10-19", "23:59", "contactado", ahora)).toBe("atrasado");
+    expect(estadoSeguimiento("2026-10-21", "00:00", "contactado", ahora)).toBe("futuro");
+  });
+  test("hoy: con la hora pasada está atrasado; sin hora o con hora futura es de hoy", () => {
+    expect(estadoSeguimiento("2026-10-20", "10:00", "contactado", ahora)).toBe("atrasado");
+    expect(estadoSeguimiento("2026-10-20", "10:01", "contactado", ahora)).toBe("hoy");
+    expect(estadoSeguimiento("2026-10-20", "16:30", "contactado", ahora)).toBe("hoy");
+    expect(estadoSeguimiento("2026-10-20", null, "contactado", ahora)).toBe("hoy");
+  });
+  test("la hora de Postgres (HH:MM:SS) se compara recortada", () => {
+    expect(estadoSeguimiento("2026-10-20", "16:30:00", "contactado", ahora)).toBe("hoy");
   });
 });
 
@@ -99,6 +122,7 @@ describe("ordenarPorUrgencia", () => {
       id,
       fase,
       proximo_seguimiento: proximo,
+      proximo_seguimiento_hora: null,
       created_at: alta,
     });
     const leads = [
@@ -110,7 +134,7 @@ describe("ordenarPorUrgencia", () => {
       l("cerrado-con-fecha-pasada", "2026-09-01", "2026-09-12T10:00:00Z", "perdido"),
     ];
     const entrada = [...leads];
-    expect(ordenarPorUrgencia(leads, HOY).map((x) => x.id)).toEqual([
+    expect(ordenarPorUrgencia(leads, { fecha: HOY, hora: "10:00" }).map((x) => x.id)).toEqual([
       "atrasado-antiguo",
       "atrasado-reciente",
       "hoy",
@@ -119,6 +143,12 @@ describe("ordenarPorUrgencia", () => {
       "futuro-viejo",
     ]);
     expect(leads).toEqual(entrada);
+  });
+
+  test("a igual día, primero las que tienen hora, de más temprana a más tardía", () => {
+    const ahora = { fecha: "2026-10-20", hora: "08:00" };
+    const l = (id: string, hora: string | null) => ({ id, fase: "contactado" as const, proximo_seguimiento: "2026-10-20", proximo_seguimiento_hora: hora, created_at: "2026-10-01T00:00:00Z" });
+    expect(ordenarPorUrgencia([l("sin", null), l("tarde", "16:30"), l("pronto", "09:00")], ahora).map((x) => x.id)).toEqual(["pronto", "tarde", "sin"]);
   });
 
   test("límite de tarjetas por columna", () => {

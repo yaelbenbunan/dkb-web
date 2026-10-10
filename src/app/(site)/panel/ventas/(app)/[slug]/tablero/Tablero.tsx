@@ -16,7 +16,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { FASE_COLORES, FASE_LABELS, type Fase } from "@/lib/ventas/dominio";
-import { formatoFecha } from "@/lib/ventas/metricas";
+import { formatoSeguimiento, type Ahora } from "@/lib/ventas/metricas";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
 import {
   COLUMNAS_TABLERO,
@@ -60,6 +60,7 @@ export interface TarjetaLead {
   fase: Fase;
   excluido: boolean;
   proximo_seguimiento: string | null;
+  proximo_seguimiento_hora: string | null;
   created_at: string;
   asignada: { nombre: string; iniciales: string } | null;
 }
@@ -75,12 +76,12 @@ const COLOR_SEGUIMIENTO = {
 export function Tablero({
   slug,
   leads,
-  hoy,
+  ahora,
   filtrosLista,
 }: {
   slug: string;
   leads: TarjetaLead[];
-  hoy: string;
+  ahora: Ahora;
   filtrosLista: { mias: boolean; atrasados: boolean; q: string };
 }) {
   // Mientras la acción está en marcha se enseña la fase nueva; al terminar manda
@@ -161,7 +162,7 @@ export function Tablero({
 
       <div style={{ display: "flex", gap: 12, overflowX: "auto", alignItems: "flex-start", paddingBottom: 10 }}>
         {COLUMNAS_TABLERO.map((columna) => {
-          const todas = ordenarPorUrgencia(grupos[columna.id], hoy);
+          const todas = ordenarPorUrgencia(grupos[columna.id], ahora);
           const destacada = sobre === columna.id;
           const aceptaSoltar = origenArrastre !== undefined && columnaDeFase(origenArrastre.fase) !== columna.id;
           const color = FASE_COLORES[columna.fases[0]];
@@ -220,7 +221,7 @@ export function Tablero({
                     key={lead.id}
                     slug={slug}
                     lead={lead}
-                    hoy={hoy}
+                    ahora={ahora}
                     arrastrandose={arrastrando === lead.id}
                     moviendo={enMarcha.has(lead.id)}
                     enDescartados={columna.destino === null}
@@ -262,7 +263,7 @@ export function Tablero({
 function Tarjeta({
   slug,
   lead,
-  hoy,
+  ahora,
   arrastrandose,
   moviendo,
   enDescartados,
@@ -275,7 +276,7 @@ function Tarjeta({
 }: {
   slug: string;
   lead: TarjetaLead;
-  hoy: string;
+  ahora: Ahora;
   arrastrandose: boolean;
   moviendo: boolean;
   enDescartados: boolean;
@@ -289,7 +290,7 @@ function Tarjeta({
   const router = useRouter();
   const ficha = `/panel/ventas/${slug}/leads/${lead.id}`;
   const siguiente = siguienteFase(lead.fase);
-  const seguimiento = estadoSeguimiento(lead.proximo_seguimiento, lead.fase, hoy);
+  const seguimiento = estadoSeguimiento(lead.proximo_seguimiento, lead.proximo_seguimiento_hora, lead.fase, ahora);
   const detalle = [lead.tipo, lead.ciudad].filter(Boolean).join(" · ");
 
   const abrir = (e: MouseEvent) => {
@@ -383,7 +384,13 @@ function Tarjeta({
                 color: COLOR_SEGUIMIENTO[seguimiento].text,
               }}
             >
-              {seguimiento === "atrasado" ? `Atrasado · ${formatoFecha(lead.proximo_seguimiento)}` : seguimiento === "hoy" ? "Seguimiento hoy" : formatoFecha(lead.proximo_seguimiento)}
+              {seguimiento === "atrasado"
+                ? `Atrasado · ${formatoSeguimiento(lead.proximo_seguimiento, lead.proximo_seguimiento_hora)}`
+                : seguimiento === "hoy"
+                  ? lead.proximo_seguimiento_hora
+                    ? `Hoy · ${lead.proximo_seguimiento_hora.slice(0, 5)}`
+                    : "Seguimiento hoy"
+                  : formatoSeguimiento(lead.proximo_seguimiento, lead.proximo_seguimiento_hora)}
             </span>
           )}
         </div>

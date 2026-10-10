@@ -14,6 +14,11 @@ describe("describirActividad", () => {
     ).toEqual({ titulo: "Llamada · Volver a llamar", detalle: "Mejor por la tarde · Próximo seguimiento: 20/09/2026", autora: "Paula" });
   });
 
+  test("seguimiento con hora en la actividad", () => {
+    const d = describirActividad({ ...base, tipo: "nota", nota: "x", datos: { proximo_seguimiento: "2026-10-20", proximo_seguimiento_hora: "16:30:00" } }, nombres);
+    expect(d.detalle).toBe("x · Próximo seguimiento: 20/10/2026 · 16:30");
+  });
+
   test("cambio de fase", () => {
     expect(describirActividad({ ...base, tipo: "cambio_fase", datos: { fase_anterior: "nuevo", fase_nueva: "interesado" } }, nombres).titulo).toBe(
       "Fase: Nuevo → Interesado",

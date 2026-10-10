@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { requireAccesoMarca } from "@/lib/ventas/auth";
 import { listLeads, listUsuarias } from "@/lib/ventas/db";
-import { FASES, FASE_LABELS, ORIGEN_LABELS, TIPO_NEGOCIO_LABELS, esFase, esFaseActiva } from "@/lib/ventas/dominio";
-import { formatoFecha, hoyMadrid } from "@/lib/ventas/metricas";
+import { FASES, FASE_LABELS, ORIGEN_LABELS, TIPO_NEGOCIO_LABELS, esFase } from "@/lib/ventas/dominio";
+import { ahoraMadrid, formatoSeguimiento } from "@/lib/ventas/metricas";
+import { estadoSeguimiento } from "@/lib/ventas/tablero";
 import { FaseEtiqueta } from "../../../_componentes/FaseEtiqueta";
 import { MarcaCabecera } from "../../../_componentes/MarcaCabecera";
 import { tarjeta, td, th } from "../../../_componentes/estilos";
@@ -30,7 +31,7 @@ export default async function LeadsPage({
   const leads = q
     ? todos.filter((l) => [l.negocio, l.ciudad, l.contacto, l.email, l.telefono].some((v) => v?.toLowerCase().includes(q)))
     : todos;
-  const hoy = hoyMadrid();
+  const ahora = ahoraMadrid();
 
   const filtro = (extra: Record<string, string | undefined>) => {
     const p = new URLSearchParams();
@@ -85,7 +86,7 @@ export default async function LeadsPage({
                 <tr><td style={{ ...td, color: "#64748b" }} colSpan={7}>No hay leads con este filtro.</td></tr>
               )}
               {leads.map((l) => {
-                const atrasado = l.proximo_seguimiento !== null && l.proximo_seguimiento < hoy && esFaseActiva(l.fase);
+                const atrasado = estadoSeguimiento(l.proximo_seguimiento, l.proximo_seguimiento_hora ?? null, l.fase, ahora) === "atrasado";
                 return (
                   <tr key={l.id}>
                     <td style={td}>
@@ -99,7 +100,7 @@ export default async function LeadsPage({
                     <td style={td}><FaseEtiqueta fase={l.fase} /></td>
                     <td style={td}>{l.asignada_a ? (nombres[l.asignada_a] ?? "—") : "—"}</td>
                     <td style={{ ...td, color: atrasado ? "#b91c1c" : td.color, fontWeight: atrasado ? 700 : 400 }}>
-                      {l.proximo_seguimiento ? formatoFecha(l.proximo_seguimiento) : "—"}
+                      {l.proximo_seguimiento ? formatoSeguimiento(l.proximo_seguimiento, l.proximo_seguimiento_hora ?? null) : "—"}
                     </td>
                     <td style={td}>
                       {ORIGEN_LABELS[l.origen]}

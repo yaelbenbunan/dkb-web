@@ -5,6 +5,7 @@
  */
 
 import { esFaseActiva, type Fase } from "./dominio";
+import type { Ahora } from "./metricas";
 
 export type ColumnaId =
   | "nuevo"
@@ -82,30 +83,41 @@ export function agruparEnColumnas<T extends { fase: Fase }>(leads: T[]): Record<
 
 export type EstadoSeguimiento = "atrasado" | "hoy" | "futuro";
 
-/** Solo las fases activas llevan seguimiento; `hoy` es la fecha de Madrid (YYYY-MM-DD). */
-export function estadoSeguimiento(proximo: string | null, fase: Fase, hoy: string): EstadoSeguimiento | null {
-  if (!proximo || !esFaseActiva(fase)) return null;
-  if (proximo < hoy) return "atrasado";
-  return proximo === hoy ? "hoy" : "futuro";
+/**
+ * Una fecha (y hora opcional) frente a ahora. Sin hora, el día entero cuenta
+ * como «hoy». La hora se recorta a HH:MM porque Postgres la devuelve con segundos.
+ */
+export function vencimiento(fecha: string | null, hora: string | null, ahora: Ahora): EstadoSeguimiento | null {
+  if (!fecha) return null;
+  if (fecha < ahora.fecha) return "atrasado";
+  if (fecha > ahora.fecha) return "futuro";
+  return hora && hora.slice(0, 5) < ahora.hora ? "atrasado" : "hoy";
+}
+
+/** Solo las fases activas llevan seguimiento. */
+export function estadoSeguimiento(proximo: string | null, hora: string | null, fase: Fase, ahora: Ahora): EstadoSeguimiento | null {
+  return esFaseActiva(fase) ? vencimiento(proximo, hora, ahora) : null;
 }
 
 /**
  * Lo urgente arriba: seguimientos atrasados (el más antiguo primero), luego los
- * de hoy y después el resto, del alta más reciente a la más antigua. No muta.
+ * de hoy (los que tienen hora, de más temprana a más tardía, antes que los de
+ * día entero) y después el resto, del alta más reciente a la más antigua. No muta.
  */
-export function ordenarPorUrgencia<T extends { fase: Fase; proximo_seguimiento: string | null; created_at: string }>(
+export function ordenarPorUrgencia<T extends { fase: Fase; proximo_seguimiento: string | null; proximo_seguimiento_hora: string | null; created_at: string }>(
   leads: T[],
-  hoy: string,
+  ahora: Ahora,
 ): T[] {
   const peso = (l: T) => {
-    const estado = estadoSeguimiento(l.proximo_seguimiento, l.fase, hoy);
+    const estado = estadoSeguimiento(l.proximo_seguimiento, l.proximo_seguimiento_hora, l.fase, ahora);
     return estado === "atrasado" ? 0 : estado === "hoy" ? 1 : 2;
   };
+  const clave = (l: T) => `${l.proximo_seguimiento ?? "9999-12-31"}T${l.proximo_seguimiento_hora?.slice(0, 5) ?? "99:99"}`;
   return [...leads].sort((a, b) => {
     const pa = peso(a);
     const pb = peso(b);
     if (pa !== pb) return pa - pb;
-    if (pa === 0) return a.proximo_seguimiento!.localeCompare(b.proximo_seguimiento!);
+    if (pa < 2) return clave(a).localeCompare(clave(b));
     return b.created_at.localeCompare(a.created_at);
   });
 }

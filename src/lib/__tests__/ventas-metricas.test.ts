@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vitest";
 import {
   hoyMadrid,
+  ahoraMadrid,
+  formatoSeguimiento,
   mesDe,
   esMes,
   mesAnterior,
@@ -125,4 +127,15 @@ describe("agruparSeguimientos", () => {
     expect(r.atrasados.map((l) => l.id)).toEqual([3, 2]);
     expect(r.hoy.map((l) => l.id)).toEqual([1]);
   });
+});
+
+test("ahoraMadrid da fecha y hora de Madrid", () => {
+  expect(ahoraMadrid(new Date("2026-10-20T08:05:00Z"))).toEqual({ fecha: "2026-10-20", hora: "10:05" });
+  expect(ahoraMadrid(new Date("2026-12-31T23:30:00Z"))).toEqual({ fecha: "2027-01-01", hora: "00:30" });
+});
+
+test("formatoSeguimiento", () => {
+  expect(formatoSeguimiento("2026-10-20", "16:30")).toBe("20/10/2026 · 16:30");
+  expect(formatoSeguimiento("2026-10-20", null)).toBe("20/10/2026");
+  expect(formatoSeguimiento("2026-10-20", "16:30:00")).toBe("20/10/2026 · 16:30");
 });

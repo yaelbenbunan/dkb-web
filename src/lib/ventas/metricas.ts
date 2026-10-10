@@ -17,6 +17,17 @@ export function hoyMadrid(now: Date = new Date()): string {
   return fechaMadrid(now);
 }
 
+export interface Ahora {
+  fecha: string;
+  hora: string;
+}
+
+/** Fecha (YYYY-MM-DD) y hora (HH:MM) de Madrid en este instante. */
+export function ahoraMadrid(now: Date = new Date()): Ahora {
+  const hora = new Intl.DateTimeFormat("en-GB", { timeZone: ZONA, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(now);
+  return { fecha: fechaMadrid(now), hora };
+}
+
 export function mesDe(iso: string): string {
   return fechaMadrid(new Date(iso)).slice(0, 7);
 }
@@ -61,6 +72,11 @@ export function rangoConsultaMes(mes: string): { desde: string; hasta: string } 
 export function formatoFecha(fecha: string): string {
   const [y, m, d] = fecha.slice(0, 10).split("-");
   return `${d}/${m}/${y}`;
+}
+
+/** «20/10/2026 · 16:30», o solo la fecha si no hay hora. Postgres da la hora como HH:MM:SS. */
+export function formatoSeguimiento(fecha: string, hora: string | null): string {
+  return hora ? `${formatoFecha(fecha)} · ${hora.slice(0, 5)}` : formatoFecha(fecha);
 }
 
 export function formatoFechaHora(iso: string): string {

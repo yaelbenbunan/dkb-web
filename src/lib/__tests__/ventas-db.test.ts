@@ -50,7 +50,15 @@ describe("registrarActividad", () => {
       p_fase_nueva: null,
       p_cambiar_seguimiento: false,
       p_proximo_seguimiento: null,
+      p_proximo_seguimiento_hora: null,
     });
+  });
+
+  test("la hora viaja con la fecha y se borra con ella", async () => {
+    await registrarActividad({ leadId: "l1", usuariaId: "u1", tipo: "nota", nota: "x", proximoSeguimiento: "2026-10-20", proximoSeguimientoHora: "16:30" });
+    expect(rpcMock.mock.calls[0][1]).toMatchObject({ p_cambiar_seguimiento: true, p_proximo_seguimiento: "2026-10-20", p_proximo_seguimiento_hora: "16:30" });
+    await registrarActividad({ leadId: "l1", usuariaId: "u1", tipo: "nota", nota: "x", proximoSeguimiento: null });
+    expect(rpcMock.mock.calls[1][1]).toMatchObject({ p_proximo_seguimiento: null, p_proximo_seguimiento_hora: null });
   });
 
   test("proximoSeguimiento null borra el seguimiento", async () => {

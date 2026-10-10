@@ -1,7 +1,7 @@
 /** Texto legible de cada entrada del historial de un lead. Puro. */
 
 import { FASE_LABELS, ORIGEN_LABELS, RESULTADO_LABELS, esFase, type Origen, type ResultadoLlamada } from "./dominio";
-import { formatoFecha } from "./metricas";
+import { formatoSeguimiento } from "./metricas";
 
 export function describirActividad(
   a: {
@@ -50,7 +50,8 @@ export function describirActividad(
   if (a.nota) partes.push(a.nota);
   if ("proximo_seguimiento" in datos) {
     const proximo = datos.proximo_seguimiento;
-    partes.push(typeof proximo === "string" && proximo ? `Próximo seguimiento: ${formatoFecha(proximo)}` : "Sin seguimiento pendiente");
+    const hora = typeof datos.proximo_seguimiento_hora === "string" ? datos.proximo_seguimiento_hora : null;
+    partes.push(typeof proximo === "string" && proximo ? `Próximo seguimiento: ${formatoSeguimiento(proximo, hora)}` : "Sin seguimiento pendiente");
   }
 
   return { titulo, detalle: partes.length > 0 ? partes.join(" · ") : null, autora };

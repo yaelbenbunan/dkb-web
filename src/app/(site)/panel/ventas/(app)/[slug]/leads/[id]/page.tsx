@@ -4,7 +4,7 @@ import { requireAccesoMarca } from "@/lib/ventas/auth";
 import { getLead, listActividadLead, listUsuarias } from "@/lib/ventas/db";
 import { ORIGEN_LABELS } from "@/lib/ventas/dominio";
 import { describirActividad } from "@/lib/ventas/historial";
-import { formatoFecha, formatoFechaHora } from "@/lib/ventas/metricas";
+import { formatoFechaHora, formatoSeguimiento } from "@/lib/ventas/metricas";
 import { FaseEtiqueta } from "../../../../_componentes/FaseEtiqueta";
 import { MarcaCabecera } from "../../../../_componentes/MarcaCabecera";
 import { tarjeta, titulo } from "../../../../_componentes/estilos";
@@ -38,7 +38,7 @@ export default async function FichaLeadPage({ params }: { params: Promise<{ slug
             <div><strong>Código de cliente:</strong> <code>{lead.codigo_cliente}</code></div>
             <div><strong>Origen:</strong> {ORIGEN_LABELS[lead.origen]}{lead.origen_detalle ? ` · ${lead.origen_detalle}` : ""}</div>
             <div><strong>Alta:</strong> {formatoFechaHora(lead.created_at)}</div>
-            <div><strong>Próximo seguimiento:</strong> {lead.proximo_seguimiento ? formatoFecha(lead.proximo_seguimiento) : "—"}</div>
+            <div><strong>Próximo seguimiento:</strong> {lead.proximo_seguimiento ? formatoSeguimiento(lead.proximo_seguimiento, lead.proximo_seguimiento_hora ?? null) : "—"}</div>
             {lead.telefono && <a href={`tel:${lead.telefono}`} style={{ color: "#187bef", fontWeight: 600 }}>Llamar a {lead.telefono}</a>}
             <Asignacion slug={slug} leadId={lead.id} asignadaA={lead.asignada_a} usuarias={activas} />
           </section>
@@ -46,7 +46,7 @@ export default async function FichaLeadPage({ params }: { params: Promise<{ slug
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <AccionesLead slug={slug} leadId={lead.id} fase={lead.fase} proximoSeguimiento={lead.proximo_seguimiento} />
+          <AccionesLead slug={slug} leadId={lead.id} fase={lead.fase} proximoSeguimiento={lead.proximo_seguimiento} proximoSeguimientoHora={lead.proximo_seguimiento_hora ?? null} />
           <section style={tarjeta}>
             <h2 style={titulo}>Historial</h2>
             <ol style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 10 }}>

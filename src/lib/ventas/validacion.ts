@@ -218,39 +218,58 @@ export function leerDatosLead(fd: FormData): Leido<LeadNuevo> {
 }
 
 const proximoSchema = z.string().regex(FECHA_RE, "Fecha de seguimiento no válida.").nullable();
+const HORA_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+const horaSchema = z.string().regex(HORA_RE, "Hora de seguimiento no válida.").nullable();
 const notaSchema = z.string().max(2000, "La nota es demasiado larga.");
+
+/** Una hora sin fecha no significa nada: se rechaza en vez de guardarla suelta. */
+function conHoraCoherente<T extends { proximo_seguimiento: string | null; proximo_seguimiento_hora: string | null }>(r: Leido<T>): Leido<T> {
+  if (r.ok && r.datos.proximo_seguimiento_hora && !r.datos.proximo_seguimiento) {
+    return { ok: false, error: "Para poner hora hace falta la fecha." };
+  }
+  return r;
+}
 
 export interface Llamada {
   resultado: ResultadoLlamada;
   nota: string;
   proximo_seguimiento: string | null;
+  proximo_seguimiento_hora: string | null;
 }
 
 export function leerLlamada(fd: FormData): Leido<Llamada> {
-  return leer(
-    z.object({
-      resultado: z.enum(RESULTADOS_LLAMADA, { message: "Elige el resultado de la llamada." }),
-      nota: notaSchema,
-      proximo_seguimiento: proximoSchema,
-    }),
-    {
-      resultado: campo(fd, "resultado"),
-      nota: campo(fd, "nota"),
-      proximo_seguimiento: campo(fd, "proximo_seguimiento") || null,
-    },
+  return conHoraCoherente(
+    leer(
+      z.object({
+        resultado: z.enum(RESULTADOS_LLAMADA, { message: "Elige el resultado de la llamada." }),
+        nota: notaSchema,
+        proximo_seguimiento: proximoSchema,
+        proximo_seguimiento_hora: horaSchema,
+      }),
+      {
+        resultado: campo(fd, "resultado"),
+        nota: campo(fd, "nota"),
+        proximo_seguimiento: campo(fd, "proximo_seguimiento") || null,
+        proximo_seguimiento_hora: campo(fd, "proximo_seguimiento_hora") || null,
+      },
+    ),
   );
 }
 
 export interface NotaSeguimiento {
   nota: string;
   proximo_seguimiento: string | null;
+  proximo_seguimiento_hora: string | null;
 }
 
 export function leerNotaSeguimiento(fd: FormData): Leido<NotaSeguimiento> {
-  return leer(z.object({ nota: notaSchema, proximo_seguimiento: proximoSchema }), {
-    nota: campo(fd, "nota"),
-    proximo_seguimiento: campo(fd, "proximo_seguimiento") || null,
-  });
+  return conHoraCoherente(
+    leer(z.object({ nota: notaSchema, proximo_seguimiento: proximoSchema, proximo_seguimiento_hora: horaSchema }), {
+      nota: campo(fd, "nota"),
+      proximo_seguimiento: campo(fd, "proximo_seguimiento") || null,
+      proximo_seguimiento_hora: campo(fd, "proximo_seguimiento_hora") || null,
+    }),
+  );
 }
 
 export interface CambioFase {

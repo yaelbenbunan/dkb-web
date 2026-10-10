@@ -74,6 +74,8 @@ export interface Lead {
   fase: Fase;
   asignada_a: string | null;
   proximo_seguimiento: string | null;
+  /** HH:MM:SS de Postgres; hasta que se ejecute la migración la fila no trae la columna. */
+  proximo_seguimiento_hora: string | null;
   codigo_cliente: string;
   excluido: boolean;
   created_by: string | null;
@@ -362,6 +364,7 @@ export async function registrarActividad(input: {
   nota?: string | null;
   faseNueva?: Fase | null;
   proximoSeguimiento?: string | null;
+  proximoSeguimientoHora?: string | null;
 }): Promise<Escritura> {
   const cambiarSeguimiento = input.proximoSeguimiento !== undefined;
   const { error } = await db().rpc("ventas_registrar_actividad", {
@@ -373,6 +376,7 @@ export async function registrarActividad(input: {
     p_fase_nueva: input.faseNueva ?? null,
     p_cambiar_seguimiento: cambiarSeguimiento,
     p_proximo_seguimiento: cambiarSeguimiento ? input.proximoSeguimiento : null,
+    p_proximo_seguimiento_hora: cambiarSeguimiento ? (input.proximoSeguimientoHora ?? null) : null,
   });
   return escritura({ error }, "registrarActividad");
 }

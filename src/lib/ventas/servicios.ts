@@ -293,6 +293,8 @@ export async function registrarLlamada(input: { usuaria: Usuaria; leadId: string
   const lead = await getLead(input.leadId);
   if (!lead) return { ok: false, error: "Lead no encontrado." };
   const fase = faseTrasLlamada(lead.fase, input.llamada.resultado);
+  // La hora solo viaja si el seguimiento sobrevive al resultado de la llamada.
+  const proximo = seguimientoTrasLlamada(input.llamada.resultado, input.llamada.proximo_seguimiento);
   return registrarActividad({
     leadId: lead.id,
     usuariaId: input.usuaria.id,
@@ -300,7 +302,8 @@ export async function registrarLlamada(input: { usuaria: Usuaria; leadId: string
     resultado: input.llamada.resultado,
     nota: input.llamada.nota,
     faseNueva: fase === lead.fase ? null : fase,
-    proximoSeguimiento: seguimientoTrasLlamada(input.llamada.resultado, input.llamada.proximo_seguimiento),
+    proximoSeguimiento: proximo,
+    proximoSeguimientoHora: proximo ? input.llamada.proximo_seguimiento_hora : null,
   });
 }
 
@@ -314,6 +317,7 @@ export async function marcarMuestrasEnviadas(input: { usuaria: Usuaria; leadId: 
     nota: input.datos.nota,
     faseNueva: lead.fase === "cliente" || lead.fase === "muestras" ? null : "muestras",
     proximoSeguimiento: input.datos.proximo_seguimiento,
+    proximoSeguimientoHora: input.datos.proximo_seguimiento_hora,
   });
 }
 
@@ -327,6 +331,7 @@ export async function anadirNota(input: { usuaria: Usuaria; leadId: string; dato
     tipo: "nota",
     nota: input.datos.nota,
     proximoSeguimiento: input.datos.proximo_seguimiento,
+    proximoSeguimientoHora: input.datos.proximo_seguimiento_hora,
   });
 }
 

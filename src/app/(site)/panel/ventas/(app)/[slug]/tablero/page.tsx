@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireAccesoMarca } from "@/lib/ventas/auth";
 import { listLeads, listUsuarias } from "@/lib/ventas/db";
 import { TIPO_NEGOCIO_LABELS } from "@/lib/ventas/dominio";
-import { hoyMadrid } from "@/lib/ventas/metricas";
+import { ahoraMadrid } from "@/lib/ventas/metricas";
 import { estadoSeguimiento, iniciales } from "@/lib/ventas/tablero";
 import { MarcaCabecera } from "../../../_componentes/MarcaCabecera";
 import { Tablero, type TarjetaLead } from "./Tablero";
@@ -19,7 +19,7 @@ export default async function TableroPage({
   const mias = sp.mias === "1";
   const atrasados = sp.atrasados === "1";
   const q = (sp.q ?? "").trim().toLowerCase();
-  const hoy = hoyMadrid();
+  const ahora = ahoraMadrid();
 
   const [todos, usuarias] = await Promise.all([
     listLeads(marca.id, { asignadaA: mias ? usuaria.id : undefined }),
@@ -29,7 +29,7 @@ export default async function TableroPage({
 
   // Al cliente solo van datos planos del lead: nada de la marca (lleva el secreto del webhook).
   const leads: TarjetaLead[] = todos
-    .filter((l) => !atrasados || estadoSeguimiento(l.proximo_seguimiento, l.fase, hoy) === "atrasado")
+    .filter((l) => !atrasados || estadoSeguimiento(l.proximo_seguimiento, l.proximo_seguimiento_hora ?? null, l.fase, ahora) === "atrasado")
     .filter((l) => !q || [l.negocio, l.ciudad, l.contacto].some((v) => v?.toLowerCase().includes(q)))
     .map((l) => {
       const nombre = l.asignada_a ? nombres.get(l.asignada_a) : undefined;
@@ -42,6 +42,7 @@ export default async function TableroPage({
         fase: l.fase,
         excluido: l.excluido,
         proximo_seguimiento: l.proximo_seguimiento,
+        proximo_seguimiento_hora: l.proximo_seguimiento_hora ?? null,
         created_at: l.created_at,
         asignada: nombre ? { nombre, iniciales: iniciales(nombre) } : null,
       };
@@ -87,7 +88,7 @@ export default async function TableroPage({
           </form>
         </div>
 
-        <Tablero slug={slug} leads={leads} hoy={hoy} filtrosLista={{ mias, atrasados, q }} />
+        <Tablero slug={slug} leads={leads} ahora={ahora} filtrosLista={{ mias, atrasados, q }} />
       </div>
     </div>
   );

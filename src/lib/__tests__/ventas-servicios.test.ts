@@ -24,6 +24,7 @@ import {
   recibirLeadFormulario,
   crearLeadManual,
   registrarLlamada,
+  anadirNota,
   marcarMuestrasEnviadas,
   cambiarFaseManual,
   moverLead,
@@ -284,7 +285,7 @@ describe("crearLeadManual", () => {
 describe("registro de trabajo sobre un lead", () => {
   test("la llamada mueve la fase y borra el seguimiento si cierra el lead", async () => {
     m.getLead.mockResolvedValue({ id: "l1", fase: "muestras" });
-    await registrarLlamada({ usuaria: USUARIA, leadId: "l1", llamada: { resultado: "no_interesa", nota: "Ya tienen proveedor", proximo_seguimiento: "2026-09-30" } });
+    await registrarLlamada({ usuaria: USUARIA, leadId: "l1", llamada: { resultado: "no_interesa", nota: "Ya tienen proveedor", proximo_seguimiento: "2026-09-30", proximo_seguimiento_hora: null } });
     expect(m.registrarActividad).toHaveBeenCalledWith({
       leadId: "l1",
       usuariaId: "u1",
@@ -293,18 +294,34 @@ describe("registro de trabajo sobre un lead", () => {
       nota: "Ya tienen proveedor",
       faseNueva: "no_interesa",
       proximoSeguimiento: null,
+      proximoSeguimientoHora: null,
     });
+  });
+
+  test("una llamada que cierra el lead no guarda hora de seguimiento", async () => {
+    m.getLead.mockResolvedValue({ id: "l1", fase: "contactado" });
+    m.registrarActividad.mockResolvedValue({ ok: true });
+    await registrarLlamada({ usuaria: USUARIA, leadId: "l1", llamada: { resultado: "no_interesa", nota: "", proximo_seguimiento: "2026-10-20", proximo_seguimiento_hora: "16:30" } });
+    expect(m.registrarActividad).toHaveBeenCalledWith(expect.objectContaining({ proximoSeguimiento: null, proximoSeguimientoHora: null }));
+  });
+
+  test("la hora viaja con la fecha cuando el seguimiento sobrevive, también en notas y muestras", async () => {
+    m.getLead.mockResolvedValue({ id: "l1", fase: "contactado" });
+    await registrarLlamada({ usuaria: USUARIA, leadId: "l1", llamada: { resultado: "no_contesta", nota: "", proximo_seguimiento: "2026-10-20", proximo_seguimiento_hora: "16:30" } });
+    await marcarMuestrasEnviadas({ usuaria: USUARIA, leadId: "l1", datos: { nota: "", proximo_seguimiento: "2026-10-20", proximo_seguimiento_hora: "09:15" } });
+    await anadirNota({ usuaria: USUARIA, leadId: "l1", datos: { nota: "x", proximo_seguimiento: "2026-10-21", proximo_seguimiento_hora: "11:00" } });
+    expect(m.registrarActividad.mock.calls.map((c) => c[0].proximoSeguimientoHora)).toEqual(["16:30", "09:15", "11:00"]);
   });
 
   test("si la fase no cambia no se pide cambio de fase", async () => {
     m.getLead.mockResolvedValue({ id: "l1", fase: "contactado" });
-    await registrarLlamada({ usuaria: USUARIA, leadId: "l1", llamada: { resultado: "no_contesta", nota: "", proximo_seguimiento: "2026-09-20" } });
+    await registrarLlamada({ usuaria: USUARIA, leadId: "l1", llamada: { resultado: "no_contesta", nota: "", proximo_seguimiento: "2026-09-20", proximo_seguimiento_hora: null } });
     expect(m.registrarActividad.mock.calls[0][0]).toMatchObject({ faseNueva: null, proximoSeguimiento: "2026-09-20" });
   });
 
   test("lead inexistente", async () => {
     m.getLead.mockResolvedValue(null);
-    expect(await registrarLlamada({ usuaria: USUARIA, leadId: "x", llamada: { resultado: "no_contesta", nota: "", proximo_seguimiento: null } })).toEqual({
+    expect(await registrarLlamada({ usuaria: USUARIA, leadId: "x", llamada: { resultado: "no_contesta", nota: "", proximo_seguimiento: null, proximo_seguimiento_hora: null } })).toEqual({
       ok: false,
       error: "Lead no encontrado.",
     });
@@ -312,8 +329,8 @@ describe("registro de trabajo sobre un lead", () => {
 
   test("muestras enviadas pasa a fase muestras salvo si ya es cliente", async () => {
     m.getLead.mockResolvedValueOnce({ id: "l1", fase: "interesado" }).mockResolvedValueOnce({ id: "l2", fase: "cliente" });
-    await marcarMuestrasEnviadas({ usuaria: USUARIA, leadId: "l1", datos: { nota: "Pack 6", proximo_seguimiento: "2026-09-25" } });
-    await marcarMuestrasEnviadas({ usuaria: USUARIA, leadId: "l2", datos: { nota: "", proximo_seguimiento: null } });
+    await marcarMuestrasEnviadas({ usuaria: USUARIA, leadId: "l1", datos: { nota: "Pack 6", proximo_seguimiento: "2026-09-25", proximo_seguimiento_hora: null } });
+    await marcarMuestrasEnviadas({ usuaria: USUARIA, leadId: "l2", datos: { nota: "", proximo_seguimiento: null, proximo_seguimiento_hora: null } });
     expect(m.registrarActividad.mock.calls[0][0]).toMatchObject({ tipo: "muestras_enviadas", faseNueva: "muestras" });
     expect(m.registrarActividad.mock.calls[1][0]).toMatchObject({ faseNueva: null });
   });
