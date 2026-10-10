@@ -10,7 +10,7 @@ vi.mock("../supabase-admin", () => ({
   getSupabaseAdmin: () => ({ rpc: rpcMock, from: fromMock, auth: { admin: authAdmin } }),
 }));
 
-import { crearLeads, registrarActividad, crearUsuariaCompleta, listLeads, listSecuencias, listUltimasNotas, actualizarTarea } from "../ventas/db";
+import { crearLeads, registrarActividad, crearUsuariaCompleta, listLeads, listSecuencias, listUltimasNotas, actualizarTarea, listSeguimientosUsuaria, listTareasUsuaria } from "../ventas/db";
 
 const LEAD = { negocio: "Gym", tipo_negocio: null, contacto: "", telefono: "600111222", email: "", ciudad: "", cif: "", web: "", excluido: false };
 
@@ -169,5 +169,30 @@ describe("actualizarTarea", () => {
     expect(update).toHaveBeenCalledWith({ asignada_a: "u2" });
     await actualizarTarea("t1", { asignadaA: null });
     expect(update).toHaveBeenLastCalledWith({ asignada_a: null });
+  });
+});
+
+describe("orden de «Mi día»", () => {
+  // Cada consulta encadena filtros y order; devolvemos un builder que lo apunta todo.
+  function builderQueRegistraOrder() {
+    const order = vi.fn();
+    const b: Record<string, unknown> = {};
+    for (const f of ["select", "eq", "lte", "in", "is", "not"]) b[f] = vi.fn(() => b);
+    b.order = order.mockImplementation(() => b);
+    b.range = vi.fn().mockResolvedValue({ data: [], error: null });
+    fromMock.mockReset().mockReturnValue(b);
+    return order;
+  }
+
+  test("los seguimientos van por fecha y luego por hora, con las sin hora al final", async () => {
+    const order = builderQueRegistraOrder();
+    await listSeguimientosUsuaria("u1", "2026-10-10");
+    expect(order.mock.calls).toEqual([["proximo_seguimiento"], ["proximo_seguimiento_hora", { ascending: true, nullsFirst: false }]]);
+  });
+
+  test("las tareas van por fecha y luego por hora, con las sin hora al final", async () => {
+    const order = builderQueRegistraOrder();
+    await listTareasUsuaria("u1");
+    expect(order.mock.calls).toEqual([["vence"], ["vence_hora", { ascending: true, nullsFirst: false }]]);
   });
 });

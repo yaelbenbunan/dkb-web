@@ -441,6 +441,8 @@ export async function listSeguimientosUsuaria(usuariaId: string, hasta: string):
         .lte("proximo_seguimiento", hasta)
         .in("fase", [...FASES_ACTIVAS])
         .order("proximo_seguimiento")
+        // Dentro del mismo día, por hora; los que no la tienen, al final.
+        .order("proximo_seguimiento_hora", { ascending: true, nullsFirst: false })
         .range(d, h) as PromiseLike<Respuesta<LeadConMarca[]>>,
     "listSeguimientosUsuaria",
   );
@@ -466,6 +468,7 @@ export async function listTareasUsuaria(usuariaId: string): Promise<(TareaManual
         .is("hecha_at", null)
         .not("vence", "is", null)
         .order("vence")
+        .order("vence_hora", { ascending: true, nullsFirst: false })
         .range(d, h) as PromiseLike<Respuesta<(TareaManual & { marca: { nombre: string; slug: string } | null })[]>>,
     "listTareasUsuaria",
   );
