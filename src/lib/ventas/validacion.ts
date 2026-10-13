@@ -295,6 +295,7 @@ export interface NuevaTarea {
   vence_hora: string | null;
   asignada_a: string | null;
   lead_id: string | null;
+  notas: string | null;
 }
 
 export function leerNuevaTarea(fd: FormData): Leido<NuevaTarea> {
@@ -305,6 +306,7 @@ export function leerNuevaTarea(fd: FormData): Leido<NuevaTarea> {
       vence_hora: horaSchema,
       asignada_a: z.uuid("Responsable no válida.").nullable(),
       lead_id: z.uuid("Lead no válido.").nullable(),
+      notas: notaSchema.nullable(),
     }),
     {
       titulo: campo(fd, "titulo"),
@@ -312,6 +314,7 @@ export function leerNuevaTarea(fd: FormData): Leido<NuevaTarea> {
       vence_hora: campo(fd, "vence_hora") || null,
       asignada_a: campo(fd, "asignada_a") || null,
       lead_id: campo(fd, "lead_id") || null,
+      notas: campo(fd, "notas") || null,
     },
   );
   if (r.ok && r.datos.vence_hora && !r.datos.vence) return { ok: false, error: "Para poner hora hace falta la fecha." };

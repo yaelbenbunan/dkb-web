@@ -22,6 +22,7 @@ export interface TareaVista {
   asignadaA: string | null;
   tareaId: string | null;
   hecha: boolean;
+  notas: string | null;
 }
 
 export interface TareaManual {
@@ -36,6 +37,8 @@ export interface TareaManual {
   hecha_at: string | null;
   hecha_por: string | null;
   created_at: string;
+  /** Falta en las filas mientras no se ejecute docs/sql/2026-10-13-ventas-tareas-notas.sql. */
+  notas?: string | null;
 }
 
 export interface LeadDeTarea {
@@ -59,7 +62,7 @@ export function leadsQuePidenMuestras(llamadas: { lead_id: string; resultado: st
 export function tareasAutomaticas(leads: LeadDeTarea[], pidenMuestras: Set<string>): TareaVista[] {
   const tareas: TareaVista[] = [];
   for (const l of leads) {
-    const comun = { leadId: l.id, negocio: l.negocio, asignadaA: l.asignada_a, tareaId: null, hecha: false };
+    const comun = { leadId: l.id, negocio: l.negocio, asignadaA: l.asignada_a, tareaId: null, hecha: false, notas: null };
     if (esFaseActiva(l.fase) && l.proximo_seguimiento) {
       tareas.push({ ...comun, clave: `llamar:${l.id}`, tipo: "llamar", titulo: `Llamar a ${l.negocio}`, fecha: l.proximo_seguimiento, hora: hhmm(l.proximo_seguimiento_hora) });
     }
@@ -87,6 +90,7 @@ export function tareasManuales(tareas: TareaManual[], negocios: Map<string, stri
     asignadaA: t.asignada_a,
     tareaId: t.id,
     hecha: t.hecha_at !== null,
+    notas: t.notas ?? null,
   }));
 }
 

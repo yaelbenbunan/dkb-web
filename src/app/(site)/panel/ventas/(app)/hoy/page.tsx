@@ -90,6 +90,7 @@ export default async function MiDiaPage() {
                   <span style={{ fontWeight: estado === "atrasado" ? 700 : 400, color: estado === "atrasado" ? "#b91c1c" : "#334155" }}>
                     {t.vence ? formatoSeguimiento(t.vence, t.vence_hora) : ""}
                   </span>
+                  {t.notas && <span style={{ flexBasis: "100%", fontSize: 13, color: "#475569", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{t.notas}</span>}
                 </Link>
               </li>
             ))}

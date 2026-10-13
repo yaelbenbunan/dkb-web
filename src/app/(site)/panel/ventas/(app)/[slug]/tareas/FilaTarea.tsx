@@ -71,6 +71,7 @@ export function FilaTarea({
       ) : (
         <span style={{ fontSize: 13, color: "#64748b" }}>{responsable ?? "Sin asignar"}</span>
       )}
+      {tarea.notas && <p style={{ flexBasis: "100%", margin: "0 0 0 23px", fontSize: 13, color: "#475569", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{tarea.notas}</p>}
       {error && <span role="alert" style={{ flexBasis: "100%", fontSize: 12, color: "#b91c1c" }}>{error}</span>}
     </li>
   );

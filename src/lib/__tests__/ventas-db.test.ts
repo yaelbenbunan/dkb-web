@@ -10,7 +10,7 @@ vi.mock("../supabase-admin", () => ({
   getSupabaseAdmin: () => ({ rpc: rpcMock, from: fromMock, auth: { admin: authAdmin } }),
 }));
 
-import { crearLeads, registrarActividad, crearUsuariaCompleta, listLeads, listSecuencias, listUltimasNotas, actualizarTarea, listSeguimientosUsuaria, listTareasUsuaria } from "../ventas/db";
+import { crearLeads, registrarActividad, crearUsuariaCompleta, listLeads, listSecuencias, listUltimasNotas, actualizarTarea, crearTarea, listSeguimientosUsuaria, listTareasUsuaria } from "../ventas/db";
 
 const LEAD = { negocio: "Gym", tipo_negocio: null, contacto: "", telefono: "600111222", email: "", ciudad: "", cif: "", web: "", excluido: false };
 
@@ -282,5 +282,30 @@ describe("crearUsuariaCompleta y la marca", () => {
     const insert = conInsert();
     await crearUsuariaCompleta({ ...BASE, rol: "cliente", marca_id: "m1" });
     expect(insert.mock.calls[0][0]).toMatchObject({ rol: "cliente", marca_id: "m1" });
+  });
+});
+
+describe("crearTarea", () => {
+  const TAREA = { marcaId: "m1", leadId: null, titulo: "Mandar catálogo", vence: null, venceHora: null, asignadaA: null, creadaPor: "u1" };
+  const insert = vi.fn();
+  beforeEach(() => {
+    insert.mockReset().mockResolvedValue({ error: null });
+    fromMock.mockReset().mockReturnValue({ insert });
+  });
+
+  test("con notas, las guarda", async () => {
+    expect(await crearTarea({ ...TAREA, notas: "El de 2026" })).toEqual({ ok: true });
+    expect(insert.mock.calls[0][0]).toMatchObject({ titulo: "Mandar catálogo", notas: "El de 2026" });
+  });
+
+  test("sin notas no manda la columna: la tarea se crea aunque falte la migración", async () => {
+    await crearTarea({ ...TAREA, notas: null });
+    expect(insert.mock.calls[0][0]).not.toHaveProperty("notas");
+  });
+
+  test("con notas y sin la columna en la base: dice qué migración falta", async () => {
+    insert.mockResolvedValue({ error: { message: "Could not find the 'notas' column", code: "PGRST204" } });
+    const r = await crearTarea({ ...TAREA, notas: "x" });
+    expect(r).toEqual({ ok: false, error: "Para guardar notas en las tareas falta ejecutar en Supabase docs/sql/2026-10-13-ventas-tareas-notas.sql." });
   });
 });

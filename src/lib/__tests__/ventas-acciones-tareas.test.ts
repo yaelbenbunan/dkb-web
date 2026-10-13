@@ -61,7 +61,13 @@ describe("acciones de tareas", () => {
       venceHora: "16:30",
       asignadaA: "3f0c2a4e-1b2c-4d5e-8f90-123456789abc",
       creadaPor: "c1",
+      notas: null,
     });
+  });
+
+  test("las notas de la tarea llegan a la base", async () => {
+    await crearTareaAction("hydrup", null, fd({ titulo: "Mandar catálogo", notas: "El de 2026, en PDF" }));
+    expect(m.crearTarea).toHaveBeenCalledWith(expect.objectContaining({ titulo: "Mandar catálogo", notas: "El de 2026, en PDF" }));
   });
 
   test("no se asigna a una usuaria desactivada", async () => {

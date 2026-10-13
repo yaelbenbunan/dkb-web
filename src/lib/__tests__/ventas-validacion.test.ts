@@ -169,7 +169,7 @@ describe("hora de seguimiento", () => {
 
 describe("leerNuevaTarea", () => {
   test("solo el título es obligatorio", () => {
-    expect(leerNuevaTarea(fd({ titulo: " Mandar catálogo " }))).toEqual({ ok: true, datos: { titulo: "Mandar catálogo", vence: null, vence_hora: null, asignada_a: null, lead_id: null } });
+    expect(leerNuevaTarea(fd({ titulo: " Mandar catálogo " }))).toEqual({ ok: true, datos: { titulo: "Mandar catálogo", vence: null, vence_hora: null, asignada_a: null, lead_id: null, notas: null } });
     expect(leerNuevaTarea(fd({ titulo: "  " }))).toEqual({ ok: false, error: "Escribe qué hay que hacer." });
   });
   test("hora sin fecha: error", () => {
@@ -177,5 +177,14 @@ describe("leerNuevaTarea", () => {
   });
   test("título de más de 200 caracteres: error", () => {
     expect(leerNuevaTarea(fd({ titulo: "a".repeat(201) }))).toEqual({ ok: false, error: "El título es demasiado largo." });
+  });
+  test("notas: opcionales, recortadas por fuera y con sus saltos de línea", () => {
+    const r = leerNuevaTarea(fd({ titulo: "x", notas: "  Pedir el de 2026.\nHablar con Marta  " }));
+    expect(r).toMatchObject({ ok: true, datos: { notas: "Pedir el de 2026.\nHablar con Marta" } });
+    expect(leerNuevaTarea(fd({ titulo: "x", notas: "   " }))).toMatchObject({ ok: true, datos: { notas: null } });
+  });
+  test("notas de más de 2000 caracteres: error", () => {
+    expect(leerNuevaTarea(fd({ titulo: "x", notas: "a".repeat(2001) }))).toEqual({ ok: false, error: "La nota es demasiado larga." });
+    expect(leerNuevaTarea(fd({ titulo: "x", notas: "a".repeat(2000) })).ok).toBe(true);
   });
 });

@@ -27,7 +27,7 @@ describe("tareasAutomaticas", () => {
   test("llamar: fase activa con fecha, a nombre de quien lleva el lead y con su hora", () => {
     const t = tareasAutomaticas([lead("a", { proximo_seguimiento: "2026-10-20", proximo_seguimiento_hora: "16:30:00", asignada_a: "u7" })], new Set());
     expect(t).toEqual([
-      { clave: "llamar:a", tipo: "llamar", titulo: "Llamar a Negocio a", leadId: "a", negocio: "Negocio a", fecha: "2026-10-20", hora: "16:30", asignadaA: "u7", tareaId: null, hecha: false },
+      { clave: "llamar:a", tipo: "llamar", titulo: "Llamar a Negocio a", leadId: "a", negocio: "Negocio a", fecha: "2026-10-20", hora: "16:30", asignadaA: "u7", tareaId: null, hecha: false, notas: null },
     ]);
   });
   test("un lead cerrado con fecha no genera llamada", () => {
@@ -54,9 +54,15 @@ test("tareasManuales pone el negocio del lead y marca las hechas", () => {
   expect(t[1]).toMatchObject({ clave: "manual:t2", negocio: null, hecha: true });
 });
 
+test("tareasManuales lleva las notas; sin la columna en la base, van a null", () => {
+  const base: TareaManual = { id: "t1", marca_id: "m1", lead_id: null, titulo: "x", vence: null, vence_hora: null, asignada_a: null, creada_por: null, hecha_at: null, hecha_por: null, created_at: "2026-10-01T00:00:00Z" };
+  const t = tareasManuales([{ ...base, notas: "El de 2026" }, base], new Map());
+  expect(t.map((x) => x.notas)).toEqual(["El de 2026", null]);
+});
+
 describe("agruparTareas", () => {
   const ahora = { fecha: "2026-10-20", hora: "10:00" };
-  const t = (clave: string, fecha: string | null, hora: string | null = null) => ({ clave, tipo: "manual" as const, titulo: clave, leadId: null, negocio: null, fecha, hora, asignadaA: null, tareaId: clave, hecha: false });
+  const t = (clave: string, fecha: string | null, hora: string | null = null) => ({ clave, tipo: "manual" as const, titulo: clave, leadId: null, negocio: null, fecha, hora, asignadaA: null, tareaId: clave, hecha: false, notas: null });
 
   test("reparte en atrasadas, hoy, próximas y sin fecha, teniendo en cuenta la hora", () => {
     const g = agruparTareas([t("ayer", "2026-10-19"), t("hoy-pasada", "2026-10-20", "09:00"), t("hoy-luego", "2026-10-20", "16:00"), t("hoy-sin-hora", "2026-10-20"), t("mañana", "2026-10-21"), t("nunca", null)], ahora);

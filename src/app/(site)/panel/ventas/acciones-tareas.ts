@@ -49,6 +49,7 @@ export async function crearTareaAction(slug: string, _prev: ResultadoAccion | nu
     venceHora: d.vence_hora,
     asignadaA: d.asignada_a,
     creadaPor: acceso.usuaria.id,
+    notas: d.notas,
   });
   if (!res.ok) return res;
   refrescar(slug);

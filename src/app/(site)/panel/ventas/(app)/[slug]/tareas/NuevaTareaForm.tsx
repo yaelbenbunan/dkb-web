@@ -56,6 +56,10 @@ export function NuevaTareaForm({
           ))}
         </select>
       </label>
+      <label style={{ ...etiqueta, flex: "1 1 100%" }}>
+        Notas (opcional)
+        <textarea name="notas" maxLength={2000} rows={2} placeholder="Detalles, contexto, qué llevar…" style={{ ...campo, resize: "vertical", fontFamily: "inherit" }} />
+      </label>
       <button type="submit" disabled={pendiente} style={botonPrimario}>Añadir</button>
       <Mensaje resultado={resultado} />
     </form>

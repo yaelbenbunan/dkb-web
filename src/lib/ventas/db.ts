@@ -571,19 +571,25 @@ export async function crearTarea(t: {
   venceHora: string | null;
   asignadaA: string | null;
   creadaPor: string;
+  notas: string | null;
 }): Promise<Escritura> {
-  return escritura(
-    await db().from("ventas_tareas").insert({
-      marca_id: t.marcaId,
-      lead_id: t.leadId,
-      titulo: t.titulo,
-      vence: t.vence,
-      vence_hora: t.venceHora,
-      asignada_a: t.asignadaA,
-      creada_por: t.creadaPor,
-    }),
-    "crearTarea",
-  );
+  const r = await db().from("ventas_tareas").insert({
+    marca_id: t.marcaId,
+    lead_id: t.leadId,
+    titulo: t.titulo,
+    vence: t.vence,
+    vence_hora: t.venceHora,
+    asignada_a: t.asignadaA,
+    creada_por: t.creadaPor,
+    // Solo se manda si hay algo que guardar: así las tareas sin notas se
+    // siguen creando aunque la columna aún no exista.
+    ...(t.notas ? { notas: t.notas } : {}),
+  });
+  if (t.notas && r.error?.code && FALTA_EN_LA_BASE.has(r.error.code)) {
+    console.error("[ventas/db] crearTarea: falta la migración de notas de tareas:", r.error.message);
+    return { ok: false, error: "Para guardar notas en las tareas falta ejecutar en Supabase docs/sql/2026-10-13-ventas-tareas-notas.sql." };
+  }
+  return escritura(r, "crearTarea");
 }
 
 export async function actualizarTarea(id: string, cambios: { hecha?: { por: string } | null; asignadaA?: string | null }): Promise<Escritura> {
