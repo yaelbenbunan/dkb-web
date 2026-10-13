@@ -77,6 +77,10 @@ export interface Lead {
   proximo_seguimiento: string | null;
   /** HH:MM:SS de Postgres; hasta que se ejecute la migración la fila no trae la columna. */
   proximo_seguimiento_hora: string | null;
+  /** Socios o usuarios activos del centro y puesto del contacto, como texto
+   *  libre: vienen del formulario del anuncio. Sin la migración, `undefined`. */
+  socios: string | null;
+  cargo: string | null;
   codigo_cliente: string;
   excluido: boolean;
   created_by: string | null;
@@ -364,6 +368,24 @@ export async function actualizarDatosLead(id: string, d: LeadNuevo): Promise<Esc
     "actualizarDatosLead",
     "Ya hay otro lead de esta marca con ese email o teléfono.",
   );
+}
+
+/**
+ * Guarda socios y cargo. Van aparte de `actualizarDatosLead` a propósito: si la
+ * base aún no tiene esas columnas, falla esto y no el guardado del resto de la
+ * ficha ni el alta del lead que llega por el webhook.
+ */
+export async function actualizarExtrasLead(id: string, extras: { socios?: string; cargo?: string }): Promise<Escritura> {
+  const fila: Record<string, string | null> = {};
+  if (extras.socios !== undefined) fila.socios = vacioANull(extras.socios);
+  if (extras.cargo !== undefined) fila.cargo = vacioANull(extras.cargo);
+  if (Object.keys(fila).length === 0) return { ok: true };
+  const r = await db().from("ventas_leads").update(fila).eq("id", id);
+  if (r.error?.code && FALTA_EN_LA_BASE.has(r.error.code)) {
+    console.error("[ventas/db] actualizarExtrasLead: falta la migración de socios y cargo:", r.error.message);
+    return { ok: false, error: "El resto se ha guardado, pero socios y cargo no: falta ejecutar en Supabase docs/sql/2026-10-13-ventas-socios-cargo.sql." };
+  }
+  return escritura(r, "actualizarExtrasLead");
 }
 
 export async function asignarLead(id: string, usuariaId: string | null): Promise<Escritura> {

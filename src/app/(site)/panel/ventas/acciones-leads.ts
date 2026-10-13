@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { accesoMarcaAccion } from "@/lib/ventas/auth";
-import { actualizarDatosLead, asignarLead, eliminarLeads, getLead, getUsuaria } from "@/lib/ventas/db";
+import { actualizarDatosLead, actualizarExtrasLead, asignarLead, eliminarLeads, getLead, getUsuaria } from "@/lib/ventas/db";
 import { esFase, MARCA_DINKBIT_SLUG } from "@/lib/ventas/dominio";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
 import { esAsignableEnMarca, type SeccionMarca } from "@/lib/ventas/rutas";
@@ -20,7 +20,7 @@ import {
   type PreviaImportacion,
   type ResultadoImportacion,
 } from "@/lib/ventas/servicios";
-import { leerCambioFase, leerDatosLead, leerLlamada, leerNotaSeguimiento } from "@/lib/ventas/validacion";
+import { leerCambioFase, leerDatosLead, leerExtrasLead, leerLlamada, leerNotaSeguimiento } from "@/lib/ventas/validacion";
 
 const NO_ENCONTRADO = { ok: false, error: "Lead no encontrado." } as const;
 
@@ -81,7 +81,13 @@ export async function actualizarLeadAction(slug: string, leadId: string, _prev: 
   if (!leido.ok) return leido;
   const res = await actualizarDatosLead(leadId, leido.datos);
   if (!res.ok) return res;
+  // Solo si el formulario los trae y han cambiado: así guardar la ficha sigue
+  // funcionando aunque la base aún no tenga las columnas de socios y cargo.
+  const extras = leerExtrasLead(fd);
+  const cambian = extras.socios !== (acceso.lead.socios ?? "") || extras.cargo !== (acceso.lead.cargo ?? "");
+  const resExtras = fd.has("socios") && cambian ? await actualizarExtrasLead(leadId, extras) : ({ ok: true } as const);
   refrescar(slug);
+  if (!resExtras.ok) return resExtras;
   return { ok: true, mensaje: "Datos guardados." };
 }
 

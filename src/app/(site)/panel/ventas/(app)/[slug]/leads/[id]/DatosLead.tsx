@@ -30,6 +30,8 @@ export function DatosLead({ slug, lead }: { slug: string; lead: Lead }) {
         </select>
       </label>
       {texto("contacto", "Persona de contacto")}
+      {texto("cargo", "Cargo del contacto")}
+      {texto("socios", "Socios o usuarios activos")}
       {texto("telefono", "Teléfono", "tel")}
       {texto("email", "Email", "email")}
       {texto("ciudad", "Ciudad")}

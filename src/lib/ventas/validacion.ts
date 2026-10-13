@@ -217,6 +217,11 @@ export function leerDatosLead(fd: FormData): Leido<LeadNuevo> {
   return r;
 }
 
+/** Socios y cargo de la ficha: texto libre y corto. Van aparte de `leerDatosLead`. */
+export function leerExtrasLead(fd: FormData): { socios: string; cargo: string } {
+  return { socios: campo(fd, "socios").slice(0, 80), cargo: campo(fd, "cargo").slice(0, 80) };
+}
+
 const proximoSchema = z.string().regex(FECHA_RE, "Fecha de seguimiento no válida.").nullable();
 const HORA_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const horaSchema = z.string().regex(HORA_RE, "Hora de seguimiento no válida.").nullable();

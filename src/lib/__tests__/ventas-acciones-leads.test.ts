@@ -6,6 +6,7 @@ const m = vi.hoisted(() => ({
   getUsuaria: vi.fn(),
   actualizarDatosLead: vi.fn(),
   asignarLead: vi.fn(),
+  actualizarExtrasLead: vi.fn(),
   eliminarLeads: vi.fn(),
   importarLeadsCsv: vi.fn(),
   previsualizarImportacion: vi.fn(),
@@ -27,6 +28,7 @@ vi.mock("@/lib/ventas/db", () => ({
   getUsuaria: m.getUsuaria,
   actualizarDatosLead: m.actualizarDatosLead,
   asignarLead: m.asignarLead,
+  actualizarExtrasLead: m.actualizarExtrasLead,
   eliminarLeads: m.eliminarLeads,
 }));
 vi.mock("@/lib/ventas/servicios", () => ({
@@ -317,5 +319,35 @@ describe("eliminarLeadAction", () => {
     m.getLead.mockResolvedValue({ ...LEAD, negocio: "Bar Paco" });
     m.eliminarLeads.mockResolvedValue({ ok: true, borrados: 0 });
     expect(await eliminarLeadAction("hydrup", "l1", null, confirmacion("Bar Paco"))).toEqual({ ok: false, error: "Lead no encontrado." });
+  });
+});
+
+describe("actualizarLeadAction: socios y cargo", () => {
+  const BASE = { negocio: "MNB", telefono: "600111222" };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    m.accesoMarcaAccion.mockResolvedValue({ ok: true, usuaria: USUARIA, marca: MARCA });
+    m.getLead.mockResolvedValue({ ...LEAD, socios: null, cargo: "Gerente" });
+    m.actualizarDatosLead.mockResolvedValue({ ok: true });
+    m.actualizarExtrasLead.mockResolvedValue({ ok: true });
+  });
+
+  test("se guardan cuando cambian", async () => {
+    const r = await actualizarLeadAction("hydrup", "l1", null, fd({ ...BASE, socios: "100 a 300", cargo: "Gerente" }));
+    expect(r).toEqual({ ok: true, mensaje: "Datos guardados." });
+    expect(m.actualizarExtrasLead).toHaveBeenCalledWith("l1", { socios: "100 a 300", cargo: "Gerente" });
+  });
+
+  test("si no cambian, no se toca la base", async () => {
+    await actualizarLeadAction("hydrup", "l1", null, fd({ ...BASE, socios: "", cargo: "Gerente" }));
+    expect(m.actualizarExtrasLead).not.toHaveBeenCalled();
+  });
+
+  test("si fallan, el resto de la ficha ya se guardó y se dice el motivo", async () => {
+    m.actualizarExtrasLead.mockResolvedValue({ ok: false, error: "El resto se ha guardado, pero socios y cargo no." });
+    const r = await actualizarLeadAction("hydrup", "l1", null, fd({ ...BASE, socios: "50", cargo: "Gerente" }));
+    expect(r).toEqual({ ok: false, error: "El resto se ha guardado, pero socios y cargo no." });
+    expect(m.actualizarDatosLead).toHaveBeenCalled();
   });
 });

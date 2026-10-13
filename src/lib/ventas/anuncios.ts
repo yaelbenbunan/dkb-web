@@ -16,11 +16,30 @@ const MAX_TELEFONO = 40;
 const MAX_EMAIL = 254;
 // El mismo tope que las notas que se escriben a mano en la ficha (`validacion.ts`).
 const MAX_NOTA = 2000;
+export const MAX_EXTRA = 80;
+
+/** Datos del formulario del anuncio que no identifican al lead pero sí lo cualifican. */
+export interface ExtrasLead {
+  /** Socios o usuarios activos del centro, tal como se contesta: «100 a 300». */
+  socios: string;
+  /** Puesto de quien deja sus datos: «Propietario / socio». */
+  cargo: string;
+}
+
+/**
+ * Las respuestas de opción de Meta llegan como `_100_a_300` o
+ * `propietario_/_socio`: se dejan legibles («100 a 300», «Propietario / socio»).
+ * Un texto ya escrito por una persona sale igual, salvo la mayúscula inicial.
+ */
+export function limpiarRespuesta(raw: string): string {
+  const limpio = raw.replace(/_/g, " ").replace(/\s+/g, " ").trim();
+  return limpio ? limpio[0].toLocaleUpperCase("es-ES") + limpio.slice(1) : "";
+}
 
 export function leadDesdeAnuncio(
   datos: Record<string, unknown>,
 ):
-  | { ok: true; lead: LeadNuevo; campana: string; nota: string }
+  | { ok: true; lead: LeadNuevo; campana: string; nota: string; extras: ExtrasLead }
   | { ok: false; error: "falta_negocio" | "falta_contacto" | "email_invalido" } {
   const texto = (...claves: string[]): string => {
     for (const clave of claves) {
@@ -44,6 +63,10 @@ export function leadDesdeAnuncio(
     ok: true,
     campana: texto("campana", "campaign_name", "campaign"),
     nota: texto("nota", "notas", "notes").slice(0, MAX_NOTA),
+    extras: {
+      socios: limpiarRespuesta(texto("socios", "num_socios", "numero_socios", "usuarios_activos")).slice(0, MAX_EXTRA),
+      cargo: limpiarRespuesta(texto("cargo", "puesto", "rol", "job_title")).slice(0, MAX_EXTRA),
+    },
     lead: {
       negocio,
       contacto,

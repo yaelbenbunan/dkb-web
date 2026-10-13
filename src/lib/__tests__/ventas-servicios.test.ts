@@ -11,6 +11,7 @@ const m = vi.hoisted(() => ({
   registrarActividad: vi.fn(),
   marcarLeadPromocionado: vi.fn(),
   actualizarDatosLead: vi.fn(),
+  actualizarExtrasLead: vi.fn(),
   createManualLead: vi.fn(),
 }));
 vi.mock("../ventas/db", () => m);
@@ -99,6 +100,35 @@ describe("recibirLeadAnuncio", () => {
     m.buscarLeadPorContacto.mockResolvedValue({ id: "l-new" });
     await recibirLeadAnuncio({ slug: "hydrup", secreto: "secreto-largo", datos: { company_name: "Box X", email: "box@x.es", nota: "Horario: mediodía" } });
     expect(m.registrarActividad).toHaveBeenCalledWith({ leadId: "l-new", usuariaId: null, tipo: "nota", nota: "Horario: mediodía" });
+  });
+
+  test("lead nuevo con socios y cargo → se guardan en su ficha, no en una nota", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA);
+    m.crearLeads.mockResolvedValue({ ok: true, creados: 1 });
+    m.buscarLeadPorContacto.mockResolvedValue({ id: "l-new", socios: null, cargo: null });
+    m.actualizarExtrasLead.mockResolvedValue({ ok: true });
+    await recibirLeadAnuncio({ slug: "hydrup", secreto: "secreto-largo", datos: { company_name: "Box X", email: "box@x.es", socios: "_100_a_300", cargo: "propietario_/_socio" } });
+    expect(m.actualizarExtrasLead).toHaveBeenCalledWith("l-new", { socios: "100 a 300", cargo: "Propietario / socio" });
+    expect(m.registrarActividad).not.toHaveBeenCalled();
+  });
+
+  test("si guardar socios y cargo falla, el lead ya creado responde 200 igual", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA);
+    m.crearLeads.mockResolvedValue({ ok: true, creados: 1 });
+    m.buscarLeadPorContacto.mockResolvedValue({ id: "l-new" });
+    m.actualizarExtrasLead.mockRejectedValue(new Error("columna inexistente"));
+    const aviso = vi.spyOn(console, "error").mockImplementation(() => {});
+    const r = await recibirLeadAnuncio({ slug: "hydrup", secreto: "secreto-largo", datos: { company_name: "Box X", email: "box@x.es", socios: "50" } });
+    expect(r).toEqual({ status: 200, body: { ok: true, duplicado: false } });
+    aviso.mockRestore();
+  });
+
+  test("lead repetido → socios y cargo solo rellenan lo que faltaba", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA);
+    m.buscarLeadPorContacto.mockResolvedValue({ id: "l7", socios: "Más de 1.000", cargo: null });
+    m.actualizarExtrasLead.mockResolvedValue({ ok: true });
+    await recibirLeadAnuncio({ slug: "hydrup", secreto: "secreto-largo", datos: { negocio: "Ya", email: "ya@a.es", socios: "_100_a_300", cargo: "gerente" } });
+    expect(m.actualizarExtrasLead).toHaveBeenCalledWith("l7", { cargo: "Gerente" });
   });
 
   test("lead nuevo sin nota → no se apunta nada en el historial", async () => {

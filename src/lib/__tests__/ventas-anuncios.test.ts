@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { leadDesdeAnuncio } from "../ventas/anuncios";
+import { leadDesdeAnuncio, limpiarRespuesta } from "../ventas/anuncios";
 
 describe("leadDesdeAnuncio", () => {
   test("lee los campos de Meta Lead Ads vía Zapier", () => {
@@ -15,6 +15,7 @@ describe("leadDesdeAnuncio", () => {
       ok: true,
       campana: "Muestras gimnasios",
       nota: "",
+      extras: { socios: "", cargo: "" },
       lead: {
         negocio: "Gym Sol",
         contacto: "Laura Pérez",
@@ -81,5 +82,30 @@ describe("leadDesdeAnuncio", () => {
     expect(r.lead.telefono.length).toBe(40);
     expect(r.lead.email.length).toBe(254);
     expect(r.lead.email.endsWith("@bb.es")).toBe(true);
+  });
+});
+
+describe("socios y cargo del formulario del anuncio", () => {
+  test("las respuestas de opción de Meta se dejan legibles", () => {
+    expect(limpiarRespuesta("_100_a_300")).toBe("100 a 300");
+    expect(limpiarRespuesta("propietario_/_socio")).toBe("Propietario / socio");
+    expect(limpiarRespuesta("más_de_1.000")).toBe("Más de 1.000");
+    expect(limpiarRespuesta("  Directora técnica ")).toBe("Directora técnica");
+    expect(limpiarRespuesta("")).toBe("");
+  });
+
+  test("llegan como `socios` y `cargo`, aparte de la nota", () => {
+    const r = leadDesdeAnuncio({ company: "MNB", mail: "a@b.es", socios: "_100_a_300", cargo: "propietario_/_socio", nota: "Anuncio: Ad 3" });
+    expect(r).toMatchObject({ ok: true, nota: "Anuncio: Ad 3", extras: { socios: "100 a 300", cargo: "Propietario / socio" } });
+  });
+
+  test("entiende `puesto` y `rol` como cargo, y un número como socios", () => {
+    expect(leadDesdeAnuncio({ company: "MNB", mail: "a@b.es", puesto: "Gerente", socios: 250 })).toMatchObject({ extras: { socios: "250", cargo: "Gerente" } });
+    expect(leadDesdeAnuncio({ company: "MNB", mail: "a@b.es", rol: "otro" })).toMatchObject({ extras: { socios: "", cargo: "Otro" } });
+  });
+
+  test("un texto larguísimo se corta", () => {
+    const r = leadDesdeAnuncio({ company: "MNB", mail: "a@b.es", cargo: "x".repeat(500) });
+    expect(r.ok && r.extras.cargo.length).toBe(80);
   });
 });

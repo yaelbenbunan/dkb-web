@@ -3,10 +3,11 @@ import { createManualLead } from "../imagina-leads";
 import type { CsvRowError } from "../leads-csv";
 import { secretMatches } from "../webhook-auth";
 import { datosParaEmbudo } from "../whatsapp/promocion";
-import { leadDesdeAnuncio } from "./anuncios";
+import { leadDesdeAnuncio, type ExtrasLead } from "./anuncios";
 import { notaFormulario } from "./formulario-web";
 import {
   actualizarDatosLead,
+  actualizarExtrasLead,
   actualizarSecuencia,
   buscarLeadPorContacto,
   crearLeads,
@@ -164,13 +165,34 @@ function completarDatos(existente: Lead, nuevo: LeadNuevo): LeadNuevo | null {
  * ficha le faltaba (`completarDatos`). Un cliente previo se
  * guarda marcado como excluido, para que se vea que ha pedido información.
  */
+/**
+ * Socios y cargo que llegan con el lead. Como `completarDatos`, solo RELLENA
+ * huecos: no pisa lo que ya hubiera en la ficha. Nunca lanza ni tumba la
+ * respuesta del webhook: el lead ya está guardado cuando se llama.
+ */
+async function guardarExtras(leadId: string, actuales: { socios?: string | null; cargo?: string | null }, extras: ExtrasLead | undefined) {
+  if (!extras) return;
+  const nuevos: { socios?: string; cargo?: string } = {};
+  if (extras.socios && !actuales.socios) nuevos.socios = extras.socios;
+  if (extras.cargo && !actuales.cargo) nuevos.cargo = extras.cargo;
+  if (Object.keys(nuevos).length === 0) return;
+  try {
+    const res = await actualizarExtrasLead(leadId, nuevos);
+    if (!res.ok) console.error("guardarLeadEntrante: no se pudieron guardar socios y cargo:", res.error);
+  } catch (error) {
+    console.error("guardarLeadEntrante: no se pudieron guardar socios y cargo", error);
+  }
+}
+
 async function guardarLeadEntrante(input: {
   marca: Marca;
   lead: LeadNuevo;
   campana: string;
   notaInicial: string | null;
+  extras?: ExtrasLead;
 }): Promise<{ status: number; body: Record<string, unknown> }> {
   const { marca, lead, campana } = input;
+  const hayExtras = Boolean(input.extras?.socios || input.extras?.cargo);
   const [existentes, exclusiones] = await Promise.all([listContactosLeads(marca.id), listExclusiones(marca.id)]);
   const clasificacion = clasificarLeads([lead], existentes, exclusiones);
 
@@ -194,6 +216,7 @@ async function guardarLeadEntrante(input: {
       } catch (error) {
         console.error("guardarLeadEntrante: no se pudo completar la ficha del lead repetido", error);
       }
+      await guardarExtras(existente.id, existente, input.extras);
     }
     return { status: 200, body: { ok: true, duplicado: true } };
   }
@@ -207,15 +230,16 @@ async function guardarLeadEntrante(input: {
   });
   if (!res.ok) return { status: 500, body: { ok: false, error: "not_saved" } };
 
-  if (input.notaInicial && res.creados > 0) {
+  if ((input.notaInicial || hayExtras) && res.creados > 0) {
     // Sin que pueda tumbar la respuesta: el lead ya está guardado.
     try {
       const creado = await buscarLeadPorContacto(marca.id, lead);
       if (creado) {
-        await registrarActividad({ leadId: creado.id, usuariaId: null, tipo: "nota", nota: input.notaInicial });
+        if (input.notaInicial) await registrarActividad({ leadId: creado.id, usuariaId: null, tipo: "nota", nota: input.notaInicial });
+        await guardarExtras(creado.id, creado, input.extras);
       }
     } catch (error) {
-      console.error("guardarLeadEntrante: no se pudo apuntar la nota inicial", error);
+      console.error("guardarLeadEntrante: no se pudo apuntar la nota inicial ni los datos del centro", error);
     }
   }
   return { status: 200, body: { ok: true, duplicado: res.creados === 0 } };
@@ -235,7 +259,7 @@ export async function recibirLeadAnuncio(input: {
   }
   const leido = leadDesdeAnuncio(input.datos as Record<string, unknown>);
   if (!leido.ok) return { status: 400, body: { ok: false, error: leido.error } };
-  return guardarLeadEntrante({ marca, lead: leido.lead, campana: leido.campana, notaInicial: leido.nota || null });
+  return guardarLeadEntrante({ marca, lead: leido.lead, campana: leido.campana, notaInicial: leido.nota || null, extras: leido.extras });
 }
 
 // Formularios web públicos: la ruta ya ha comprobado origen, trampa y límite.
@@ -251,7 +275,7 @@ export async function recibirLeadFormulario(input: {
   const datos = input.datos as Record<string, unknown>;
   const leido = leadDesdeAnuncio({ ...datos, campana: CAMPANA_FORMULARIO_WEB });
   if (!leido.ok) return { status: 400, body: { ok: false, error: leido.error } };
-  return guardarLeadEntrante({ marca, lead: leido.lead, campana: CAMPANA_FORMULARIO_WEB, notaInicial: notaFormulario(datos) });
+  return guardarLeadEntrante({ marca, lead: leido.lead, campana: CAMPANA_FORMULARIO_WEB, notaInicial: notaFormulario(datos), extras: leido.extras });
 }
 
 export async function crearLeadManual(input: {
