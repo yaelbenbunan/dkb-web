@@ -115,9 +115,38 @@ function db() {
   return sb;
 }
 
+/** Error de lectura que conserva el código de Postgres/PostgREST. */
+class ErrorLectura extends Error {
+  constructor(mensaje: string, readonly codigo?: string) {
+    super(mensaje);
+  }
+}
+
 function comprobar<T>(r: Respuesta<T>, contexto: string): T | null {
-  if (r.error) throw new Error(`[ventas/db] ${contexto}: ${r.error.message}`);
+  if (r.error) throw new ErrorLectura(`[ventas/db] ${contexto}: ${r.error.message}`, r.error.code);
   return r.data;
+}
+
+/**
+ * Códigos con los que la base contesta cuando le falta algo de una migración:
+ * función, tabla o columna que no existe (los de PostgREST y los de Postgres).
+ */
+const FALTA_EN_LA_BASE = new Set(["PGRST202", "PGRST204", "PGRST205", "42883", "42P01", "42703"]);
+
+/**
+ * Para lecturas que dependen de una migración reciente y no son imprescindibles
+ * para pintar la pantalla. Si la base aún no tiene esa función, tabla o columna,
+ * devuelve `alternativa` y lo deja en el log, en vez de tumbar el panel entero.
+ * Cualquier otro fallo (red, permisos) se sigue lanzando: ese sí hay que verlo.
+ */
+async function tolerarMigracionPendiente<T>(lectura: () => Promise<T>, alternativa: () => T | Promise<T>, contexto: string): Promise<T> {
+  try {
+    return await lectura();
+  } catch (error) {
+    if (!(error instanceof ErrorLectura) || !error.codigo || !FALTA_EN_LA_BASE.has(error.codigo)) throw error;
+    console.error(`[ventas/db] ${contexto}: falta ejecutar una migración (${error.codigo}); se sigue sin ello.`, error.message);
+    return alternativa();
+  }
 }
 
 function escritura(r: { error: { message: string; code?: string } | null }, contexto: string, duplicado?: string): Escritura {
@@ -161,7 +190,15 @@ export async function crearUsuariaCompleta(u: NuevaUsuaria): Promise<{ ok: true;
     const repetido = /already|registered|exists/i.test(error?.message ?? "");
     return { ok: false, error: repetido ? "Ya existe una cuenta con ese email." : "No se pudo crear la cuenta." };
   }
-  const perfil = await sb.from("ventas_usuarias").insert({ id: data.user.id, nombre: u.nombre, email: u.email, rol: u.rol, marca_id: u.marca_id });
+  const perfil = await sb.from("ventas_usuarias").insert({
+    id: data.user.id,
+    nombre: u.nombre,
+    email: u.email,
+    rol: u.rol,
+    // Solo las clientas llevan marca; no mandarla en los demás roles deja el
+    // alta de comerciales funcionando aunque la columna aún no exista.
+    ...(u.marca_id ? { marca_id: u.marca_id } : {}),
+  });
   if (perfil.error) {
     // Sin perfil la cuenta no sirve para nada: se deshace para poder reintentar.
     await sb.auth.admin.deleteUser(data.user.id);
@@ -222,8 +259,14 @@ export async function regenerarSecretoWebhook(id: string): Promise<Escritura> {
 /** La nota con texto más reciente de cada lead de la marca (de cualquier tipo de actividad). */
 export async function listUltimasNotas(marcaId: string): Promise<Map<string, { texto: string; fecha: string }>> {
   type Fila = { lead_id: string; nota: string; created_at: string };
-  const filas = await todas<Fila>(
-    (d, h) => db().rpc("ventas_ultimas_notas", { p_marca_id: marcaId }).order("lead_id").range(d, h) as PromiseLike<Respuesta<Fila[]>>,
+  // La nota es un adorno de la tarjeta: sin la función, el tablero se pinta igual.
+  const filas = await tolerarMigracionPendiente(
+    () =>
+      todas<Fila>(
+        (d, h) => db().rpc("ventas_ultimas_notas", { p_marca_id: marcaId }).order("lead_id").range(d, h) as PromiseLike<Respuesta<Fila[]>>,
+        "listUltimasNotas",
+      ),
+    () => [],
     "listUltimasNotas",
   );
   return new Map(filas.map((f) => [f.lead_id, { texto: f.nota, fecha: f.created_at }]));
@@ -378,6 +421,7 @@ export async function registrarActividad(input: {
   proximoSeguimientoHora?: string | null;
 }): Promise<Escritura> {
   const cambiarSeguimiento = input.proximoSeguimiento !== undefined;
+  const hora = cambiarSeguimiento && input.proximoSeguimiento ? (input.proximoSeguimientoHora ?? null) : null;
   const { error } = await db().rpc("ventas_registrar_actividad", {
     p_lead_id: input.leadId,
     p_usuaria_id: input.usuariaId,
@@ -387,7 +431,11 @@ export async function registrarActividad(input: {
     p_fase_nueva: input.faseNueva ?? null,
     p_cambiar_seguimiento: cambiarSeguimiento,
     p_proximo_seguimiento: cambiarSeguimiento ? input.proximoSeguimiento : null,
-    p_proximo_seguimiento_hora: cambiarSeguimiento ? (input.proximoSeguimientoHora ?? null) : null,
+    // Solo se manda cuando hay hora. En la función es un parámetro con
+    // `default null`, así que omitirlo borra la hora igual; y así registrar
+    // una llamada sin hora funciona también con la versión anterior de la
+    // función (ocho parámetros), si la migración de la hora no se ha ejecutado.
+    ...(hora ? { p_proximo_seguimiento_hora: hora } : {}),
   });
   return escritura({ error }, "registrarActividad");
 }
@@ -432,20 +480,21 @@ export async function listCambiosFaseMarca(marcaId: string): Promise<{ lead_id: 
 }
 
 export async function listSeguimientosUsuaria(usuariaId: string, hasta: string): Promise<LeadConMarca[]> {
-  return todas(
-    (d, h) =>
-      db()
+  const leer = (conHora: boolean) =>
+    todas((d, h) => {
+      let q = db()
         .from("ventas_leads")
         .select("*, marca:ventas_marcas(nombre,slug)")
         .eq("asignada_a", usuariaId)
         .lte("proximo_seguimiento", hasta)
         .in("fase", [...FASES_ACTIVAS])
-        .order("proximo_seguimiento")
-        // Dentro del mismo día, por hora; los que no la tienen, al final.
-        .order("proximo_seguimiento_hora", { ascending: true, nullsFirst: false })
-        .range(d, h) as PromiseLike<Respuesta<LeadConMarca[]>>,
-    "listSeguimientosUsuaria",
-  );
+        .order("proximo_seguimiento");
+      // Dentro del mismo día, por hora; los que no la tienen, al final.
+      if (conHora) q = q.order("proximo_seguimiento_hora", { ascending: true, nullsFirst: false });
+      return q.range(d, h) as PromiseLike<Respuesta<LeadConMarca[]>>;
+    }, "listSeguimientosUsuaria");
+  // Sin la columna de la hora, «Mi día» sigue saliendo, ordenado solo por fecha.
+  return tolerarMigracionPendiente(() => leer(true), () => leer(false), "listSeguimientosUsuaria");
 }
 
 /* Tareas -------------------------------------------------------------------- */
@@ -459,17 +508,24 @@ export async function listTareasMarca(marcaId: string, opciones: { hechasDesde?:
 }
 
 export async function listTareasUsuaria(usuariaId: string): Promise<(TareaManual & { marca: { nombre: string; slug: string } | null })[]> {
-  return todas(
-    (d, h) =>
-      db()
-        .from("ventas_tareas")
-        .select("*, marca:ventas_marcas(nombre,slug)")
-        .eq("asignada_a", usuariaId)
-        .is("hecha_at", null)
-        .not("vence", "is", null)
-        .order("vence")
-        .order("vence_hora", { ascending: true, nullsFirst: false })
-        .range(d, h) as PromiseLike<Respuesta<(TareaManual & { marca: { nombre: string; slug: string } | null })[]>>,
+  type Fila = TareaManual & { marca: { nombre: string; slug: string } | null };
+  // Sin la tabla de tareas, «Mi día» enseña los seguimientos y ninguna tarea.
+  return tolerarMigracionPendiente<Fila[]>(
+    () =>
+      todas(
+        (d, h) =>
+          db()
+            .from("ventas_tareas")
+            .select("*, marca:ventas_marcas(nombre,slug)")
+            .eq("asignada_a", usuariaId)
+            .is("hecha_at", null)
+            .not("vence", "is", null)
+            .order("vence")
+            .order("vence_hora", { ascending: true, nullsFirst: false })
+            .range(d, h) as PromiseLike<Respuesta<Fila[]>>,
+        "listTareasUsuaria",
+      ),
+    () => [],
     "listTareasUsuaria",
   );
 }

@@ -50,7 +50,6 @@ describe("registrarActividad", () => {
       p_fase_nueva: null,
       p_cambiar_seguimiento: false,
       p_proximo_seguimiento: null,
-      p_proximo_seguimiento_hora: null,
     });
   });
 
@@ -58,7 +57,15 @@ describe("registrarActividad", () => {
     await registrarActividad({ leadId: "l1", usuariaId: "u1", tipo: "nota", nota: "x", proximoSeguimiento: "2026-10-20", proximoSeguimientoHora: "16:30" });
     expect(rpcMock.mock.calls[0][1]).toMatchObject({ p_cambiar_seguimiento: true, p_proximo_seguimiento: "2026-10-20", p_proximo_seguimiento_hora: "16:30" });
     await registrarActividad({ leadId: "l1", usuariaId: "u1", tipo: "nota", nota: "x", proximoSeguimiento: null });
-    expect(rpcMock.mock.calls[1][1]).toMatchObject({ p_proximo_seguimiento: null, p_proximo_seguimiento_hora: null });
+    // Al borrar el seguimiento la hora no se manda: el `default null` de la función la borra.
+    expect(rpcMock.mock.calls[1][1]).toMatchObject({ p_proximo_seguimiento: null });
+    expect(rpcMock.mock.calls[1][1]).not.toHaveProperty("p_proximo_seguimiento_hora");
+  });
+
+  test("sin hora no manda el parámetro nuevo: vale también con la función de ocho parámetros", async () => {
+    await registrarActividad({ leadId: "l1", usuariaId: "u1", tipo: "llamada", nota: "", proximoSeguimiento: "2026-10-20" });
+    expect(rpcMock.mock.calls[0][1]).toMatchObject({ p_cambiar_seguimiento: true, p_proximo_seguimiento: "2026-10-20" });
+    expect(rpcMock.mock.calls[0][1]).not.toHaveProperty("p_proximo_seguimiento_hora");
   });
 
   test("proximoSeguimiento null borra el seguimiento", async () => {
@@ -194,5 +201,74 @@ describe("orden de «Mi día»", () => {
     const order = builderQueRegistraOrder();
     await listTareasUsuaria("u1");
     expect(order.mock.calls).toEqual([["vence"], ["vence_hora", { ascending: true, nullsFirst: false }]]);
+  });
+});
+
+describe("lecturas que dependen de una migración pendiente", () => {
+  const FALTA_FUNCION = { message: "Could not find the function public.ventas_ultimas_notas", code: "PGRST202" };
+  const FALTA_TABLA = { message: "Could not find the table 'public.ventas_tareas'", code: "PGRST205" };
+  const FALTA_COLUMNA = { message: "column ventas_leads.proximo_seguimiento_hora does not exist", code: "42703" };
+
+  /** Consulta encadenable cuyo `range` resuelve lo indicado; guarda las llamadas a `order`. */
+  function consulta(resultado: { data: unknown; error: unknown }) {
+    const ordenes: unknown[][] = [];
+    const q: Record<string, unknown> = {};
+    for (const m of ["select", "eq", "lte", "in", "is", "not"]) q[m] = vi.fn(() => q);
+    q.order = vi.fn((...args: unknown[]) => {
+      ordenes.push(args);
+      return q;
+    });
+    q.range = vi.fn().mockResolvedValue(resultado);
+    return { q, ordenes };
+  }
+
+  beforeEach(() => vi.spyOn(console, "error").mockImplementation(() => {}));
+
+  test("sin la función de notas, el tablero se queda sin notas en vez de fallar", async () => {
+    const range = vi.fn().mockResolvedValue({ data: null, error: FALTA_FUNCION });
+    rpcMock.mockReset().mockReturnValue({ order: vi.fn(() => ({ range })) });
+    expect((await listUltimasNotas("m1")).size).toBe(0);
+  });
+
+  test("un fallo que no es de migración sí se lanza", async () => {
+    const range = vi.fn().mockResolvedValue({ data: null, error: { message: "timeout", code: "57014" } });
+    rpcMock.mockReset().mockReturnValue({ order: vi.fn(() => ({ range })) });
+    await expect(listUltimasNotas("m1")).rejects.toThrow("timeout");
+  });
+
+  test("sin la tabla de tareas, Mi día no enseña tareas en vez de fallar", async () => {
+    fromMock.mockReset().mockReturnValue(consulta({ data: null, error: FALTA_TABLA }).q);
+    expect(await listTareasUsuaria("u1")).toEqual([]);
+  });
+
+  test("sin la columna de la hora, los seguimientos se leen ordenados solo por fecha", async () => {
+    const primera = consulta({ data: null, error: FALTA_COLUMNA });
+    const segunda = consulta({ data: [{ id: "l1" }], error: null });
+    fromMock.mockReset().mockReturnValueOnce(primera.q).mockReturnValueOnce(segunda.q);
+    expect(await listSeguimientosUsuaria("u1", "2026-10-20")).toEqual([{ id: "l1" }]);
+    expect(primera.ordenes.map((o) => o[0])).toEqual(["proximo_seguimiento", "proximo_seguimiento_hora"]);
+    expect(segunda.ordenes.map((o) => o[0])).toEqual(["proximo_seguimiento"]);
+  });
+});
+
+describe("crearUsuariaCompleta y la marca", () => {
+  function conInsert() {
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    fromMock.mockReset().mockReturnValue({ insert });
+    authAdmin.createUser.mockReset().mockResolvedValue({ data: { user: { id: "u9" } }, error: null });
+    return insert;
+  }
+  const BASE = { nombre: "Ana", email: "ana@x.es", password: "1234567890ab" };
+
+  test("una comercial se inserta sin la columna de marca", async () => {
+    const insert = conInsert();
+    await crearUsuariaCompleta({ ...BASE, rol: "comercial", marca_id: null });
+    expect(insert.mock.calls[0][0]).not.toHaveProperty("marca_id");
+  });
+
+  test("una clienta se inserta con su marca", async () => {
+    const insert = conInsert();
+    await crearUsuariaCompleta({ ...BASE, rol: "cliente", marca_id: "m1" });
+    expect(insert.mock.calls[0][0]).toMatchObject({ rol: "cliente", marca_id: "m1" });
   });
 });
