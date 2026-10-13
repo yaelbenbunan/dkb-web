@@ -25,7 +25,9 @@ const LOGOS_MARCA: Record<string, { src: string; ancho: number; alto: number }> 
   hydrup: { src: "/img/casos/hydrup/logo/positivo-recortado.png", ancho: 314, alto: 82 },
   dinkbit: { src: "/img/logo/dinkbit.svg", ancho: 1914, alto: 576 },
 };
-const ALTO_LOGO = 46;
+// 30 px de alto: el PNG de Hydrup mide 82, así que en pantallas de doble
+// densidad sigue reduciéndose (nunca se estira, que es lo que lo pixelaba).
+const ALTO_LOGO = 30;
 
 export function MarcaCabecera({ marca, activa, rol }: { marca: Marca; activa: Pestana; rol: Rol }) {
   // La clienta solo ve las secciones que el servidor le deja abrir.
@@ -43,7 +45,17 @@ export function MarcaCabecera({ marca, activa, rol }: { marca: Marca; activa: Pe
               width={Math.round((ALTO_LOGO * logo.ancho) / logo.alto)}
               height={ALTO_LOGO}
               priority
-              style={{ height: ALTO_LOGO, width: "auto" }}
+              // Sin recomprimir: el optimizador de imágenes emborrona un logo de trazo fino.
+              unoptimized
+              style={{
+                height: ALTO_LOGO,
+                width: "auto",
+                boxSizing: "content-box",
+                background: "#fff",
+                border: "1px solid #e2e8f0",
+                borderRadius: 10,
+                padding: "9px 14px",
+              }}
             />
           ) : (
             marca.nombre
