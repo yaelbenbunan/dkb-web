@@ -40,7 +40,7 @@ describe("leerNuevaUsuaria con rol cliente", () => {
     expect(leerNuevaUsuaria(fd({ ...base, rol: "cliente", marca_id: UUID }))).toEqual({ ok: true, datos: { ...base, rol: "cliente", marca_id: UUID } });
   });
   test("cliente sin marca: error", () => {
-    expect(leerNuevaUsuaria(fd({ ...base, rol: "cliente" }))).toEqual({ ok: false, error: "Elige la marca de la clienta." });
+    expect(leerNuevaUsuaria(fd({ ...base, rol: "cliente" }))).toEqual({ ok: false, error: "Elige la marca del cliente." });
   });
   test("comercial: la marca se ignora aunque venga", () => {
     const r = leerNuevaUsuaria(fd({ ...base, rol: "comercial", marca_id: UUID }));

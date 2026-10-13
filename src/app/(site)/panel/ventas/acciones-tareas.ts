@@ -8,7 +8,7 @@ import { esAsignableEnMarca } from "@/lib/ventas/rutas";
 import { leerNuevaTarea } from "@/lib/ventas/validacion";
 
 const TAREA_NO_ENCONTRADA = { ok: false, error: "Tarea no encontrada." } as const;
-const USUARIA_NO_VALIDA = { ok: false, error: "Esa usuaria no existe o está desactivada." } as const;
+const USUARIA_NO_VALIDA = { ok: false, error: "Ese usuario no existe o está desactivado." } as const;
 
 function refrescar(slug: string) {
   revalidatePath(`/panel/ventas/${slug}/tareas`);

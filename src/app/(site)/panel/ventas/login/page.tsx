@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { ventasLogin } from "./actions";
 
 export const metadata = {
@@ -49,9 +50,7 @@ export default async function VentasLoginPage({
         action={ventasLogin}
         style={{ width: "100%", maxWidth: 360, background: "#fff", borderRadius: 16, padding: 28 }}
       >
-        <div style={{ fontWeight: 800, fontSize: 13, letterSpacing: 2, color: "#187bef", textTransform: "uppercase" }}>
-          dinkbit
-        </div>
+        <Image src="/img/logo/dinkbit.svg" alt="dinkbit" width={110} height={33} priority style={{ height: 33, width: 110 }} />
         <h1 style={{ margin: "10px 0 18px", fontSize: 22, color: "#0f172a" }}>Ventas B2B</h1>
         {error && <p style={{ margin: "0 0 14px", color: "#dc2626", fontSize: 14 }}>{error}</p>}
         <input type="hidden" name="next" value={sp.next ?? "/panel/ventas"} />

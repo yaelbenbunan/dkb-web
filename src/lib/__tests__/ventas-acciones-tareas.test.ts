@@ -68,7 +68,7 @@ describe("acciones de tareas", () => {
     m.getUsuaria.mockResolvedValue({ id: "u2", rol: "comercial", activa: false, marca_id: null });
     expect(await crearTareaAction("hydrup", null, fd({ titulo: "x", asignada_a: "3f0c2a4e-1b2c-4d5e-8f90-123456789abc" }))).toEqual({
       ok: false,
-      error: "Esa usuaria no existe o está desactivada.",
+      error: "Ese usuario no existe o está desactivado.",
     });
     expect(m.crearTarea).not.toHaveBeenCalled();
   });
@@ -97,7 +97,7 @@ describe("acciones de tareas", () => {
   test("reasignar a una usuaria desactivada se rechaza; vacío deja la tarea sin asignar", async () => {
     m.getTarea.mockResolvedValue(TAREA);
     m.getUsuaria.mockResolvedValue({ id: "u2", rol: "comercial", activa: false, marca_id: null });
-    expect(await reasignarTareaAction("hydrup", "t1", "u2")).toEqual({ ok: false, error: "Esa usuaria no existe o está desactivada." });
+    expect(await reasignarTareaAction("hydrup", "t1", "u2")).toEqual({ ok: false, error: "Ese usuario no existe o está desactivado." });
     expect(await reasignarTareaAction("hydrup", "t1", "")).toEqual({ ok: true });
     expect(m.actualizarTarea).toHaveBeenCalledTimes(1);
     expect(m.actualizarTarea).toHaveBeenCalledWith("t1", { asignadaA: null });
@@ -107,7 +107,7 @@ describe("acciones de tareas", () => {
     const UUID = "3f0c2a4e-1b2c-4d5e-8f90-123456789abc";
     m.getTarea.mockResolvedValue(TAREA);
     m.getUsuaria.mockResolvedValue({ id: UUID, rol: "cliente", activa: true, marca_id: "m2" });
-    const error = { ok: false, error: "Esa usuaria no existe o está desactivada." };
+    const error = { ok: false, error: "Ese usuario no existe o está desactivado." };
     expect(await crearTareaAction("hydrup", null, fd({ titulo: "x", asignada_a: UUID }))).toEqual(error);
     expect(await reasignarTareaAction("hydrup", "t1", UUID)).toEqual(error);
     expect(m.crearTarea).not.toHaveBeenCalled();

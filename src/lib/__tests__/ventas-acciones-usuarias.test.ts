@@ -84,8 +84,8 @@ describe("acciones de usuarias", () => {
 
   test("activar o cambiar contraseña de una usuaria que no existe no llama a Supabase", async () => {
     m.getUsuaria.mockResolvedValue(null);
-    expect(await setUsuariaActivaAction("nadie", true)).toEqual({ ok: false, error: "Usuaria no encontrada." });
-    expect(await cambiarPasswordAction("nadie", "1234567890")).toEqual({ ok: false, error: "Usuaria no encontrada." });
+    expect(await setUsuariaActivaAction("nadie", true)).toEqual({ ok: false, error: "Usuario no encontrado." });
+    expect(await cambiarPasswordAction("nadie", "1234567890")).toEqual({ ok: false, error: "Usuario no encontrado." });
     expect(m.getUsuaria).toHaveBeenCalledWith("nadie");
     expect(m.setUsuariaActiva).not.toHaveBeenCalled();
     expect(m.setPasswordUsuaria).not.toHaveBeenCalled();

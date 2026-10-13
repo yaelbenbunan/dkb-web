@@ -7,7 +7,7 @@ import type { ResultadoAccion } from "@/lib/ventas/resultado";
 import { leerNuevaUsuaria, leerPassword } from "@/lib/ventas/validacion";
 
 const RUTA = "/panel/ventas/usuarias";
-const NO_ENCONTRADA = { ok: false, error: "Usuaria no encontrada." } as const;
+const NO_ENCONTRADA = { ok: false, error: "Usuario no encontrado." } as const;
 
 export async function crearUsuariaAction(_prev: ResultadoAccion | null, fd: FormData): Promise<ResultadoAccion> {
   await requireUsuaria("admin");

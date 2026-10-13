@@ -87,7 +87,7 @@ export function leerNuevaUsuaria(fd: FormData): Leido<NuevaUsuaria> {
   if (!r.ok) return r;
   // La marca solo cuenta para la clienta: a las demás se les descarta aunque llegue.
   if (r.datos.rol !== "cliente") return { ok: true, datos: { ...r.datos, marca_id: null } };
-  if (!r.datos.marca_id) return { ok: false, error: "Elige la marca de la clienta." };
+  if (!r.datos.marca_id) return { ok: false, error: "Elige la marca del cliente." };
   return r;
 }
 

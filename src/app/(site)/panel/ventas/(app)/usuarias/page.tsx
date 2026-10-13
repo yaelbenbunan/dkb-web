@@ -15,7 +15,7 @@ export default async function UsuariasPage() {
       {/* Solo id y nombre: la marca completa lleva el secreto del webhook. */}
       <NuevaUsuariaForm marcas={marcas.map(({ id, nombre }) => ({ id, nombre }))} />
       <section style={tarjeta}>
-        <h2 style={titulo}>Usuarias ({usuarias.length})</h2>
+        <h2 style={titulo}>Usuarios ({usuarias.length})</h2>
         <div style={{ overflowX: "auto" }}>
           <table style={{ borderCollapse: "collapse", width: "100%" }}>
             <thead>
@@ -35,7 +35,7 @@ export default async function UsuariasPage() {
                   <td style={td}>{ROL_LABELS[u.rol]}
                     {u.rol === "cliente" && u.marca_id ? ` · ${nombreMarca.get(u.marca_id) ?? "marca desconocida"}` : ""}
                   </td>
-                  <td style={{ ...td, color: u.activa ? "#16a34a" : "#b91c1c", fontWeight: 600 }}>{u.activa ? "Activa" : "Desactivada"}</td>
+                  <td style={{ ...td, color: u.activa ? "#16a34a" : "#b91c1c", fontWeight: 600 }}>{u.activa ? "Activo" : "Desactivado"}</td>
                   <td style={td}>
                     <AccionesUsuaria id={u.id} activa={u.activa} />
                   </td>

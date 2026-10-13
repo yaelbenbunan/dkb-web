@@ -90,7 +90,7 @@ export async function asignarLeadAction(slug: string, leadId: string, usuariaId:
   if (!acceso.ok) return acceso;
   if (usuariaId) {
     const destino = await getUsuaria(usuariaId);
-    if (!destino || !esAsignableEnMarca(destino, acceso.marca.id)) return { ok: false, error: "Esa usuaria no existe o está desactivada." };
+    if (!destino || !esAsignableEnMarca(destino, acceso.marca.id)) return { ok: false, error: "Ese usuario no existe o está desactivado." };
   }
   const res = await asignarLead(leadId, usuariaId || null);
   if (!res.ok) return res;
@@ -172,7 +172,7 @@ export async function moverLeadAction(slug: string, leadId: string, fase: string
 export async function eliminarLeadAction(slug: string, leadId: string, _prev: ResultadoAccion | null, fd: FormData): Promise<ResultadoAccion> {
   const acceso = await accesoALead(slug, leadId);
   if (!acceso.ok) return acceso;
-  if (acceso.usuaria.rol !== "admin") return { ok: false, error: "Solo una admin puede eliminar leads." };
+  if (acceso.usuaria.rol !== "admin") return { ok: false, error: "Solo un admin puede eliminar leads." };
   const escrito = String(fd.get("confirmacion") ?? "").trim().toLowerCase();
   if (escrito !== acceso.lead.negocio.trim().toLowerCase()) {
     return { ok: false, error: "Escribe el nombre del negocio tal cual para confirmar." };

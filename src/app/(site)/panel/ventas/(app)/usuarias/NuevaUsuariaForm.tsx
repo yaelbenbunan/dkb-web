@@ -14,7 +14,7 @@ export function NuevaUsuariaForm({ marcas }: { marcas: { id: string; nombre: str
     // Tras enviar, React vacía el formulario (el desplegable vuelve a «Comercial»):
     // el estado tiene que volver con él, o quedaría la marca a la vista con otro rol.
     <form action={accion} onReset={() => setRol("comercial")} style={{ ...tarjeta, display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
-      <h2 style={{ ...titulo, flexBasis: "100%", margin: 0 }}>Nueva usuaria</h2>
+      <h2 style={{ ...titulo, flexBasis: "100%", margin: 0 }}>Nuevo usuario</h2>
       <label style={{ ...etiqueta, flex: "1 1 160px" }}>
         Nombre
         <input name="nombre" required style={campo} />

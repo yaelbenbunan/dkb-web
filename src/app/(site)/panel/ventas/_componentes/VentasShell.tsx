@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { Usuaria } from "@/lib/ventas/db";
 import { ROL_LABELS } from "@/lib/ventas/dominio";
@@ -33,7 +34,7 @@ export function VentasShell({ usuaria, children }: { usuaria: Usuaria; children:
         }}
       >
         <nav style={{ display: "flex", alignItems: "baseline", gap: 18, flexWrap: "wrap" }}>
-          <span style={{ fontWeight: 800, letterSpacing: 2, color: "#187bef", textTransform: "uppercase", fontSize: 12 }}>dinkbit</span>
+          <Image src="/img/logo/dinkbit.svg" alt="dinkbit" width={80} height={24} priority style={{ height: 24, width: 80, alignSelf: "center" }} />
           <strong style={{ fontSize: 16 }}>Ventas B2B</strong>
           {usuaria.rol !== "cliente" && (
             <>
@@ -41,7 +42,7 @@ export function VentasShell({ usuaria, children }: { usuaria: Usuaria; children:
               <Link href="/panel/ventas/hoy" style={enlace}>Mi día</Link>
             </>
           )}
-          {usuaria.rol === "admin" && <Link href="/panel/ventas/usuarias" style={enlace}>Usuarias</Link>}
+          {usuaria.rol === "admin" && <Link href="/panel/ventas/usuarias" style={enlace}>Usuarios</Link>}
         </nav>
         <form action={ventasLogout} style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 13, color: "#cbd5e1" }}>

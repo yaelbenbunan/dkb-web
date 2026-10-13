@@ -134,7 +134,7 @@ describe("acciones de leads", () => {
 
   test("no se asigna a una clienta de otra marca; a una de la misma sí", async () => {
     m.getUsuaria.mockResolvedValue({ id: "u3", rol: "cliente", activa: true, marca_id: "m2" });
-    expect(await asignarLeadAction("hydrup", "l1", "u3")).toEqual({ ok: false, error: "Esa usuaria no existe o está desactivada." });
+    expect(await asignarLeadAction("hydrup", "l1", "u3")).toEqual({ ok: false, error: "Ese usuario no existe o está desactivado." });
     expect(m.asignarLead).not.toHaveBeenCalled();
     m.getUsuaria.mockResolvedValue({ id: "u3", rol: "cliente", activa: true, marca_id: "m1" });
     expect((await asignarLeadAction("hydrup", "l1", "u3")).ok).toBe(true);
@@ -285,7 +285,7 @@ describe("eliminarLeadAction", () => {
     m.getLead.mockResolvedValue({ ...LEAD, negocio: "Bar Paco" });
     for (const rol of ["comercial", "cliente"]) {
       m.accesoMarcaAccion.mockResolvedValue({ ok: true, usuaria: { id: "u1", rol, activa: true }, marca: MARCA });
-      expect(await eliminarLeadAction("hydrup", "l1", null, confirmacion("Bar Paco"))).toEqual({ ok: false, error: "Solo una admin puede eliminar leads." });
+      expect(await eliminarLeadAction("hydrup", "l1", null, confirmacion("Bar Paco"))).toEqual({ ok: false, error: "Solo un admin puede eliminar leads." });
     }
     expect(m.eliminarLeads).not.toHaveBeenCalled();
   });

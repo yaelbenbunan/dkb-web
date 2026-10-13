@@ -320,7 +320,7 @@ export function EditorSecuencia({
 
       {!editable && (
         <p style={{ margin: 0, fontSize: 13, color: "#64748b" }}>
-          Solo puedes ver esta secuencia: pide a una admin que la edite, la active o la archive.
+          Solo puedes ver esta secuencia: pide a un admin que la edite, la active o la archive.
         </p>
       )}
 

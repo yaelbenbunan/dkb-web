@@ -207,9 +207,9 @@ export async function crearUsuariaCompleta(u: NuevaUsuaria): Promise<{ ok: true;
     // columna de marca: es la migración del rol cliente, que no se ha ejecutado.
     const codigo = (perfil.error as { code?: string }).code;
     if (u.rol === "cliente" && codigo && (codigo === "23514" || FALTA_EN_LA_BASE.has(codigo))) {
-      return { ok: false, error: "Para crear clientas falta ejecutar en Supabase la migración del rol cliente (docs/sql/2026-10-09-ventas-tareas-rol-cliente.sql)." };
+      return { ok: false, error: "Para crear clientes falta ejecutar en Supabase la migración del rol cliente (docs/sql/2026-10-09-ventas-tareas-rol-cliente.sql)." };
     }
-    return { ok: false, error: "No se pudo crear el perfil de la usuaria." };
+    return { ok: false, error: "No se pudo crear el perfil del usuario." };
   }
   return { ok: true, id: data.user.id };
 }
