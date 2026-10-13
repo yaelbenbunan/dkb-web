@@ -16,12 +16,16 @@ const PESTANAS = [
 
 export type Pestana = (typeof PESTANAS)[number]["clave"];
 
-/** Logo de cada marca, por slug, para fondo claro. Una marca sin logo enseña solo su nombre. */
+/**
+ * Logo de cada marca, por slug, para fondo claro y sin margen alrededor. Con
+ * logo, el título de la página ES el logo (el nombre va en su `alt`): no se
+ * repite al lado. Una marca sin logo enseña su nombre en texto.
+ */
 const LOGOS_MARCA: Record<string, { src: string; ancho: number; alto: number }> = {
-  hydrup: { src: "/img/casos/hydrup/logo/positivo.png", ancho: 358, alto: 287 },
+  hydrup: { src: "/img/casos/hydrup/logo/positivo-recortado.png", ancho: 314, alto: 82 },
   dinkbit: { src: "/img/logo/dinkbit.svg", ancho: 1914, alto: 576 },
 };
-const ALTO_LOGO = 44;
+const ALTO_LOGO = 46;
 
 export function MarcaCabecera({ marca, activa, rol }: { marca: Marca; activa: Pestana; rol: Rol }) {
   // La clienta solo ve las secciones que el servidor le deja abrir.
@@ -31,16 +35,20 @@ export function MarcaCabecera({ marca, activa, rol }: { marca: Marca; activa: Pe
     <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         {rol !== "cliente" && <Link href="/panel/ventas" style={{ fontSize: 13, color: "#64748b", textDecoration: "none" }}>← Panel</Link>}
-        {logo && (
-          <Image
-            src={logo.src}
-            alt=""
-            width={Math.round((ALTO_LOGO * logo.ancho) / logo.alto)}
-            height={ALTO_LOGO}
-            style={{ height: ALTO_LOGO, width: "auto", background: "#fff", borderRadius: 8, border: "1px solid #e2e8f0", padding: logo.src.endsWith(".svg") ? "8px 10px" : 0 }}
-          />
-        )}
-        <h1 style={{ margin: 0, fontSize: 24 }}>{marca.nombre}</h1>
+        <h1 style={{ margin: 0, fontSize: 24, lineHeight: 1, display: "flex" }}>
+          {logo ? (
+            <Image
+              src={logo.src}
+              alt={marca.nombre}
+              width={Math.round((ALTO_LOGO * logo.ancho) / logo.alto)}
+              height={ALTO_LOGO}
+              priority
+              style={{ height: ALTO_LOGO, width: "auto" }}
+            />
+          ) : (
+            marca.nombre
+          )}
+        </h1>
         {marca.estado !== "activa" && (
           <span style={{ fontSize: 12, fontWeight: 700, color: "#92400e", background: "#fef3c7", borderRadius: 6, padding: "2px 8px" }}>
             {marca.estado === "pausada" ? "Pausada" : "Finalizada"}
