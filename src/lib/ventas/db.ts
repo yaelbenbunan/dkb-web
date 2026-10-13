@@ -203,6 +203,12 @@ export async function crearUsuariaCompleta(u: NuevaUsuaria): Promise<{ ok: true;
     // Sin perfil la cuenta no sirve para nada: se deshace para poder reintentar.
     await sb.auth.admin.deleteUser(data.user.id);
     console.error("[ventas/db] crearUsuariaCompleta perfil:", perfil.error.message);
+    // Una clienta que la base rechaza por el rol (23514) o por no conocer la
+    // columna de marca: es la migración del rol cliente, que no se ha ejecutado.
+    const codigo = (perfil.error as { code?: string }).code;
+    if (u.rol === "cliente" && codigo && (codigo === "23514" || FALTA_EN_LA_BASE.has(codigo))) {
+      return { ok: false, error: "Para crear clientas falta ejecutar en Supabase la migración del rol cliente (docs/sql/2026-10-09-ventas-tareas-rol-cliente.sql)." };
+    }
     return { ok: false, error: "No se pudo crear el perfil de la usuaria." };
   }
   return { ok: true, id: data.user.id };

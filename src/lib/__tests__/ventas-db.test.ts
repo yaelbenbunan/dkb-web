@@ -266,6 +266,18 @@ describe("crearUsuariaCompleta y la marca", () => {
     expect(insert.mock.calls[0][0]).not.toHaveProperty("marca_id");
   });
 
+  test("si la base rechaza a la clienta por faltar la migración, se dice y se deshace la cuenta", async () => {
+    const insert = vi.fn().mockResolvedValue({ error: { message: "violates check constraint", code: "23514" } });
+    fromMock.mockReset().mockReturnValue({ insert });
+    authAdmin.createUser.mockReset().mockResolvedValue({ data: { user: { id: "u9" } }, error: null });
+    authAdmin.deleteUser.mockReset().mockResolvedValue({ error: null });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const r = await crearUsuariaCompleta({ ...BASE, rol: "cliente", marca_id: "m1" });
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.error).toContain("falta ejecutar en Supabase la migración");
+    expect(authAdmin.deleteUser).toHaveBeenCalledWith("u9");
+  });
+
   test("una clienta se inserta con su marca", async () => {
     const insert = conInsert();
     await crearUsuariaCompleta({ ...BASE, rol: "cliente", marca_id: "m1" });
