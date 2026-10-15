@@ -17,6 +17,8 @@ export const FASES = [
   "volver_a_llamar",
   "interesado",
   "muestras",
+  /** El paso avanzado de dinkbit, que vende servicios: en vez de muestras, una propuesta. */
+  "propuesta",
   "cliente",
   "perdido",
   "no_interesa",
@@ -32,6 +34,7 @@ export const FASE_LABELS: Record<Fase, string> = {
   contactado: "Contactado",
   interesado: "Interesado",
   muestras: "Muestras enviadas",
+  propuesta: "Propuesta enviada",
   cliente: "Cliente",
   volver_a_llamar: "Volver a llamar",
   fuera_de_perfil: "Fuera de perfil",
@@ -45,6 +48,7 @@ export const FASE_COLORES: Record<Fase, { bg: string; text: string }> = {
   contactado: { bg: "#dbeafe", text: "#1e40af" },
   interesado: { bg: "#fef3c7", text: "#92400e" },
   muestras: { bg: "#ede9fe", text: "#5b21b6" },
+  propuesta: { bg: "#e0e7ff", text: "#3730a3" },
   cliente: { bg: "#dcfce7", text: "#166534" },
   volver_a_llamar: { bg: "#ffedd5", text: "#9a3412" },
   fuera_de_perfil: { bg: "#f1f5f9", text: "#64748b" },
@@ -53,13 +57,18 @@ export const FASE_COLORES: Record<Fase, { bg: string; text: string }> = {
   ilocalizable: { bg: "#f1f5f9", text: "#64748b" },
 };
 
-/** Fases en las que todavía se trabaja el lead: solo estas llevan seguimiento. */
+/**
+ * Fases en las que todavía se trabaja el lead: solo estas llevan seguimiento.
+ * Es la unión de las de todas las marcas (ver `flujoDeMarca`), para lo que no
+ * sabe de marca, como «Mi día».
+ */
 export const FASES_ACTIVAS: readonly Fase[] = [
   "nuevo",
   "contactado",
   "volver_a_llamar",
   "interesado",
   "muestras",
+  "propuesta",
 ];
 
 export function esFaseActiva(fase: string): boolean {
@@ -83,6 +92,74 @@ export function esFaseDescarte(fase: string | null | undefined): boolean {
 
 export function esFase(v: unknown): v is Fase {
   return typeof v === "string" && (FASES as readonly string[]).includes(v);
+}
+
+/* Fases por marca ---------------------------------------------------------- */
+
+export interface FlujoMarca {
+  /** Fases que existen en la marca (las que se ofrecen en desplegables y filtros). */
+  fases: readonly Fase[];
+  /** Fases en las que se trabaja el lead (llevan seguimiento). */
+  activas: readonly Fase[];
+  /** Camino principal: el botón «→» y el menú «Mover a…». */
+  camino: readonly Fase[];
+  /** El paso entre «Interesado» y «Cliente». */
+  pasoAvanzado: "muestras" | "propuesta";
+  /** Si la marca envía muestras (tarea automática, botón y resultado «Pide muestras»). */
+  conMuestras: boolean;
+}
+
+/**
+ * dinkbit vende servicios: entre «Interesado» y «Cliente» hay una propuesta, no
+ * unas muestras. Las marcas de producto (Hydrup, proveedores deportivos) sí
+ * envían muestras. Vive en código, como `TIPOS_POR_MARCA`: con tres marcas no
+ * compensa una tabla.
+ */
+export function flujoDeMarca(slug: string): FlujoMarca {
+  const paso = slug === MARCA_DINKBIT_SLUG ? "propuesta" : "muestras";
+  const activas: Fase[] = ["nuevo", "contactado", "volver_a_llamar", "interesado", paso];
+  return {
+    fases: [...activas, "cliente", ...FASES_DESCARTE],
+    activas,
+    camino: ["nuevo", "contactado", "interesado", paso, "cliente"],
+    pasoAvanzado: paso,
+    conMuestras: paso === "muestras",
+  };
+}
+
+/* Correspondencias del /panel viejo (migración y altas de la web) ---------- */
+
+export const ETIQUETA_KIT_DIGITAL = "kit-digital";
+
+/** Estado de `imagina_leads.status` → fase de ventas. Copiada en
+ *  docs/sql/2026-10-15-crm-unificacion-datos.sql: si cambia aquí, cambia allí. */
+export const ESTADO_PANEL_A_FASE: Record<string, Fase> = {
+  nuevo: "nuevo",
+  contactado: "contactado",
+  seguimiento: "volver_a_llamar",
+  "kit-digital": "interesado",
+  propuesta: "propuesta",
+  ganado: "cliente",
+  "cliente-kit-digital": "cliente",
+  perdido: "perdido",
+  ilocalizable: "ilocalizable",
+};
+
+export function faseDesdeEstadoPanel(estado: string | null | undefined): Fase {
+  return (estado && ESTADO_PANEL_A_FASE[estado]) || "nuevo";
+}
+
+/** `imagina_leads.account_manager` → email de su usuario en ventas. Copiada en el SQL de datos. */
+export const RESPONSABLES_PANEL: Record<string, string> = {
+  yael: "yael.benbunan@dinkbit.com",
+  "paula g": "paula.garcia@dinkbit.com",
+  "paula l": "paula.lopez@dinkbit.com",
+  alicia: "alicia.ruiz@dinkbit.com",
+};
+
+export function emailDeResponsablePanel(texto: string | null | undefined): string | null {
+  const clave = (texto ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  return RESPONSABLES_PANEL[clave] ?? null;
 }
 
 export const RESULTADOS_LLAMADA = [

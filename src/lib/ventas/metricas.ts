@@ -107,6 +107,7 @@ const RANGO: Record<Fase, number> = {
   ilocalizable: 1,
   interesado: 2,
   muestras: 3,
+  propuesta: 3,
   cliente: 4,
 };
 const RANGO_ETAPA: Record<EtapaEmbudo, number> = { contactado: 1, interesado: 2, muestras: 3, cliente: 4 };
