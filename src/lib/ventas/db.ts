@@ -865,3 +865,35 @@ export async function buscarLeadWeb(
 export async function actualizarLeadWeb(id: string, cambios: CambiosLeadWeb): Promise<Escritura> {
   return escritura(await db().from("ventas_leads").update(cambios).eq("id", id), "actualizarLeadWeb");
 }
+
+/** Leads a los que se les puede mandar una campaña: consentimiento sí, con
+ *  email, sin rebote ni queja y sin archivar. Misma regla que `isLeadEmailable`. */
+export async function listarLeadsEmailables(
+  marcaId: string,
+  filtro: { fase?: string; campana?: string; canal?: string } = {},
+): Promise<Lead[]> {
+  return todas((desde, hasta) => {
+    let q = db()
+      .from("ventas_leads")
+      .select("*")
+      .eq("marca_id", marcaId)
+      .eq("consentimiento", true)
+      .eq("archivado", false)
+      .not("email", "is", null)
+      .or("email_estado.is.null,email_estado.not.in.(bounced,complained)");
+    if (filtro.fase) q = q.eq("fase", filtro.fase);
+    if (filtro.campana) q = q.eq("campana", filtro.campana);
+    if (filtro.canal) q = q.eq("canal", filtro.canal);
+    return q.order("created_at", { ascending: false }).range(desde, hasta) as PromiseLike<Respuesta<Lead[]>>;
+  }, "listarLeadsEmailables");
+}
+
+/** Estado del último correo automático del lead cuyo id de Resend casa. Devuelve cuántos cambió. */
+export async function actualizarEmailPorMensaje(mensajeId: string, cambios: CambiosLeadWeb): Promise<number> {
+  const { data, error } = await db().from("ventas_leads").update(cambios).eq("email_mensaje_id", mensajeId).select("id");
+  if (error) {
+    console.error("[ventas/db] actualizarEmailPorMensaje:", error.message);
+    return 0;
+  }
+  return data?.length ?? 0;
+}

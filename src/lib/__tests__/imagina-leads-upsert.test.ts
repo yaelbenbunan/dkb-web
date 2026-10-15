@@ -46,7 +46,7 @@ function fakeClient() {
   };
 }
 
-import { upsertKitDigital2026Lead } from "../imagina-leads";
+import { upsertKitDigital2026Lead } from "../imagina-leads-legacy";
 
 const leadInput = () => ({
   name: "Nuria",

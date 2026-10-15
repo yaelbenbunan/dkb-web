@@ -96,7 +96,7 @@ function fakeClient() {
 import {
   setCampaignRecipientStatusByMessageId,
   listEmailableLeads,
-} from "../imagina-leads";
+} from "../imagina-leads-legacy";
 
 describe("campaign helpers en imagina-leads", () => {
   beforeEach(() => {

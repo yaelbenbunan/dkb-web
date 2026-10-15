@@ -41,7 +41,7 @@ function fakeClient() {
 import {
   setLeadEmailSent,
   setLeadEmailStatusByMessageId,
-} from "../imagina-leads";
+} from "../imagina-leads-legacy";
 
 describe("email-status helpers", () => {
   beforeEach(() => {

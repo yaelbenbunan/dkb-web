@@ -10,7 +10,7 @@ vi.mock("../supabase-admin", () => ({
   getSupabaseAdmin: () => ({ rpc: rpcMock, from: fromMock, auth: { admin: authAdmin } }),
 }));
 
-import { crearLeadWeb, buscarLeadWeb, actualizarLeadWeb, crearLeads, registrarActividad, crearUsuariaCompleta, listLeads, listSecuencias, listUltimasNotas, actualizarTarea, crearTarea, listSeguimientosUsuaria, listTareasUsuaria } from "../ventas/db";
+import { crearLeadWeb, buscarLeadWeb, actualizarLeadWeb, listarLeadsEmailables, actualizarEmailPorMensaje, crearLeads, registrarActividad, crearUsuariaCompleta, listLeads, listSecuencias, listUltimasNotas, actualizarTarea, crearTarea, listSeguimientosUsuaria, listTareasUsuaria } from "../ventas/db";
 
 const LEAD = { negocio: "Gym", tipo_negocio: null, contacto: "", telefono: "600111222", email: "", ciudad: "", cif: "", web: "", excluido: false };
 
@@ -426,5 +426,26 @@ describe("listLeads con filtros nuevos", () => {
     fromMock.mockReset().mockReturnValueOnce(falla.q).mockReturnValueOnce(bien.q);
     expect(await listLeads("m1")).toEqual([{ id: "l1" }]);
     expect(bien.llamadas.some(([, a]) => a[0] === "archivado")).toBe(false);
+  });
+});
+
+describe("campañas sobre ventas", () => {
+  test("emailables: consentimiento, sin archivar, con email y sin rebote ni queja, más los filtros", async () => {
+    const c = cadena({ data: [], error: null });
+    fromMock.mockReset().mockReturnValue(c.q);
+    await listarLeadsEmailables("m1", { fase: "interesado", canal: "Meta" });
+    expect(c.llamadas).toContainEqual(["eq", ["consentimiento", true]]);
+    expect(c.llamadas).toContainEqual(["eq", ["archivado", false]]);
+    expect(c.llamadas).toContainEqual(["not", ["email", "is", null]]);
+    expect(c.llamadas).toContainEqual(["or", ["email_estado.is.null,email_estado.not.in.(bounced,complained)"]]);
+    expect(c.llamadas).toContainEqual(["eq", ["fase", "interesado"]]);
+    expect(c.llamadas).toContainEqual(["eq", ["canal", "Meta"]]);
+  });
+
+  test("estado por mensaje devuelve cuántos cambió", async () => {
+    const c = cadena({ data: [{ id: "v1" }], error: null });
+    fromMock.mockReset().mockReturnValue(c.q);
+    expect(await actualizarEmailPorMensaje("re_1", { email_estado: "delivered" })).toBe(1);
+    expect(c.llamadas).toContainEqual(["eq", ["email_mensaje_id", "re_1"]]);
   });
 });
