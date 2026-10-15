@@ -708,3 +708,24 @@ export async function eliminarLeads(marcaId: string, leadIds: string[]): Promise
   }
   return { ok: true, borrados: Number(data ?? 0) };
 }
+
+/* Recordatorio diario ------------------------------------------------------- */
+
+/**
+ * Reserva el recordatorio de hoy de una usuaria. `ya_enviado` si otra pasada
+ * del cron se adelantó; `falta_migracion` si no existe la tabla (entonces no
+ * hay forma de saber qué se envió y no hay que mandar nada).
+ */
+export async function reclamarRecordatorioDiario(usuariaId: string, fecha: string): Promise<"reclamado" | "ya_enviado" | "falta_migracion"> {
+  const { error } = await db().from("ventas_recordatorios_enviados").insert({ usuaria_id: usuariaId, fecha });
+  if (!error) return "reclamado";
+  if (error.code === "23505") return "ya_enviado";
+  if (error.code && FALTA_EN_LA_BASE.has(error.code)) return "falta_migracion";
+  throw new ErrorLectura(`[ventas/db] reclamarRecordatorioDiario: ${error.message}`, error.code);
+}
+
+/** Deshace la reserva cuando el envío falla, para que la siguiente pasada lo reintente. */
+export async function liberarRecordatorioDiario(usuariaId: string, fecha: string): Promise<void> {
+  const { error } = await db().from("ventas_recordatorios_enviados").delete().eq("usuaria_id", usuariaId).eq("fecha", fecha);
+  if (error) console.error("[ventas/db] liberarRecordatorioDiario:", error.message);
+}

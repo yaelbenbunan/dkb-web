@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { sendDueScheduledCampaigns } from "@/lib/campaign-send";
 import { isAuthorizedCronRequest } from "@/lib/cron-auth";
+import { enviarRecordatoriosDiarios } from "@/lib/ventas/recordatorio-diario-envio";
 import { enviarRecordatoriosPendientes } from "@/lib/whatsapp/recordatorio";
 
 // Supabase (pg_cron + pg_net) llama aquí cada 5 minutos y se envían las
@@ -37,5 +38,15 @@ export async function GET(req: NextRequest) {
     recordatorios = { error: "recordatorios_failed" };
   }
 
-  return NextResponse.json({ ok: true, results, recordatorios });
+  // Correo de la mañana con los pendientes de cada admin y clienta de ventas
+  // (ver `ventas/recordatorio-diario.ts`). Fuera de 8:00–12:00 no hace nada.
+  let pendientesVentas: Awaited<ReturnType<typeof enviarRecordatoriosDiarios>> | { error: string };
+  try {
+    pendientesVentas = await enviarRecordatoriosDiarios();
+  } catch (e) {
+    console.error("[cron] fallo enviando los recordatorios de ventas", e);
+    pendientesVentas = { error: "pendientes_ventas_failed" };
+  }
+
+  return NextResponse.json({ ok: true, results, recordatorios, pendientesVentas });
 }

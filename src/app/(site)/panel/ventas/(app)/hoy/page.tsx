@@ -4,7 +4,7 @@ import { requireUsuaria } from "@/lib/ventas/auth";
 import { getMarcaPorId, listSeguimientosUsuaria, listTareasUsuaria, type LeadConMarca } from "@/lib/ventas/db";
 import { TIPO_NEGOCIO_LABELS } from "@/lib/ventas/dominio";
 import { ahoraMadrid, formatoFecha, formatoSeguimiento } from "@/lib/ventas/metricas";
-import { estadoSeguimiento, vencimiento } from "@/lib/ventas/tablero";
+import { pendientesDelDia } from "@/lib/ventas/recordatorio-diario";
 import { FaseEtiqueta } from "../../_componentes/FaseEtiqueta";
 import { tarjeta, td, th, titulo } from "../../_componentes/estilos";
 
@@ -53,11 +53,8 @@ export default async function MiDiaPage() {
   const ahora = ahoraMadrid();
   const [seguimientos, tareas] = await Promise.all([listSeguimientosUsuaria(usuaria.id, ahora.fecha), listTareasUsuaria(usuaria.id)]);
   // El estado mira la hora: un seguimiento de hoy a las 10:00 ya es atrasado a las 11:00.
-  const atrasados = seguimientos.filter((l) => estadoSeguimiento(l.proximo_seguimiento, l.proximo_seguimiento_hora ?? null, l.fase, ahora) === "atrasado");
-  const deHoy = seguimientos.filter((l) => estadoSeguimiento(l.proximo_seguimiento, l.proximo_seguimiento_hora ?? null, l.fase, ahora) === "hoy");
-  const misTareas = tareas
-    .map((t) => ({ t, estado: vencimiento(t.vence, t.vence_hora, ahora) }))
-    .filter((x) => x.estado === "atrasado" || x.estado === "hoy");
+  // Es el mismo filtro que el correo de la mañana, para que cuenten igual.
+  const { seguimientosAtrasados: atrasados, seguimientosHoy: deHoy, tareas: misTareas } = pendientesDelDia(seguimientos, tareas, ahora);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
