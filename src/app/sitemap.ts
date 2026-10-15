@@ -32,6 +32,7 @@ const STATIC_ROUTES: StaticRoute[] = [
   // puede citar. Fuera del sitemap y sin ningún enlace interno, era una página
   // huérfana a la que no llegaba ningún rastreador (29-09-2026).
   { path: "/web-299", priority: 0.9, changeFrequency: "weekly" },
+  { path: "/proveedores-deportivos", priority: 0.9, changeFrequency: "weekly" },
   { path: "/condiciones-web-express", priority: 0.3, changeFrequency: "yearly" },
   { path: "/casos-de-exito", priority: 0.9, changeFrequency: "weekly" },
   { path: "/blog", priority: 0.9, changeFrequency: "weekly" },
