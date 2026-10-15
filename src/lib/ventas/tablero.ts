@@ -4,17 +4,11 @@
  * Puro (sin `server-only`): lo usan la página y el componente de cliente.
  */
 
-import { esFaseActiva, type Fase } from "./dominio";
+import { FASE_LABELS, esFaseActiva, flujoDeMarca, type Fase } from "./dominio";
 import type { Ahora } from "./metricas";
 
-export type ColumnaId =
-  | "nuevo"
-  | "contactado"
-  | "volver_a_llamar"
-  | "interesado"
-  | "muestras"
-  | "cliente"
-  | "descartados";
+/** Una fase de columna («nuevo», «muestras», «propuesta»…), «descartados» u «otros». */
+export type ColumnaId = string;
 
 export interface ColumnaTablero {
   id: ColumnaId;
@@ -25,15 +19,28 @@ export interface ColumnaTablero {
   destino: Fase | null;
 }
 
-export const COLUMNAS_TABLERO: readonly ColumnaTablero[] = [
-  { id: "nuevo", titulo: "Nuevo", fases: ["nuevo"], destino: "nuevo" },
-  { id: "contactado", titulo: "Contactado", fases: ["contactado"], destino: "contactado" },
-  { id: "volver_a_llamar", titulo: "Volver a llamar", fases: ["volver_a_llamar"], destino: "volver_a_llamar" },
-  { id: "interesado", titulo: "Interesado", fases: ["interesado"], destino: "interesado" },
-  { id: "muestras", titulo: "Muestras enviadas", fases: ["muestras"], destino: "muestras" },
-  { id: "cliente", titulo: "Cliente", fases: ["cliente"], destino: "cliente" },
-  { id: "descartados", titulo: "Descartados", fases: ["perdido", "no_interesa", "ilocalizable"], destino: null },
-];
+const BASE: readonly Fase[] = ["nuevo", "contactado", "volver_a_llamar", "interesado"];
+
+/**
+ * Columnas del tablero de una marca. Todas iguales salvo el paso avanzado:
+ * «Muestras enviadas» en las marcas de producto, «Propuesta enviada» en
+ * dinkbit (ver `flujoDeMarca`).
+ */
+export function columnasTablero(slug: string): ColumnaTablero[] {
+  const paso = flujoDeMarca(slug).pasoAvanzado;
+  return [
+    ...[...BASE, paso].map((f) => ({ id: f, titulo: FASE_LABELS[f], fases: [f], destino: f })),
+    { id: "cliente", titulo: "Cliente", fases: ["cliente"], destino: "cliente" },
+    { id: "descartados", titulo: "Descartados", fases: ["perdido", "no_interesa", "ilocalizable"], destino: null },
+  ];
+}
+
+/**
+ * Reserva para los leads cuya fase no es de su marca (un dato antiguo, o una
+ * marca que cambió de flujo): mejor verlos en una columna aparte que perderlos.
+ * La vista solo la pinta si tiene tarjetas.
+ */
+export const COLUMNA_OTROS: ColumnaTablero = { id: "otros", titulo: "Otros", fases: [], destino: null };
 
 /** Tarjetas que se pintan como mucho por columna; el resto se ve en la lista. */
 export const MAX_TARJETAS_COLUMNA = 50;
@@ -43,28 +50,25 @@ export const MAX_TARJETAS_COLUMNA = 50;
  * enseña en el tablero (hoy, «Fuera de perfil»). Quien llame a esto tiene que
  * contemplar el nulo: antes se daba por hecho que toda fase tenía columna.
  */
-export function columnaDeFase(fase: Fase): ColumnaId | null {
-  return COLUMNAS_TABLERO.find((c) => c.fases.includes(fase))?.id ?? null;
+export function columnaDeFase(fase: Fase, slug: string): ColumnaId | null {
+  if (fase === "fuera_de_perfil") return null;
+  return columnasTablero(slug).find((c) => c.fases.includes(fase))?.id ?? COLUMNA_OTROS.id;
 }
-
-const CAMINO: readonly Fase[] = ["nuevo", "contactado", "interesado", "muestras", "cliente"];
 
 /** Paso siguiente del botón «→». En Cliente y en las fases cerradas no hay. */
-export function siguienteFase(fase: Fase): Fase | null {
-  const i = CAMINO.indexOf(fase);
-  return i >= 0 && i < CAMINO.length - 1 ? CAMINO[i + 1] : null;
+export function siguienteFase(fase: Fase, slug: string): Fase | null {
+  const camino = flujoDeMarca(slug).camino;
+  const i = camino.indexOf(fase);
+  return i >= 0 && i < camino.length - 1 ? camino[i + 1] : null;
 }
-
-/** Fases entre las que se puede mover una tarjeta a mano, en el orden del camino principal. */
-export const FASES_MOVIBLES: readonly Fase[] = CAMINO;
 
 /**
  * Destinos del menú «Mover a…» de una tarjeta: las fases movibles salvo la
  * actual. Sirve tanto para leads activos (permite retroceder, algo que el
  * botón «→» no hace) como para leads descartados (permite recuperarlos).
  */
-export function fasesDestino(actual: Fase): Fase[] {
-  return FASES_MOVIBLES.filter((f) => f !== actual);
+export function fasesDestino(actual: Fase, slug: string): Fase[] {
+  return flujoDeMarca(slug).camino.filter((f) => f !== actual);
 }
 
 /**
@@ -72,10 +76,10 @@ export function fasesDestino(actual: Fase): Fase[] {
  * fases archivadas se quedan fuera del tablero a propósito: se ven en la lista
  * de leads, no aquí.
  */
-export function agruparEnColumnas<T extends { fase: Fase }>(leads: T[]): Record<ColumnaId, T[]> {
-  const grupos = Object.fromEntries(COLUMNAS_TABLERO.map((c) => [c.id, [] as T[]])) as Record<ColumnaId, T[]>;
+export function agruparEnColumnas<T extends { fase: Fase }>(leads: T[], slug: string): Record<ColumnaId, T[]> {
+  const grupos: Record<ColumnaId, T[]> = Object.fromEntries([...columnasTablero(slug), COLUMNA_OTROS].map((c) => [c.id, [] as T[]]));
   for (const lead of leads) {
-    const columna = columnaDeFase(lead.fase);
+    const columna = columnaDeFase(lead.fase, slug);
     if (columna) grupos[columna].push(lead);
   }
   return grupos;

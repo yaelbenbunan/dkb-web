@@ -1,8 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { FASES, type Fase } from "../ventas/dominio";
 import {
-  COLUMNAS_TABLERO,
-  FASES_MOVIBLES,
+  columnasTablero,
   MAX_TARJETAS_COLUMNA,
   agruparEnColumnas,
   calcularPosicionMenu,
@@ -18,33 +17,34 @@ const HOY = "2026-09-17";
 
 describe("columnas del tablero", () => {
   test("las columnas van en orden, con Descartados al final y sin destino único", () => {
-    expect(COLUMNAS_TABLERO.map((c) => c.id)).toEqual(["nuevo", "contactado", "volver_a_llamar", "interesado", "muestras", "cliente", "descartados"]);
-    expect(COLUMNAS_TABLERO.map((c) => c.titulo)).toEqual(["Nuevo", "Contactado", "Volver a llamar", "Interesado", "Muestras enviadas", "Cliente", "Descartados"]);
-    const descartados = COLUMNAS_TABLERO.find((c) => c.id === "descartados")!;
+    expect(columnasTablero("hydrup").map((c) => c.id)).toEqual(["nuevo", "contactado", "volver_a_llamar", "interesado", "muestras", "cliente", "descartados"]);
+    expect(columnasTablero("hydrup").map((c) => c.titulo)).toEqual(["Nuevo", "Contactado", "Volver a llamar", "Interesado", "Muestras enviadas", "Cliente", "Descartados"]);
+    const descartados = columnasTablero("hydrup").find((c) => c.id === "descartados")!;
     expect(descartados.fases).toEqual(["perdido", "no_interesa", "ilocalizable"]);
     expect(descartados.destino).toBeNull();
-    expect(COLUMNAS_TABLERO.find((c) => c.id === "muestras")!.destino).toBe("muestras");
+    expect(columnasTablero("hydrup").find((c) => c.id === "muestras")!.destino).toBe("muestras");
   });
 
   test("cada fase está en una columna como mucho, y las archivadas en ninguna", () => {
     // «Fuera de perfil» se archiva: es la única que no se pinta en el tablero.
     const ARCHIVADAS: readonly string[] = ["fuera_de_perfil"];
-    for (const fase of FASES) {
-      const columnas = COLUMNAS_TABLERO.filter((c) => c.fases.includes(fase));
+    // «Propuesta» no es de Hydrup: no tiene columna propia (cae en «Otros»).
+    for (const fase of FASES.filter((f) => f !== "propuesta")) {
+      const columnas = columnasTablero("hydrup").filter((c) => c.fases.includes(fase));
       expect(columnas).toHaveLength(ARCHIVADAS.includes(fase) ? 0 : 1);
     }
-    expect(columnaDeFase("nuevo")).toBe("nuevo");
-    expect(columnaDeFase("cliente")).toBe("cliente");
-    expect(columnaDeFase("perdido")).toBe("descartados");
-    expect(columnaDeFase("no_interesa")).toBe("descartados");
-    expect(columnaDeFase("ilocalizable")).toBe("descartados");
-    expect(columnaDeFase("volver_a_llamar")).toBe("volver_a_llamar");
+    expect(columnaDeFase("nuevo", "hydrup")).toBe("nuevo");
+    expect(columnaDeFase("cliente", "hydrup")).toBe("cliente");
+    expect(columnaDeFase("perdido", "hydrup")).toBe("descartados");
+    expect(columnaDeFase("no_interesa", "hydrup")).toBe("descartados");
+    expect(columnaDeFase("ilocalizable", "hydrup")).toBe("descartados");
+    expect(columnaDeFase("volver_a_llamar", "hydrup")).toBe("volver_a_llamar");
   });
 
   test("una fase archivada no tiene columna: desaparece del tablero", () => {
     // «Fuera de perfil» es el lead que nunca fue válido. No se arrastra a
     // ningún sitio ni ocupa espacio en el embudo; sigue en la lista de leads.
-    expect(columnaDeFase("fuera_de_perfil")).toBeNull();
+    expect(columnaDeFase("fuera_de_perfil", "hydrup")).toBeNull();
   });
 
   test("agrupar reparte los leads y Descartados junta las tres fases cerradas, manteniendo el orden", () => {
@@ -56,7 +56,7 @@ describe("columnas del tablero", () => {
       { id: "5", fase: "nuevo" },
       { id: "6", fase: "no_interesa" },
     ];
-    const g = agruparEnColumnas(leads);
+    const g = agruparEnColumnas(leads, "hydrup");
     expect(g.nuevo.map((l) => l.id)).toEqual(["1", "5"]);
     expect(g.contactado).toEqual([]);
     expect(g.interesado).toEqual([]);
@@ -68,14 +68,14 @@ describe("columnas del tablero", () => {
 
 describe("siguienteFase", () => {
   test("avanza por el camino principal y se para en Cliente y en las cerradas", () => {
-    expect(siguienteFase("nuevo")).toBe("contactado");
-    expect(siguienteFase("contactado")).toBe("interesado");
-    expect(siguienteFase("interesado")).toBe("muestras");
-    expect(siguienteFase("muestras")).toBe("cliente");
-    expect(siguienteFase("cliente")).toBeNull();
-    expect(siguienteFase("perdido")).toBeNull();
-    expect(siguienteFase("no_interesa")).toBeNull();
-    expect(siguienteFase("ilocalizable")).toBeNull();
+    expect(siguienteFase("nuevo", "hydrup")).toBe("contactado");
+    expect(siguienteFase("contactado", "hydrup")).toBe("interesado");
+    expect(siguienteFase("interesado", "hydrup")).toBe("muestras");
+    expect(siguienteFase("muestras", "hydrup")).toBe("cliente");
+    expect(siguienteFase("cliente", "hydrup")).toBeNull();
+    expect(siguienteFase("perdido", "hydrup")).toBeNull();
+    expect(siguienteFase("no_interesa", "hydrup")).toBeNull();
+    expect(siguienteFase("ilocalizable", "hydrup")).toBeNull();
   });
 });
 
@@ -158,15 +158,15 @@ describe("ordenarPorUrgencia", () => {
 
 describe("fasesDestino", () => {
   test("las cinco fases movibles salvo la actual, en el orden del camino principal", () => {
-    expect(fasesDestino("nuevo")).toEqual(["contactado", "interesado", "muestras", "cliente"]);
-    expect(fasesDestino("interesado")).toEqual(["nuevo", "contactado", "muestras", "cliente"]);
-    expect(fasesDestino("cliente")).toEqual(["nuevo", "contactado", "interesado", "muestras"]);
+    expect(fasesDestino("nuevo", "hydrup")).toEqual(["contactado", "interesado", "muestras", "cliente"]);
+    expect(fasesDestino("interesado", "hydrup")).toEqual(["nuevo", "contactado", "muestras", "cliente"]);
+    expect(fasesDestino("cliente", "hydrup")).toEqual(["nuevo", "contactado", "interesado", "muestras"]);
   });
 
   test("un lead descartado puede recuperarse a cualquier fase movible", () => {
-    expect(fasesDestino("perdido")).toEqual(FASES_MOVIBLES);
-    expect(fasesDestino("no_interesa")).toEqual(FASES_MOVIBLES);
-    expect(fasesDestino("ilocalizable")).toEqual(FASES_MOVIBLES);
+    expect(fasesDestino("perdido", "hydrup")).toEqual(["nuevo", "contactado", "interesado", "muestras", "cliente"]);
+    expect(fasesDestino("no_interesa", "hydrup")).toEqual(["nuevo", "contactado", "interesado", "muestras", "cliente"]);
+    expect(fasesDestino("ilocalizable", "hydrup")).toEqual(["nuevo", "contactado", "interesado", "muestras", "cliente"]);
   });
 });
 
@@ -219,5 +219,22 @@ describe("iniciales", () => {
     expect(iniciales("maría josé garcía lópez")).toBe("ML");
     expect(iniciales("  Álvaro  ")).toBe("Á");
     expect(iniciales("")).toBe("");
+  });
+});
+
+describe("tablero por marca", () => {
+  test("dinkbit: Propuesta enviada en lugar de Muestras", () => {
+    const cols = columnasTablero("dinkbit");
+    expect(cols.map((c) => c.id)).toEqual(["nuevo", "contactado", "volver_a_llamar", "interesado", "propuesta", "cliente", "descartados"]);
+    expect(cols.find((c) => c.id === "propuesta")?.titulo).toBe("Propuesta enviada");
+    expect(siguienteFase("interesado", "dinkbit")).toBe("propuesta");
+    expect(siguienteFase("propuesta", "dinkbit")).toBe("cliente");
+    expect(fasesDestino("nuevo", "dinkbit")).not.toContain("muestras");
+  });
+
+  test("un lead con una fase que no es de su marca cae en «Otros», no desaparece", () => {
+    expect(agruparEnColumnas([{ fase: "muestras" as const }], "dinkbit").otros).toHaveLength(1);
+    expect(agruparEnColumnas([{ fase: "propuesta" as const }], "hydrup").otros).toHaveLength(1);
+    expect(columnaDeFase("propuesta", "hydrup")).toBe("otros");
   });
 });

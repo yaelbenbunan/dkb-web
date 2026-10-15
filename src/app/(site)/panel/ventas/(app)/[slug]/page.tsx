@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireAccesoMarca } from "@/lib/ventas/auth";
-import { FASES, FASE_LABELS } from "@/lib/ventas/dominio";
+import { FASE_LABELS, flujoDeMarca } from "@/lib/ventas/dominio";
 import { hoyMadrid } from "@/lib/ventas/metricas";
 import { cargarPanelMarca, mesDeConsulta } from "@/lib/ventas/paneles";
 import { EmbudoVista } from "../../_componentes/EmbudoVista";
@@ -25,7 +25,7 @@ export default async function MarcaResumenPage({
     ["Leads nuevos", resumen.leadsNuevos],
     ["Llamadas hechas", resumen.llamadas],
     ["Pasaron a interesado", resumen.interesados],
-    ["Envíos de muestras", resumen.muestras],
+    flujoDeMarca(marca.slug).conMuestras ? ["Envíos de muestras", resumen.muestras] : ["Propuestas enviadas", resumen.propuestas],
     ["Seguimientos atrasados (ahora)", resumen.seguimientosAtrasados],
   ];
 
@@ -52,7 +52,7 @@ export default async function MarcaResumenPage({
 
         <section style={tarjeta}>
           <h2 style={titulo}>Embudo acumulado</h2>
-          <EmbudoVista embudo={embudo} />
+          <EmbudoVista embudo={embudo} slug={marca.slug} />
           <p style={{ margin: "10px 0 0", fontSize: 12, color: "#64748b" }}>
             Cuenta cada lead en todas las etapas a las que llegó alguna vez. El % es el paso desde la etapa anterior.
           </p>
@@ -61,7 +61,7 @@ export default async function MarcaResumenPage({
         <section style={tarjeta}>
           <h2 style={titulo}>Leads por fase (ahora)</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {FASES.map((f) => (
+            {flujoDeMarca(marca.slug).fases.map((f) => (
               <Link key={f} href={`/panel/ventas/${slug}/leads?fase=${f}`} style={{ display: "flex", justifyContent: "space-between", textDecoration: "none", color: "#0f172a" }}>
                 <FaseEtiqueta fase={f} />
                 <strong aria-label={FASE_LABELS[f]}>{embudo.porFase[f]}</strong>

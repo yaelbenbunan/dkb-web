@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { cambiarFaseAction, muestrasEnviadasAction, notaAction, pasarAlEmbudoAction, registrarLlamadaAction } from "../../../../acciones-leads";
-import { FASES, FASE_LABELS, MARCA_DINKBIT_SLUG, RESULTADOS_LLAMADA, RESULTADO_LABELS, type Fase } from "@/lib/ventas/dominio";
+import { FASE_LABELS, MARCA_DINKBIT_SLUG, RESULTADOS_LLAMADA, flujoDeMarca, RESULTADO_LABELS, type Fase } from "@/lib/ventas/dominio";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
 import { Mensaje } from "../../../../_componentes/Mensaje";
 import { botonPrimario, botonSecundario, campo, etiqueta, tarjeta } from "../../../../_componentes/estilos";
@@ -65,7 +65,11 @@ export function AccionesLead({
   const [rFase, aFase, pFase] = useActionState<ResultadoAccion | null, FormData>(cambiarFaseAction.bind(null, slug, leadId), null);
   const [rEmbudo, aEmbudo, pEmbudo] = useActionState<ResultadoAccion | null, FormData>(pasarAlEmbudoAction.bind(null, slug, leadId), null);
 
-  const pestanas = slug === MARCA_DINKBIT_SLUG ? [...PESTANAS, PESTANA_EMBUDO] : PESTANAS;
+  // Las marcas que no envían muestras (dinkbit) no ven nada de muestras.
+  const flujo = flujoDeMarca(slug);
+  const base = flujo.conMuestras ? PESTANAS : PESTANAS.filter((p) => p.clave !== "muestras");
+  const pestanas = slug === MARCA_DINKBIT_SLUG ? [...base, PESTANA_EMBUDO] : base;
+  const resultados = flujo.conMuestras ? RESULTADOS_LLAMADA : RESULTADOS_LLAMADA.filter((r) => r !== "pide_muestras");
   const formulario = { display: "flex", flexDirection: "column", gap: 10 } as const;
 
   return (
@@ -87,7 +91,7 @@ export function AccionesLead({
         <form action={aLlamada} style={formulario}>
           <fieldset style={{ border: "none", padding: 0, margin: 0, display: "flex", gap: 6, flexWrap: "wrap" }}>
             <legend style={{ ...etiqueta, marginBottom: 6 }}>Resultado</legend>
-            {RESULTADOS_LLAMADA.map((r) => (
+            {resultados.map((r) => (
               <label key={r} style={{ display: "flex", gap: 4, alignItems: "center", fontSize: 13, border: "1px solid #e2e8f0", borderRadius: 6, padding: "5px 8px" }}>
                 <input type="radio" name="resultado" value={r} required /> {RESULTADO_LABELS[r]}
               </label>
@@ -132,7 +136,7 @@ export function AccionesLead({
           <label style={etiqueta}>
             Nueva fase
             <select name="fase" defaultValue={fase} style={campo}>
-              {FASES.map((f) => (
+              {flujo.fases.map((f) => (
                 <option key={f} value={f}>{FASE_LABELS[f]}</option>
               ))}
             </select>

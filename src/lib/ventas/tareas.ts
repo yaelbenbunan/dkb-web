@@ -4,7 +4,7 @@
  * leídas, así se prueba sin base de datos.
  */
 
-import { esFaseActiva, type Fase } from "./dominio";
+import { esFaseActiva, flujoDeMarca, type Fase } from "./dominio";
 import type { Ahora } from "./metricas";
 import { vencimiento } from "./tablero";
 
@@ -59,14 +59,15 @@ export function leadsQuePidenMuestras(llamadas: { lead_id: string; resultado: st
   return new Set([...ultimo].filter(([, r]) => r === "pide_muestras").map(([id]) => id));
 }
 
-export function tareasAutomaticas(leads: LeadDeTarea[], pidenMuestras: Set<string>): TareaVista[] {
+export function tareasAutomaticas(leads: LeadDeTarea[], pidenMuestras: Set<string>, slug: string): TareaVista[] {
   const tareas: TareaVista[] = [];
+  const conMuestras = flujoDeMarca(slug).conMuestras;
   for (const l of leads) {
     const comun = { leadId: l.id, negocio: l.negocio, asignadaA: l.asignada_a, tareaId: null, hecha: false, notas: null };
     if (esFaseActiva(l.fase) && l.proximo_seguimiento) {
       tareas.push({ ...comun, clave: `llamar:${l.id}`, tipo: "llamar", titulo: `Llamar a ${l.negocio}`, fecha: l.proximo_seguimiento, hora: hhmm(l.proximo_seguimiento_hora) });
     }
-    if (l.fase === "interesado" && pidenMuestras.has(l.id)) {
+    if (conMuestras && l.fase === "interesado" && pidenMuestras.has(l.id)) {
       tareas.push({ ...comun, clave: `muestras:${l.id}`, tipo: "enviar_muestras", titulo: `Enviar muestras a ${l.negocio}`, fecha: null, hora: null });
     }
   }

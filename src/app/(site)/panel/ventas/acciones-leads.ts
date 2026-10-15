@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { accesoMarcaAccion } from "@/lib/ventas/auth";
 import { actualizarDatosLead, actualizarExtrasLead, asignarLead, eliminarLeads, getLead, getUsuaria } from "@/lib/ventas/db";
-import { esFase, MARCA_DINKBIT_SLUG } from "@/lib/ventas/dominio";
+import { esFase, flujoDeMarca, MARCA_DINKBIT_SLUG, type Fase } from "@/lib/ventas/dominio";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
 import { esAsignableEnMarca, type SeccionMarca } from "@/lib/ventas/rutas";
 import {
@@ -32,6 +32,13 @@ async function accesoALead(slug: string, leadId: string, seccion: SeccionMarca =
   const lead = await getLead(leadId);
   if (!lead || lead.marca_id !== acceso.marca.id) return NO_ENCONTRADO;
   return { ...acceso, lead };
+}
+
+const SIN_MUESTRAS = { ok: false as const, error: "Esta marca no trabaja con muestras." };
+const FASE_AJENA = { ok: false as const, error: "Esa fase no es de esta marca." };
+
+function esFaseDeMarca(fase: Fase, slug: string): boolean {
+  return flujoDeMarca(slug).fases.includes(fase);
 }
 
 function refrescar(slug: string) {
@@ -109,6 +116,7 @@ export async function registrarLlamadaAction(slug: string, leadId: string, _prev
   if (!acceso.ok) return acceso;
   const leido = leerLlamada(fd);
   if (!leido.ok) return leido;
+  if (leido.datos.resultado === "pide_muestras" && !flujoDeMarca(acceso.marca.slug).conMuestras) return SIN_MUESTRAS;
   const res = await registrarLlamada({ usuaria: acceso.usuaria, leadId, llamada: leido.datos });
   if (!res.ok) return res;
   refrescar(slug);
@@ -118,6 +126,7 @@ export async function registrarLlamadaAction(slug: string, leadId: string, _prev
 export async function muestrasEnviadasAction(slug: string, leadId: string, _prev: ResultadoAccion | null, fd: FormData): Promise<ResultadoAccion> {
   const acceso = await accesoALead(slug, leadId);
   if (!acceso.ok) return acceso;
+  if (!flujoDeMarca(acceso.marca.slug).conMuestras) return SIN_MUESTRAS;
   const leido = leerNotaSeguimiento(fd);
   if (!leido.ok) return leido;
   const res = await marcarMuestrasEnviadas({ usuaria: acceso.usuaria, leadId, datos: leido.datos });
@@ -142,6 +151,7 @@ export async function cambiarFaseAction(slug: string, leadId: string, _prev: Res
   if (!acceso.ok) return acceso;
   const leido = leerCambioFase(fd);
   if (!leido.ok) return leido;
+  if (!esFaseDeMarca(leido.datos.fase, acceso.marca.slug)) return FASE_AJENA;
   const res = await cambiarFaseManual({ usuaria: acceso.usuaria, leadId, cambio: leido.datos });
   if (!res.ok) return res;
   refrescar(slug);
@@ -165,6 +175,7 @@ export async function moverLeadAction(slug: string, leadId: string, fase: string
   const acceso = await accesoALead(slug, leadId, "tablero");
   if (!acceso.ok) return acceso;
   if (!esFase(fase)) return { ok: false, error: "Fase no válida." };
+  if (!esFaseDeMarca(fase, acceso.marca.slug)) return FASE_AJENA;
   // moverLead vuelve a leer el lead antes de escribir: es a propósito, no un
   // descuido, para achicar la ventana en la que dos movimientos simultáneos
   // podrían duplicarse.

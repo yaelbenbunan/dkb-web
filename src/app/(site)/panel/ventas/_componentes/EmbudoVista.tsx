@@ -1,14 +1,18 @@
-import { ETAPAS_EMBUDO, pctPaso, type Embudo } from "@/lib/ventas/metricas";
+import { etapasEmbudo, pctPaso, type Embudo, type EtapaEmbudo } from "@/lib/ventas/metricas";
 
-const TEXTO: Record<(typeof ETAPAS_EMBUDO)[number], string> = {
+const TEXTO: Record<EtapaEmbudo, string> = {
   contactado: "Contactados",
   interesado: "Interesados",
   muestras: "Con muestras",
+  propuesta: "Con propuesta",
   cliente: "Clientes",
 };
 
-export function EmbudoVista({ embudo }: { embudo: Embudo }) {
-  const pasos = [{ clave: "total", texto: "Leads", valor: embudo.total }, ...ETAPAS_EMBUDO.map((e) => ({ clave: e, texto: TEXTO[e], valor: embudo.alcanzaron[e] }))];
+export function EmbudoVista({ embudo, slug }: { embudo: Embudo; slug: string }) {
+  const pasos = [
+    { clave: "total", texto: "Leads", valor: embudo.total },
+    ...etapasEmbudo(slug).map((e) => ({ clave: e, texto: TEXTO[e], valor: embudo.alcanzaron[e] ?? 0 })),
+  ];
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       {pasos.map((p, i) => {

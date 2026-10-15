@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireAccesoMarca } from "@/lib/ventas/auth";
 import { listLeads, listUsuarias } from "@/lib/ventas/db";
-import { FASES, FASE_LABELS, ORIGEN_LABELS, TIPO_NEGOCIO_LABELS, esFase } from "@/lib/ventas/dominio";
+import { FASE_LABELS, ORIGEN_LABELS, TIPO_NEGOCIO_LABELS, esFase, flujoDeMarca } from "@/lib/ventas/dominio";
 import { ahoraMadrid, formatoSeguimiento } from "@/lib/ventas/metricas";
 import { estadoSeguimiento } from "@/lib/ventas/tablero";
 import { FaseEtiqueta } from "../../../_componentes/FaseEtiqueta";
@@ -56,7 +56,7 @@ export default async function LeadsPage({
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
           <Link href={filtro({ fase: undefined })} style={chip(!fase)}>Todas</Link>
-          {FASES.map((f) => (
+          {flujoDeMarca(marca.slug).fases.map((f) => (
             <Link key={f} href={filtro({ fase: f })} style={chip(fase === f)}>{FASE_LABELS[f]}</Link>
           ))}
           <Link href={filtro({ mias: mias ? undefined : "1" })} style={chip(mias)}>Solo mías</Link>

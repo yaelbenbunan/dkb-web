@@ -351,3 +351,33 @@ describe("actualizarLeadAction: socios y cargo", () => {
     expect(m.actualizarDatosLead).toHaveBeenCalled();
   });
 });
+
+describe("fases de cada marca", () => {
+  const LEAD_DINKBIT = { id: "l1", marca_id: "m2", fase: "interesado" };
+  beforeEach(() => {
+    m.accesoMarcaAccion.mockResolvedValue({ ok: true, usuaria: USUARIA, marca: MARCA_DINKBIT });
+    m.getLead.mockResolvedValue(LEAD_DINKBIT);
+  });
+
+  test("dinkbit no trabaja con muestras", async () => {
+    expect(await muestrasEnviadasAction("dinkbit", "l1", null, fd({ nota: "x" }))).toEqual({ ok: false, error: "Esta marca no trabaja con muestras." });
+    expect(m.marcarMuestrasEnviadas).not.toHaveBeenCalled();
+  });
+
+  test("no se puede llevar un lead a una fase que no es de su marca", async () => {
+    expect(await moverLeadAction("dinkbit", "l1", "muestras")).toEqual({ ok: false, error: "Esa fase no es de esta marca." });
+    expect(await cambiarFaseAction("dinkbit", "l1", null, fd({ fase: "muestras", nota: "" }))).toEqual({ ok: false, error: "Esa fase no es de esta marca." });
+    expect(m.moverLead).not.toHaveBeenCalled();
+    expect(m.cambiarFaseManual).not.toHaveBeenCalled();
+  });
+
+  test("en dinkbit sí se puede mover a «Propuesta enviada»", async () => {
+    expect(await moverLeadAction("dinkbit", "l1", "propuesta")).toEqual({ ok: true });
+    expect(m.moverLead).toHaveBeenCalledWith(expect.objectContaining({ fase: "propuesta" }));
+  });
+
+  test("«Pide muestras» no es un resultado de llamada en dinkbit", async () => {
+    expect(await registrarLlamadaAction("dinkbit", "l1", null, fd({ resultado: "pide_muestras" }))).toEqual({ ok: false, error: "Esta marca no trabaja con muestras." });
+    expect(m.registrarLlamada).not.toHaveBeenCalled();
+  });
+});

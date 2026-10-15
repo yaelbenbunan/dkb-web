@@ -25,20 +25,20 @@ describe("leadsQuePidenMuestras", () => {
 
 describe("tareasAutomaticas", () => {
   test("llamar: fase activa con fecha, a nombre de quien lleva el lead y con su hora", () => {
-    const t = tareasAutomaticas([lead("a", { proximo_seguimiento: "2026-10-20", proximo_seguimiento_hora: "16:30:00", asignada_a: "u7" })], new Set());
+    const t = tareasAutomaticas([lead("a", { proximo_seguimiento: "2026-10-20", proximo_seguimiento_hora: "16:30:00", asignada_a: "u7" })], new Set(), "hydrup");
     expect(t).toEqual([
       { clave: "llamar:a", tipo: "llamar", titulo: "Llamar a Negocio a", leadId: "a", negocio: "Negocio a", fecha: "2026-10-20", hora: "16:30", asignadaA: "u7", tareaId: null, hecha: false, notas: null },
     ]);
   });
   test("un lead cerrado con fecha no genera llamada", () => {
-    expect(tareasAutomaticas([lead("a", { fase: "no_interesa", proximo_seguimiento: "2026-10-20" })], new Set())).toEqual([]);
+    expect(tareasAutomaticas([lead("a", { fase: "no_interesa", proximo_seguimiento: "2026-10-20" })], new Set(), "hydrup")).toEqual([]);
   });
   test("enviar muestras: interesado que las pidió; sin fecha propia", () => {
-    const t = tareasAutomaticas([lead("a", { fase: "interesado" }), lead("b", { fase: "muestras" })], new Set(["a", "b"]));
+    const t = tareasAutomaticas([lead("a", { fase: "interesado" }), lead("b", { fase: "muestras" })], new Set(["a", "b"]), "hydrup");
     expect(t.map((x) => [x.clave, x.titulo, x.fecha])).toEqual([["muestras:a", "Enviar muestras a Negocio a", null]]);
   });
   test("un interesado que pidió muestras y tiene fecha genera las dos tareas", () => {
-    const t = tareasAutomaticas([lead("a", { fase: "interesado", proximo_seguimiento: "2026-10-21" })], new Set(["a"]));
+    const t = tareasAutomaticas([lead("a", { fase: "interesado", proximo_seguimiento: "2026-10-21" })], new Set(["a"]), "hydrup");
     expect(t.map((x) => x.clave).sort()).toEqual(["llamar:a", "muestras:a"]);
   });
 });
@@ -75,4 +75,10 @@ describe("agruparTareas", () => {
   test("las hechas no aparecen", () => {
     expect(agruparTareas([{ ...t("x", "2026-10-19"), hecha: true }], ahora).atrasadas).toEqual([]);
   });
+});
+
+test("dinkbit no genera «Enviar muestras»", () => {
+  const leads = [lead("a", { fase: "interesado" })];
+  expect(tareasAutomaticas(leads, new Set(["a"]), "dinkbit")).toEqual([]);
+  expect(tareasAutomaticas(leads, new Set(["a"]), "hydrup").map((t) => t.tipo)).toEqual(["enviar_muestras"]);
 });

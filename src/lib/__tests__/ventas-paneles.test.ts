@@ -15,10 +15,10 @@ describe("cargarPanelMarca", () => {
   });
 
   test("pide la actividad del rango del mes y combina embudo y resumen", async () => {
-    const datos = await cargarPanelMarca({ id: "m1" } as never, "2026-09", "2026-09-17");
+    const datos = await cargarPanelMarca({ id: "m1", slug: "hydrup" } as never, "2026-09", "2026-09-17");
     expect(m.listActividadMarca).toHaveBeenCalledWith("m1", "2026-08-31T00:00:00.000Z", "2026-10-02T00:00:00.000Z");
     expect(datos.embudo.alcanzaron.interesado).toBe(1);
-    expect(datos.resumen).toEqual({ leadsNuevos: 1, llamadas: 1, interesados: 0, muestras: 0, seguimientosAtrasados: 1 });
+    expect(datos.resumen).toEqual({ leadsNuevos: 1, llamadas: 1, interesados: 0, muestras: 0, propuestas: 0, seguimientosAtrasados: 1 });
   });
 });
 

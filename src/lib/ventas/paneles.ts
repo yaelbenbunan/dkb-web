@@ -15,7 +15,7 @@ export async function cargarPanelMarca(marca: Marca, mes: string, hoy: string): 
     listActividadMarca(marca.id, rango.desde, rango.hasta),
     listCambiosFaseMarca(marca.id),
   ]);
-  return { marca, embudo: calcularEmbudo(leads, cambios), resumen: resumenMes(mes, leads, actividad, hoy) };
+  return { marca, embudo: calcularEmbudo(leads, cambios, marca.slug), resumen: resumenMes(mes, leads, actividad, hoy) };
 }
 
 export function mesDeConsulta(raw: unknown, now: Date = new Date()): string {

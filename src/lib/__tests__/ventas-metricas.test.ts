@@ -13,8 +13,7 @@ import {
   calcularEmbudo,
   pctPaso,
   resumenMes,
-  agruparSeguimientos,
-} from "../ventas/metricas";
+  agruparSeguimientos, etapasEmbudo } from "../ventas/metricas";
 
 describe("fechas en hora de Madrid", () => {
   test("a las 23:30 UTC del 30 de septiembre en Madrid ya es 1 de octubre", () => {
@@ -51,14 +50,14 @@ describe("calcularEmbudo", () => {
       { id: "b", fase: "fuera_de_perfil" as const },
       { id: "c", fase: "fuera_de_perfil" as const },
     ];
-    const embudo = calcularEmbudo(leads, []);
+    const embudo = calcularEmbudo(leads, [], "hydrup");
     expect(embudo.total).toBe(1);
     expect(embudo.alcanzaron.contactado).toBe(1);
     expect(embudo.porFase.fuera_de_perfil).toBe(2);
   });
 
   test("«volver a llamar» cuenta como contactado: alguien lo intentó", () => {
-    const embudo = calcularEmbudo([{ id: "a", fase: "volver_a_llamar" as const }], []);
+    const embudo = calcularEmbudo([{ id: "a", fase: "volver_a_llamar" as const }], [], "hydrup");
     expect(embudo.alcanzaron.contactado).toBe(1);
     expect(embudo.alcanzaron.interesado).toBe(0);
   });
@@ -71,14 +70,14 @@ describe("calcularEmbudo", () => {
       { id: "d", fase: "muestras" as const },
     ];
     const cambios = [{ lead_id: "c", datos: { fase_anterior: "muestras", fase_nueva: "no_interesa" } }, { lead_id: "c", datos: { fase_nueva: "muestras" } }];
-    const e = calcularEmbudo(leads, cambios);
+    const e = calcularEmbudo(leads, cambios, "hydrup");
     expect(e.total).toBe(4);
     expect(e.alcanzaron).toEqual({ contactado: 3, interesado: 3, muestras: 2, cliente: 0 });
     expect(e.porFase.no_interesa).toBe(1);
   });
 
   test("un lead cerrado sin historial cuenta al menos como contactado", () => {
-    const e = calcularEmbudo([{ id: "x", fase: "ilocalizable" }], []);
+    const e = calcularEmbudo([{ id: "x", fase: "ilocalizable" }], [], "hydrup");
     expect(e.alcanzaron.contactado).toBe(1);
     expect(e.alcanzaron.interesado).toBe(0);
   });
@@ -107,6 +106,7 @@ describe("resumenMes", () => {
       llamadas: 1,
       interesados: 1,
       muestras: 1,
+      propuestas: 0,
       seguimientosAtrasados: 1,
     });
   });
@@ -138,4 +138,12 @@ test("formatoSeguimiento", () => {
   expect(formatoSeguimiento("2026-10-20", "16:30")).toBe("20/10/2026 · 16:30");
   expect(formatoSeguimiento("2026-10-20", null)).toBe("20/10/2026");
   expect(formatoSeguimiento("2026-10-20", "16:30:00")).toBe("20/10/2026 · 16:30");
+});
+
+test("embudo de dinkbit con propuesta", () => {
+  expect(etapasEmbudo("dinkbit")).toEqual(["contactado", "interesado", "propuesta", "cliente"]);
+  expect(etapasEmbudo("hydrup")).toEqual(["contactado", "interesado", "muestras", "cliente"]);
+  const e = calcularEmbudo([{ id: "a", fase: "propuesta" }, { id: "b", fase: "cliente" }], [], "dinkbit");
+  expect(e.alcanzaron.propuesta).toBe(2);
+  expect(e.alcanzaron.cliente).toBe(1);
 });

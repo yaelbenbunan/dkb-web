@@ -1,3 +1,4 @@
+import { flujoDeMarca } from "@/lib/ventas/dominio";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireUsuaria } from "@/lib/ventas/auth";
@@ -51,12 +52,12 @@ export default async function PanelVentasPage({ searchParams }: { searchParams: 
               <Cifra texto="Leads nuevos" valor={resumen.leadsNuevos} />
               <Cifra texto="Llamadas" valor={resumen.llamadas} />
               <Cifra texto="Interesados" valor={resumen.interesados} />
-              <Cifra texto="Muestras" valor={resumen.muestras} />
+              {flujoDeMarca(marca.slug).conMuestras ? <Cifra texto="Muestras" valor={resumen.muestras} /> : <Cifra texto="Propuestas" valor={resumen.propuestas} />}
               <Cifra texto="Seguim. atrasados" valor={resumen.seguimientosAtrasados} alerta />
             </div>
             <div>
               <div style={{ fontSize: 12, color: "#64748b", marginBottom: 6 }}>Embudo acumulado</div>
-              <EmbudoVista embudo={embudo} />
+              <EmbudoVista embudo={embudo} slug={marca.slug} />
             </div>
           </section>
         ))}

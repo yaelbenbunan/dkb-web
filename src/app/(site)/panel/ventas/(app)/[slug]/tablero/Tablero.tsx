@@ -19,7 +19,8 @@ import { FASE_COLORES, FASE_LABELS, type Fase } from "@/lib/ventas/dominio";
 import { formatoSeguimiento, type Ahora } from "@/lib/ventas/metricas";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
 import {
-  COLUMNAS_TABLERO,
+  COLUMNA_OTROS,
+  columnasTablero,
   MAX_TARJETAS_COLUMNA,
   agruparEnColumnas,
   calcularPosicionMenu,
@@ -103,7 +104,9 @@ export function Tablero({
   // ni recorte), no document.body — ver el porqué junto a Z_MENU más arriba.
   const portalRef = useRef<HTMLDivElement>(null);
 
-  const grupos = agruparEnColumnas(visibles);
+  const grupos = agruparEnColumnas(visibles, slug);
+  // «Otros» (fases que no son de la marca) solo aparece si tiene algo.
+  const columnas = [...columnasTablero(slug), ...(grupos[COLUMNA_OTROS.id].length > 0 ? [COLUMNA_OTROS] : [])];
   const origenArrastre = arrastrando ? visibles.find((l) => l.id === arrastrando) : undefined;
 
   function registrarRef(id: string, el: HTMLElement | null) {
@@ -150,7 +153,7 @@ export function Tablero({
     setSobre(null);
     setArrastrando(null);
     const lead = visibles.find((l) => l.id === id);
-    if (!lead || columnaDeFase(lead.fase) === columna.id) return;
+    if (!lead || columna.id === COLUMNA_OTROS.id || columnaDeFase(lead.fase, slug) === columna.id) return;
     if (columna.destino === null) abrirDescarte(lead);
     else mover(lead, columna.destino);
   }
@@ -162,11 +165,11 @@ export function Tablero({
       </div>
 
       <div style={{ display: "flex", gap: 12, overflowX: "auto", alignItems: "flex-start", paddingBottom: 10 }}>
-        {COLUMNAS_TABLERO.map((columna) => {
+        {columnas.map((columna) => {
           const todas = ordenarPorUrgencia(grupos[columna.id], ahora);
           const destacada = sobre === columna.id;
-          const aceptaSoltar = origenArrastre !== undefined && columnaDeFase(origenArrastre.fase) !== columna.id;
-          const color = FASE_COLORES[columna.fases[0]];
+          const aceptaSoltar = origenArrastre !== undefined && columna.id !== COLUMNA_OTROS.id && columnaDeFase(origenArrastre.fase, slug) !== columna.id;
+          const color = columna.fases[0] ? FASE_COLORES[columna.fases[0]] : { bg: "#f1f5f9", text: "#64748b" };
           const ancho = columna.id === "descartados" ? 220 : 260;
           return (
             <section
@@ -290,7 +293,7 @@ function Tarjeta({
 }) {
   const router = useRouter();
   const ficha = `/panel/ventas/${slug}/leads/${lead.id}`;
-  const siguiente = siguienteFase(lead.fase);
+  const siguiente = siguienteFase(lead.fase, slug);
   const seguimiento = estadoSeguimiento(lead.proximo_seguimiento, lead.proximo_seguimiento_hora, lead.fase, ahora);
   const detalle = [lead.tipo, lead.ciudad].filter(Boolean).join(" · ");
 
@@ -451,7 +454,7 @@ function Tarjeta({
         )}
         <MenuAcciones
           negocio={lead.negocio}
-          destinos={fasesDestino(lead.fase)}
+          destinos={fasesDestino(lead.fase, slug)}
           deshabilitado={moviendo}
           onMover={onMover}
           onDescartar={onDescartar}

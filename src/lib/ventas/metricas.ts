@@ -4,7 +4,7 @@
  * hora de Madrid, que es donde trabajan las comerciales.
  */
 
-import { FASES, esFase, esFaseActiva, type Fase } from "./dominio";
+import { FASES, esFase, esFaseActiva, flujoDeMarca, type Fase } from "./dominio";
 
 const ZONA = "Europe/Madrid";
 
@@ -92,8 +92,12 @@ export function formatoFechaHora(iso: string): string {
 
 /* Embudo -------------------------------------------------------------------- */
 
-export const ETAPAS_EMBUDO = ["contactado", "interesado", "muestras", "cliente"] as const;
-export type EtapaEmbudo = (typeof ETAPAS_EMBUDO)[number];
+export type EtapaEmbudo = "contactado" | "interesado" | "muestras" | "propuesta" | "cliente";
+
+/** Etapas del embudo de una marca: la tercera es su paso avanzado (muestras o propuesta). */
+export function etapasEmbudo(slug: string): readonly EtapaEmbudo[] {
+  return ["contactado", "interesado", flujoDeMarca(slug).pasoAvanzado, "cliente"];
+}
 
 /** Hasta dónde llega cada fase en el embudo. Las fases cerradas cuentan como
  *  «contactado»: para cerrar un lead alguien tuvo que hablar (o intentarlo). */
@@ -110,11 +114,12 @@ const RANGO: Record<Fase, number> = {
   propuesta: 3,
   cliente: 4,
 };
-const RANGO_ETAPA: Record<EtapaEmbudo, number> = { contactado: 1, interesado: 2, muestras: 3, cliente: 4 };
+const RANGO_ETAPA: Record<EtapaEmbudo, number> = { contactado: 1, interesado: 2, muestras: 3, propuesta: 3, cliente: 4 };
 
 export interface Embudo {
   total: number;
-  alcanzaron: Record<EtapaEmbudo, number>;
+  /** Solo las etapas de la marca (ver `etapasEmbudo`). */
+  alcanzaron: Partial<Record<EtapaEmbudo, number>>;
   porFase: Record<Fase, number>;
 }
 
@@ -126,6 +131,7 @@ export interface Embudo {
 export function calcularEmbudo(
   leads: { id: string; fase: Fase }[],
   cambios: { lead_id: string; datos: Record<string, unknown> }[],
+  slug: string,
 ): Embudo {
   const maximo = new Map<string, number>();
   const porFase = Object.fromEntries(FASES.map((f) => [f, 0])) as Record<Fase, number>;
@@ -142,9 +148,10 @@ export function calcularEmbudo(
     const actual = maximo.get(cambio.lead_id);
     if (actual !== undefined && esFase(fase)) maximo.set(cambio.lead_id, Math.max(actual, RANGO[fase]));
   }
-  const alcanzaron = { contactado: 0, interesado: 0, muestras: 0, cliente: 0 };
+  const etapas = etapasEmbudo(slug);
+  const alcanzaron: Partial<Record<EtapaEmbudo, number>> = Object.fromEntries(etapas.map((e) => [e, 0]));
   for (const rango of maximo.values()) {
-    for (const etapa of ETAPAS_EMBUDO) if (rango >= RANGO_ETAPA[etapa]) alcanzaron[etapa]++;
+    for (const etapa of etapas) if (rango >= RANGO_ETAPA[etapa]) alcanzaron[etapa] = (alcanzaron[etapa] ?? 0) + 1;
   }
   return { total: maximo.size, alcanzaron, porFase };
 }
@@ -160,6 +167,8 @@ export interface ResumenMes {
   llamadas: number;
   interesados: number;
   muestras: number;
+  /** Cambios de fase a «Propuesta enviada» del mes (marcas que no trabajan con muestras). */
+  propuestas: number;
   seguimientosAtrasados: number;
 }
 
@@ -175,6 +184,7 @@ export function resumenMes(
     llamadas: delMes.filter((a) => a.tipo === "llamada").length,
     interesados: delMes.filter((a) => a.tipo === "cambio_fase" && a.datos?.fase_nueva === "interesado").length,
     muestras: delMes.filter((a) => a.tipo === "muestras_enviadas").length,
+    propuestas: delMes.filter((a) => a.tipo === "cambio_fase" && a.datos?.fase_nueva === "propuesta").length,
     seguimientosAtrasados: leads.filter(
       (l) => esFaseActiva(l.fase) && l.proximo_seguimiento !== null && l.proximo_seguimiento < hoy,
     ).length,

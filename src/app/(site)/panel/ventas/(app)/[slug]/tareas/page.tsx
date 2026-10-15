@@ -52,7 +52,7 @@ export default async function TareasPage({
   const de = sp.de === "yo" ? usuaria.id : activas.some((u) => u.id === sp.de) ? sp.de : undefined;
 
   const todas = [
-    ...tareasAutomaticas(leads, leadsQuePidenMuestras(llamadas)),
+    ...tareasAutomaticas(leads, leadsQuePidenMuestras(llamadas), marca.slug),
     ...tareasManuales(manuales, new Map(leads.map((l) => [l.id, l.negocio]))),
   ].filter((t) => !de || t.asignadaA === de);
   const grupos = agruparTareas(todas, ahoraMadrid());
