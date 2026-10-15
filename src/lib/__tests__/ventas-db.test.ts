@@ -102,16 +102,17 @@ describe("crearUsuariaCompleta", () => {
     expect(authAdmin.updateUserById).not.toHaveBeenCalled();
   });
 
-  test("login que ya existía sin perfil de ventas (otra herramienta): se le crea el perfil y se le pone la contraseña", async () => {
+  test("login que ya existía sin perfil (otra herramienta): no se toca la cuenta ni su contraseña", async () => {
+    // Ponerle la contraseña desde el panel dejaría a cualquier admin de ventas
+    // quedarse con la cuenta de otra herramienta solo con saber el email.
     authAdmin.createUser.mockResolvedValue(YA_EXISTE);
-    authAdmin.listUsers.mockResolvedValue({ data: { users: [{ id: "otro", email: "x@d.com" }, { id: "u7", email: "P@d.com" }] }, error: null });
-    authAdmin.updateUserById.mockReset().mockResolvedValue({ error: null });
-    const sinPerfil = cadena({ data: null, error: null });
-    const insert = vi.fn().mockResolvedValue({ error: null });
-    fromMock.mockReturnValueOnce(sinPerfil.q).mockReturnValueOnce({ insert });
-    expect(await crearUsuariaCompleta({ nombre: "Paula", email: "p@d.com", password: "1234567890", rol: "comercial", marca_id: null })).toEqual({ ok: true, id: "u7" });
-    expect(authAdmin.updateUserById).toHaveBeenCalledWith("u7", { password: "1234567890", email_confirm: true });
-    expect(insert).toHaveBeenCalledWith(expect.objectContaining({ id: "u7", email: "p@d.com", rol: "comercial" }));
+    authAdmin.listUsers.mockResolvedValue({ data: { users: [{ id: "u7", email: "P@d.com" }] }, error: null });
+    authAdmin.updateUserById.mockReset();
+    fromMock.mockReturnValue(cadena({ data: null, error: null }).q);
+    const r = await crearUsuariaCompleta({ nombre: "Paula", email: "p@d.com", password: "1234567890", rol: "comercial", marca_id: null });
+    expect(r).toEqual({ ok: false, error: expect.stringContaining("ya tiene cuenta de acceso en otra herramienta") });
+    expect(authAdmin.updateUserById).not.toHaveBeenCalled();
+    expect(authAdmin.deleteUser).not.toHaveBeenCalled();
   });
 });
 

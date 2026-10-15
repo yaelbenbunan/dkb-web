@@ -247,23 +247,26 @@ async function buscarCuentaAuth(email: string): Promise<string | null> {
 export async function crearUsuariaCompleta(u: NuevaUsuaria): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   const sb = db();
   const { data, error } = await sb.auth.admin.createUser({ email: u.email, password: u.password, email_confirm: true });
-  // El mismo proyecto de Supabase lo usan otras herramientas: un email puede
-  // tener ya cuenta de login sin ser usuario de ventas (pasó con paula.lopez@
-  // el 15/10/2026). Entonces se reutiliza esa cuenta en vez de rechazar el alta.
-  let authId = data?.user?.id ?? null;
-  let cuentaPrevia = false;
+  const authId = data?.user?.id ?? null;
   if (error || !authId) {
     console.error("[ventas/db] crearUsuariaCompleta auth:", error?.message);
     const repetido = /already|registered|exists/i.test(error?.message ?? "");
     if (!repetido) return { ok: false, error: "No se pudo crear la cuenta." };
+    // El mismo proyecto de Supabase lo usan otras herramientas: un email puede
+    // tener cuenta de login sin ser usuario de ventas (pasó con paula.lopez@ el
+    // 15/10/2026). Esa cuenta NO se toca desde aquí: ponerle contraseña dejaría
+    // a cualquier admin de ventas quedarse con una cuenta ajena. Se vincula a
+    // mano, comprobando antes que es de quien dice ser.
     const previa = await buscarCuentaAuth(u.email);
-    if (!previa) return { ok: false, error: "Ya existe una cuenta con ese email." };
-    const perfilPrevio = await sb.from("ventas_usuarias").select("id").eq("id", previa).maybeSingle();
-    if (perfilPrevio.data) return { ok: false, error: "Ya existe un usuario con ese email." };
-    const puesta = await sb.auth.admin.updateUserById(previa, { password: u.password, email_confirm: true });
-    if (puesta.error) return { ok: false, error: "No se pudo preparar la cuenta existente." };
-    authId = previa;
-    cuentaPrevia = true;
+    if (previa) {
+      const perfilPrevio = await sb.from("ventas_usuarias").select("id").eq("id", previa).maybeSingle();
+      if (perfilPrevio.data) return { ok: false, error: "Ya existe un usuario con ese email." };
+      return {
+        ok: false,
+        error: "Ese email ya tiene cuenta de acceso en otra herramienta de dinkbit. Hay que vincularla a mano: pídeselo a quien mantiene el panel.",
+      };
+    }
+    return { ok: false, error: "Ya existe una cuenta con ese email." };
   }
   const perfil = await sb.from("ventas_usuarias").insert({
     id: authId,
@@ -276,8 +279,7 @@ export async function crearUsuariaCompleta(u: NuevaUsuaria): Promise<{ ok: true;
   });
   if (perfil.error) {
     // Sin perfil la cuenta no sirve para nada: se deshace para poder reintentar.
-    // Una cuenta que ya existía (de otra herramienta) no se borra nunca.
-    if (!cuentaPrevia) await sb.auth.admin.deleteUser(authId);
+    await sb.auth.admin.deleteUser(authId);
     console.error("[ventas/db] crearUsuariaCompleta perfil:", perfil.error.message);
     // Una clienta que la base rechaza por el rol (23514) o por no conocer la
     // columna de marca: es la migración del rol cliente, que no se ha ejecutado.
