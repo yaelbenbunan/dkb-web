@@ -86,11 +86,9 @@ export interface Lead {
   created_by: string | null;
   created_at: string;
   updated_at: string;
-  /** Cuándo se pasó este lead al embudo del CRM principal (botón "Pasar al
-   *  embudo", solo marca dinkbit). null = todavía no. Es la marca real de
-   *  idempotencia de ese botón — a propósito, no el texto de una nota, que
-   *  una comercial podría escribir a mano y crear un falso positivo. */
-  promocionado_at: string | null;
+  /** Del botón «Pasar al embudo», retirado con la unificación del CRM
+   *  (2026-10-15). La columna se queda; ya no la escribe nadie. */
+  promocionado_at?: string | null;
   /* Campos de los leads de la web (docs/sql/2026-10-15-crm-unificacion-estructura.sql).
    * Opcionales: hasta que se ejecute la migración, las filas no los traen. */
   /** Id con el que llegó de fuera: el de `imagina_leads` o el del preview de Imagina. */
@@ -458,16 +456,6 @@ export async function asignarLead(id: string, usuariaId: string | null): Promise
   return escritura(
     await db().from("ventas_leads").update({ asignada_a: usuariaId, updated_at: new Date().toISOString() }).eq("id", id),
     "asignarLead",
-  );
-}
-
-/** Marca el lead como ya pasado al embudo principal del CRM (botón "Pasar al
- *  embudo"). No pisa `updated_at`: no es una edición de los datos del lead,
- *  es un hito aparte que solo mira la comprobación de idempotencia. */
-export async function marcarLeadPromocionado(id: string): Promise<Escritura> {
-  return escritura(
-    await db().from("ventas_leads").update({ promocionado_at: new Date().toISOString() }).eq("id", id),
-    "marcarLeadPromocionado",
   );
 }
 

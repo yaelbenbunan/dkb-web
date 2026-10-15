@@ -320,3 +320,22 @@ export function leerNuevaTarea(fd: FormData): Leido<NuevaTarea> {
   if (r.ok && r.datos.vence_hora && !r.datos.vence) return { ok: false, error: "Para poner hora hace falta la fecha." };
   return r;
 }
+
+/* Origen del lead (canal, campaña, etiquetas, consentimiento) ---------------- */
+
+export interface OrigenLead {
+  canal: string | null;
+  campana: string | null;
+  etiquetas: string[];
+  consentimiento: boolean | null;
+}
+
+/** Etiquetas escritas a mano, separadas por comas: en minúsculas y sin repetir. */
+export function leerOrigenLead(fd: FormData): Leido<OrigenLead> {
+  const texto = (k: string) => campo(fd, k).trim().slice(0, 200) || null;
+  const etiquetas = [...new Set(campo(fd, "etiquetas").split(",").map((t) => t.trim().toLowerCase()).filter(Boolean))];
+  if (etiquetas.length > 10) return { ok: false, error: "Como mucho 10 etiquetas." };
+  if (etiquetas.some((t) => t.length > 40)) return { ok: false, error: "Cada etiqueta puede tener como mucho 40 caracteres." };
+  const c = campo(fd, "consentimiento");
+  return { ok: true, datos: { canal: texto("canal"), campana: texto("campana"), etiquetas, consentimiento: c === "si" ? true : c === "no" ? false : null } };
+}

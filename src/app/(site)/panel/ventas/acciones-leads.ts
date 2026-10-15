@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { accesoMarcaAccion } from "@/lib/ventas/auth";
-import { actualizarDatosLead, actualizarExtrasLead, asignarLead, eliminarLeads, getLead, getUsuaria } from "@/lib/ventas/db";
-import { esFase, flujoDeMarca, MARCA_DINKBIT_SLUG, type Fase } from "@/lib/ventas/dominio";
+import { actualizarDatosLead, actualizarExtrasLead, asignarLead, eliminarLeads, getLead, getUsuaria, actualizarLeadWeb } from "@/lib/ventas/db";
+import { esFase, flujoDeMarca, type Fase } from "@/lib/ventas/dominio";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
 import { esAsignableEnMarca, type SeccionMarca } from "@/lib/ventas/rutas";
 import {
@@ -14,13 +14,12 @@ import {
   importarLeadsCsv,
   marcarMuestrasEnviadas,
   moverLead,
-  pasarLeadAlEmbudo,
   previsualizarImportacion,
   registrarLlamada,
   type PreviaImportacion,
   type ResultadoImportacion,
 } from "@/lib/ventas/servicios";
-import { leerCambioFase, leerDatosLead, leerExtrasLead, leerLlamada, leerNotaSeguimiento } from "@/lib/ventas/validacion";
+import { leerCambioFase, leerDatosLead, leerExtrasLead, leerLlamada, leerNotaSeguimiento, leerOrigenLead } from "@/lib/ventas/validacion";
 
 const NO_ENCONTRADO = { ok: false, error: "Lead no encontrado." } as const;
 
@@ -158,18 +157,6 @@ export async function cambiarFaseAction(slug: string, leadId: string, _prev: Res
   return { ok: true, mensaje: "Fase cambiada." };
 }
 
-/** Ficha del lead → botón «Pasar al embudo». Solo para la marca `dinkbit`
- *  (leads de WhatsApp): es la única con sentido para promocionar al CRM
- *  principal con `channel: "WhatsApp"`. */
-export async function pasarAlEmbudoAction(slug: string, leadId: string, _prev: ResultadoAccion | null, _fd: FormData): Promise<ResultadoAccion> {
-  if (slug !== MARCA_DINKBIT_SLUG) return { ok: false, error: "Esta acción solo está disponible para la marca Dinkbit." };
-  const acceso = await accesoALead(slug, leadId);
-  if (!acceso.ok) return acceso;
-  const res = await pasarLeadAlEmbudo({ usuaria: acceso.usuaria, leadId });
-  if (res.ok) refrescar(slug);
-  return res;
-}
-
 /** Tablero: arrastrar una tarjeta o pulsar «→». */
 export async function moverLeadAction(slug: string, leadId: string, fase: string): Promise<ResultadoAccion> {
   const acceso = await accesoALead(slug, leadId, "tablero");
@@ -199,4 +186,26 @@ export async function eliminarLeadAction(slug: string, leadId: string, _prev: Re
   if (res.borrados === 0) return NO_ENCONTRADO;
   refrescar(slug);
   redirect(`/panel/ventas/${slug}/leads`);
+}
+
+/** Ficha → bloque «Origen»: canal, campaña, etiquetas y consentimiento. */
+export async function actualizarOrigenLeadAction(slug: string, leadId: string, _prev: ResultadoAccion | null, fd: FormData): Promise<ResultadoAccion> {
+  const acceso = await accesoALead(slug, leadId);
+  if (!acceso.ok) return acceso;
+  const leido = leerOrigenLead(fd);
+  if (!leido.ok) return leido;
+  const res = await actualizarLeadWeb(leadId, leido.datos);
+  if (!res.ok) return res;
+  refrescar(slug);
+  return { ok: true, mensaje: "Origen guardado." };
+}
+
+/** Ficha → «Archivar» / «Desarchivar»: lo saca de la lista y del tablero sin borrarlo. */
+export async function archivarLeadAction(slug: string, leadId: string, archivado: boolean): Promise<ResultadoAccion> {
+  const acceso = await accesoALead(slug, leadId);
+  if (!acceso.ok) return acceso;
+  const res = await actualizarLeadWeb(leadId, { archivado });
+  if (!res.ok) return res;
+  refrescar(slug);
+  return { ok: true, mensaje: archivado ? "Lead archivado." : "Lead recuperado." };
 }

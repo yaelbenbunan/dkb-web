@@ -10,8 +10,7 @@ import {
   leerLlamada,
   leerNotaSeguimiento,
   leerCambioFase,
-  leerNuevaTarea,
-} from "../ventas/validacion";
+  leerNuevaTarea, leerOrigenLead } from "../ventas/validacion";
 
 function fd(campos: Record<string, string>): FormData {
   const f = new FormData();
@@ -186,5 +185,28 @@ describe("leerNuevaTarea", () => {
   test("notas de más de 2000 caracteres: error", () => {
     expect(leerNuevaTarea(fd({ titulo: "x", notas: "a".repeat(2001) }))).toEqual({ ok: false, error: "La nota es demasiado larga." });
     expect(leerNuevaTarea(fd({ titulo: "x", notas: "a".repeat(2000) })).ok).toBe(true);
+  });
+});
+
+describe("leerOrigenLead", () => {
+  const fd = (c: Record<string, string>) => {
+    const f = new FormData();
+    Object.entries(c).forEach(([k, v]) => f.set(k, v));
+    return f;
+  };
+
+  test("etiquetas: minúsculas, sin vacías ni repetidas", () => {
+    const r = leerOrigenLead(fd({ canal: " Meta ", campana: "", etiquetas: "Kit-Digital, , kit-digital ,Promo", consentimiento: "si" }));
+    expect(r).toEqual({ ok: true, datos: { canal: "Meta", campana: null, etiquetas: ["kit-digital", "promo"], consentimiento: true } });
+  });
+
+  test("consentimiento: sí, no o sin definir", () => {
+    expect(leerOrigenLead(fd({ consentimiento: "no" }))).toMatchObject({ datos: { consentimiento: false } });
+    expect(leerOrigenLead(fd({ consentimiento: "" }))).toMatchObject({ datos: { consentimiento: null } });
+  });
+
+  test("como mucho 10 etiquetas de 40 caracteres", () => {
+    expect(leerOrigenLead(fd({ etiquetas: Array.from({ length: 11 }, (_, i) => `e${i}`).join(",") })).ok).toBe(false);
+    expect(leerOrigenLead(fd({ etiquetas: "x".repeat(41) })).ok).toBe(false);
   });
 });

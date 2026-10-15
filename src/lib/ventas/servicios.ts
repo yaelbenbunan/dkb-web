@@ -1,8 +1,6 @@
 import "server-only";
-import { createManualLead } from "../imagina-leads";
 import type { CsvRowError } from "../leads-csv";
 import { secretMatches } from "../webhook-auth";
-import { datosParaEmbudo } from "../whatsapp/promocion";
 import { leadDesdeAnuncio, type ExtrasLead } from "./anuncios";
 import { notaFormulario } from "./formulario-web";
 import {
@@ -18,7 +16,6 @@ import {
   listContactosLeads,
   listExclusiones,
   listSecuencias,
-  marcarLeadPromocionado,
   registrarActividad,
   registrarImportacion,
   type Escritura,
@@ -390,73 +387,6 @@ export async function moverLead(input: { usuaria: Usuaria; leadId: string; fase:
   return registrarActividad({ leadId: lead.id, usuariaId: input.usuaria.id, tipo: "cambio_fase", faseNueva: input.fase });
 }
 
-/** Texto de la nota informativa que deja «Pasar al embudo» en el historial.
- *  Es solo para que una persona vea qué pasó — la idempotencia la garantiza
- *  `promocionado_at` en `ventas_leads`, no este texto (una comercial podría
- *  escribir la misma frase a mano en la pestaña "Nota" y, si comparásemos
- *  contra el texto, eso crearía un falso positivo que bloquease el botón). */
-const NOTA_PASADO_AL_EMBUDO = "Pasado al embudo principal";
-
-/**
- * Pasa un lead de WhatsApp (marca `dinkbit`) al embudo del CRM principal.
- * Siempre a mano, desde un botón: nunca automático. Crea el lead en
- * `imagina_leads` con `channel: "WhatsApp"`, marca `promocionado_at` en el
- * lead de origen (fuente de verdad de la idempotencia) y deja además una nota
- * en su historial para que quede constancia de quién y cuándo.
- *
- * Idempotente: si se pulsa el botón dos veces (doble clic, reintento de red),
- * la segunda vez no crea un lead duplicado en el CRM — se detecta por
- * `promocionado_at` y se responde `ok` sin volver a escribir nada.
- */
-export async function pasarLeadAlEmbudo(input: { usuaria: Usuaria; leadId: string }): Promise<ResultadoAccion> {
-  const lead = await getLead(input.leadId);
-  if (!lead) return { ok: false, error: "Lead no encontrado." };
-
-  if (lead.promocionado_at) {
-    return { ok: true, mensaje: "Este lead ya se había pasado al embudo principal." };
-  }
-
-  const datos = datosParaEmbudo(lead);
-  const creado = await createManualLead({
-    name: datos.name,
-    phone: datos.phone,
-    channel: datos.channel,
-    campaign: datos.campaign,
-    email: lead.email,
-    website: lead.web,
-  });
-  if (!creado.ok) return { ok: false, error: "No se pudo crear el lead en el embudo principal." };
-
-  // A partir de aquí el lead YA existe en el CRM principal: un fallo en
-  // cualquiera de las dos escrituras siguientes no lo deshace (no hay
-  // transacción entre `imagina_leads` y `ventas_leads`, son tablas vecinas en
-  // la misma instancia). Se avisa con un mensaje distinto de "todo ok" para
-  // no mentir sobre lo que pasó, y se deja rastro en el servidor.
-  const marcado = await marcarLeadPromocionado(lead.id);
-  if (!marcado.ok) {
-    console.error("[ventas/servicios] pasarLeadAlEmbudo: lead creado en el CRM pero no se pudo marcar como promocionado:", marcado.error);
-    return {
-      ok: true,
-      mensaje: "Lead creado en el CRM, pero no se pudo guardar la marca de promocionado. Compruébalo en el CRM antes de volver a pulsar.",
-    };
-  }
-
-  const actividad = await registrarActividad({
-    leadId: lead.id,
-    usuariaId: input.usuaria.id,
-    tipo: "nota",
-    nota: NOTA_PASADO_AL_EMBUDO,
-  });
-  if (!actividad.ok) {
-    console.error("[ventas/servicios] pasarLeadAlEmbudo: no se pudo registrar la nota de actividad:", actividad.error);
-    return {
-      ok: true,
-      mensaje: "Lead creado en el CRM, pero no se pudo dejar la nota en el historial. Compruébalo en el CRM antes de volver a pulsar.",
-    };
-  }
-
-  return { ok: true, mensaje: "Lead pasado al embudo principal." };
-}
 
 /* Secuencias de WhatsApp ----------------------------------------------------- */
 
