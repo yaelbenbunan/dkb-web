@@ -54,11 +54,11 @@ describe("tocaRecordatorio", () => {
 });
 
 describe("esDestinatariaRecordatorio", () => {
-  test("admins y clientes activas; comerciales y desactivadas no", () => {
+  test("todas las activas, también las comerciales; las desactivadas no", () => {
     expect(esDestinatariaRecordatorio({ rol: "admin", activa: true })).toBe(true);
     expect(esDestinatariaRecordatorio({ rol: "cliente", activa: true })).toBe(true);
-    expect(esDestinatariaRecordatorio({ rol: "comercial", activa: true })).toBe(false);
-    expect(esDestinatariaRecordatorio({ rol: "admin", activa: false })).toBe(false);
+    expect(esDestinatariaRecordatorio({ rol: "comercial", activa: true })).toBe(true);
+    expect(esDestinatariaRecordatorio({ rol: "comercial", activa: false })).toBe(false);
   });
 });
 

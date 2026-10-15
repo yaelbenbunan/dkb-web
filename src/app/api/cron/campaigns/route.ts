@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     recordatorios = { error: "recordatorios_failed" };
   }
 
-  // Correo de la mañana con los pendientes de cada admin y clienta de ventas
+  // Correo de la mañana con los pendientes de cada usuaria activa de ventas
   // (ver `ventas/recordatorio-diario.ts`). Fuera de 8:00–12:00 no hace nada.
   let pendientesVentas: Awaited<ReturnType<typeof enviarRecordatoriosDiarios>> | { error: string };
   try {

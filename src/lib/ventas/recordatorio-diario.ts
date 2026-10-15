@@ -1,5 +1,5 @@
 /**
- * Recordatorio de la mañana: un correo a cada admin y clienta con lo que tiene
+ * Recordatorio de la mañana: un correo a cada usuaria activa con lo que tiene
  * asignado y está atrasado o vence hoy (seguimientos de leads y tareas
  * manuales), agrupado por proyecto. Es lo mismo que enseña «Mi día», y
  * `pendientesDelDia` lo usan los dos para que nunca cuenten distinto.
@@ -53,9 +53,12 @@ export function tocaRecordatorio(now: Date): boolean {
   return dia !== "Sat" && dia !== "Sun" && hora >= HORA_DESDE && hora < HORA_HASTA;
 }
 
-/** Las comerciales no lo reciben: lo pidió así quien lleva el módulo. */
+/**
+ * Todas las usuarias activas, cada una con lo suyo. Al principio eran solo
+ * admins y clientas; desde el 15/10/2026 también las comerciales.
+ */
 export function esDestinatariaRecordatorio(u: { rol: Rol; activa: boolean }): boolean {
-  return u.activa && (u.rol === "admin" || u.rol === "cliente");
+  return u.activa;
 }
 
 /** Lo atrasado y lo de hoy. La hora cuenta: una cita de hoy a las 10:00 está atrasada a las 10:01. */

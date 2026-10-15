@@ -1,5 +1,5 @@
 -- Recordatorio de la mañana (/panel/ventas): un correo de lunes a viernes, a
--- partir de las 8:00 de Madrid, a cada admin y clienta con lo que tiene
+-- partir de las 8:00 de Madrid, a cada usuaria activa con lo que tiene
 -- atrasado o para hoy. Lo envía /api/cron/campaigns, que Supabase llama cada
 -- 5 minutos.
 --

@@ -17,7 +17,7 @@ export type ResultadoRecordatorios =
 
 /**
  * Lo llama `/api/cron/campaigns` cada 5 minutos. Fuera de la franja no hace
- * nada; dentro, cada admin y clienta recibe como mucho un correo al día (la
+ * nada; dentro, cada usuaria activa recibe como mucho un correo al día (la
  * reserva en `ventas_recordatorios_enviados` lo garantiza aunque se solapen
  * pasadas). Si el envío falla se libera la reserva y se reintenta en la
  * siguiente pasada, mientras siga siendo por la mañana.

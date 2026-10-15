@@ -53,21 +53,24 @@ describe("enviarRecordatoriosDiarios", () => {
     expect(m.listUsuarias).not.toHaveBeenCalled();
   });
 
-  test("solo a admins y clientas activas, cada una con lo suyo", async () => {
+  test("a todas las activas, comerciales incluidas, cada una con lo suyo", async () => {
     m.listUsuarias.mockResolvedValue([
       usuaria({ id: "a" }),
       usuaria({ id: "c", rol: "cliente", marca_id: "m1", email: "ana@hydrup.es", nombre: "Ana" }),
-      usuaria({ id: "k", rol: "comercial" }),
+      usuaria({ id: "k", rol: "comercial", email: "paula@x.es", nombre: "Paula" }),
       usuaria({ id: "d", activa: false }),
     ]);
-    expect(await enviarRecordatoriosDiarios(MANANA)).toEqual({ enviados: 2, sinPendientes: 0, fallidos: 0 });
+    expect(await enviarRecordatoriosDiarios(MANANA)).toEqual({ enviados: 3, sinPendientes: 0, fallidos: 0 });
     expect(m.reclamar.mock.calls).toEqual([
       ["a", "2026-10-15"],
       ["c", "2026-10-15"],
+      ["k", "2026-10-15"],
     ]);
-    expect(m.tareas).toHaveBeenCalledWith("c");
-    expect(m.send.mock.calls.map((c) => c[0].to)).toEqual(["yael@x.es", "ana@hydrup.es"]);
+    expect(m.tareas).toHaveBeenCalledWith("k");
+    expect(m.send.mock.calls.map((c) => c[0].to)).toEqual(["yael@x.es", "ana@hydrup.es", "paula@x.es"]);
     expect(m.send.mock.calls[1][0].html).toContain("/panel/ventas/hydrup/tareas?de=yo");
+    // La comercial va a «Mi día», como la admin.
+    expect(m.send.mock.calls[2][0].html).toContain("/panel/ventas/hoy");
   });
 
   test("a quien no tiene nada pendiente no le escribe", async () => {
