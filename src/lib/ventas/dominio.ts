@@ -265,12 +265,14 @@ export const ROLES = ["admin", "comercial", "cliente"] as const;
 export type Rol = (typeof ROLES)[number];
 export const ROL_LABELS: Record<Rol, string> = { admin: "Admin", comercial: "Comercial", cliente: "Cliente" };
 
-export const ORIGENES = ["lista", "anuncio", "manual"] as const;
+/** `web`: formularios de dinkbit.es (antes iban al /panel viejo). */
+export const ORIGENES = ["lista", "anuncio", "manual", "web"] as const;
 export type Origen = (typeof ORIGENES)[number];
 export const ORIGEN_LABELS: Record<Origen, string> = {
   lista: "Lista",
   anuncio: "Anuncio",
   manual: "Alta manual",
+  web: "Web",
 };
 
 export const ESTADOS_MARCA = ["activa", "pausada", "finalizada"] as const;

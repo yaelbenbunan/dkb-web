@@ -10,7 +10,7 @@ vi.mock("../supabase-admin", () => ({
   getSupabaseAdmin: () => ({ rpc: rpcMock, from: fromMock, auth: { admin: authAdmin } }),
 }));
 
-import { crearLeads, registrarActividad, crearUsuariaCompleta, listLeads, listSecuencias, listUltimasNotas, actualizarTarea, crearTarea, listSeguimientosUsuaria, listTareasUsuaria } from "../ventas/db";
+import { crearLeadWeb, buscarLeadWeb, actualizarLeadWeb, crearLeads, registrarActividad, crearUsuariaCompleta, listLeads, listSecuencias, listUltimasNotas, actualizarTarea, crearTarea, listSeguimientosUsuaria, listTareasUsuaria } from "../ventas/db";
 
 const LEAD = { negocio: "Gym", tipo_negocio: null, contacto: "", telefono: "600111222", email: "", ciudad: "", cif: "", web: "", excluido: false };
 
@@ -307,5 +307,124 @@ describe("crearTarea", () => {
     insert.mockResolvedValue({ error: { message: "Could not find the 'notas' column", code: "PGRST204" } });
     const r = await crearTarea({ ...TAREA, notas: "x" });
     expect(r).toEqual({ ok: false, error: "Para guardar notas en las tareas falta ejecutar en Supabase docs/sql/2026-10-13-ventas-tareas-notas.sql." });
+  });
+});
+
+/** Constructor encadenable: cada método devuelve el mismo objeto y el resultado
+ *  sale de `maybeSingle`, `range` o de esperar el propio objeto. */
+function cadena(resultado: { data: unknown; error: unknown }) {
+  const llamadas: [string, unknown[]][] = [];
+  const q: Record<string, unknown> = {};
+  for (const m of ["select", "eq", "contains", "is", "neq", "in", "not", "or", "order", "update", "limit"]) {
+    q[m] = vi.fn((...args: unknown[]) => {
+      llamadas.push([m, args]);
+      return q;
+    });
+  }
+  q.maybeSingle = vi.fn().mockResolvedValue(resultado);
+  q.range = vi.fn().mockResolvedValue(resultado);
+  q.then = (ok: (v: unknown) => unknown) => Promise.resolve(resultado).then(ok);
+  return { q, llamadas };
+}
+
+describe("crearLeadWeb", () => {
+  test("llama a ventas_crear_lead con el lead entero y devuelve el id", async () => {
+    rpcMock.mockReset().mockResolvedValue({ data: "uuid-1", error: null });
+    const r = await crearLeadWeb("m1", { negocio: "Clínica Sol", email: "a@b.es", origen: "web", canal: "Meta", etiquetas: ["kit-digital"] });
+    expect(r).toEqual({ ok: true, id: "uuid-1" });
+    expect(rpcMock).toHaveBeenCalledWith("ventas_crear_lead", { p_marca_id: "m1", p_lead: expect.objectContaining({ negocio: "Clínica Sol", canal: "Meta", etiquetas: ["kit-digital"] }) });
+  });
+
+  test("sin la RPC (migración pendiente) lo dice", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    rpcMock.mockReset().mockResolvedValue({ data: null, error: { message: "not found", code: "PGRST202" } });
+    expect(await crearLeadWeb("m1", { negocio: "X", origen: "web" })).toEqual({ ok: false, error: expect.any(String), faltaMigracion: true });
+  });
+
+  test("choque con un lead existente: ok false «duplicado»", async () => {
+    rpcMock.mockReset().mockResolvedValue({ data: null, error: null });
+    expect(await crearLeadWeb("m1", { negocio: "X", origen: "web" })).toEqual({ ok: false, error: "duplicado" });
+  });
+});
+
+describe("buscarLeadWeb", () => {
+  test("un uuid se busca por id; si no está, por id_externo", async () => {
+    const porId = cadena({ data: null, error: null });
+    const porExterno = cadena({ data: { id: "v1" }, error: null });
+    fromMock.mockReset().mockReturnValueOnce(porId.q).mockReturnValueOnce(porExterno.q);
+    const uuid = "0b7c3f7e-1d2a-4c55-9a8e-2b2f1c9d0e11";
+    expect(await buscarLeadWeb("m1", { id: uuid })).toEqual({ id: "v1" });
+    expect(porId.llamadas).toContainEqual(["eq", ["id", uuid]]);
+    expect(porExterno.llamadas).toContainEqual(["eq", ["id_externo", uuid]]);
+  });
+
+  test("un id viejo (no uuid) no se busca por id; prueba id_externo y luego ids_externos", async () => {
+    const porExterno = cadena({ data: null, error: null });
+    const porLista = cadena({ data: { id: "v2" }, error: null });
+    fromMock.mockReset().mockReturnValueOnce(porExterno.q).mockReturnValueOnce(porLista.q);
+    expect(await buscarLeadWeb("m1", { id: "prev-123" })).toEqual({ id: "v2" });
+    expect(porLista.llamadas).toContainEqual(["contains", ["ids_externos", ["prev-123"]]]);
+  });
+
+  test("por email normalizado y por teléfono normalizado", async () => {
+    const porEmail = cadena({ data: null, error: null });
+    const porTel = cadena({ data: { id: "v3" }, error: null });
+    fromMock.mockReset().mockReturnValueOnce(porEmail.q).mockReturnValueOnce(porTel.q);
+    expect(await buscarLeadWeb("m1", { email: " ANA@x.es ", telefono: "+34 600 11 22 33" })).toEqual({ id: "v3" });
+    expect(porEmail.llamadas).toContainEqual(["eq", ["email_norm", "ana@x.es"]]);
+    expect(porTel.llamadas.some(([m, a]) => m === "eq" && a[0] === "telefono_norm")).toBe(true);
+  });
+
+  test("sin la columna id_externo (migración pendiente) sigue por email", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const falla = cadena({ data: null, error: { message: "column does not exist", code: "42703" } });
+    const fallaLista = cadena({ data: null, error: { message: "column does not exist", code: "42703" } });
+    const porEmail = cadena({ data: { id: "v4" }, error: null });
+    fromMock.mockReset().mockReturnValueOnce(falla.q).mockReturnValueOnce(fallaLista.q).mockReturnValueOnce(porEmail.q);
+    expect(await buscarLeadWeb("m1", { id: "old-1", email: "a@x.es" })).toEqual({ id: "v4" });
+  });
+
+  test("sin criterios no consulta", async () => {
+    fromMock.mockReset();
+    expect(await buscarLeadWeb("m1", {})).toBeNull();
+    expect(fromMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("actualizarLeadWeb", () => {
+  test("actualiza solo los campos dados", async () => {
+    const c = cadena({ data: null, error: null });
+    fromMock.mockReset().mockReturnValue(c.q);
+    expect(await actualizarLeadWeb("v1", { consentimiento: false, canal: "Meta" })).toEqual({ ok: true });
+    expect(c.llamadas).toContainEqual(["update", [{ consentimiento: false, canal: "Meta" }]]);
+    expect(c.llamadas).toContainEqual(["eq", ["id", "v1"]]);
+  });
+});
+
+describe("listLeads con filtros nuevos", () => {
+  test("filtra por canal, campaña y etiqueta, y oculta los archivados por defecto", async () => {
+    const c = cadena({ data: [], error: null });
+    fromMock.mockReset().mockReturnValue(c.q);
+    await listLeads("m1", { canal: "Meta", campana: "kd", etiqueta: "kit-digital" });
+    expect(c.llamadas).toContainEqual(["eq", ["canal", "Meta"]]);
+    expect(c.llamadas).toContainEqual(["eq", ["campana", "kd"]]);
+    expect(c.llamadas).toContainEqual(["contains", ["etiquetas", ["kit-digital"]]]);
+    expect(c.llamadas).toContainEqual(["eq", ["archivado", false]]);
+  });
+
+  test("con archivados: solo los archivados", async () => {
+    const c = cadena({ data: [], error: null });
+    fromMock.mockReset().mockReturnValue(c.q);
+    await listLeads("m1", { archivados: true });
+    expect(c.llamadas).toContainEqual(["eq", ["archivado", true]]);
+  });
+
+  test("sin la columna archivado (migración pendiente) lista sin ese filtro", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const falla = cadena({ data: null, error: { message: "column does not exist", code: "42703" } });
+    const bien = cadena({ data: [{ id: "l1" }], error: null });
+    fromMock.mockReset().mockReturnValueOnce(falla.q).mockReturnValueOnce(bien.q);
+    expect(await listLeads("m1")).toEqual([{ id: "l1" }]);
+    expect(bien.llamadas.some(([, a]) => a[0] === "archivado")).toBe(false);
   });
 });

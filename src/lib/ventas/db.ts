@@ -91,7 +91,54 @@ export interface Lead {
    *  idempotencia de ese botón — a propósito, no el texto de una nota, que
    *  una comercial podría escribir a mano y crear un falso positivo. */
   promocionado_at: string | null;
+  /* Campos de los leads de la web (docs/sql/2026-10-15-crm-unificacion-estructura.sql).
+   * Opcionales: hasta que se ejecute la migración, las filas no los traen. */
+  /** Id con el que llegó de fuera: el de `imagina_leads` o el del preview de Imagina. */
+  id_externo?: string | null;
+  /** Otros ids externos del mismo lead (llegó por varios flujos). */
+  ids_externos?: string[];
+  canal?: string | null;
+  campana?: string | null;
+  etiquetas?: string[];
+  /** Comunicaciones comerciales. null = sin definir. */
+  consentimiento?: boolean | null;
+  email_estado?: string | null;
+  email_mensaje_id?: string | null;
+  email_actualizado_at?: string | null;
+  archivado?: boolean;
+  /** Lo que es solo de los flujos de la web: datos del preview, sector… */
+  extra?: Record<string, unknown>;
 }
+
+/** Alta de un lead con todos los campos (RPC `ventas_crear_lead`). */
+export interface LeadWebNuevo {
+  negocio: string;
+  contacto?: string | null;
+  telefono?: string | null;
+  email?: string | null;
+  web?: string | null;
+  tipo_negocio?: string | null;
+  origen: "web" | "manual" | "lista";
+  origen_detalle?: string | null;
+  fase?: Fase;
+  asignada_a?: string | null;
+  proximo_seguimiento?: string | null;
+  id_externo?: string | null;
+  canal?: string | null;
+  campana?: string | null;
+  etiquetas?: string[];
+  consentimiento?: boolean | null;
+  extra?: Record<string, unknown>;
+  created_at?: string | null;
+}
+
+export type CambiosLeadWeb = Partial<
+  Pick<
+    Lead,
+    | "negocio" | "contacto" | "telefono" | "email" | "web" | "canal" | "campana" | "etiquetas" | "consentimiento"
+    | "email_estado" | "email_mensaje_id" | "email_actualizado_at" | "archivado" | "extra" | "id_externo" | "ids_externos"
+  >
+>;
 
 export interface Actividad {
   id: string;
@@ -312,13 +359,32 @@ export async function borrarExclusion(id: string, marcaId: string): Promise<Escr
 
 /* Leads --------------------------------------------------------------------- */
 
-export async function listLeads(marcaId: string, filtro: { fase?: Fase; asignadaA?: string } = {}): Promise<Lead[]> {
-  return todas((desde, hasta) => {
-    let q = db().from("ventas_leads").select("*").eq("marca_id", marcaId);
-    if (filtro.fase) q = q.eq("fase", filtro.fase);
-    if (filtro.asignadaA) q = q.eq("asignada_a", filtro.asignadaA);
-    return q.order("created_at", { ascending: false }).range(desde, hasta) as PromiseLike<Respuesta<Lead[]>>;
-  }, "listLeads");
+export interface FiltroLeads {
+  fase?: Fase;
+  asignadaA?: string;
+  canal?: string;
+  campana?: string;
+  etiqueta?: string;
+  /** true: solo los archivados. Por defecto se ocultan. */
+  archivados?: boolean;
+}
+
+export async function listLeads(marcaId: string, filtro: FiltroLeads = {}): Promise<Lead[]> {
+  const leer = (conColumnasNuevas: boolean) =>
+    todas((desde, hasta) => {
+      let q = db().from("ventas_leads").select("*").eq("marca_id", marcaId);
+      if (filtro.fase) q = q.eq("fase", filtro.fase);
+      if (filtro.asignadaA) q = q.eq("asignada_a", filtro.asignadaA);
+      if (conColumnasNuevas) {
+        if (filtro.canal) q = q.eq("canal", filtro.canal);
+        if (filtro.campana) q = q.eq("campana", filtro.campana);
+        if (filtro.etiqueta) q = q.contains("etiquetas", [filtro.etiqueta]);
+        q = q.eq("archivado", filtro.archivados === true);
+      }
+      return q.order("created_at", { ascending: false }).range(desde, hasta) as PromiseLike<Respuesta<Lead[]>>;
+    }, "listLeads");
+  // Sin la migración de los leads de la web, la lista sale entera y sin esos filtros.
+  return tolerarMigracionPendiente(() => leer(true), () => leer(false), "listLeads");
 }
 
 export async function getLead(id: string): Promise<Lead | null> {
@@ -728,4 +794,74 @@ export async function reclamarRecordatorioDiario(usuariaId: string, fecha: strin
 export async function liberarRecordatorioDiario(usuariaId: string, fecha: string): Promise<void> {
   const { error } = await db().from("ventas_recordatorios_enviados").delete().eq("usuaria_id", usuariaId).eq("fecha", fecha);
   if (error) console.error("[ventas/db] liberarRecordatorioDiario:", error.message);
+}
+
+/* Leads de la web (unificación con /panel) ----------------------------------- */
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function crearLeadWeb(
+  marcaId: string,
+  lead: LeadWebNuevo,
+): Promise<{ ok: true; id: string } | { ok: false; error: string; faltaMigracion?: boolean }> {
+  const { data, error } = await db().rpc("ventas_crear_lead", { p_marca_id: marcaId, p_lead: lead });
+  if (error) {
+    console.error("[ventas/db] crearLeadWeb:", error.message);
+    const falta = Boolean(error.code && FALTA_EN_LA_BASE.has(error.code));
+    return { ok: false, error: error.message, ...(falta ? { faltaMigracion: true } : {}) };
+  }
+  // null = chocó con otro lead (mismo email, teléfono o id externo): quien llama lo busca.
+  return data ? { ok: true, id: String(data) } : { ok: false, error: "duplicado" };
+}
+
+/**
+ * Un lead de la marca por cualquiera de sus identificadores: el id de ventas,
+ * el id externo con el que llegó (los correos ya enviados llevan el de
+ * `imagina_leads` o el del preview), otro id externo suyo, el email o el
+ * teléfono. Para en el primero que encuentra.
+ */
+export async function buscarLeadWeb(
+  marcaId: string,
+  c: { id?: string | null; email?: string | null; telefono?: string | null },
+): Promise<Lead | null> {
+  const base = () => db().from("ventas_leads").select("*").eq("marca_id", marcaId).limit(1);
+  // Los criterios que tocan columnas de la migración toleran que aún no existan.
+  const criterios: { campo: string; leer: () => Promise<Lead | null> }[] = [];
+  const id = c.id?.trim();
+  if (id && UUID.test(id)) {
+    criterios.push({ campo: "id", leer: async () => comprobar(await base().eq("id", id).maybeSingle() as Respuesta<Lead>, "buscarLeadWeb:id") });
+  }
+  if (id) {
+    criterios.push({
+      campo: "id_externo",
+      leer: () =>
+        tolerarMigracionPendiente(
+          async () => comprobar(await base().eq("id_externo", id).maybeSingle() as Respuesta<Lead>, "buscarLeadWeb:id_externo"),
+          () => null,
+          "buscarLeadWeb:id_externo",
+        ),
+    });
+    criterios.push({
+      campo: "ids_externos",
+      leer: () =>
+        tolerarMigracionPendiente(
+          async () => comprobar(await base().contains("ids_externos", [id]).maybeSingle() as Respuesta<Lead>, "buscarLeadWeb:ids_externos"),
+          () => null,
+          "buscarLeadWeb:ids_externos",
+        ),
+    });
+  }
+  const email = normalizarEmail(c.email);
+  if (email) criterios.push({ campo: "email", leer: async () => comprobar(await base().eq("email_norm", email).maybeSingle() as Respuesta<Lead>, "buscarLeadWeb:email") });
+  const tel = normalizarTelefono(c.telefono);
+  if (tel) criterios.push({ campo: "telefono", leer: async () => comprobar(await base().eq("telefono_norm", tel).maybeSingle() as Respuesta<Lead>, "buscarLeadWeb:telefono") });
+  for (const criterio of criterios) {
+    const lead = await criterio.leer();
+    if (lead) return lead;
+  }
+  return null;
+}
+
+export async function actualizarLeadWeb(id: string, cambios: CambiosLeadWeb): Promise<Escritura> {
+  return escritura(await db().from("ventas_leads").update(cambios).eq("id", id), "actualizarLeadWeb");
 }
