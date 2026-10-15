@@ -266,6 +266,9 @@ export async function recibirLeadAnuncio(input: {
 export async function recibirLeadFormulario(input: {
   slug: string;
   datos: unknown;
+  /** Nota inicial ya montada por quien llama (p. ej. la landing de proveedores
+   *  deportivos). Sin ella se monta con los campos del formulario de Hydrup. */
+  nota?: string | null;
 }): Promise<{ status: number; body: Record<string, unknown> }> {
   const marca = await getMarcaPorSlug(input.slug);
   if (!marca || marca.estado !== "activa") return { status: 404, body: { ok: false, error: "unknown_brand" } };
