@@ -32,3 +32,7 @@ test("sin nombre, email ni teléfono: no se pierde", () => {
   const l = leadVentasDesdePanel({ ...base, name: null, business_name: null, email: null, phone: null }, U);
   expect(l.negocio).toBe("(sin nombre) old-1");
 });
+
+test("un lead archivado no se trae su seguimiento: no debe salir en «Mi día» ni en el correo de la mañana", () => {
+  expect(leadVentasDesdePanel({ ...base, archived: true }, U).proximo_seguimiento).toBeNull();
+});

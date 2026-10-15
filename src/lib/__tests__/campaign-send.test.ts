@@ -334,6 +334,16 @@ describe("reclamo de la campaña antes de enviar", () => {
     expect(setCampaignStatusMock).not.toHaveBeenCalled();
   });
 
+  test("una campaña programada antes de unificar el CRM (ids viejos) llega a los leads migrados", async () => {
+    // scheduled_lead_ids guarda ids de imagina_leads; los leads ya son de ventas
+    // y conservan aquel id como alternativo.
+    listDueScheduledMock.mockResolvedValue([{ id: "c1", scheduled_lead_ids: ["imagina-viejo-1"] }]);
+    getCampaignMock.mockResolvedValue({ ...CAMPAIGN, status: "scheduled" });
+    listEmailableLeadsMock.mockResolvedValue([makeLead("v-uuid-1", { ids_alternativos: ["imagina-viejo-1"] })]);
+    const results = await sendDueScheduledCampaigns(new Date("2026-09-20T08:00:00Z"));
+    expect(results).toEqual([{ id: "c1", ok: true, sent: 1, skipped: 0 }]);
+  });
+
   test("el cron manda las campañas vencidas a los destinatarios guardados", async () => {
     listDueScheduledMock.mockResolvedValue([{ id: "c1", scheduled_lead_ids: ["lead-1"] }]);
     getCampaignMock.mockResolvedValue({ ...CAMPAIGN, status: "scheduled" });

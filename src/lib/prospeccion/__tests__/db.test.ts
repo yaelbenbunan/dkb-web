@@ -8,6 +8,7 @@ vi.mock("../../supabase-admin", () => ({
 import {
   borrarPlantilla,
   darDeBaja,
+  buscarLeadPorEmail,
   emailsDeLeads,
   enlazarLead,
   enviadosDesde,
@@ -280,5 +281,29 @@ describe("darDeBaja", () => {
       .mockReturnValueOnce(cadena({}))
       .mockReturnValueOnce(cadena(fallo));
     expect(await darDeBaja("p1")).toBe(false);
+  });
+});
+
+describe("leads del CRM (unificado en ventas)", () => {
+  test("emailsDeLeads junta los de ventas y los de la tabla vieja", async () => {
+    fromMock
+      .mockReturnValueOnce(cadena({ data: [{ email: "Viejo@a.es" }] }))
+      .mockReturnValueOnce(cadena({ data: [] }))
+      .mockReturnValueOnce(cadena({ data: [{ email: "nuevo@b.es" }] }))
+      .mockReturnValueOnce(cadena({ data: [] }));
+    const r = await emailsDeLeads();
+    expect(r && [...r].sort()).toEqual(["nuevo@b.es", "viejo@a.es"]);
+    expect(fromMock.mock.calls.map((c) => c[0])).toEqual(["imagina_leads", "imagina_leads", "ventas_leads", "ventas_leads"]);
+  });
+
+  test("buscarLeadPorEmail prefiere el lead de ventas", async () => {
+    fromMock.mockReturnValueOnce(cadena({ data: [{ id: "v1" }] }));
+    expect(await buscarLeadPorEmail("A@b.es")).toBe("v1");
+    expect(fromMock).toHaveBeenCalledWith("ventas_leads");
+  });
+
+  test("buscarLeadPorEmail cae a la tabla vieja si en ventas no está", async () => {
+    fromMock.mockReturnValueOnce(cadena({ data: [] })).mockReturnValueOnce(cadena({ data: [{ id: "old" }] }));
+    expect(await buscarLeadPorEmail("a@b.es")).toBe("old");
   });
 });

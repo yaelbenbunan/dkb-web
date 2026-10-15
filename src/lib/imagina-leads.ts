@@ -64,6 +64,10 @@ export interface LeadRow {
   email_updated_at: string | null;
   /** Consentimiento de comunicaciones comerciales (para campañas). null = sin definir. */
   consent: boolean | null;
+  /** Solo en leads de ventas: los ids viejos con los que se le conoció (el de
+   *  imagina_leads, el del preview). Las campañas programadas antes de unificar
+   *  el CRM guardan esos ids. */
+  ids_alternativos?: string[];
 }
 
 export interface SaveLeadInput {

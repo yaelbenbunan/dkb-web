@@ -1,4 +1,6 @@
 import "server-only";
+import { Resend } from "resend";
+import { destinatariosAviso } from "../avisos-internos";
 import { statusesBelow, type RecipientEventStatus } from "../campaign-stats";
 import type { BulkLeadInput, LeadRow, ManualLeadInput, SaveLeadInput, WebhookLeadInput } from "../imagina-leads";
 import * as legacy from "../imagina-leads-legacy";
@@ -49,7 +51,8 @@ interface Entrada {
   origen: "web" | "manual" | "lista";
 }
 
-type Guardado = { ok: true; id: string; existia: boolean } | { ok: false; error: string; respaldo: true };
+/** `campanaPrevia`: la campaña con la que ya estaba el lead, si existía. */
+type Guardado = { ok: true; id: string; existia: boolean; campanaPrevia?: string | null } | { ok: false; error: string; respaldo: true };
 
 const limpio = (v?: string | null): string | null => {
   const t = (v ?? "").trim();
@@ -120,10 +123,21 @@ async function guardar(e: Entrada): Promise<Guardado> {
       const existente = await buscarLeadWeb(marca.id, { id, email: email ?? undefined, telefono: telefono ?? undefined });
       if (existente) {
         const cambios = completar(existente, e);
-        if (Object.keys(cambios).length) await actualizarLeadWeb(existente.id, cambios);
+        if (Object.keys(cambios).length) {
+          const r = await actualizarLeadWeb(existente.id, cambios);
+          // El teléfono o el email nuevos pueden ser ya de OTRO lead de la marca
+          // (índices únicos): entonces se guarda todo lo demás sin ellos, para
+          // no perder el consentimiento, las etiquetas o el id del preview.
+          if (!r.ok) {
+            const { telefono: _t, email: _e, ...resto } = cambios;
+            void _t;
+            void _e;
+            if (Object.keys(resto).length) await actualizarLeadWeb(existente.id, resto);
+          }
+        }
         const via = [limpio(e.canal), limpio(e.campana)].filter(Boolean).join(" · ");
         await nota(existente.id, [`Ha vuelto a llegar desde la web${via ? ` (${via})` : ""}.`, limpio(e.notas)].filter(Boolean).join("\n"));
-        return { ok: true, id: existente.id, existia: true };
+        return { ok: true, id: existente.id, existia: true, campanaPrevia: existente.campana ?? null };
       }
       // El negocio es obligatorio en ventas: el de la persona o el email si no lo hay.
       const negocio = limpio(e.negocio) ?? limpio(e.nombre) ?? email ?? `(sin nombre) ${id ?? "web"}`;
@@ -159,6 +173,37 @@ async function guardar(e: Entrada): Promise<Guardado> {
   }
 }
 
+/**
+ * Un lead que acaba en la tabla vieja no lo ve nadie: el /panel viejo es solo
+ * de consulta. Así que cada respaldo avisa al equipo por correo, con el dato
+ * para encontrarlo y qué hacer. Sin que pueda fallar el alta.
+ */
+async function avisarRespaldo(e: Entrada, motivo: string): Promise<void> {
+  try {
+    const apiKey = process.env.RESEND_API_KEY;
+    const to = destinatariosAviso(process.env.CONTACT_EMAIL_TO);
+    const from = process.env.CONTACT_EMAIL_FROM;
+    if (!apiKey || !from || to.length === 0) return;
+    const quien = [limpio(e.nombre), limpio(e.email), limpio(e.telefono)].filter(Boolean).join(" · ") || "(sin datos de contacto)";
+    await new Resend(apiKey).emails.send({
+      from,
+      to,
+      subject: "Lead guardado en la tabla vieja: revisar",
+      text: [
+        "Un lead de la web no se pudo guardar en /panel/ventas y se guardó en la tabla vieja (imagina_leads), donde nadie lo trabaja.",
+        "",
+        `Lead: ${quien}`,
+        `Canal / campaña: ${[limpio(e.canal), limpio(e.campana)].filter(Boolean).join(" · ") || "—"}`,
+        `Motivo: ${motivo}`,
+        "",
+        "Para pasarlo a ventas, vuelve a ejecutar docs/sql/2026-10-15-crm-unificacion-datos.sql en Supabase (es re-ejecutable: solo copia lo que falte).",
+      ].join("\n"),
+    });
+  } catch (error) {
+    console.error("[leads-web] no se pudo avisar del respaldo", error);
+  }
+}
+
 /** El lead de ventas de un id nuevo o viejo; null si no está (o si falla la lectura). */
 async function resolver(id: string): Promise<Lead | null> {
   try {
@@ -172,8 +217,8 @@ async function resolver(id: string): Promise<Lead | null> {
 
 /* Altas -------------------------------------------------------------------- */
 
-export async function createWebhookLead(input: WebhookLeadInput): Promise<{ ok: boolean; id?: string; error?: string }> {
-  const r = await guardar({
+function entradaWebhook(input: WebhookLeadInput): Entrada {
+  return {
     idExterno: input.id,
     nombre: input.name,
     email: input.email,
@@ -185,8 +230,13 @@ export async function createWebhookLead(input: WebhookLeadInput): Promise<{ ok: 
     notas: input.notes,
     extra: { sector: limpio(input.sector), business_type: limpio(input.businessType) },
     origen: "web",
-  });
+  };
+}
+
+export async function createWebhookLead(input: WebhookLeadInput): Promise<{ ok: boolean; id?: string; error?: string }> {
+  const r = await guardar(entradaWebhook(input));
   if (r.ok) return { ok: true, id: r.id };
+  await avisarRespaldo(entradaWebhook(input), r.error);
   return legacy.createWebhookLead(input);
 }
 
@@ -209,26 +259,21 @@ export async function saveLead(input: SaveLeadInput): Promise<void> {
     },
     origen: "web",
   });
-  if (!r.ok) await legacy.saveLead(input);
+  if (!r.ok) {
+    await avisarRespaldo({ idExterno: input.id, nombre: input.name, email: input.email, telefono: input.phone, canal: "Web", origen: "web" }, r.error);
+    await legacy.saveLead(input);
+  }
 }
 
 export async function upsertKitDigital2026Lead(
   lead: WebhookLeadInput,
 ): Promise<{ ok: boolean; id?: string; matched: boolean; error?: string }> {
-  const r = await guardar({
-    idExterno: lead.id,
-    nombre: lead.name,
-    email: lead.email,
-    telefono: lead.phone,
-    canal: limpio(lead.channel) ?? "Meta",
-    campana: lead.campaign,
-    estado: lead.status,
-    consentimiento: lead.consent,
-    notas: lead.notes,
-    extra: { sector: limpio(lead.sector), business_type: limpio(lead.businessType) },
-    origen: "web",
-  });
-  if (r.ok) return { ok: true, id: r.id, matched: r.existia };
+  const r = await guardar(entradaWebhook(lead));
+  // «matched» = ya venía de la campaña de Kit Digital 2026 (Meta) y recibió el
+  // correo de «casi está»; alguien que era lead por otro formulario sí recibe su acuse.
+  const deKd2026 = r.ok && r.existia && (r.campanaPrevia ?? "").trim().toLowerCase() === "kit digital 2026";
+  if (r.ok) return { ok: true, id: r.id, matched: deKd2026 };
+  await avisarRespaldo(entradaWebhook(lead), r.error);
   return legacy.upsertKitDigital2026Lead(lead);
 }
 
@@ -249,6 +294,7 @@ function entradaManual(input: ManualLeadInput, origen: "manual" | "lista", extra
 export async function createManualLead(input: ManualLeadInput): Promise<{ ok: boolean; id?: string; error?: string }> {
   const r = await guardar(entradaManual(input, "manual"));
   if (r.ok) return { ok: true, id: r.id };
+  await avisarRespaldo(entradaManual(input, "manual"), r.error);
   return legacy.createManualLead(input);
 }
 
@@ -259,6 +305,7 @@ export async function createLeadsBulk(inputs: BulkLeadInput[]): Promise<{ ok: bo
   for (const [i, input] of inputs.entries()) {
     const r = await guardar(entradaManual(input, "lista", { estado: input.status, consentimiento: input.consent }));
     if (!r.ok) {
+      await avisarRespaldo(entradaManual(input, "lista"), `${r.error} (y los ${inputs.length - i - 1} siguientes de la importación)`);
       const resto = await legacy.createLeadsBulk(inputs.slice(i));
       return { ...resto, inserted: inserted + resto.inserted };
     }
@@ -402,6 +449,7 @@ export function aLeadRow(l: Lead): LeadRow {
     email_message_id: l.email_mensaje_id ?? null,
     email_updated_at: l.email_actualizado_at ?? null,
     consent: l.consentimiento ?? null,
+    ids_alternativos: [l.id_externo, ...(l.ids_externos ?? [])].filter((x): x is string => Boolean(x)),
   };
 }
 

@@ -14,6 +14,9 @@
 -- fase y de responsables están copiadas de src/lib/ventas/dominio.ts
 -- (ESTADO_PANEL_A_FASE y RESPONSABLES_PANEL): si cambian allí, cambian aquí.
 --
+-- Un lead archivado en el panel viejo llega sin fecha de seguimiento: nadie lo
+-- trabaja, así que no debe salir en «Mi día» ni en el correo de la mañana.
+--
 -- Al terminar imprime (pestaña «Messages» / avisos) los recuentos.
 
 do $$
@@ -56,11 +59,24 @@ begin
   for r in select * from public.imagina_leads order by created_at loop
     v_leidos := v_leidos + 1;
     begin
-      -- Ya migrado: se salta (re-ejecutable).
-      if exists (
-        select 1 from public.ventas_leads
-        where marca_id = v_marca and (id_externo = r.id or r.id = any(ids_externos))
-      ) then
+      v_extra := jsonb_strip_nulls(jsonb_build_object(
+        'sector', nullif(btrim(r.sector), ''), 'business_type', nullif(btrim(r.business_type), ''),
+        'template', nullif(btrim(r.template), ''), 'style', nullif(btrim(r.style), ''),
+        'palette', nullif(btrim(r.palette), ''), 'value_prop', nullif(btrim(r.value_prop), ''),
+        'pdf_path', nullif(btrim(r.pdf_path), ''), 'review_rating', nullif(btrim(r.review_rating), ''),
+        'review_comment', nullif(btrim(r.review_comment), '')
+      ));
+
+      -- Ya migrado: no se duplica (re-ejecutable). Solo se completa lo que le
+      -- falte: p. ej. el PDF de un preview que se guardó en la tabla vieja por
+      -- el respaldo después de que el lead ya estuviera en ventas.
+      update public.ventas_leads set
+        extra = v_extra || extra,
+        email_estado = case when r.email_status in ('bounced', 'complained') then r.email_status else coalesce(email_estado, r.email_status) end,
+        email_mensaje_id = coalesce(email_mensaje_id, r.email_message_id),
+        consentimiento = case when r.consent is false and r.email_status = 'complained' then false else consentimiento end
+      where marca_id = v_marca and (id_externo = r.id or r.id = any(ids_externos));
+      if found then
         v_saltados := v_saltados + 1;
         continue;
       end if;
@@ -72,13 +88,6 @@ begin
         insert into _asignacion values (r.account_manager, v_asignada is not null);
       end if;
       v_etiquetas := case when r.status in ('kit-digital', 'cliente-kit-digital') then array['kit-digital'] else '{}'::text[] end;
-      v_extra := jsonb_strip_nulls(jsonb_build_object(
-        'sector', nullif(btrim(r.sector), ''), 'business_type', nullif(btrim(r.business_type), ''),
-        'template', nullif(btrim(r.template), ''), 'style', nullif(btrim(r.style), ''),
-        'palette', nullif(btrim(r.palette), ''), 'value_prop', nullif(btrim(r.value_prop), ''),
-        'pdf_path', nullif(btrim(r.pdf_path), ''), 'review_rating', nullif(btrim(r.review_rating), ''),
-        'review_comment', nullif(btrim(r.review_comment), '')
-      ));
 
       -- ¿Ya está en dinkbit por email o teléfono (p. ej. llegó por WhatsApp)?
       select * into v_existente from public.ventas_leads
@@ -98,9 +107,15 @@ begin
           campana = coalesce(campana, nullif(btrim(r.campaign), '')),
           etiquetas = (select coalesce(array_agg(distinct e), '{}') from unnest(etiquetas || v_etiquetas) e),
           ids_externos = ids_externos || r.id,
-          consentimiento = case when r.consent is true then true else consentimiento end,
+          consentimiento = case
+            when r.email_status = 'complained' then false
+            when r.consent is true then true
+            else consentimiento end,
+          -- Un rebote o una queja registrados en el panel viejo no se pierden al fusionar.
+          email_estado = case when r.email_status in ('bounced', 'complained') then r.email_status else coalesce(email_estado, r.email_status) end,
+          email_mensaje_id = coalesce(email_mensaje_id, r.email_message_id),
           asignada_a = coalesce(asignada_a, v_asignada),
-          proximo_seguimiento = coalesce(proximo_seguimiento, r.followup_at),
+          proximo_seguimiento = coalesce(proximo_seguimiento, case when r.archived then null else r.followup_at end),
           extra = v_extra || extra
         where id = v_existente.id;
         v_id := v_existente.id;
@@ -117,7 +132,7 @@ begin
           'origen_detalle', nullif(btrim(r.campaign), ''),
           'fase', v_fase,
           'asignada_a', v_asignada,
-          'proximo_seguimiento', r.followup_at,
+          'proximo_seguimiento', case when r.archived then null else r.followup_at end,
           'id_externo', r.id,
           'canal', nullif(btrim(r.channel), ''),
           'campana', nullif(btrim(r.campaign), ''),

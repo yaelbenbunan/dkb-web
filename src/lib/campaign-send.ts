@@ -114,7 +114,11 @@ export async function sendCampaign(
 
   const wanted = new Set(leadIds);
   const allEmailable = await listEmailableLeads();
-  const emailable = allEmailable.filter((lead) => wanted.has(lead.id) && isEmailableLead(lead));
+  // Una campaña programada antes de unificar el CRM guarda ids de imagina_leads:
+  // el lead migrado los conserva como alternativos.
+  const emailable = allEmailable.filter(
+    (lead) => (wanted.has(lead.id) || (lead.ids_alternativos ?? []).some((id) => wanted.has(id))) && isEmailableLead(lead),
+  );
   const skipped = leadIds.length - emailable.length;
 
   const resend = getResendClient();

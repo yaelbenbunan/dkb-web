@@ -41,7 +41,8 @@ export function leadVentasDesdePanel(
     origen_detalle: limpio(fila.campaign),
     fase: faseDesdeEstadoPanel(estado),
     asignada_a: responsable?.id ?? null,
-    proximo_seguimiento: fila.followup_at ?? null,
+    // Archivado = nadie lo trabaja: sin seguimiento no sale en «Mi día» ni en el correo de la mañana.
+    proximo_seguimiento: fila.archived ? null : (fila.followup_at ?? null),
     canal: limpio(fila.channel),
     campana: limpio(fila.campaign),
     etiquetas: estado === "kit-digital" || estado === "cliente-kit-digital" ? [ETIQUETA_KIT_DIGITAL] : [],

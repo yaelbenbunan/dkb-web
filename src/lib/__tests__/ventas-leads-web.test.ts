@@ -9,6 +9,7 @@ const m = vi.hoisted(() => ({
   listarLeadsEmailables: vi.fn(),
   actualizarEmailPorMensaje: vi.fn(),
   recipientsUpdate: vi.fn(),
+  enviarAviso: vi.fn(),
   legacy: {
     createWebhookLead: vi.fn(),
     saveLead: vi.fn(),
@@ -38,6 +39,11 @@ vi.mock("../ventas/db", () => ({
   actualizarEmailPorMensaje: m.actualizarEmailPorMensaje,
 }));
 vi.mock("../imagina-leads-legacy", () => m.legacy);
+vi.mock("resend", () => ({
+  Resend: class {
+    emails = { send: m.enviarAviso };
+  },
+}));
 vi.mock("../supabase-admin", () => ({
   getSupabaseAdmin: () => ({
     from: () => {
@@ -117,6 +123,16 @@ describe("altas de la web", () => {
     expect(m.actualizarLeadWeb).toHaveBeenCalledTimes(1);
   });
 
+  test("si completar choca (el teléfono ya es de otro lead), se guarda lo demás igualmente", async () => {
+    m.buscarLeadWeb.mockResolvedValue({ id: "v1", negocio: "Ana", contacto: "Ana", telefono: null, email: "a@x.es", web: null, canal: "Meta", campana: null, etiquetas: [], id_externo: null, ids_externos: [], extra: {}, consentimiento: null });
+    m.actualizarLeadWeb.mockResolvedValueOnce({ ok: false, error: "No se pudo guardar." }).mockResolvedValueOnce({ ok: true });
+    await createWebhookLead({ id: "prev-9", email: "a@x.es", phone: "600999888", consent: true, status: "kit-digital" });
+    expect(m.actualizarLeadWeb).toHaveBeenCalledTimes(2);
+    const segundo = m.actualizarLeadWeb.mock.calls[1][1];
+    expect(segundo.telefono).toBeUndefined();
+    expect(segundo).toMatchObject({ consentimiento: true, etiquetas: ["kit-digital"], id_externo: "prev-9" });
+  });
+
   test("el mismo id externo otra vez (reintento de Zapier) no se apunta dos veces", async () => {
     m.buscarLeadWeb.mockResolvedValue({ id: "v1", negocio: "Ana", contacto: "Ana", telefono: "600", email: "a@x.es", web: null, canal: "Meta", campana: null, etiquetas: [], id_externo: "meta-9", ids_externos: [], extra: {}, consentimiento: null });
     await createWebhookLead({ id: "meta-9", email: "a@x.es" });
@@ -154,6 +170,23 @@ describe("altas de la web", () => {
     expect(m.legacy.createWebhookLead).toHaveBeenCalledWith({ email: "a@x.es" });
   });
 
+  test("cuando un lead va al respaldo, avisa por email al equipo (si no, nadie lo vería)", async () => {
+    vi.stubEnv("RESEND_API_KEY", "re_x");
+    vi.stubEnv("CONTACT_EMAIL_TO", "hola@dinkbit.es");
+    vi.stubEnv("CONTACT_EMAIL_FROM", "dinkbit <hola@dinkbit.es>");
+    m.enviarAviso.mockResolvedValue({ data: { id: "e1" }, error: null });
+    m.buscarLeadWeb.mockResolvedValue(null);
+    m.crearLeadWeb.mockResolvedValue({ ok: false, error: "boom" });
+    m.legacy.createWebhookLead.mockResolvedValue({ ok: true, id: "old-1" });
+    await createWebhookLead({ email: "a@x.es", name: "Ana" });
+    expect(m.enviarAviso).toHaveBeenCalledTimes(1);
+    const correo = m.enviarAviso.mock.calls[0][0];
+    expect(correo.to).toEqual(["hola@dinkbit.es"]);
+    expect(correo.text).toContain("a@x.es");
+    expect(correo.text).toContain("2026-10-15-crm-unificacion-datos.sql");
+    vi.unstubAllEnvs();
+  });
+
   test("si Supabase lanza, también respaldo", async () => {
     m.buscarLeadWeb.mockRejectedValue(new Error("red"));
     m.legacy.saveLead.mockResolvedValue(undefined);
@@ -167,6 +200,11 @@ describe("altas de la web", () => {
     expect(await upsertKitDigital2026Lead({ email: "k@x.es", campaign: "Kit Digital 2026", status: "kit-digital" })).toEqual({ ok: true, id: "v6", matched: false });
     m.buscarLeadWeb.mockResolvedValue({ id: "v6", negocio: "k@x.es", contacto: null, telefono: null, email: "k@x.es", web: null, canal: "Meta", campana: "Kit Digital 2026", etiquetas: ["kit-digital"], id_externo: null, ids_externos: [], extra: {}, consentimiento: null });
     expect(await upsertKitDigital2026Lead({ email: "k@x.es", sector: "dental" })).toEqual({ ok: true, id: "v6", matched: true });
+  });
+
+  test("Kit Digital 2026: alguien que ya era lead por OTRO formulario no cuenta como «matched» (recibe su acuse)", async () => {
+    m.buscarLeadWeb.mockResolvedValue({ id: "v7", negocio: "k@x.es", contacto: null, telefono: null, email: "k@x.es", web: null, canal: "Web", campana: "web-299", etiquetas: [], id_externo: null, ids_externos: [], extra: {}, consentimiento: null });
+    expect(await upsertKitDigital2026Lead({ email: "k@x.es", campaign: "Kit Digital 2026" })).toEqual({ ok: true, id: "v7", matched: false });
   });
 
   test("alta masiva (prospección, CSV): una a una, origen lista, cuenta las insertadas", async () => {

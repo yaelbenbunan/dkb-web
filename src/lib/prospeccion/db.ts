@@ -15,6 +15,7 @@ const PROSPECTOS = "prospects";
 const PLANTILLAS = "prospect_templates";
 const SUPRESIONES = "prospect_suppressions";
 const LEADS = "imagina_leads";
+const LEADS_VENTAS = "ventas_leads";
 
 function aviso(donde: string, mensaje: string) {
   console.error(`[prospeccion] ${donde}: ${mensaje}`);
@@ -445,10 +446,16 @@ export async function listarSuprimidos(): Promise<Set<string> | null> {
   return v && new Set(v.map((x) => x.trim().toLowerCase()));
 }
 
-/** Emails de todos los leads del CRM, en minúsculas; null si no se pudo leer. */
+/**
+ * Emails de todos los leads, en minúsculas; null si no se pudo leer. Desde la
+ * unificación del CRM los leads viven en ventas (de cualquier marca: a quien ya
+ * está en un embudo no se le escribe en frío) y los antiguos en `imagina_leads`.
+ */
 export async function emailsDeLeads(): Promise<Set<string> | null> {
-  const v = await leerColumna(LEADS, "email", "emailsDeLeads");
-  return v && new Set(v.map((x) => x.trim().toLowerCase()).filter(Boolean));
+  const viejos = await leerColumna(LEADS, "email", "emailsDeLeads");
+  const nuevos = await leerColumna(LEADS_VENTAS, "email", "emailsDeLeads");
+  if (!viejos || !nuevos) return null;
+  return new Set([...viejos, ...nuevos].map((x) => x.trim().toLowerCase()).filter(Boolean));
 }
 
 // Plantillas --------------------------------------------------------------
@@ -511,10 +518,20 @@ export async function borrarPlantilla(id: string): Promise<boolean> {
 
 // Leads del CRM -----------------------------------------------------------
 
-/** Id del lead del CRM con ese email, si existe (sin distinguir mayúsculas). */
+/** Id del lead de dinkbit con ese email, si existe (sin distinguir mayúsculas):
+ *  primero en ventas, luego en la tabla vieja (leads aún sin migrar). */
 export async function buscarLeadPorEmail(email: string): Promise<string | null> {
   const sb = getSupabaseAdmin();
   if (!sb) return null;
+  const enVentas = await sb
+    .from(LEADS_VENTAS)
+    .select("id, ventas_marcas!inner(slug)")
+    .eq("ventas_marcas.slug", "dinkbit")
+    .eq("email_norm", email.trim().toLowerCase())
+    .limit(1);
+  if (enVentas.error) aviso("buscarLeadPorEmail", enVentas.error.message);
+  const idVentas = (enVentas.data as Array<{ id: string }> | null)?.[0]?.id;
+  if (idVentas) return idVentas;
   const { data, error } = await sb.from(LEADS).select("id").ilike("email", email.trim()).limit(1);
   if (error) {
     aviso("buscarLeadPorEmail", error.message);
