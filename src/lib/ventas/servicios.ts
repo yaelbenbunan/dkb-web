@@ -275,7 +275,7 @@ export async function recibirLeadFormulario(input: {
   const datos = input.datos as Record<string, unknown>;
   const leido = leadDesdeAnuncio({ ...datos, campana: CAMPANA_FORMULARIO_WEB });
   if (!leido.ok) return { status: 400, body: { ok: false, error: leido.error } };
-  return guardarLeadEntrante({ marca, lead: leido.lead, campana: CAMPANA_FORMULARIO_WEB, notaInicial: notaFormulario(datos), extras: leido.extras });
+  return guardarLeadEntrante({ marca, lead: leido.lead, campana: CAMPANA_FORMULARIO_WEB, notaInicial: input.nota ?? notaFormulario(datos), extras: leido.extras });
 }
 
 export async function crearLeadManual(input: {

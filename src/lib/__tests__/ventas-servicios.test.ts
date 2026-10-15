@@ -198,6 +198,22 @@ describe("recibirLeadAnuncio", () => {
 });
 
 describe("recibirLeadFormulario", () => {
+  test("con nota del llamante, la nota del lead nuevo es esa", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA_ACTIVA);
+    m.crearLeads.mockResolvedValue({ ok: true, creados: 1 });
+    m.buscarLeadPorContacto.mockResolvedValue({ id: "l-new" });
+    await recibirLeadFormulario({ slug: "hydrup", datos: { negocio: "Padel Pro", email: "p@p.es", comentarios: "x" }, nota: "Qué vende: Material de pádel" });
+    expect(m.registrarActividad).toHaveBeenCalledWith(expect.objectContaining({ leadId: "l-new", tipo: "nota", nota: "Qué vende: Material de pádel" }));
+  });
+
+  test("lead repetido: cuenta como éxito y la nota llega al existente", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA_ACTIVA);
+    m.buscarLeadPorContacto.mockResolvedValue({ id: "l-viejo", email: "ya@a.es", telefono: null });
+    const r = await recibirLeadFormulario({ slug: "hydrup", datos: { negocio: "Padel Pro", email: "ya@a.es" }, nota: "Qué vende: Trofeos" });
+    expect(r).toEqual({ status: 200, body: { ok: true, duplicado: true } });
+    expect(m.registrarActividad.mock.calls[0][0].nota).toContain("Qué vende: Trofeos");
+  });
+
   test("marca desconocida → 404 unknown_brand", async () => {
     m.getMarcaPorSlug.mockResolvedValueOnce(null);
     const r = await recibirLeadFormulario({ slug: "nope", datos: { negocio: "Gym", email: "gym@a.es" } });
