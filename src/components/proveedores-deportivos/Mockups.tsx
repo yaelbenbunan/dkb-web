@@ -68,7 +68,7 @@ export function PortatilCrm() {
         <div className="grid grid-cols-4 gap-2">
           {COLUMNAS.map((c, i) => (
             <div key={c.titulo} className="rounded-lg p-1.5" style={{ background: PD.superficie }}>
-              <p className="mb-1.5 truncate text-[9px] font-bold uppercase tracking-[0.04em] sm:text-[10px]" style={{ color: i === 3 ? PD.acentoClaro : PD.suave }}>
+              <p className="mb-1.5 min-h-[2.4em] text-[9px] font-bold uppercase leading-tight tracking-[0.04em] sm:text-[10px]" style={{ color: i === 3 ? PD.acentoClaro : PD.suave }}>
                 {c.titulo}
               </p>
               {c.tarjetas.map((t) => (

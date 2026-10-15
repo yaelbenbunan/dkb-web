@@ -48,7 +48,7 @@ export function Contador({ valor, sufijo = "", etiqueta }: { valor: number | nul
       <div className="text-[56px] leading-none sm:text-[72px]" style={{ ...TITULO, color: PD.acentoClaro }}>
         {valor === null ? <Hueco>[X]</Hueco> : `${mostrado}${sufijo}`}
       </div>
-      <p className="mt-2 text-[15px] font-semibold uppercase tracking-[0.06em]" style={{ color: PD.suave }}>
+      <p className="mt-4 text-[15px] font-semibold uppercase tracking-[0.06em]" style={{ color: PD.suave }}>
         {etiqueta}
       </p>
     </div>

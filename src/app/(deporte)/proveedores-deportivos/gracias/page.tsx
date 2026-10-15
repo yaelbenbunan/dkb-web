@@ -5,7 +5,7 @@ import { CONTACT_INFO } from "@/lib/contact-info";
 import { PD_PATH } from "@/lib/proveedores-deportivos";
 
 export const metadata: Metadata = {
-  title: "Solicitud recibida | dinkbit",
+  title: "Solicitud recibida",
   robots: { index: false, follow: false },
 };
 

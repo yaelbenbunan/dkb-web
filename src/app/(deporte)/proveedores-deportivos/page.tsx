@@ -5,7 +5,8 @@ import { PD_FAQS, PD_META_DESCRIPTION, PD_META_TITLE, PD_PATH, PD_PRECIO_NUMERO 
 const SITE_URL = "https://www.dinkbit.es";
 
 export const metadata: Metadata = {
-  title: PD_META_TITLE,
+  // `absolute`: el layout raíz añade «— dinkbit» y el título ya lo lleva.
+  title: { absolute: PD_META_TITLE },
   description: PD_META_DESCRIPTION,
   alternates: { canonical: PD_PATH },
   openGraph: {

@@ -32,3 +32,12 @@ describe("LandingProveedoresDeportivos", () => {
     expect(ctas.length).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe("metadata", () => {
+  test("el título no repite «dinkbit» con la plantilla del layout raíz («%s — dinkbit»)", async () => {
+    const { metadata } = await import("@/app/(deporte)/proveedores-deportivos/page");
+    const gracias = await import("@/app/(deporte)/proveedores-deportivos/gracias/page");
+    expect(metadata.title).toEqual({ absolute: "Pack Campaña + CRM para proveedores deportivos | dinkbit" });
+    expect(gracias.metadata.title).toBe("Solicitud recibida");
+  });
+});
