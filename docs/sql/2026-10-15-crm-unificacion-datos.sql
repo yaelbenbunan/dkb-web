@@ -7,7 +7,8 @@
 --   2. desplegar el código de la unificación
 --
 -- Es re-ejecutable: un lead ya migrado (su id viejo ya está en id_externo o
--- ids_externos) se salta. imagina_leads no se toca.
+-- ids_externos) no se duplica; solo se le completa lo que falte (también el
+-- responsable, si cuando se migró aún no tenía usuario). imagina_leads no se toca.
 --
 -- La traducción de cada fila replica src/lib/ventas/migracion-panel.ts (probada
 -- en src/lib/__tests__/ventas-migracion-panel.test.ts). Las tablas de estado →
@@ -67,6 +68,9 @@ begin
         'review_comment', nullif(btrim(r.review_comment), '')
       ));
 
+      v_email_resp := (select email from _resp where texto = lower(regexp_replace(btrim(coalesce(r.account_manager, '')), '\s+', ' ', 'g')));
+      v_asignada := (select id from public.ventas_usuarias where activa and lower(email) = v_email_resp);
+
       -- Ya migrado: no se duplica (re-ejecutable). Solo se completa lo que le
       -- falte: p. ej. el PDF de un preview que se guardó en la tabla vieja por
       -- el respaldo después de que el lead ya estuviera en ventas.
@@ -74,7 +78,10 @@ begin
         extra = v_extra || extra,
         email_estado = case when r.email_status in ('bounced', 'complained') then r.email_status else coalesce(email_estado, r.email_status) end,
         email_mensaje_id = coalesce(email_mensaje_id, r.email_message_id),
-        consentimiento = case when r.consent is false and r.email_status = 'complained' then false else consentimiento end
+        consentimiento = case when r.consent is false and r.email_status = 'complained' then false else consentimiento end,
+        -- Si al migrarlo su responsable aún no tenía usuario (p. ej. Alicia), se
+        -- asigna al volver a ejecutar esto cuando ya lo tenga.
+        asignada_a = coalesce(asignada_a, v_asignada)
       where marca_id = v_marca and (id_externo = r.id or r.id = any(ids_externos));
       if found then
         v_saltados := v_saltados + 1;
@@ -82,8 +89,6 @@ begin
       end if;
 
       v_fase := coalesce((select fase from _fase where estado = r.status), 'nuevo');
-      v_email_resp := (select email from _resp where texto = lower(regexp_replace(btrim(coalesce(r.account_manager, '')), '\s+', ' ', 'g')));
-      v_asignada := (select id from public.ventas_usuarias where activa and lower(email) = v_email_resp);
       if nullif(btrim(coalesce(r.account_manager, '')), '') is not null then
         insert into _asignacion values (r.account_manager, v_asignada is not null);
       end if;
