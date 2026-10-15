@@ -64,8 +64,12 @@ JSON-LD y la validación lean lo mismo. Los componentes van en
 
 **Paleta y tipografía.**
 - Fondo grafito `#0B0C0E`, superficies `#15171B`, texto `#FFFFFF` y
-  `#B8BDC6`, acento verde lima `#C6FF3D`. El texto que va sobre el acento es
-  negro `#0B0C0E`.
+  `#B8BDC6`, y el **azul de dinkbit** como acento (el brief pedía lima o
+  amarillo flúor; se cambió para que la página sea de la marca):
+  - `#187bef` en botones, bordes y brillos, con el texto encima en blanco,
+    negrita y a 16 px o más;
+  - `#4DA3FF`, un azul más claro, para texto, iconos y checks sobre el fondo
+    oscuro, donde `#187bef` se queda corto de contraste.
 - Los colores se fijan en el layout, como hace `GROWTH_THEME`, y no con los
   tokens del tema del sitio.
 - Titulares en **Anton** (`next/font/google`, cargada solo en este grupo) y
