@@ -19,6 +19,15 @@ function rellenarPasoUno() {
   fireEvent.change(screen.getByLabelText(/Teléfono/i), { target: { value: "600112233" } });
 }
 
+function rellenarPasoDos() {
+  fireEvent.change(screen.getByLabelText(/¿Qué vendes\?/i), { target: { value: "padel" } });
+  fireEvent.click(screen.getByLabelText("Gimnasios"));
+  fireEvent.change(screen.getByLabelText(/Facturación anual/i), { target: { value: "100k_500k" } });
+  fireEvent.click(screen.getByLabelText("Sí"));
+  fireEvent.change(screen.getByLabelText(/Presupuesto mensual/i), { target: { value: "500_1500" } });
+  fireEvent.click(screen.getByLabelText(/acepto la/i));
+}
+
 beforeEach(() => {
   m.enviar.mockReset();
   m.push.mockReset();
@@ -50,6 +59,7 @@ describe("FormularioPack", () => {
     render(<FormularioPack />);
     rellenarPasoUno();
     fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
+    rellenarPasoDos();
     const enviar = screen.getByRole("button", { name: /QUIERO MI PACK/i });
     fireEvent.submit(enviar.closest("form")!);
     await waitFor(() => expect(screen.getByRole("button", { name: /Enviando/i })).toBeDisabled());
@@ -64,9 +74,52 @@ describe("FormularioPack", () => {
     render(<FormularioPack />);
     rellenarPasoUno();
     fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
+    rellenarPasoDos();
     fireEvent.submit(screen.getByRole("button", { name: /QUIERO MI PACK/i }).closest("form")!);
     const alerta = await screen.findByRole("alert");
     expect(alerta).toHaveTextContent("No hemos podido enviar");
     expect(alerta.querySelector("a")).toHaveAttribute("href", "https://wa.me/34657559397");
+  });
+
+  test("si la llamada al servidor revienta (red caída), avisa con WhatsApp y deja reintentar", async () => {
+    m.enviar.mockRejectedValueOnce(new Error("Failed to fetch")).mockResolvedValueOnce({ ok: true });
+    render(<FormularioPack />);
+    rellenarPasoUno();
+    fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
+    rellenarPasoDos();
+    const form = screen.getByRole("button", { name: /QUIERO MI PACK/i }).closest("form")!;
+    fireEvent.submit(form);
+    const alerta = await screen.findByRole("alert");
+    expect(alerta.querySelector("a")?.getAttribute("href")).toContain("wa.me");
+    fireEvent.submit(form);
+    await waitFor(() => expect(m.push).toHaveBeenCalledWith("/proveedores-deportivos/gracias"));
+    expect(m.enviar).toHaveBeenCalledTimes(2);
+  });
+
+  test("Enter en el paso 1 avanza al paso 2 en vez de enviar", () => {
+    render(<FormularioPack />);
+    rellenarPasoUno();
+    fireEvent.submit(screen.getByLabelText(/Teléfono/i).closest("form")!);
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "2");
+    expect(m.enviar).not.toHaveBeenCalled();
+  });
+
+  test("al pasar al paso 2 el foco va a su primer campo, y al volver, al primero del paso 1", () => {
+    render(<FormularioPack />);
+    rellenarPasoUno();
+    fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
+    expect(screen.getByLabelText(/¿Qué vendes\?/i)).toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: /Volver/i }));
+    expect(screen.getByLabelText(/Nombre y apellidos/i)).toHaveFocus();
+  });
+
+  test("el paso 2 incompleto no llega al servidor: marca los campos en el formulario", () => {
+    render(<FormularioPack />);
+    rellenarPasoUno();
+    fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
+    fireEvent.submit(screen.getByRole("button", { name: /QUIERO MI PACK/i }).closest("form")!);
+    expect(m.enviar).not.toHaveBeenCalled();
+    expect(screen.getByText(/Elige al menos uno/i)).toBeInTheDocument();
+    expect(screen.getByText(/aceptar la política de privacidad/i)).toBeInTheDocument();
   });
 });

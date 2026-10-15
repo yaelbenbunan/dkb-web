@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { trackChatGptLead } from "@/lib/chatgpt-pixel";
+import { CONTACT_INFO } from "@/lib/contact-info";
 import { pushUserData, track } from "@/lib/gtm";
 import { newEventId, trackMetaLead } from "@/lib/meta-pixel";
 import { enviarSolicitudPack } from "@/lib/proveedores-deportivos-action";
@@ -13,6 +14,7 @@ import {
   PD_MUESTRAS,
   PD_PRESUPUESTO,
   PD_PRODUCTOS,
+  leerSolicitud,
   pasoUnoSchema,
   type ErroresSolicitud,
 } from "@/lib/proveedores-deportivos";
@@ -30,6 +32,7 @@ import { PD } from "./tema";
  */
 
 const CAMPOS_PASO_UNO = ["nombre", "empresa", "web", "email", "telefono"] as const;
+const WHATSAPP = `${CONTACT_INFO.socials.whatsapp}?text=${encodeURIComponent("Hola, quiero el Pack Campaña + CRM")}`;
 
 const inputClass = "mt-1.5 block w-full rounded-xl border px-4 py-3 text-[16px] outline-none transition-colors focus:border-[#4DA3FF]";
 const inputStyle = { background: PD.campo, borderColor: PD.linea, color: PD.texto } as const;
@@ -97,6 +100,22 @@ export function FormularioPack({ id = "solicitud" }: { id?: string }) {
   const [pending, startTransition] = useTransition();
   // Freno síncrono contra el doble clic: `pending` tarda un render en llegar.
   const enviando = useRef(false);
+  // Al cambiar de paso, el botón pulsado queda oculto y el foco se perdería en
+  // <body>: se lleva al primer campo del paso nuevo (y se ve, en móvil).
+  const moverFoco = useRef(false);
+
+  useEffect(() => {
+    if (!moverFoco.current) return;
+    moverFoco.current = false;
+    const primero = formRef.current?.querySelector<HTMLElement>(paso === 1 ? '[name="nombre"]' : '[name="producto"]');
+    primero?.focus();
+    primero?.scrollIntoView?.({ block: "center", behavior: "smooth" });
+  }, [paso]);
+
+  function irAPaso(p: 1 | 2) {
+    moverFoco.current = true;
+    setPaso(p);
+  }
 
   function siguiente() {
     const fd = new FormData(formRef.current!);
@@ -108,11 +127,25 @@ export function FormularioPack({ id = "solicitud" }: { id?: string }) {
       return;
     }
     setErrores({});
-    setPaso(2);
+    irAPaso(2);
   }
 
   function enviar(fd: FormData) {
+    // Enter (o «Ir» en el teclado del móvil) en el paso 1 envía el formulario:
+    // ahí significa «siguiente», no «enviar».
+    if (paso === 1) {
+      siguiente();
+      return;
+    }
     if (enviando.current) return;
+    // El paso 2 se valida aquí: un fallo no gasta un intento del límite por IP
+    // ni un viaje al servidor.
+    const local = leerSolicitud(fd);
+    if (!local.ok) {
+      setErrores(local.errores);
+      if (CAMPOS_PASO_UNO.some((k) => local.errores[k])) irAPaso(1);
+      return;
+    }
     enviando.current = true;
     // El mismo eventId para el píxel y para CAPI: si llegan los dos, Meta cuenta uno.
     const eventId = newEventId();
@@ -121,7 +154,14 @@ export function FormularioPack({ id = "solicitud" }: { id?: string }) {
     appendUtms(fd);
     setAviso(null);
     startTransition(async () => {
-      const r = await enviarSolicitudPack(fd);
+      let r: Awaited<ReturnType<typeof enviarSolicitudPack>>;
+      try {
+        r = await enviarSolicitudPack(fd);
+      } catch {
+        // Red caída, tiempo agotado o una acción que ya no existe tras un
+        // despliegue: sin esto el formulario se quedaba bloqueado.
+        r = { ok: false, error: "No hemos podido enviar tu solicitud. Escríbenos por WhatsApp y lo vemos al momento.", whatsapp: WHATSAPP };
+      }
       if (r.ok) {
         pushUserData({ email: String(fd.get("email") ?? ""), phone: String(fd.get("telefono") ?? "") });
         track("generate_lead", { form_location: "proveedores_deportivos" });
@@ -132,7 +172,7 @@ export function FormularioPack({ id = "solicitud" }: { id?: string }) {
       }
       enviando.current = false;
       setErrores(r.errores ?? {});
-      if (r.errores && CAMPOS_PASO_UNO.some((k) => r.errores?.[k])) setPaso(1);
+      if (r.errores && CAMPOS_PASO_UNO.some((k) => r.errores?.[k])) irAPaso(1);
       setAviso({ error: r.error, whatsapp: r.whatsapp });
     });
   }
@@ -141,7 +181,12 @@ export function FormularioPack({ id = "solicitud" }: { id?: string }) {
     <form
       id={id}
       ref={formRef}
-      action={enviar}
+      // `onSubmit` y no `action`: con `action`, React 19 vacía el formulario al
+      // terminar, también cuando el envío falla, y la persona pierde lo escrito.
+      onSubmit={(e) => {
+        e.preventDefault();
+        enviar(new FormData(e.currentTarget));
+      }}
       noValidate
       className="relative scroll-mt-24 rounded-2xl p-5 sm:p-7"
       style={{
@@ -253,7 +298,7 @@ export function FormularioPack({ id = "solicitud" }: { id?: string }) {
           {pending ? "Enviando…" : "QUIERO MI PACK"}
         </button>
         <div className="flex items-center justify-between text-[13px]" style={{ color: PD.suave }}>
-          <button type="button" onClick={() => setPaso(1)} className="underline underline-offset-4">
+          <button type="button" onClick={() => irAPaso(1)} className="underline underline-offset-4">
             ← Volver
           </button>
           <span>Te respondemos en menos de 24 h</span>
