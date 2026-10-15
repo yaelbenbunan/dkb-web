@@ -3,7 +3,9 @@ import { requireAccesoMarca } from "@/lib/ventas/auth";
 import { listLeads, listUsuarias } from "@/lib/ventas/db";
 import { FASE_LABELS, ORIGEN_LABELS, TIPO_NEGOCIO_LABELS, esFase, flujoDeMarca } from "@/lib/ventas/dominio";
 import { ahoraMadrid, formatoSeguimiento } from "@/lib/ventas/metricas";
+import { filtrarPorOrigen, leerFiltroOrigen, opcionesOrigen } from "@/lib/ventas/filtros-origen";
 import { estadoSeguimiento } from "@/lib/ventas/tablero";
+import { FiltrosOrigen } from "../../../_componentes/FiltrosOrigen";
 import { FaseEtiqueta } from "../../../_componentes/FaseEtiqueta";
 import { MarcaCabecera } from "../../../_componentes/MarcaCabecera";
 import { tarjeta, td, th } from "../../../_componentes/estilos";
@@ -14,18 +16,23 @@ export default async function LeadsPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ fase?: string; mias?: string; q?: string }>;
+  searchParams: Promise<{ fase?: string; mias?: string; q?: string; canal?: string; campana?: string; etiqueta?: string; archivados?: string }>;
 }) {
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const { usuaria, marca } = await requireAccesoMarca(slug, "leads");
   const fase = esFase(sp.fase) ? sp.fase : undefined;
   const mias = sp.mias === "1";
   const q = (sp.q ?? "").trim().toLowerCase();
+  const origen = leerFiltroOrigen(sp);
+  const archivados = sp.archivados === "1";
 
-  const [todos, usuarias] = await Promise.all([
-    listLeads(marca.id, { fase, asignadaA: mias ? usuaria.id : undefined }),
+  const [cargados, usuarias, enArchivo] = await Promise.all([
+    listLeads(marca.id, { fase, asignadaA: mias ? usuaria.id : undefined, archivados }),
     listUsuarias(),
+    archivados ? Promise.resolve(null) : listLeads(marca.id, { fase, asignadaA: mias ? usuaria.id : undefined, archivados: true }),
   ]);
+  const opciones = opcionesOrigen(cargados);
+  const todos = filtrarPorOrigen(cargados, origen);
   const nombres = Object.fromEntries(usuarias.map((u) => [u.id, u.nombre]));
   const leads = q
     ? todos.filter((l) => [l.negocio, l.ciudad, l.contacto, l.email, l.telefono].some((v) => v?.toLowerCase().includes(q)))
@@ -34,7 +41,7 @@ export default async function LeadsPage({
 
   const filtro = (extra: Record<string, string | undefined>) => {
     const p = new URLSearchParams();
-    const valores = { fase, mias: mias ? "1" : undefined, q: q || undefined, ...extra };
+    const valores = { fase, mias: mias ? "1" : undefined, q: q || undefined, ...origen, archivados: archivados ? "1" : undefined, ...extra };
     Object.entries(valores).forEach(([k, v]) => v && p.set(k, v));
     const s = p.toString();
     return `/panel/ventas/${slug}/leads${s ? `?${s}` : ""}`;
@@ -60,6 +67,9 @@ export default async function LeadsPage({
             <Link key={f} href={filtro({ fase: f })} style={chip(fase === f)}>{FASE_LABELS[f]}</Link>
           ))}
           <Link href={filtro({ mias: mias ? undefined : "1" })} style={chip(mias)}>Solo mías</Link>
+          <Link href={filtro({ archivados: archivados ? undefined : "1" })} style={chip(archivados)}>
+            {archivados ? "Ver activos" : `Archivados (${enArchivo?.length ?? 0})`}
+          </Link>
           <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <form action={`/panel/ventas/${slug}/leads`}>
               {fase && <input type="hidden" name="fase" value={fase} />}
@@ -69,6 +79,12 @@ export default async function LeadsPage({
             <BotonesLeads slug={slug} />
           </div>
         </div>
+        <FiltrosOrigen
+          accion={`/panel/ventas/${slug}/leads`}
+          valores={origen}
+          opciones={opciones}
+          ocultos={{ fase, mias: mias ? "1" : undefined, q: q || undefined, archivados: archivados ? "1" : undefined }}
+        />
 
         <section style={{ ...tarjeta, padding: 0, overflowX: "auto" }}>
           <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 860 }}>
@@ -106,7 +122,9 @@ export default async function LeadsPage({
                     </td>
                     <td style={td}>
                       {ORIGEN_LABELS[l.origen]}
+                      {l.canal && <span style={{ color: "#475569" }}> · {l.canal}</span>}
                       {l.origen_detalle && <div style={{ fontSize: 12, color: "#64748b" }}>{l.origen_detalle}</div>}
+                      {(l.etiquetas ?? []).length > 0 && <div style={{ fontSize: 11, color: "#3730a3" }}>{(l.etiquetas ?? []).join(" · ")}</div>}
                     </td>
                   </tr>
                 );

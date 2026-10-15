@@ -3,7 +3,9 @@ import { requireAccesoMarca } from "@/lib/ventas/auth";
 import { listLeads, listUltimasNotas, listUsuarias } from "@/lib/ventas/db";
 import { TIPO_NEGOCIO_LABELS } from "@/lib/ventas/dominio";
 import { ahoraMadrid, formatoFechaHora } from "@/lib/ventas/metricas";
+import { filtrarPorOrigen, leerFiltroOrigen, opcionesOrigen } from "@/lib/ventas/filtros-origen";
 import { estadoSeguimiento, iniciales } from "@/lib/ventas/tablero";
+import { FiltrosOrigen } from "../../../_componentes/FiltrosOrigen";
 import { MarcaCabecera } from "../../../_componentes/MarcaCabecera";
 import { Tablero, type TarjetaLead } from "./Tablero";
 
@@ -12,21 +14,24 @@ export default async function TableroPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ mias?: string; atrasados?: string; q?: string }>;
+  searchParams: Promise<{ mias?: string; atrasados?: string; q?: string; canal?: string; campana?: string; etiqueta?: string }>;
 }) {
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const { usuaria, marca } = await requireAccesoMarca(slug, "tablero");
   const mias = sp.mias === "1";
   const atrasados = sp.atrasados === "1";
   const q = (sp.q ?? "").trim().toLowerCase();
+  const origen = leerFiltroOrigen(sp);
   const ahora = ahoraMadrid();
 
-  const [todos, usuarias, notas] = await Promise.all([
+  const [cargados, usuarias, notas] = await Promise.all([
     listLeads(marca.id, { asignadaA: mias ? usuaria.id : undefined }),
     listUsuarias(),
     listUltimasNotas(marca.id),
   ]);
   const nombres = new Map(usuarias.map((u) => [u.id, u.nombre]));
+  const opciones = opcionesOrigen(cargados);
+  const todos = filtrarPorOrigen(cargados, origen);
 
   // Al cliente solo van datos planos del lead: nada de la marca (lleva el secreto del webhook).
   const leads: TarjetaLead[] = todos
@@ -54,7 +59,7 @@ export default async function TableroPage({
 
   const filtro = (extra: Record<string, string | undefined>) => {
     const p = new URLSearchParams();
-    const valores = { mias: mias ? "1" : undefined, atrasados: atrasados ? "1" : undefined, q: q || undefined, ...extra };
+    const valores = { mias: mias ? "1" : undefined, atrasados: atrasados ? "1" : undefined, q: q || undefined, ...origen, ...extra };
     Object.entries(valores).forEach(([k, v]) => v && p.set(k, v));
     const s = p.toString();
     return `/panel/ventas/${slug}/tablero${s ? `?${s}` : ""}`;
@@ -91,6 +96,13 @@ export default async function TableroPage({
             />
           </form>
         </div>
+
+        <FiltrosOrigen
+          accion={`/panel/ventas/${slug}/tablero`}
+          valores={origen}
+          opciones={opciones}
+          ocultos={{ mias: mias ? "1" : undefined, atrasados: atrasados ? "1" : undefined, q: q || undefined }}
+        />
 
         <Tablero slug={slug} leads={leads} ahora={ahora} filtrosLista={{ mias, atrasados, q }} />
       </div>

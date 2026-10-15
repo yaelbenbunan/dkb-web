@@ -12,6 +12,7 @@ import { tarjeta, titulo } from "../../../../_componentes/estilos";
 import { AccionesLead } from "./AccionesLead";
 import { Asignacion } from "./Asignacion";
 import { DatosLead } from "./DatosLead";
+import { OrigenLead } from "./OrigenLead";
 import { EliminarLead } from "./EliminarLead";
 
 export default async function FichaLeadPage({ params }: { params: Promise<{ slug: string; id: string }> }) {
@@ -32,6 +33,7 @@ export default async function FichaLeadPage({ params }: { params: Promise<{ slug
         <Link href={`/panel/ventas/${slug}/leads`} style={{ fontSize: 13, color: "#64748b", textDecoration: "none" }}>← Leads</Link>
         <h2 style={{ margin: 0, fontSize: 22 }}>{lead.negocio}</h2>
         <FaseEtiqueta fase={lead.fase} />
+        {lead.archivado && <span style={{ fontSize: 12, fontWeight: 700, color: "#64748b" }}>ARCHIVADO</span>}
         {lead.excluido && <span style={{ fontSize: 12, fontWeight: 700, color: "#b91c1c" }}>EXCLUIDO · ya era cliente de la marca</span>}
       </div>
 
@@ -46,6 +48,7 @@ export default async function FichaLeadPage({ params }: { params: Promise<{ slug
             <Asignacion slug={slug} leadId={lead.id} asignadaA={lead.asignada_a} usuarias={activas} />
           </section>
           <DatosLead slug={slug} lead={lead} />
+          <OrigenLead slug={slug} lead={lead} />
           {usuaria.rol === "admin" && <EliminarLead slug={slug} leadId={lead.id} negocio={lead.negocio} />}
         </div>
 

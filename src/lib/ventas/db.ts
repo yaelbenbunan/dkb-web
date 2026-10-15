@@ -360,10 +360,8 @@ export async function borrarExclusion(id: string, marcaId: string): Promise<Escr
 export interface FiltroLeads {
   fase?: Fase;
   asignadaA?: string;
-  canal?: string;
-  campana?: string;
-  etiqueta?: string;
-  /** true: solo los archivados. Por defecto se ocultan. */
+  /** true: solo los archivados. Por defecto se ocultan. (Canal, campaña y
+   *  etiqueta se filtran en memoria: ver `filtros-origen.ts`.) */
   archivados?: boolean;
 }
 
@@ -373,12 +371,7 @@ export async function listLeads(marcaId: string, filtro: FiltroLeads = {}): Prom
       let q = db().from("ventas_leads").select("*").eq("marca_id", marcaId);
       if (filtro.fase) q = q.eq("fase", filtro.fase);
       if (filtro.asignadaA) q = q.eq("asignada_a", filtro.asignadaA);
-      if (conColumnasNuevas) {
-        if (filtro.canal) q = q.eq("canal", filtro.canal);
-        if (filtro.campana) q = q.eq("campana", filtro.campana);
-        if (filtro.etiqueta) q = q.contains("etiquetas", [filtro.etiqueta]);
-        q = q.eq("archivado", filtro.archivados === true);
-      }
+      if (conColumnasNuevas) q = q.eq("archivado", filtro.archivados === true);
       return q.order("created_at", { ascending: false }).range(desde, hasta) as PromiseLike<Respuesta<Lead[]>>;
     }, "listLeads");
   // Sin la migración de los leads de la web, la lista sale entera y sin esos filtros.

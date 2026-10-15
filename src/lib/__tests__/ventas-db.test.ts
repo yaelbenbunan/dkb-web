@@ -402,13 +402,10 @@ describe("actualizarLeadWeb", () => {
 });
 
 describe("listLeads con filtros nuevos", () => {
-  test("filtra por canal, campaña y etiqueta, y oculta los archivados por defecto", async () => {
+  test("oculta los archivados por defecto", async () => {
     const c = cadena({ data: [], error: null });
     fromMock.mockReset().mockReturnValue(c.q);
-    await listLeads("m1", { canal: "Meta", campana: "kd", etiqueta: "kit-digital" });
-    expect(c.llamadas).toContainEqual(["eq", ["canal", "Meta"]]);
-    expect(c.llamadas).toContainEqual(["eq", ["campana", "kd"]]);
-    expect(c.llamadas).toContainEqual(["contains", ["etiquetas", ["kit-digital"]]]);
+    await listLeads("m1");
     expect(c.llamadas).toContainEqual(["eq", ["archivado", false]]);
   });
 
