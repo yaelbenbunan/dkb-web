@@ -40,9 +40,15 @@ La unificación va en cuatro proyectos, cada uno con su spec:
   - El `followup_at` del lead pasa a `proximo_seguimiento` y genera la tarea
     automática «Llamar».
   - El texto libre `followup` va al historial como nota.
-- **Responsables por nombre.** Yael crea en «Usuarios» los usuarios que falten
-  (Paula G, Paula L, Alicia). La migración empareja `account_manager` con
-  `ventas_usuarias.nombre`; si no casa, el lead queda sin asignar.
+- **Responsables por comienzo del nombre.** En `/panel` los responsables son
+  textos cortos («Yael», «Paula G», «Paula L», «Alicia»); en ventas, usuarios
+  con nombre completo («Paula Garcia»). La migración asigna a la usuaria
+  **activa** cuyo `nombre` empieza por el texto de `account_manager`, sin
+  distinguir mayúsculas ni tildes. Así «Paula G» → «Paula Garcia».
+  - Si no casa ninguna, o casan dos o más, el lead queda sin asignar.
+  - Yael y Paula Garcia ya tienen usuario. Yael crea antes del SQL de datos
+    los de Paula L y Alicia, con nombres que empiecen por «Paula L» y
+    «Alicia».
 - **`imagina_leads` no se borra.** Se queda como copia de seguridad de solo
   lectura hasta el proyecto 4.
 - **Las fases por marca viven en código**, como `TIPOS_POR_MARCA`. Con tres
@@ -211,8 +217,9 @@ Debe devolver `8`.
   | ilocalizable | ilocalizable |
   | cualquier otro | nuevo |
 
-- `asignada_a` = la usuaria activa cuyo `nombre` coincide con
-  `account_manager`, sin distinguir mayúsculas; si no hay coincidencia, nula.
+- `asignada_a` = la única usuaria activa cuyo `nombre` empieza por
+  `account_manager` (sin distinguir mayúsculas ni tildes: `unaccent` +
+  `ilike texto || '%'`). Si no hay ninguna o hay varias, nula.
 - `proximo_seguimiento` = `followup_at`.
 - `created_at` = el original.
 - `origen` = `web`, `origen_detalle` = `campaign`.
@@ -235,7 +242,8 @@ existente, por fase, con responsable y sin responsable. Yael pasa ese resultado.
 
 ## Orden de despliegue
 
-1. Yael crea los usuarios que falten.
+1. Yael crea los usuarios de Paula L y Alicia (nombres que empiecen por
+   «Paula L» y «Alicia»).
 2. Yael ejecuta el SQL de estructura y pasa la comprobación (`8`).
 3. Despliegue del código. Desde este momento los leads nuevos entran en ventas.
 4. Yael ejecuta el SQL de datos y pasa los recuentos.
@@ -257,7 +265,8 @@ pierde un lead si el SQL no se ha ejecutado.
   `imagina_leads`: duplicaría la fuente de verdad.
 - Un lead de la migración con email y teléfono vacíos se crea igual, con
   `negocio` = `(sin nombre) <id>`, para no perderlo.
-- Responsable sin coincidencia: queda sin asignar; el recuento lo dice.
+- Responsable sin coincidencia o con varias: queda sin asignar; el recuento lo
+  dice, por cada valor de `account_manager`.
 
 ## Pruebas
 
