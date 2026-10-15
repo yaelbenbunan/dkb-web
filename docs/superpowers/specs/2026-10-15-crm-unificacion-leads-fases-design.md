@@ -46,7 +46,7 @@ La unificación va en cuatro proyectos, cada uno con su spec:
 
   | `account_manager` | Usuario de ventas |
   |---|---|
-  | Yael | tech@dinkbit.com |
+  | Yael | yael.benbunan@dinkbit.com |
   | Paula G | paula.garcia@dinkbit.com |
   | Paula L | paula.lopez@dinkbit.com |
   | Alicia | alicia.ruiz@dinkbit.com |
