@@ -231,16 +231,42 @@ export async function listUsuarias(): Promise<Usuaria[]> {
   return comprobar(r as Respuesta<Usuaria[]>, "listUsuarias") ?? [];
 }
 
+/** Id de la cuenta de login con ese email, si existe (sin distinguir mayúsculas). */
+async function buscarCuentaAuth(email: string): Promise<string | null> {
+  const buscado = email.trim().toLowerCase();
+  for (let page = 1; page <= 50; page++) {
+    const { data, error } = await db().auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) return null;
+    const hallado = data.users.find((x) => (x.email ?? "").toLowerCase() === buscado);
+    if (hallado) return hallado.id;
+    if (data.users.length < 1000) return null;
+  }
+  return null;
+}
+
 export async function crearUsuariaCompleta(u: NuevaUsuaria): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   const sb = db();
   const { data, error } = await sb.auth.admin.createUser({ email: u.email, password: u.password, email_confirm: true });
-  if (error || !data.user) {
+  // El mismo proyecto de Supabase lo usan otras herramientas: un email puede
+  // tener ya cuenta de login sin ser usuario de ventas (pasó con paula.lopez@
+  // el 15/10/2026). Entonces se reutiliza esa cuenta en vez de rechazar el alta.
+  let authId = data?.user?.id ?? null;
+  let cuentaPrevia = false;
+  if (error || !authId) {
     console.error("[ventas/db] crearUsuariaCompleta auth:", error?.message);
     const repetido = /already|registered|exists/i.test(error?.message ?? "");
-    return { ok: false, error: repetido ? "Ya existe una cuenta con ese email." : "No se pudo crear la cuenta." };
+    if (!repetido) return { ok: false, error: "No se pudo crear la cuenta." };
+    const previa = await buscarCuentaAuth(u.email);
+    if (!previa) return { ok: false, error: "Ya existe una cuenta con ese email." };
+    const perfilPrevio = await sb.from("ventas_usuarias").select("id").eq("id", previa).maybeSingle();
+    if (perfilPrevio.data) return { ok: false, error: "Ya existe un usuario con ese email." };
+    const puesta = await sb.auth.admin.updateUserById(previa, { password: u.password, email_confirm: true });
+    if (puesta.error) return { ok: false, error: "No se pudo preparar la cuenta existente." };
+    authId = previa;
+    cuentaPrevia = true;
   }
   const perfil = await sb.from("ventas_usuarias").insert({
-    id: data.user.id,
+    id: authId,
     nombre: u.nombre,
     email: u.email,
     rol: u.rol,
@@ -250,7 +276,8 @@ export async function crearUsuariaCompleta(u: NuevaUsuaria): Promise<{ ok: true;
   });
   if (perfil.error) {
     // Sin perfil la cuenta no sirve para nada: se deshace para poder reintentar.
-    await sb.auth.admin.deleteUser(data.user.id);
+    // Una cuenta que ya existía (de otra herramienta) no se borra nunca.
+    if (!cuentaPrevia) await sb.auth.admin.deleteUser(authId);
     console.error("[ventas/db] crearUsuariaCompleta perfil:", perfil.error.message);
     // Una clienta que la base rechaza por el rol (23514) o por no conocer la
     // columna de marca: es la migración del rol cliente, que no se ha ejecutado.
@@ -260,7 +287,7 @@ export async function crearUsuariaCompleta(u: NuevaUsuaria): Promise<{ ok: true;
     }
     return { ok: false, error: "No se pudo crear el perfil del usuario." };
   }
-  return { ok: true, id: data.user.id };
+  return { ok: true, id: authId };
 }
 
 export async function setUsuariaActiva(id: string, activa: boolean): Promise<Escritura> {

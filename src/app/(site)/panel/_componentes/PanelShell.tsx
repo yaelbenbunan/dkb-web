@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { panelLogout } from "../actions";
 
+// Los leads, el tablero y la agenda viven en /panel/ventas desde la unificación
+// del CRM (2026-10-15); aquí queda la lista vieja, solo de consulta.
 const PESTANAS = [
-  { clave: "leads", texto: "Leads", ruta: "/panel" },
-  { clave: "tablero", texto: "Tablero", ruta: "/panel/tablero" },
-  { clave: "agenda", texto: "Agenda", ruta: "/panel/agenda" },
+  { clave: "ventas", texto: "CRM (ventas) →", ruta: "/panel/ventas/dinkbit" },
+  { clave: "leads", texto: "Leads antiguos", ruta: "/panel" },
   { clave: "campanas", texto: "Campañas", ruta: "/panel/campanas" },
   { clave: "prospeccion", texto: "Prospección", ruta: "/panel/prospeccion" },
   { clave: "calculadora", texto: "Calculadora", ruta: "/panel/calculadora" },
@@ -17,14 +18,10 @@ export type PestanaPanel = (typeof PESTANAS)[number]["clave"];
  *  importar de `panel/ventas`: son apps distintas dentro del mismo repo). */
 export function PanelShell({
   activa,
-  agendaCount,
   alturaCompleta,
   children,
 }: {
   activa: PestanaPanel;
-  /** Llamadas vencidas o de hoy, para el aviso rojo de la pestaña Agenda. Solo
-   *  lo pasan las páginas que ya leen los leads; el resto lo omite. */
-  agendaCount?: number;
   /** El tablero quiere aprovechar todo el alto de la ventana (columnas con
    *  scroll propio) en vez de que crezca la página entera. Con esto a `true`,
    *  `<main>` pasa a ser un `flex: 1` que no crece más allá de lo que queda
@@ -68,7 +65,6 @@ export function PanelShell({
           <strong style={{ fontSize: 16 }}>CRM de leads</strong>
           {PESTANAS.map((p) => {
             const activo = p.clave === activa;
-            const aviso = p.clave === "agenda" && !!agendaCount && agendaCount > 0;
             return (
               <Link
                 key={p.clave}
@@ -87,20 +83,6 @@ export function PanelShell({
                 }}
               >
                 {p.texto}
-                {aviso && (
-                  <span
-                    style={{
-                      background: "#dc2626",
-                      color: "#fff",
-                      borderRadius: 999,
-                      padding: "1px 7px",
-                      fontSize: 11,
-                      fontWeight: 800,
-                    }}
-                  >
-                    {agendaCount}
-                  </span>
-                )}
               </Link>
             );
           })}

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 const { rpcMock, fromMock, authAdmin } = vi.hoisted(() => ({
   rpcMock: vi.fn(),
   fromMock: vi.fn(),
-  authAdmin: { createUser: vi.fn(), deleteUser: vi.fn(), updateUserById: vi.fn() },
+  authAdmin: { createUser: vi.fn(), deleteUser: vi.fn(), updateUserById: vi.fn(), listUsers: vi.fn() },
 }));
 
 vi.mock("../supabase-admin", () => ({
@@ -89,12 +89,29 @@ describe("crearUsuariaCompleta", () => {
     expect(authAdmin.deleteUser).toHaveBeenCalledWith("u9");
   });
 
-  test("email repetido en Auth da un mensaje claro", async () => {
-    authAdmin.createUser.mockResolvedValue({ data: { user: null }, error: { message: "A user with this email address has already been registered" } });
+  const YA_EXISTE = { data: { user: null }, error: { message: "A user with this email address has already been registered" } };
+
+  test("email ya usado por un usuario de ventas: mensaje claro", async () => {
+    authAdmin.createUser.mockResolvedValue(YA_EXISTE);
+    authAdmin.listUsers.mockResolvedValue({ data: { users: [{ id: "u5", email: "p@d.com" }] }, error: null });
+    fromMock.mockReturnValue(cadena({ data: { id: "u5" }, error: null }).q);
     expect(await crearUsuariaCompleta({ nombre: "Paula", email: "p@d.com", password: "1234567890", rol: "comercial", marca_id: null })).toEqual({
       ok: false,
-      error: "Ya existe una cuenta con ese email.",
+      error: "Ya existe un usuario con ese email.",
     });
+    expect(authAdmin.updateUserById).not.toHaveBeenCalled();
+  });
+
+  test("login que ya existía sin perfil de ventas (otra herramienta): se le crea el perfil y se le pone la contraseña", async () => {
+    authAdmin.createUser.mockResolvedValue(YA_EXISTE);
+    authAdmin.listUsers.mockResolvedValue({ data: { users: [{ id: "otro", email: "x@d.com" }, { id: "u7", email: "P@d.com" }] }, error: null });
+    authAdmin.updateUserById.mockReset().mockResolvedValue({ error: null });
+    const sinPerfil = cadena({ data: null, error: null });
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    fromMock.mockReturnValueOnce(sinPerfil.q).mockReturnValueOnce({ insert });
+    expect(await crearUsuariaCompleta({ nombre: "Paula", email: "p@d.com", password: "1234567890", rol: "comercial", marca_id: null })).toEqual({ ok: true, id: "u7" });
+    expect(authAdmin.updateUserById).toHaveBeenCalledWith("u7", { password: "1234567890", email_confirm: true });
+    expect(insert).toHaveBeenCalledWith(expect.objectContaining({ id: "u7", email: "p@d.com", rol: "comercial" }));
   });
 });
 
