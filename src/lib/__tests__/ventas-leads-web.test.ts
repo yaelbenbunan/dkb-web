@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 const m = vi.hoisted(() => ({
   getMarcaPorSlug: vi.fn(),
   buscarLeadWeb: vi.fn(),
+  getLead: vi.fn(),
   crearLeadWeb: vi.fn(),
   actualizarLeadWeb: vi.fn(),
   registrarActividad: vi.fn(),
@@ -32,6 +33,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("../ventas/db", () => ({
   getMarcaPorSlug: m.getMarcaPorSlug,
   buscarLeadWeb: m.buscarLeadWeb,
+  getLead: m.getLead,
   crearLeadWeb: m.crearLeadWeb,
   actualizarLeadWeb: m.actualizarLeadWeb,
   registrarActividad: m.registrarActividad,
@@ -71,7 +73,7 @@ import {
 } from "../ventas/leads-web";
 
 beforeEach(() => {
-  for (const f of [m.getMarcaPorSlug, m.buscarLeadWeb, m.crearLeadWeb, m.actualizarLeadWeb, m.registrarActividad, m.listarLeadsEmailables, m.actualizarEmailPorMensaje, m.recipientsUpdate, ...Object.values(m.legacy)]) f.mockReset();
+  for (const f of [m.getMarcaPorSlug, m.buscarLeadWeb, m.getLead, m.crearLeadWeb, m.actualizarLeadWeb, m.registrarActividad, m.listarLeadsEmailables, m.actualizarEmailPorMensaje, m.recipientsUpdate, ...Object.values(m.legacy)]) f.mockReset();
   m.getMarcaPorSlug.mockResolvedValue({ id: "m-dink", slug: "dinkbit", estado: "activa" });
   m.actualizarLeadWeb.mockResolvedValue({ ok: true });
   m.registrarActividad.mockResolvedValue({ ok: true });
@@ -228,6 +230,32 @@ describe("ids nuevos y viejos", () => {
     m.buscarLeadWeb.mockResolvedValue(null);
     await setLeadConsent("solo-viejo", false);
     expect(m.legacy.setLeadConsent).toHaveBeenCalledWith("solo-viejo", false);
+  });
+
+  test("baja de una campaña de otra marca: el uuid de ventas encuentra su lead, sin tocar dinkbit", async () => {
+    const uuid = "5f0c2a3e-1b2c-4d5e-8f90-1234567890ab";
+    m.buscarLeadWeb.mockResolvedValue(null);
+    m.getLead.mockResolvedValue({ id: uuid, marca_id: "m-hyd" });
+    await setLeadConsent(uuid, false);
+    expect(m.getLead).toHaveBeenCalledWith(uuid);
+    expect(m.actualizarLeadWeb).toHaveBeenCalledWith(uuid, { consentimiento: false });
+    expect(m.legacy.setLeadConsent).not.toHaveBeenCalled();
+  });
+
+  test("un id que no es uuid no se busca fuera de dinkbit", async () => {
+    m.buscarLeadWeb.mockResolvedValue(null);
+    await setLeadConsent("solo-viejo", false);
+    expect(m.getLead).not.toHaveBeenCalled();
+  });
+
+  test("rebote de una campaña de otra marca: se marca su lead", async () => {
+    const uuid = "5f0c2a3e-1b2c-4d5e-8f90-1234567890ab";
+    m.recipientsUpdate.mockResolvedValue({ data: [{ id: "r1", lead_id: uuid }], error: null });
+    m.buscarLeadWeb.mockResolvedValue(null);
+    m.getLead.mockResolvedValue({ id: uuid, marca_id: "m-hyd" });
+    expect(await setCampaignRecipientStatusByMessageId("re_2", "bounced")).toBe(1);
+    expect(m.actualizarLeadWeb).toHaveBeenCalledWith(uuid, expect.objectContaining({ email_estado: "bounced" }));
+    expect(m.legacy.marcarEmailLeadLegacy).not.toHaveBeenCalled();
   });
 
   test("setLeadEmailSent guarda el estado y el mensaje en el lead de ventas", async () => {

@@ -11,6 +11,7 @@ import {
   actualizarLeadWeb,
   buscarLeadWeb,
   crearLeadWeb,
+  getLead,
   getMarcaPorSlug,
   listarLeadsEmailables,
   registrarActividad,
@@ -215,6 +216,25 @@ async function resolver(id: string): Promise<Lead | null> {
   }
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * El lead al que apunta el enlace de baja o el destinatario de una campaña.
+ * Primero dinkbit, por id nuevo o viejo (correos enviados antes de unificar el
+ * CRM); si no, el lead de ventas de cualquier marca con ese uuid, porque desde
+ * el módulo de campañas (2026-10-16) otras marcas también mandan correos.
+ */
+async function resolverDestinatario(id: string): Promise<Lead | null> {
+  const lead = await resolver(id);
+  if (lead || !UUID.test(id)) return lead;
+  try {
+    return await getLead(id);
+  } catch (error) {
+    console.error("[leads-web] no se pudo buscar el lead de la campaña", error);
+    return null;
+  }
+}
+
 /* Altas -------------------------------------------------------------------- */
 
 function entradaWebhook(input: WebhookLeadInput): Entrada {
@@ -368,7 +388,7 @@ export async function setLeadEmailStatusByMessageId(messageId: string, status: s
 }
 
 export async function setLeadConsent(leadId: string, consent: boolean): Promise<void> {
-  const lead = await resolver(leadId);
+  const lead = await resolverDestinatario(leadId);
   if (!lead) return legacy.setLeadConsent(leadId, consent);
   await actualizarLeadWeb(lead.id, { consentimiento: consent });
 }
@@ -402,7 +422,7 @@ export async function setCampaignRecipientStatusByMessageId(messageId: string, s
   const rows = (data ?? []) as { id: string; lead_id: string }[];
   if (status === "bounced" || status === "complained") {
     for (const row of rows) {
-      const lead = await resolver(row.lead_id);
+      const lead = await resolverDestinatario(row.lead_id);
       if (!lead) {
         await legacy.marcarEmailLeadLegacy(row.lead_id, status);
         continue;
