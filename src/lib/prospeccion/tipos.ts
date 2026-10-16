@@ -18,7 +18,7 @@ export const ESTADOS_DESCARTABLES: EstadoProspecto[] = ESTADOS_PROSPECTO.filter(
   (e) => e !== "baja" && e !== "rebotado" && e !== "descartado",
 );
 
-export type FuenteProspecto = "osm" | "borme";
+export type FuenteProspecto = "osm" | "overture" | "borme";
 export type TipoEmail = "generica" | "personal";
 
 export interface ProspectRow {

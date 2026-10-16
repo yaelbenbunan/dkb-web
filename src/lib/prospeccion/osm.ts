@@ -1,5 +1,6 @@
 import "server-only";
 import { categoriaPorClave } from "./categorias";
+import { webPropia } from "./contacto";
 import type { ProspectoNuevo } from "./tipos";
 
 /**
@@ -22,30 +23,11 @@ const MAX_RESULTADOS = 120;
  *  los que tienen forma de contacto no se quedan fuera por el corte. */
 const MAX_LEIDOS = 600;
 
-/** Un perfil en una red social no es una web: ni se puede leer para buscar el
- *  email, ni quita que al negocio le haga falta una. */
-const REDES = ["facebook.com", "instagram.com", "linktr.ee", "wa.me", "tiktok.com", "twitter.com", "x.com"];
-
 function texto(v: unknown): string | null {
   if (typeof v !== "string") return null;
   // Las etiquetas de OSM las escribe gente: llegan con espacios dobles.
   const limpio = v.replace(/\s+/g, " ").trim();
   return limpio || null;
-}
-
-function webPropia(bruta: string | null): string | null {
-  if (!bruta) return null;
-  const conEsquema = /^[a-z][a-z0-9+.-]*:/i.test(bruta) ? bruta : `https://${bruta}`;
-  try {
-    const url = new URL(conEsquema);
-    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
-    const host = url.hostname.toLowerCase();
-    if (!host.includes(".")) return null;
-    if (REDES.some((r) => host === r || host.endsWith(`.${r}`))) return null;
-    return conEsquema;
-  } catch {
-    return null;
-  }
 }
 
 export function normalizarElemento(
