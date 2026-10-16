@@ -13,6 +13,8 @@
 //   --release 2026-09-23.1  release de Overture (por defecto, el último publicado)
 //   --confianza 0.5         confianza mínima de Overture (0–1)
 //   --provincia Soria       solo esa provincia (por código postal); para probar
+//   --categorias dentistas,gimnasios  solo esas claves de categorias.ts (España
+//                           entera son ~500.000 lugares; para no llenar la base)
 //   --dry-run               no escribe en Supabase
 //   --salida archivo.json   guarda las filas en un JSON
 //   --borrar-antiguos       tras subir, borra las filas de releases anteriores
@@ -33,6 +35,7 @@ const { values: o } = parseArgs({
     release: { type: "string" },
     confianza: { type: "string", default: "0.5" },
     provincia: { type: "string" },
+    categorias: { type: "string" },
     "dry-run": { type: "boolean", default: false },
     salida: { type: "string" },
     "borrar-antiguos": { type: "boolean", default: false },
@@ -56,9 +59,12 @@ async function ultimoRelease(): Promise<string> {
 
 const confianzaMinima = Number(o.confianza);
 if (!Number.isFinite(confianzaMinima) || confianzaMinima < 0 || confianzaMinima > 1) salir("--confianza va de 0 a 1.");
+const soloCategorias = o.categorias ? o.categorias.split(",").map((c) => c.trim()).filter(Boolean) : null;
+const desconocidas = (soloCategorias ?? []).filter((c) => !CATEGORIAS.some((k) => k.clave === c));
+if (desconocidas.length > 0) salir(`Categorías desconocidas: ${desconocidas.join(", ")}. Claves: ${CATEGORIAS.map((c) => c.clave).join(", ")}.`);
 const cpPrefijo = o.provincia ? codigoDeProvincia(o.provincia) : undefined;
 if (o.provincia && !cpPrefijo) salir(`No conozco la provincia «${o.provincia}».`);
-if (o["borrar-antiguos"] && o.provincia) salir("--borrar-antiguos borraría las demás provincias: no se combina con --provincia.");
+if (o["borrar-antiguos"] && (o.provincia || o.categorias)) salir("--borrar-antiguos borraría lo que no se ha importado esta vez: no se combina con --provincia ni --categorias.");
 const seco = o["dry-run"];
 const sb = seco
   ? null
@@ -86,7 +92,8 @@ const filas: FilaLugar[] = [];
 const vistos = new Set<string>();
 for (const b of brutos) {
   const f = transformarLugar(b, { release, confianzaMinima });
-  if (f && !vistos.has(f.id)) {
+  if (f && soloCategorias) f.categorias = f.categorias.filter((c) => soloCategorias.includes(c));
+  if (f && f.categorias.length > 0 && !vistos.has(f.id)) {
     vistos.add(f.id);
     filas.push(f);
   }
@@ -98,7 +105,7 @@ console.log(
     ` · con web ${pct(filas.filter((f) => f.web).length)} · con email ${pct(filas.filter((f) => f.email).length)}` +
     ` · sin provincia ${filas.filter((f) => !f.provincia).length}`,
 );
-for (const c of CATEGORIAS) {
+for (const c of CATEGORIAS.filter((k) => !soloCategorias || soloCategorias.includes(k.clave))) {
   const n = filas.filter((f) => f.categorias.includes(c.clave)).length;
   console.log(`  ${c.texto.padEnd(32)} ${n}`);
 }
