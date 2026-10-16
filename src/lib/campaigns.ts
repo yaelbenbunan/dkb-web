@@ -34,6 +34,9 @@ export interface CampaignRow {
   /** Destinatarios elegidos al programar: el wizard no los guarda en ningún
    *  otro sitio, y el cron no tiene a nadie delante que los seleccione. */
   scheduled_lead_ids?: string[] | null;
+  /** Marca de ventas dueña de la campaña. null = dinkbit (las de antes de
+   *  2026-10-16). Opcional en el tipo: su columna se migra a mano. */
+  marca_id?: string | null;
 }
 
 export interface CampaignRecipientRow {
@@ -53,6 +56,23 @@ export interface EmailTemplateRow {
   description: string | null;
   blocks: unknown;
   is_builtin: boolean;
+  marca_id?: string | null;
+}
+
+/** Qué campañas y plantillas ve una marca de ventas. `incluirSinMarca` solo
+ *  para dinkbit: lo que no tiene marca es suyo (ver ventas/campanas.ts). */
+export interface AmbitoMarca {
+  marcaId: string;
+  incluirSinMarca: boolean;
+}
+
+/** La base aún no tiene `marca_id` (docs/sql/2026-10-16-ventas-campanas.sql). */
+function faltaColumnaMarca(error: { message: string; code?: string }): boolean {
+  return error.code === "42703" || error.code === "PGRST204" || error.message.includes("marca_id");
+}
+
+function filtroMarca(ambito: AmbitoMarca): string {
+  return ambito.incluirSinMarca ? `marca_id.eq.${ambito.marcaId},marca_id.is.null` : `marca_id.eq.${ambito.marcaId}`;
 }
 
 /** Crea una campaña en borrador. Best-effort — devuelve null si falla o no hay
@@ -73,6 +93,32 @@ export async function createCampaign(
     return null;
   }
   return { id: (data as { id: string }).id };
+}
+
+/** Borrador de campaña de una marca de ventas. Si falta la columna `marca_id`,
+ *  solo dinkbit (`sinMarcaSiFalta`) la crea sin marca: para cualquier otra
+ *  marca sería crearle una campaña a dinkbit. */
+export async function crearCampanaDeMarca(input: {
+  marcaId: string;
+  sinMarcaSiFalta: boolean;
+}): Promise<{ ok: true; id: string } | { ok: false; error: "missing_migration" | "db_error" }> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return { ok: false, error: "db_error" };
+  const row = { name: null, concept: null, status: "draft" };
+  const r = await sb.from(CAMPAIGNS_TABLE).insert({ ...row, marca_id: input.marcaId }).select("id").single();
+  if (!r.error) return { ok: true, id: (r.data as { id: string }).id };
+  if (!faltaColumnaMarca(r.error)) {
+    console.error("[campaigns] crearCampanaDeMarca error:", r.error.message);
+    return { ok: false, error: "db_error" };
+  }
+  console.error("[campaigns] crearCampanaDeMarca: falta la columna marca_id. Ejecuta docs/sql/2026-10-16-ventas-campanas.sql.");
+  if (!input.sinMarcaSiFalta) return { ok: false, error: "missing_migration" };
+  const sinMarca = await sb.from(CAMPAIGNS_TABLE).insert(row).select("id").single();
+  if (sinMarca.error) {
+    console.error("[campaigns] crearCampanaDeMarca error:", sinMarca.error.message);
+    return { ok: false, error: "db_error" };
+  }
+  return { ok: true, id: (sinMarca.data as { id: string }).id };
 }
 
 /** Actualiza campos de una campaña por id. `blocks` es jsonb: se pasa tal
@@ -137,14 +183,22 @@ export async function getCampaign(id: string): Promise<CampaignRow | null> {
   return (data as CampaignRow | null) ?? null;
 }
 
-export async function listCampaigns(limit = 200): Promise<CampaignRow[]> {
+/** Sin `ambito`, todas (el /panel viejo antes de saber qué marca es dinkbit). */
+export async function listCampaigns(limit = 200, ambito?: AmbitoMarca): Promise<CampaignRow[]> {
   const sb = getSupabaseAdmin();
   if (!sb) return [];
-  const { data, error } = await sb
-    .from(CAMPAIGNS_TABLE)
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(limit);
+  const leer = (conMarca: boolean) => {
+    let q = sb.from(CAMPAIGNS_TABLE).select("*");
+    if (ambito && conMarca) q = ambito.incluirSinMarca ? q.or(filtroMarca(ambito)) : q.eq("marca_id", ambito.marcaId);
+    return q.order("created_at", { ascending: false }).limit(limit);
+  };
+  let { data, error } = await leer(true);
+  if (error && ambito && faltaColumnaMarca(error)) {
+    console.error("[campaigns] listCampaigns: falta la columna marca_id. Ejecuta docs/sql/2026-10-16-ventas-campanas.sql.");
+    // Sin la columna todas son de dinkbit: dinkbit las ve todas; otra marca, ninguna.
+    if (!ambito.incluirSinMarca) return [];
+    ({ data, error } = await leer(false));
+  }
   if (error) {
     console.error("[campaigns] listCampaigns error:", error.message);
     return [];
@@ -270,13 +324,21 @@ export async function setCampaignStatus(id: string, status: string): Promise<voi
   if (error) console.error("[campaigns] setCampaignStatus error:", error.message);
 }
 
-export async function listEmailTemplates(): Promise<EmailTemplateRow[]> {
+/** Con `ambito`: las predefinidas y las de la marca. Sin él, todas. */
+export async function listEmailTemplates(ambito?: AmbitoMarca): Promise<EmailTemplateRow[]> {
   const sb = getSupabaseAdmin();
   if (!sb) return [];
-  const { data, error } = await sb
-    .from(TEMPLATES_TABLE)
-    .select("*")
-    .order("created_at", { ascending: false });
+  const leer = (modo: "marca" | "todas" | "predefinidas") => {
+    let q = sb.from(TEMPLATES_TABLE).select("*");
+    if (ambito && modo === "marca") q = q.or(`is_builtin.eq.true,${filtroMarca(ambito)}`);
+    if (modo === "predefinidas") q = q.eq("is_builtin", true);
+    return q.order("created_at", { ascending: false });
+  };
+  let { data, error } = await leer(ambito ? "marca" : "todas");
+  if (error && ambito && faltaColumnaMarca(error)) {
+    console.error("[campaigns] listEmailTemplates: falta la columna marca_id. Ejecuta docs/sql/2026-10-16-ventas-campanas.sql.");
+    ({ data, error } = await leer(ambito.incluirSinMarca ? "todas" : "predefinidas"));
+  }
   if (error) {
     console.error("[campaigns] listEmailTemplates error:", error.message);
     return [];
@@ -335,17 +397,27 @@ export async function getBuiltinTemplates(): Promise<EmailTemplateRow[]> {
 
 /** Guarda una plantilla creada por el usuario (nunca sembrada/built-in). */
 export async function saveEmailTemplate(
-  input: { name: string; description?: string; blocks: unknown },
+  input: { name: string; description?: string; blocks: unknown; marcaId?: string; sinMarcaSiFalta?: boolean },
 ): Promise<{ id: string } | null> {
   const sb = getSupabaseAdmin();
   if (!sb) return null;
-  const row = {
+  const row: Record<string, unknown> = {
     name: input.name,
     description: input.description ?? null,
     blocks: input.blocks,
     is_builtin: false,
   };
-  const { data, error } = await sb.from(TEMPLATES_TABLE).insert(row).select("id").single();
+  let { data, error } = await sb
+    .from(TEMPLATES_TABLE)
+    .insert(input.marcaId ? { ...row, marca_id: input.marcaId } : row)
+    .select("id")
+    .single();
+  // Sin la columna, igual que al crear campañas: solo dinkbit guarda sin marca.
+  if (error && input.marcaId && faltaColumnaMarca(error)) {
+    console.error("[campaigns] saveEmailTemplate: falta la columna marca_id. Ejecuta docs/sql/2026-10-16-ventas-campanas.sql.");
+    if (!input.sinMarcaSiFalta) return null;
+    ({ data, error } = await sb.from(TEMPLATES_TABLE).insert(row).select("id").single());
+  }
   if (error) {
     console.error("[campaigns] saveEmailTemplate error:", error.message);
     return null;
