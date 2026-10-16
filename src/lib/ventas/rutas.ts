@@ -40,7 +40,7 @@ export function esAsignableEnMarca(usuaria: { rol: string; activa: boolean; marc
   return usuaria.rol === "cliente" && usuaria.marca_id === marcaId;
 }
 
-export type SeccionMarca = "resumen" | "tablero" | "leads" | "tareas" | "secuencias" | "conversaciones" | "condiciones";
+export type SeccionMarca = "resumen" | "tablero" | "leads" | "tareas" | "secuencias" | "conversaciones" | "condiciones" | "prospeccion";
 
 /** Lo único que ve una usuaria con rol «cliente», y solo en su marca. */
 export const SECCIONES_CLIENTE: readonly SeccionMarca[] = ["resumen", "tablero", "leads", "tareas"];
@@ -55,4 +55,17 @@ export function evaluarAccesoMarca(
   if (usuaria.rol === "admin" || usuaria.rol === "comercial") return "ok";
   if (usuaria.rol !== "cliente") return "permiso";
   return usuaria.marca_id === marcaId && SECCIONES_CLIENTE.includes(seccion) ? "ok" : "permiso";
+}
+
+/**
+ * Marcas con pestaña de Prospección. Solo dinkbit: los remitentes
+ * (`PROSPECT_SENDERS`), el pie legal y la página de baja hablan en su nombre, y
+ * las tablas `prospect_*` no tienen marca. Abrirla a otra marca pide todo eso
+ * por marca (docs/superpowers/specs/2026-10-16-ventas-prospeccion-design.md).
+ * La clienta no la ve en ningún caso: no está en `SECCIONES_CLIENTE`.
+ */
+export const MARCAS_CON_PROSPECCION: readonly string[] = ["dinkbit"];
+
+export function tieneProspeccion(slug: string): boolean {
+  return MARCAS_CON_PROSPECCION.includes(slug);
 }

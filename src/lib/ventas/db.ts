@@ -872,6 +872,42 @@ export async function buscarLeadWeb(
   return null;
 }
 
+/**
+ * Prospección guarda en `prospects.lead_id` el lead con el que se enlazó: un id
+ * de ventas o, en los convertidos antes de la unificación, el de
+ * `imagina_leads`, que la migración de datos dejó en `id_externo`. Devuelve
+ * id guardado → id del lead de ventas de la marca, solo para los que existen.
+ * Sin la columna `id_externo` se queda con lo que encuentre por id.
+ */
+export async function resolverLeadsEnlazados(marcaId: string, ids: string[]): Promise<Map<string, string>> {
+  const unicos = [...new Set(ids.filter(Boolean))];
+  const mapa = new Map<string, string>();
+  if (unicos.length === 0) return mapa;
+  const uuids = unicos.filter((id) => UUID.test(id));
+  if (uuids.length > 0) {
+    const filas = comprobar(
+      (await db().from("ventas_leads").select("id").eq("marca_id", marcaId).in("id", uuids)) as Respuesta<{ id: string }[]>,
+      "resolverLeadsEnlazados:id",
+    );
+    for (const f of filas ?? []) mapa.set(f.id, f.id);
+  }
+  const resto = unicos.filter((id) => !mapa.has(id));
+  if (resto.length === 0) return mapa;
+  const externos = await tolerarMigracionPendiente(
+    async () =>
+      comprobar(
+        (await db().from("ventas_leads").select("id,id_externo").eq("marca_id", marcaId).in("id_externo", resto)) as Respuesta<
+          { id: string; id_externo: string }[]
+        >,
+        "resolverLeadsEnlazados:id_externo",
+      ) ?? [],
+    () => [],
+    "resolverLeadsEnlazados:id_externo",
+  );
+  for (const f of externos) mapa.set(f.id_externo, f.id);
+  return mapa;
+}
+
 export async function actualizarLeadWeb(id: string, cambios: CambiosLeadWeb): Promise<Escritura> {
   return escritura(await db().from("ventas_leads").update(cambios).eq("id", id), "actualizarLeadWeb");
 }

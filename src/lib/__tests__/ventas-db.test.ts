@@ -10,7 +10,7 @@ vi.mock("../supabase-admin", () => ({
   getSupabaseAdmin: () => ({ rpc: rpcMock, from: fromMock, auth: { admin: authAdmin } }),
 }));
 
-import { crearLeadWeb, buscarLeadWeb, actualizarLeadWeb, listarLeadsEmailables, actualizarEmailPorMensaje, crearLeads, registrarActividad, crearUsuariaCompleta, listLeads, listSecuencias, listUltimasNotas, actualizarTarea, crearTarea, listSeguimientosUsuaria, listTareasUsuaria } from "../ventas/db";
+import { crearLeadWeb, buscarLeadWeb, actualizarLeadWeb, listarLeadsEmailables, actualizarEmailPorMensaje, crearLeads, registrarActividad, crearUsuariaCompleta, listLeads, listSecuencias, listUltimasNotas, actualizarTarea, crearTarea, listSeguimientosUsuaria, listTareasUsuaria, resolverLeadsEnlazados } from "../ventas/db";
 
 const LEAD = { negocio: "Gym", tipo_negocio: null, contacto: "", telefono: "600111222", email: "", ciudad: "", cif: "", web: "", excluido: false };
 
@@ -462,5 +462,34 @@ describe("campañas sobre ventas", () => {
     fromMock.mockReset().mockReturnValue(c.q);
     expect(await actualizarEmailPorMensaje("re_1", { email_estado: "delivered" })).toBe(1);
     expect(c.llamadas).toContainEqual(["eq", ["email_mensaje_id", "re_1"]]);
+  });
+});
+
+describe("resolverLeadsEnlazados", () => {
+  const nuevo = "0b7c3f7e-1d2a-4c55-9a8e-2b2f1c9d0e11";
+  const viejo = "5d1c0a3b-0000-4c55-9a8e-2b2f1c9d0e99";
+
+  test("un id de ventas se queda; uno de imagina_leads se traduce por id_externo", async () => {
+    const porId = cadena({ data: [{ id: nuevo }], error: null });
+    const porExterno = cadena({ data: [{ id: "v2", id_externo: viejo }], error: null });
+    fromMock.mockReset().mockReturnValueOnce(porId.q).mockReturnValueOnce(porExterno.q);
+    const r = await resolverLeadsEnlazados("m1", [nuevo, viejo, nuevo]);
+    expect(r).toEqual(new Map([[nuevo, nuevo], [viejo, "v2"]]));
+    expect(porId.llamadas).toContainEqual(["eq", ["marca_id", "m1"]]);
+    expect(porExterno.llamadas).toContainEqual(["in", ["id_externo", [viejo]]]);
+  });
+
+  test("sin la columna id_externo (migración pendiente) devuelve lo que encontró por id", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const porId = cadena({ data: [], error: null });
+    const falla = cadena({ data: null, error: { message: "column does not exist", code: "42703" } });
+    fromMock.mockReset().mockReturnValueOnce(porId.q).mockReturnValueOnce(falla.q);
+    expect(await resolverLeadsEnlazados("m1", [viejo, "no-uuid"])).toEqual(new Map());
+  });
+
+  test("sin ids no consulta", async () => {
+    fromMock.mockReset();
+    expect(await resolverLeadsEnlazados("m1", [])).toEqual(new Map());
+    expect(fromMock).not.toHaveBeenCalled();
   });
 });
