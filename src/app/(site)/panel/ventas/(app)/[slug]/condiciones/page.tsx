@@ -1,8 +1,11 @@
+import { ALLOWED_SENDERS } from "@/lib/campaign-send";
 import { requireAccesoMarca } from "@/lib/ventas/auth";
+import { MODULO_CAMPANAS, tieneModulo } from "@/lib/ventas/campanas";
 import { listExclusiones } from "@/lib/ventas/db";
 import { MarcaCabecera } from "../../../_componentes/MarcaCabecera";
 import { CondicionesForm } from "./CondicionesForm";
 import { Exclusiones } from "./Exclusiones";
+import { ModulosForm } from "./ModulosForm";
 import { WebhookInfo } from "./WebhookInfo";
 
 export default async function CondicionesPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -21,6 +24,13 @@ export default async function CondicionesPage({ params }: { params: Promise<{ sl
       <MarcaCabecera marca={marca} activa="condiciones" rol={usuaria.rol} />
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <CondicionesForm marca={marcaSinSecreto} editable={admin} />
+        <ModulosForm
+          marcaId={marca.id}
+          campanas={tieneModulo(marca, MODULO_CAMPANAS)}
+          remitentes={marca.campanas_remitentes ?? []}
+          remitentesGlobales={ALLOWED_SENDERS}
+          editable={admin}
+        />
         <Exclusiones marcaId={marca.id} exclusiones={exclusiones} editable={admin} />
         {admin && <WebhookInfo marcaId={marca.id} slug={marca.slug} secreto={webhook_secret} />}
       </div>

@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Marca } from "@/lib/ventas/db";
 import type { Rol } from "@/lib/ventas/dominio";
+import { MODULO_CAMPANAS, tieneModulo } from "@/lib/ventas/campanas";
 import { SECCIONES_CLIENTE } from "@/lib/ventas/rutas";
 
 const PESTANAS = [
@@ -11,6 +12,7 @@ const PESTANAS = [
   { clave: "tareas", texto: "Tareas", ruta: "/tareas" },
   { clave: "secuencias", texto: "Secuencias", ruta: "/secuencias" },
   { clave: "conversaciones", texto: "Conversaciones", ruta: "/conversaciones" },
+  { clave: "campanas", texto: "Campañas", ruta: "/campanas" },
   { clave: "condiciones", texto: "Condiciones", ruta: "/condiciones" },
 ] as const;
 
@@ -31,7 +33,9 @@ const ALTO_LOGO = 30;
 
 export function MarcaCabecera({ marca, activa, rol }: { marca: Marca; activa: Pestana; rol: Rol }) {
   // La clienta solo ve las secciones que el servidor le deja abrir.
-  const visibles = rol === "cliente" ? PESTANAS.filter((p) => (SECCIONES_CLIENTE as readonly string[]).includes(p.clave)) : PESTANAS;
+  const porRol = rol === "cliente" ? PESTANAS.filter((p) => (SECCIONES_CLIENTE as readonly string[]).includes(p.clave)) : PESTANAS;
+  // Campañas es un módulo de pago: la pestaña solo aparece si la marca lo tiene.
+  const visibles = porRol.filter((p) => p.clave !== "campanas" || tieneModulo(marca, MODULO_CAMPANAS));
   const logo = LOGOS_MARCA[marca.slug];
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 }}>

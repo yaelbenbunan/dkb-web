@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useAccionesCampana } from "./AccionesCampana";
 import type { CampaignRow } from "@/lib/campaigns";
 import type { CampaignStats } from "@/lib/campaign-stats";
@@ -62,12 +62,21 @@ export function CampaignsList({
   const router = useRouter();
   const acciones = useAccionesCampana();
   const [busy, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const aviso = error ? (
+    <p role="alert" style={{ margin: 0, fontSize: 13, color: "#b91c1c" }}>
+      {error}
+    </p>
+  ) : null;
 
   const onNewCampaign = () => {
     start(async () => {
+      setError(null);
       const res = await acciones.crearBorrador();
       if ("id" in res) {
         router.push(`${acciones.rutaBase}/${res.id}`);
+      } else {
+        setError(res.error);
       }
     });
   };
@@ -112,12 +121,14 @@ export function CampaignsList({
         >
           ＋ Nueva campaña
         </button>
+        {aviso}
       </div>
     );
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {aviso}
       <div
         style={{
           display: "flex",
