@@ -11,6 +11,10 @@ import { MarcaCabecera } from "../../../_componentes/MarcaCabecera";
 import { tarjeta, td, th } from "../../../_componentes/estilos";
 import { BotonesLeads } from "./BotonesLeads";
 
+const FECHA_ENTRADA = new Intl.DateTimeFormat("es-ES", { day: "2-digit", month: "2-digit", year: "2-digit", timeZone: "Europe/Madrid" });
+const secundario = { fontSize: 12, color: "#64748b" } as const;
+const texto = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+
 export default async function LeadsPage({
   params,
   searchParams,
@@ -35,7 +39,7 @@ export default async function LeadsPage({
   const todos = filtrarPorOrigen(cargados, origen);
   const nombres = Object.fromEntries(usuarias.map((u) => [u.id, u.nombre]));
   const leads = q
-    ? todos.filter((l) => [l.negocio, l.ciudad, l.contacto, l.email, l.telefono].some((v) => v?.toLowerCase().includes(q)))
+    ? todos.filter((l) => [l.negocio, l.ciudad, l.contacto, l.email, l.telefono, l.canal, l.campana, l.origen_detalle].some((v) => v?.toLowerCase().includes(q)))
     : todos;
   const ahora = ahoraMadrid();
 
@@ -74,7 +78,7 @@ export default async function LeadsPage({
             <form action={`/panel/ventas/${slug}/leads`}>
               {fase && <input type="hidden" name="fase" value={fase} />}
               {mias && <input type="hidden" name="mias" value="1" />}
-              <input name="q" defaultValue={q} placeholder="Buscar negocio, ciudad…" style={{ padding: "6px 10px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 13 }} />
+              <input name="q" defaultValue={q} placeholder="Buscar negocio, ciudad, campaña…" style={{ padding: "6px 10px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 13 }} />
             </form>
             <BotonesLeads slug={slug} />
           </div>
@@ -87,24 +91,31 @@ export default async function LeadsPage({
         />
 
         <section style={{ ...tarjeta, padding: 0, overflowX: "auto" }}>
-          <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 860 }}>
+          <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 1280 }}>
             <thead>
               <tr>
                 <th style={th}>Negocio</th>
-                <th style={th}>Tipo</th>
-                <th style={th}>Ciudad</th>
-                <th style={th}>Fase</th>
+                <th style={th}>Contacto</th>
+                <th style={th}>Estado</th>
                 <th style={th}>Asignada</th>
                 <th style={th}>Seguimiento</th>
-                <th style={th}>Origen</th>
+                <th style={th}>Canal</th>
+                <th style={th}>Campaña</th>
+                <th style={th}>Anuncio</th>
+                <th style={th}>Tipo</th>
+                <th style={th}>Ciudad</th>
+                <th style={th}>Entrada</th>
               </tr>
             </thead>
             <tbody>
               {leads.length === 0 && (
-                <tr><td style={{ ...td, color: "#64748b" }} colSpan={7}>No hay leads con este filtro.</td></tr>
+                <tr><td style={{ ...td, color: "#64748b" }} colSpan={11}>No hay leads con este filtro.</td></tr>
               )}
               {leads.map((l) => {
                 const atrasado = estadoSeguimiento(l.proximo_seguimiento, l.proximo_seguimiento_hora ?? null, l.fase, ahora) === "atrasado";
+                const campana = l.campana ?? l.origen_detalle;
+                const conjunto = texto(l.extra?.adset_name);
+                const anuncio = texto(l.extra?.ad_name);
                 return (
                   <tr key={l.id}>
                     <td style={td}>
@@ -112,20 +123,34 @@ export default async function LeadsPage({
                         {l.negocio}
                       </Link>
                       {l.excluido && <span style={{ marginLeft: 6, fontSize: 11, color: "#b91c1c", fontWeight: 700 }}>EXCLUIDO</span>}
+                      {(l.etiquetas ?? []).length > 0 && <div style={{ fontSize: 11, color: "#3730a3" }}>{(l.etiquetas ?? []).join(" · ")}</div>}
                     </td>
-                    <td style={td}>{l.tipo_negocio ? TIPO_NEGOCIO_LABELS[l.tipo_negocio] : "—"}</td>
-                    <td style={td}>{l.ciudad ?? "—"}</td>
+                    <td style={td}>
+                      {l.contacto ?? "—"}
+                      {l.telefono && (
+                        <div style={secundario}>
+                          <a href={`tel:${l.telefono}`} style={{ color: "inherit" }}>{l.telefono}</a>
+                        </div>
+                      )}
+                      {l.email && <div style={{ ...secundario, wordBreak: "break-all" }}>{l.email}</div>}
+                    </td>
                     <td style={td}><FaseEtiqueta fase={l.fase} /></td>
                     <td style={td}>{l.asignada_a ? (nombres[l.asignada_a] ?? "—") : "—"}</td>
                     <td style={{ ...td, color: atrasado ? "#b91c1c" : td.color, fontWeight: atrasado ? 700 : 400 }}>
                       {l.proximo_seguimiento ? formatoSeguimiento(l.proximo_seguimiento, l.proximo_seguimiento_hora ?? null) : "—"}
                     </td>
                     <td style={td}>
-                      {ORIGEN_LABELS[l.origen]}
-                      {l.canal && <span style={{ color: "#475569" }}> · {l.canal}</span>}
-                      {l.origen_detalle && <div style={{ fontSize: 12, color: "#64748b" }}>{l.origen_detalle}</div>}
-                      {(l.etiquetas ?? []).length > 0 && <div style={{ fontSize: 11, color: "#3730a3" }}>{(l.etiquetas ?? []).join(" · ")}</div>}
+                      {l.canal ?? "—"}
+                      <div style={secundario}>{ORIGEN_LABELS[l.origen]}</div>
                     </td>
+                    <td style={td}>{campana ?? "—"}</td>
+                    <td style={td}>
+                      {anuncio ?? "—"}
+                      {conjunto && <div style={secundario}>{conjunto}</div>}
+                    </td>
+                    <td style={td}>{l.tipo_negocio ? TIPO_NEGOCIO_LABELS[l.tipo_negocio] : "—"}</td>
+                    <td style={td}>{l.ciudad ?? "—"}</td>
+                    <td style={{ ...td, whiteSpace: "nowrap" }}>{FECHA_ENTRADA.format(new Date(l.created_at))}</td>
                   </tr>
                 );
               })}
