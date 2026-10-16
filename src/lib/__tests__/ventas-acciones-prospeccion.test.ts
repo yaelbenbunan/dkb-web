@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 const m = vi.hoisted(() => ({
   accesoMarcaAccion: vi.fn(),
   revalidatePath: vi.fn(),
-  buscarEnOsm: vi.fn(),
+  buscarNegocios: vi.fn(),
   enviarProspectos: vi.fn(),
   enriquecerProspecto: vi.fn(),
   pasarProspectoAlEmbudo: vi.fn(),
@@ -28,7 +28,7 @@ vi.mock("@/lib/ventas/prospeccion", () => ({ pasarProspectoAlEmbudo: m.pasarPros
 vi.mock("@/lib/prospeccion/db", () => m.db);
 vi.mock("@/lib/prospeccion/enriquecer", () => ({ enriquecerProspecto: m.enriquecerProspecto }));
 vi.mock("@/lib/prospeccion/enviar", () => ({ enviarProspectos: m.enviarProspectos }));
-vi.mock("@/lib/prospeccion/osm", () => ({ buscarEnOsm: m.buscarEnOsm }));
+vi.mock("@/lib/prospeccion/busqueda", () => ({ buscarNegocios: m.buscarNegocios }));
 
 import * as acciones from "@/app/(site)/panel/ventas/acciones-prospeccion";
 
@@ -57,7 +57,7 @@ async function llamarATodas(slug: string) {
 
 function nadaTocado() {
   for (const f of Object.values(m.db)) expect(f).not.toHaveBeenCalled();
-  expect(m.buscarEnOsm).not.toHaveBeenCalled();
+  expect(m.buscarNegocios).not.toHaveBeenCalled();
   expect(m.enviarProspectos).not.toHaveBeenCalled();
   expect(m.enriquecerProspecto).not.toHaveBeenCalled();
   expect(m.pasarProspectoAlEmbudo).not.toHaveBeenCalled();
@@ -66,12 +66,19 @@ function nadaTocado() {
 beforeEach(() => {
   vi.clearAllMocks();
   for (const f of Object.values(m.db)) f.mockReset();
-  m.buscarEnOsm.mockReset();
+  m.buscarNegocios.mockReset();
   m.enviarProspectos.mockReset();
   m.pasarProspectoAlEmbudo.mockReset();
   acceso({ ok: true, usuaria: COMERCIAL, marca: DINKBIT });
   m.db.crearBusqueda.mockResolvedValue("s1");
-  m.buscarEnOsm.mockResolvedValue({ ok: true, prospectos: [{ external_id: "x" }, { external_id: "y" }] });
+  m.buscarNegocios.mockResolvedValue({
+    ok: true,
+    fuente: "overture",
+    prospectos: [{ external_id: "x" }, { external_id: "y" }],
+    encontradas: 2,
+    repetidas: 0,
+    quedan: 0,
+  });
   m.db.guardarProspectos.mockResolvedValue(2);
 });
 
@@ -111,11 +118,40 @@ describe("acceso", () => {
 });
 
 describe("con acceso", () => {
-  test("buscarAction llega a OpenStreetMap, cuenta las nuevas y refresca la pestaña de la marca", async () => {
+  test("buscarAction busca (Overture o OSM), guarda la búsqueda con su fuente y refresca la pestaña de la marca", async () => {
     const r = await acciones.buscarAction("dinkbit", "restaurantes", "Madrid");
-    expect(m.buscarEnOsm).toHaveBeenCalledWith({ categoria: "restaurantes", ciudad: "Madrid" });
-    expect(r).toEqual({ ok: true, searchId: "s1", mensaje: "2 empresas encontradas: 2 nuevas." });
+    expect(m.buscarNegocios).toHaveBeenCalledWith({ categoria: "restaurantes", ciudad: "Madrid" });
+    expect(m.db.crearBusqueda).toHaveBeenCalledWith("overture", { categoria: "Restaurantes", clave: "restaurantes", ciudad: "Madrid", fuente: "overture" });
+    expect(m.db.cerrarBusqueda).toHaveBeenCalledWith("s1", { status: "lista", total: 2 });
+    expect(r).toEqual({ ok: true, searchId: "s1", mensaje: "2 empresas nuevas (Overture Maps)." });
     expect(m.revalidatePath).toHaveBeenCalledWith("/panel/ventas/dinkbit/prospeccion");
+  });
+
+  test("buscarAction cuenta las repetidas y las que quedan para otra búsqueda", async () => {
+    m.buscarNegocios.mockResolvedValue({ ok: true, fuente: "osm", prospectos: [{ external_id: "x" }], encontradas: 9, repetidas: 3, quedan: 5 });
+    m.db.guardarProspectos.mockResolvedValue(1);
+    const r = await acciones.buscarAction("dinkbit", "restaurantes", "Madrid");
+    expect(m.db.crearBusqueda).toHaveBeenCalledWith("osm", expect.objectContaining({ fuente: "osm" }));
+    expect(r).toEqual({
+      ok: true,
+      searchId: "s1",
+      mensaje: "1 empresa nueva (OpenStreetMap). 3 que ya tenías. Quedan 5 más: repite la búsqueda para traerlas.",
+    });
+  });
+
+  test("buscarAction: si la fuente falla, guarda la búsqueda con el error", async () => {
+    m.buscarNegocios.mockResolvedValue({ ok: false, error: "ciudad_no_encontrada" });
+    const error = "No encuentro ese municipio en España. Revisa cómo está escrito.";
+    expect(await acciones.buscarAction("dinkbit", "restaurantes", "Xyz")).toEqual({ ok: false, error });
+    expect(m.db.crearBusqueda).toHaveBeenCalledWith("osm", expect.objectContaining({ ciudad: "Xyz" }));
+    expect(m.db.cerrarBusqueda).toHaveBeenCalledWith("s1", { status: "error", error });
+  });
+
+  test("buscarAction: si todas eran repetidas no guarda nada pero cierra la búsqueda", async () => {
+    m.buscarNegocios.mockResolvedValue({ ok: true, fuente: "overture", prospectos: [], encontradas: 4, repetidas: 4, quedan: 0 });
+    m.db.guardarProspectos.mockResolvedValue(0);
+    const r = await acciones.buscarAction("dinkbit", "restaurantes", "Madrid");
+    expect(r).toEqual({ ok: true, searchId: "s1", mensaje: "Ninguna empresa nueva (Overture Maps). 4 que ya tenías." });
   });
 
   test("buscarAction: si no se pueden guardar las empresas, lo dice y cierra la búsqueda con error", async () => {

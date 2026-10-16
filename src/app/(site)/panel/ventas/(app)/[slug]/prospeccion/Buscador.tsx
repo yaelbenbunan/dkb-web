@@ -3,13 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CATEGORIAS } from "@/lib/prospeccion/categorias";
+import { ATRIBUCION_OVERTURE } from "@/lib/prospeccion/overture";
 import { botonPrimario, campo, etiqueta, tarjeta, titulo } from "../../../_componentes/estilos";
 import { buscarAction, enriquecerTandaAction } from "../../../acciones-prospeccion";
 import type { Aviso } from "./Prospeccion";
 
-/** 120 empresas en tandas de 10 son 12 vueltas; el margen cubre reintentos. Con
- *  tope, un fallo que no deje avanzar no convierte el bucle en infinito. */
-const MAX_TANDAS = 16;
+/** 200 empresas en tandas de 10 son 20 vueltas; el margen cubre reintentos. Con
+ *  tope, un fallo que no deje avanzar no convierte el bucle en infinito. Las
+ *  que ya traen email de la fuente no leen su web y van rápidas. */
+const MAX_TANDAS = 24;
 
 export function Buscador({
   slug,
@@ -98,7 +100,7 @@ export function Buscador({
           </select>
         </label>
         <label style={etiqueta}>
-          Ciudad
+          Municipio o provincia
           <input style={{ ...campo, width: 200 }} value={ciudad} onChange={(e) => setCiudad(e.target.value)} placeholder="Getafe" required maxLength={80} />
         </label>
         <button type="submit" disabled={fase !== null} style={{ ...botonPrimario, opacity: fase !== null ? 0.6 : 1 }}>
@@ -123,8 +125,14 @@ export function Buscador({
         </p>
       )}
       <p style={{ margin: 0, fontSize: 12, color: "#64748b" }}>
-        Hasta 120 negocios por búsqueda, por municipio. Después se lee la web de cada uno para encontrar su email. Datos de negocios ©{" "}
-        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" style={{ color: "#64748b" }}>colaboradores de OpenStreetMap</a>.
+        Hasta 200 negocios nuevos por búsqueda; los que tienen teléfono, primero. Si ya trae email se usa; si no, se lee su web para encontrarlo.
+      </p>
+      <p style={{ margin: 0, fontSize: 12, color: "#64748b" }}>
+        Datos de negocios:{" "}
+        <a href={ATRIBUCION_OVERTURE.url} target="_blank" rel="noopener noreferrer" style={{ color: "#64748b" }}>{ATRIBUCION_OVERTURE.texto}</a>{" "}
+        (con datos de {ATRIBUCION_OVERTURE.fuentes}; licencias {ATRIBUCION_OVERTURE.licencias};{" "}
+        <a href={ATRIBUCION_OVERTURE.urlAtribucion} target="_blank" rel="noopener noreferrer" style={{ color: "#64748b" }}>atribución completa</a>) y ©{" "}
+        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" style={{ color: "#64748b" }}>colaboradores de OpenStreetMap</a> (ODbL).
       </p>
     </form>
   );

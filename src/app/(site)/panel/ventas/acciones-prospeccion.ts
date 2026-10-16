@@ -17,7 +17,8 @@ import {
 import { categoriaPorClave } from "@/lib/prospeccion/categorias";
 import { enriquecerProspecto } from "@/lib/prospeccion/enriquecer";
 import { enviarProspectos, type ErrorEnvio } from "@/lib/prospeccion/enviar";
-import { buscarEnOsm, type ErrorOsm } from "@/lib/prospeccion/osm";
+import { buscarNegocios } from "@/lib/prospeccion/busqueda";
+import type { ErrorOsm } from "@/lib/prospeccion/osm";
 import { TEXTO_BLOQUEO } from "@/lib/prospeccion/reglas-envio";
 import { resumirOmitidos } from "@/lib/prospeccion/resumen-envio";
 import { ESTADOS_DESCARTABLES } from "@/lib/prospeccion/tipos";
@@ -71,6 +72,8 @@ const ERROR_BUSQUEDA: Record<ErrorOsm, string> = {
   error_api: "OpenStreetMap no ha respondido. Espera un minuto y vuelve a intentarlo.",
 };
 
+const NOMBRE_FUENTE = { overture: "Overture Maps", osm: "OpenStreetMap" } as const;
+
 export async function buscarAction(
   slug: string,
   categoria: string,
@@ -82,17 +85,20 @@ export async function buscarAction(
   const ciu = ciudad.trim().slice(0, 80);
   if (!cat || !ciu) return { ok: false, error: "Elige qué buscar y escribe la ciudad." };
 
+  // Primero los lugares de Overture importados; si no hay, OpenStreetMap.
+  const r = await buscarNegocios({ categoria: cat.clave, ciudad: ciu });
   // En la búsqueda se guarda el nombre legible: es lo que enseña el filtro.
-  const searchId = await crearBusqueda("osm", { categoria: cat.texto, clave: cat.clave, ciudad: ciu });
-  if (!searchId) return { ok: false, error: "No se pudo guardar la búsqueda." };
-
-  const r = await buscarEnOsm({ categoria: cat.clave, ciudad: ciu });
+  const params = { categoria: cat.texto, clave: cat.clave, ciudad: ciu };
   if (!r.ok) {
     const error = ERROR_BUSQUEDA[r.error];
-    await cerrarBusqueda(searchId, { status: "error", error });
+    const searchId = await crearBusqueda("osm", params);
+    if (searchId) await cerrarBusqueda(searchId, { status: "error", error });
     revalidatePath(ruta(slug));
     return { ok: false, error };
   }
+
+  const searchId = await crearBusqueda(r.fuente, { ...params, fuente: r.fuente });
+  if (!searchId) return { ok: false, error: "No se pudo guardar la búsqueda." };
 
   const nuevas = await guardarProspectos(searchId, r.prospectos);
   if (nuevas === null) {
@@ -103,13 +109,18 @@ export async function buscarAction(
   }
   await cerrarBusqueda(searchId, { status: "lista", total: r.prospectos.length });
   revalidatePath(ruta(slug));
-  const repetidas = r.prospectos.length - nuevas;
+  // Las que el upsert no insertó también estaban ya (carrera con otra búsqueda).
+  const repetidas = r.repetidas + (r.prospectos.length - nuevas);
+  const fuente = NOMBRE_FUENTE[r.fuente];
   return {
     ok: true,
     searchId,
     mensaje:
-      `${r.prospectos.length} empresas encontradas: ${nuevas} nuevas` +
-      (repetidas > 0 ? ` y ${repetidas} que ya tenías.` : "."),
+      (nuevas === 0
+        ? `Ninguna empresa nueva (${fuente}).`
+        : `${nuevas} empresa${nuevas === 1 ? " nueva" : "s nuevas"} (${fuente}).`) +
+      (repetidas > 0 ? ` ${repetidas} que ya tenías.` : "") +
+      (r.quedan > 0 ? ` Quedan ${r.quedan} más: repite la búsqueda para traerlas.` : ""),
   };
 }
 

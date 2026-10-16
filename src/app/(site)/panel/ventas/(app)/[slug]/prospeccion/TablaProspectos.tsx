@@ -32,6 +32,12 @@ function urlSegura(web: string | null): string | null {
   return web && /^https?:\/\//i.test(web) ? web : null;
 }
 
+/** `tel:` solo con dígitos y un `+` inicial: lo que venga de la fuente no entra tal cual en el enlace. */
+function enlaceTelefono(tel: string | null): string | null {
+  const limpio = (tel ?? "").replace(/[^\d+]/g, "").replace(/(?!^)\+/g, "");
+  return limpio.replace(/\D/g, "").length >= 9 ? `tel:${limpio}` : null;
+}
+
 export function TablaProspectos({
   slug,
   prospectos,
@@ -118,7 +124,7 @@ export function TablaProspectos({
           <option value="">Todas las búsquedas</option>
           {busquedas.map((b) => (
             <option key={b.id} value={b.id}>
-              {b.params.categoria} · {b.params.ciudad} ({b.total})
+              {b.params.categoria} · {b.params.ciudad} ({b.total}){b.source === "overture" ? " · Overture" : ""}
             </option>
           ))}
         </select>
@@ -228,7 +234,16 @@ export function TablaProspectos({
                       )}
                       {p.send_error && <div style={{ fontSize: 11, color: "#b91c1c" }}>Falló: {p.send_error}</div>}
                     </td>
-                    <td style={{ ...td, whiteSpace: "nowrap" }}>{p.phone ?? "—"}</td>
+                    <td style={{ ...td, whiteSpace: "nowrap" }}>
+                      {/* La llamada es el canal principal de Prospección: el teléfono va como botón. */}
+                      {enlaceTelefono(p.phone) ? (
+                        <a href={enlaceTelefono(p.phone) as string} style={botonLlamar} aria-label={`Llamar a ${p.name}`}>
+                          Llamar · {p.phone}
+                        </a>
+                      ) : (
+                        p.phone ?? "—"
+                      )}
+                    </td>
                     <td style={td}>
                       <span style={{ background: estado.bg, color: estado.color, borderRadius: 999, padding: "2px 10px", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>
                         {estado.texto}
@@ -288,6 +303,17 @@ export function TablaProspectos({
 function FilaProspecto({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
+
+const botonLlamar = {
+  display: "inline-block",
+  background: "#187bef",
+  color: "#fff",
+  borderRadius: 8,
+  padding: "4px 10px",
+  fontSize: 13,
+  fontWeight: 600,
+  textDecoration: "none",
+} as const;
 
 const enlace = {
   background: "none",
