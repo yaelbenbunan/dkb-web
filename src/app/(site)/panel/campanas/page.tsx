@@ -5,7 +5,9 @@ import {
   type CampaignStats,
 } from "@/lib/campaign-stats";
 import { PanelShell } from "../_componentes/PanelShell";
-import { CampaignsList } from "./CampaignsList";
+import { CampaignsList } from "../_campanas/CampaignsList";
+import { ProveedorAccionesCampana } from "../_campanas/AccionesCampana";
+import { ACCIONES_PANEL, ambitoDinkbit } from "./dinkbit";
 
 export const metadata = {
   title: "Campañas — dinkbit",
@@ -14,7 +16,7 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function CampanasPage() {
-  const campaigns = await listCampaigns();
+  const campaigns = await listCampaigns(200, await ambitoDinkbit());
   // Rendimiento solo de las enviadas y con seguimiento: del resto no hay nada
   // que contar. Pocas campañas, así que una consulta por cada una basta.
   const stats: Record<string, CampaignStats> = {};
@@ -29,7 +31,9 @@ export default async function CampanasPage() {
 
   return (
     <PanelShell activa="campanas">
-      <CampaignsList campaigns={campaigns} stats={stats} />
+      <ProveedorAccionesCampana acciones={ACCIONES_PANEL}>
+        <CampaignsList campaigns={campaigns} stats={stats} />
+      </ProveedorAccionesCampana>
     </PanelShell>
   );
 }

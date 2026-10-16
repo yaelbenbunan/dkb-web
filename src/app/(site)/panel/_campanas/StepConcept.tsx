@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { generateAction } from "../actions";
+import { useAccionesCampana } from "./AccionesCampana";
 import type { EmailTemplateRow } from "@/lib/campaigns";
 import type { Block } from "@/lib/campaign-blocks";
 
@@ -39,6 +39,7 @@ export function StepConcept({
   goTo: (step: 1 | 2 | 3 | 4) => void;
 }) {
   const router = useRouter();
+  const acciones = useAccionesCampana();
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(AI_TEMPLATE_ID);
   const [concept, setConcept] = useState("");
   const [refs, setRefs] = useState("");
@@ -49,7 +50,7 @@ export function StepConcept({
     setError(null);
     start(async () => {
       const templateId = selectedTemplateId === AI_TEMPLATE_ID ? undefined : selectedTemplateId;
-      const res = await generateAction(campaignId, concept, refs, templateId);
+      const res = await acciones.generar(campaignId, concept, refs, templateId);
       if (!res.ok) {
         setError(res.error || "No se pudo generar la propuesta.");
         return;

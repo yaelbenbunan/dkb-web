@@ -8,8 +8,10 @@ import {
 import { hasEngagementTracking, summarizeRecipientStatuses } from "@/lib/campaign-stats";
 import type { EmailTemplateRow } from "@/lib/campaigns";
 import { listEmailableLeads } from "@/lib/imagina-leads";
-import { CampaignWizard } from "./CampaignWizard";
-import { CampaignStats } from "./CampaignStats";
+import { CampaignWizard } from "../../_campanas/CampaignWizard";
+import { CampaignStats } from "../../_campanas/CampaignStats";
+import { ProveedorAccionesCampana } from "../../_campanas/AccionesCampana";
+import { ACCIONES_PANEL, ambitoDinkbit, esCampanaDeDinkbit } from "../dinkbit";
 
 export const metadata = {
   title: "Campaña — dinkbit",
@@ -23,7 +25,9 @@ export default async function CampaignPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const campaign = await getCampaign(id);
+  const encontrada = await getCampaign(id);
+  // Una campaña de otra marca se gestiona en /panel/ventas/<marca>/campanas.
+  const campaign = encontrada && (await esCampanaDeDinkbit(encontrada)) ? encontrada : null;
 
   const containerStyle = {
     position: "fixed",
@@ -84,7 +88,7 @@ export default async function CampaignPage({
   }
 
   const builtin = await getBuiltinTemplates();
-  const custom = await listEmailTemplates();
+  const custom = await listEmailTemplates(await ambitoDinkbit());
   const seen = new Set<string>();
   const templates: EmailTemplateRow[] = [];
   for (const t of [...builtin, ...custom]) {
@@ -130,7 +134,9 @@ export default async function CampaignPage({
             tracked={hasEngagementTracking(campaign.sent_at)}
           />
         )}
-        <CampaignWizard campaign={campaign} templates={templates} emailableLeads={emailableLeads} />
+        <ProveedorAccionesCampana acciones={ACCIONES_PANEL}>
+          <CampaignWizard campaign={campaign} templates={templates} emailableLeads={emailableLeads} />
+        </ProveedorAccionesCampana>
       </div>
     </div>
   );

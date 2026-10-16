@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { saveBlocksAction, setCampaignMetaAction } from "../actions";
+import { useAccionesCampana } from "./AccionesCampana";
 import { blocksSchema, DEFAULT_STYLE, type Block, type CampaignStyle } from "@/lib/campaign-blocks";
 import { DEFAULT_SENDER_NAME, isValidSenderName, sanitizeSenderName } from "@/lib/email-from";
 import {
@@ -45,11 +45,13 @@ export function CampaignWizard({
   emailableLeads: LeadRow[];
 }) {
   const initialBlocks = parseInitialBlocks(campaign.blocks);
+  const acciones = useAccionesCampana();
+  const remitentePorDefecto = acciones.remitentes[0] ?? "hola@dinkbit.es";
   const [step, setStep] = useState<WizardStep>(initialBlocks.length > 0 ? 2 : 1);
   const [blocks, setBlocksState] = useState<Block[]>(initialBlocks);
   const [style] = useState<CampaignStyle>(DEFAULT_STYLE);
   const [subject, setSubject] = useState(campaign.subject ?? "");
-  const [fromEmail, setFromEmail] = useState(campaign.from_email ?? "hola@dinkbit.es");
+  const [fromEmail, setFromEmail] = useState(campaign.from_email ?? remitentePorDefecto);
   const [fromName, setFromName] = useState(campaign.from_name ?? "");
   const [preheader, setPreheader] = useState(campaign.preheader ?? "");
   const [name, setName] = useState(campaign.name ?? "");
@@ -69,7 +71,7 @@ export function CampaignWizard({
     // they can be edited — the details row is shown on every step, but only
     // steps 1-3 are "before send", so this is a good boundary to flush.
     if (step >= 1 && step <= 3) {
-      void setCampaignMetaAction(campaign.id, name, subject, fromEmail, fromName, preheader);
+      void acciones.guardarDatos(campaign.id, name, subject, fromEmail, fromName, preheader);
     }
     setStep(next);
   };
@@ -78,14 +80,14 @@ export function CampaignWizard({
     setBlocksState(next);
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      void saveBlocksAction(campaign.id, JSON.stringify(next));
+      void acciones.guardarBloques(campaign.id, JSON.stringify(next));
     }, SAVE_DEBOUNCE_MS);
   };
 
   // Lo que va a ver quien reciba el correo, calculado con las mismas reglas que
   // aplica el servidor al enviar: nombre limpio, y el de por defecto si está vacío.
   const cleanFromName = sanitizeSenderName(fromName) || DEFAULT_SENDER_NAME;
-  const fromPreview = `${cleanFromName} <${fromEmail.trim() || "hola@dinkbit.es"}>`;
+  const fromPreview = `${cleanFromName} <${fromEmail.trim() || remitentePorDefecto}>`;
   const nameWarning = !isValidSenderName(fromName);
 
   // Contador del texto previo: cuenta lo que se va a guardar de verdad (ya
@@ -213,9 +215,15 @@ export function CampaignWizard({
           <input
             value={fromEmail}
             onChange={(e) => setFromEmail(e.target.value)}
-            placeholder="hola@dinkbit.es"
+            placeholder={remitentePorDefecto}
+            list="remitentes-campana"
             style={{ padding: "8px 10px", border: "1px solid #e2e8f0", borderRadius: 6, fontSize: 13, color: "#0f172a" }}
           />
+          <datalist id="remitentes-campana">
+            {acciones.remitentes.map((r) => (
+              <option key={r} value={r} />
+            ))}
+          </datalist>
         </label>
         <label
           style={{ display: "flex", flexDirection: "column", gap: 4, flexBasis: "100%", fontSize: 12, color: "#64748b" }}

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { editAction, saveAsTemplateAction, uploadCampaignImageAction } from "../actions";
+import { useAccionesCampana } from "./AccionesCampana";
 import {
   newBlock,
   ALIGNMENTS,
@@ -112,6 +112,7 @@ export function StepDesign({
   setBlocks: (next: Block[]) => void;
 }) {
   const router = useRouter();
+  const acciones = useAccionesCampana();
   const [addOpen, setAddOpen] = useState(false);
   const [instruction, setInstruction] = useState("");
   const [aiError, setAiError] = useState<string | null>(null);
@@ -157,7 +158,7 @@ export function StepDesign({
   const onApplyAi = () => {
     setAiError(null);
     startAi(async () => {
-      const res = await editAction(campaignId, instruction);
+      const res = await acciones.editar(campaignId, instruction);
       if (!res.ok) {
         setAiError(res.error || "No se pudo aplicar la edición.");
         return;
@@ -171,7 +172,7 @@ export function StepDesign({
     setTemplateError(null);
     setTemplateSaved(false);
     startTemplate(async () => {
-      const res = await saveAsTemplateAction(campaignId, templateName, "");
+      const res = await acciones.guardarComoPlantilla(campaignId, templateName, "");
       if (!res.ok) {
         setTemplateError(res.error || "No se pudo guardar la plantilla.");
         return;
@@ -705,6 +706,7 @@ function ImageFields({
   campaignId: string;
   onChange: (patch: Record<string, unknown>) => void;
 }) {
+  const acciones = useAccionesCampana();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -716,7 +718,7 @@ function ImageFields({
       const fd = new FormData();
       fd.set("campaignId", campaignId);
       fd.set("file", file);
-      const res = await uploadCampaignImageAction(fd);
+      const res = await acciones.subirImagen(fd);
       if (!res.ok || !res.url) {
         setError(res.error ?? "No se pudo subir la imagen.");
         return;

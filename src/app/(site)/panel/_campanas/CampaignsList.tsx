@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { createDraftAction } from "./actions";
+import { useAccionesCampana } from "./AccionesCampana";
 import type { CampaignRow } from "@/lib/campaigns";
 import type { CampaignStats } from "@/lib/campaign-stats";
 
@@ -60,13 +60,14 @@ export function CampaignsList({
   stats: Record<string, CampaignStats>;
 }) {
   const router = useRouter();
+  const acciones = useAccionesCampana();
   const [busy, start] = useTransition();
 
   const onNewCampaign = () => {
     start(async () => {
-      const res = await createDraftAction();
+      const res = await acciones.crearBorrador();
       if ("id" in res) {
-        router.push(`/panel/campanas/${res.id}`);
+        router.push(`${acciones.rutaBase}/${res.id}`);
       }
     });
   };
@@ -187,7 +188,7 @@ export function CampaignsList({
                   <td style={{ ...td }}>{fmtDate(campaign.created_at)}</td>
                   <td style={{ ...td }}>
                     <a
-                      href={`/panel/campanas/${campaign.id}`}
+                      href={`${acciones.rutaBase}/${campaign.id}`}
                       style={{
                         color: "#187bef",
                         textDecoration: "none",
@@ -195,7 +196,7 @@ export function CampaignsList({
                       }}
                       onClick={(e) => {
                         e.preventDefault();
-                        router.push(`/panel/campanas/${campaign.id}`);
+                        router.push(`${acciones.rutaBase}/${campaign.id}`);
                       }}
                     >
                       {campaign.name || "(sin nombre)"}

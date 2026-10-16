@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { sendTestAction } from "../actions";
+import { useAccionesCampana } from "./AccionesCampana";
 import type { LeadRow } from "@/lib/imagina-leads";
 
 function chipStyle(active: boolean): React.CSSProperties {
@@ -60,6 +60,7 @@ export function StepRecipients({
   subject: string;
   fromEmail: string;
 }) {
+  const acciones = useAccionesCampana();
   const [statusFilter, setStatusFilter] = useState("todos");
   const [campaignFilter, setCampaignFilter] = useState("todos");
   const [channelFilter, setChannelFilter] = useState("todos");
@@ -102,7 +103,7 @@ export function StepRecipients({
   const onSendTest = () => {
     setTestResult(null);
     startTest(async () => {
-      const res = await sendTestAction(campaignId, testEmails);
+      const res = await acciones.enviarPrueba(campaignId, testEmails);
       setTestResult({
         ok: res.ok,
         msg: res.ok ? "Enviado ✓" : res.error || "No se pudo enviar la prueba.",

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { cancelScheduleAction, scheduleCampaignAction, sendCampaignAction } from "../actions";
+import { useAccionesCampana } from "./AccionesCampana";
 import { DEFAULT_SENDER_NAME, sanitizeSenderName } from "@/lib/email-from";
 import { checkScheduleTime, formatMadrid, MIN_LEAD_MINUTES } from "@/lib/campaign-schedule";
 
@@ -43,6 +43,7 @@ export function StepSend({
   selectedIds: string[];
 }) {
   const router = useRouter();
+  const acciones = useAccionesCampana();
   const [mode, setMode] = useState<Mode>("now");
   const [when, setWhen] = useState("");
   const [confirming, setConfirming] = useState(false);
@@ -60,7 +61,7 @@ export function StepSend({
   const onSend = () => {
     setResult(null);
     start(async () => {
-      const res = await sendCampaignAction(campaignId, selectedIds.join(","));
+      const res = await acciones.enviar(campaignId, selectedIds.join(","));
       if (res.ok) {
         setResult({ ok: true, msg: `Enviada: ${res.sent ?? 0} · Omitidos: ${res.skipped ?? 0}` });
         setDone(true);
@@ -76,7 +77,7 @@ export function StepSend({
     if (!whenCheck?.ok) return;
     setResult(null);
     start(async () => {
-      const res = await scheduleCampaignAction(campaignId, selectedIds.join(","), whenCheck.iso);
+      const res = await acciones.programar(campaignId, selectedIds.join(","), whenCheck.iso);
       if (res.ok) {
         router.refresh();
       } else {
@@ -89,7 +90,7 @@ export function StepSend({
   const onCancelSchedule = () => {
     setResult(null);
     start(async () => {
-      const res = await cancelScheduleAction(campaignId);
+      const res = await acciones.cancelarProgramacion(campaignId);
       if (!res.ok) setResult({ ok: false, msg: res.error || "No se pudo cancelar." });
       router.refresh();
     });
