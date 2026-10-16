@@ -47,6 +47,11 @@ export interface Marca {
   skus_b2b: string[];
   webhook_secret: string;
   created_at: string;
+  /** Servicios opcionales encendidos (hoy solo `campanas`). Sin la migración
+   *  (docs/sql/2026-10-16-ventas-campanas.sql), la fila no lo trae. */
+  modulos?: string[] | null;
+  /** Remitentes permitidos para sus campañas; vacío = la lista global. */
+  campanas_remitentes?: string[] | null;
 }
 
 export interface Exclusion {
@@ -333,6 +338,17 @@ export async function crearMarca(m: { nombre: string; slug: string }): Promise<{
 
 export async function actualizarCondiciones(id: string, c: Condiciones): Promise<Escritura> {
   return escritura(await db().from("ventas_marcas").update(c).eq("id", id), "actualizarCondiciones");
+}
+
+/** Módulos opcionales y remitentes de campañas de la marca. Sin la migración,
+ *  lo dice en vez de un «no se pudo guardar» que no explica nada. */
+export async function actualizarModulosMarca(id: string, cambios: { modulos: string[]; campanas_remitentes: string[] }): Promise<Escritura> {
+  const r = await db().from("ventas_marcas").update(cambios).eq("id", id);
+  if (r.error?.code && FALTA_EN_LA_BASE.has(r.error.code)) {
+    console.error("[ventas/db] actualizarModulosMarca:", r.error.message);
+    return { ok: false, error: "Falta ejecutar en Supabase la migración de campañas (docs/sql/2026-10-16-ventas-campanas.sql)." };
+  }
+  return escritura(r, "actualizarModulosMarca");
 }
 
 export async function regenerarSecretoWebhook(id: string): Promise<Escritura> {

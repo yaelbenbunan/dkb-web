@@ -46,6 +46,7 @@ describe("evaluarAccesoMarca", () => {
     for (const u of [admin, comercial]) {
       expect(evaluarAccesoMarca(u, "m1", "condiciones")).toBe("ok");
       expect(evaluarAccesoMarca(u, "m2", "tareas")).toBe("ok");
+      expect(evaluarAccesoMarca(u, "m2", "campanas")).toBe("ok");
     }
   });
 
@@ -53,7 +54,7 @@ describe("evaluarAccesoMarca", () => {
     for (const s of ["resumen", "tablero", "leads", "tareas"] as const) {
       expect(evaluarAccesoMarca(cliente, "m1", s)).toBe("ok");
     }
-    for (const s of ["secuencias", "conversaciones", "condiciones"] as const) {
+    for (const s of ["secuencias", "conversaciones", "condiciones", "campanas"] as const) {
       expect(evaluarAccesoMarca(cliente, "m1", s)).toBe("permiso");
     }
   });

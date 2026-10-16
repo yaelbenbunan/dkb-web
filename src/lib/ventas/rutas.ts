@@ -40,7 +40,7 @@ export function esAsignableEnMarca(usuaria: { rol: string; activa: boolean; marc
   return usuaria.rol === "cliente" && usuaria.marca_id === marcaId;
 }
 
-export type SeccionMarca = "resumen" | "tablero" | "leads" | "tareas" | "secuencias" | "conversaciones" | "condiciones";
+export type SeccionMarca = "resumen" | "tablero" | "leads" | "tareas" | "secuencias" | "conversaciones" | "condiciones" | "campanas";
 
 /** Lo único que ve una usuaria con rol «cliente», y solo en su marca. */
 export const SECCIONES_CLIENTE: readonly SeccionMarca[] = ["resumen", "tablero", "leads", "tareas"];
