@@ -515,27 +515,3 @@ export async function borrarPlantilla(id: string): Promise<boolean> {
   }
   return true;
 }
-
-// Leads del CRM -----------------------------------------------------------
-
-/** Id del lead de dinkbit con ese email, si existe (sin distinguir mayúsculas):
- *  primero en ventas, luego en la tabla vieja (leads aún sin migrar). */
-export async function buscarLeadPorEmail(email: string): Promise<string | null> {
-  const sb = getSupabaseAdmin();
-  if (!sb) return null;
-  const enVentas = await sb
-    .from(LEADS_VENTAS)
-    .select("id, ventas_marcas!inner(slug)")
-    .eq("ventas_marcas.slug", "dinkbit")
-    .eq("email_norm", email.trim().toLowerCase())
-    .limit(1);
-  if (enVentas.error) aviso("buscarLeadPorEmail", enVentas.error.message);
-  const idVentas = (enVentas.data as Array<{ id: string }> | null)?.[0]?.id;
-  if (idVentas) return idVentas;
-  const { data, error } = await sb.from(LEADS).select("id").ilike("email", email.trim()).limit(1);
-  if (error) {
-    aviso("buscarLeadPorEmail", error.message);
-    return null;
-  }
-  return (data as Array<{ id: string }> | null)?.[0]?.id ?? null;
-}

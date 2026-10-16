@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { Marca } from "@/lib/ventas/db";
 import type { Rol } from "@/lib/ventas/dominio";
 import { MODULO_CAMPANAS, tieneModulo } from "@/lib/ventas/campanas";
-import { SECCIONES_CLIENTE } from "@/lib/ventas/rutas";
+import { SECCIONES_CLIENTE, tieneProspeccion } from "@/lib/ventas/rutas";
 
 const PESTANAS = [
   { clave: "resumen", texto: "Resumen", ruta: "" },
@@ -13,6 +13,7 @@ const PESTANAS = [
   { clave: "secuencias", texto: "Secuencias", ruta: "/secuencias" },
   { clave: "conversaciones", texto: "Conversaciones", ruta: "/conversaciones" },
   { clave: "campanas", texto: "Campañas", ruta: "/campanas" },
+  { clave: "prospeccion", texto: "Prospección", ruta: "/prospeccion" },
   { clave: "condiciones", texto: "Condiciones", ruta: "/condiciones" },
 ] as const;
 
@@ -35,7 +36,10 @@ export function MarcaCabecera({ marca, activa, rol }: { marca: Marca; activa: Pe
   // La clienta solo ve las secciones que el servidor le deja abrir.
   const porRol = rol === "cliente" ? PESTANAS.filter((p) => (SECCIONES_CLIENTE as readonly string[]).includes(p.clave)) : PESTANAS;
   // Campañas es un módulo de pago: la pestaña solo aparece si la marca lo tiene.
-  const visibles = porRol.filter((p) => p.clave !== "campanas" || tieneModulo(marca, MODULO_CAMPANAS));
+  // Prospección solo en las marcas que la tienen (hoy, dinkbit).
+  const visibles = porRol.filter(
+    (p) => (p.clave !== "campanas" || tieneModulo(marca, MODULO_CAMPANAS)) && (p.clave !== "prospeccion" || tieneProspeccion(marca.slug)),
+  );
   const logo = LOGOS_MARCA[marca.slug];
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 }}>

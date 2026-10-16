@@ -3,8 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CATEGORIAS } from "@/lib/prospeccion/categorias";
-import { botonPrimario, campo, etiqueta, tarjeta, titulo } from "../_componentes/estilos";
-import { buscarAction, enriquecerTandaAction } from "./actions";
+import { botonPrimario, campo, etiqueta, tarjeta, titulo } from "../../../_componentes/estilos";
+import { buscarAction, enriquecerTandaAction } from "../../../acciones-prospeccion";
 import type { Aviso } from "./Prospeccion";
 
 /** 120 empresas en tandas de 10 son 12 vueltas; el margen cubre reintentos. Con
@@ -12,9 +12,11 @@ import type { Aviso } from "./Prospeccion";
 const MAX_TANDAS = 16;
 
 export function Buscador({
+  slug,
   pendientes,
   onAviso,
 }: {
+  slug: string;
   /** Búsquedas con empresas aún sin revisar (se cerró la pestaña a medias). */
   pendientes: Array<{ searchId: string; n: number }>;
   onAviso: (a: Aviso | null) => void;
@@ -31,7 +33,7 @@ export function Buscador({
     setFase("buscando");
     let searchId: string;
     try {
-      const r = await buscarAction(categoria, ciudad);
+      const r = await buscarAction(slug, categoria, ciudad);
       if (!r.ok) {
         setFase(null);
         onAviso({ ok: false, texto: r.error });
@@ -60,7 +62,7 @@ export function Buscador({
       for (const searchId of searchIds) {
         quedan = 0;
         for (let i = 0; i < MAX_TANDAS; i++) {
-          const t = await enriquecerTandaAction(searchId);
+          const t = await enriquecerTandaAction(slug, searchId);
           hechos += t.procesados;
           quedan = t.restantes;
           setProgreso({ hechos, total: hechos + t.restantes });

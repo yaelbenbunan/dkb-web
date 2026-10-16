@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { clasificarRutaPanel, destinoTrasLogin, esAsignableEnMarca, evaluarAcceso, evaluarAccesoMarca } from "../ventas/rutas";
+import { clasificarRutaPanel, destinoTrasLogin, esAsignableEnMarca, evaluarAcceso, evaluarAccesoMarca, tieneProspeccion } from "../ventas/rutas";
 
 describe("clasificarRutaPanel", () => {
   test("separa ventas del panel de leads", () => {
@@ -47,6 +47,7 @@ describe("evaluarAccesoMarca", () => {
       expect(evaluarAccesoMarca(u, "m1", "condiciones")).toBe("ok");
       expect(evaluarAccesoMarca(u, "m2", "tareas")).toBe("ok");
       expect(evaluarAccesoMarca(u, "m2", "campanas")).toBe("ok");
+      expect(evaluarAccesoMarca(u, "m1", "prospeccion")).toBe("ok");
     }
   });
 
@@ -54,7 +55,7 @@ describe("evaluarAccesoMarca", () => {
     for (const s of ["resumen", "tablero", "leads", "tareas"] as const) {
       expect(evaluarAccesoMarca(cliente, "m1", s)).toBe("ok");
     }
-    for (const s of ["secuencias", "conversaciones", "condiciones", "campanas"] as const) {
+    for (const s of ["secuencias", "conversaciones", "condiciones", "campanas", "prospeccion"] as const) {
       expect(evaluarAccesoMarca(cliente, "m1", s)).toBe("permiso");
     }
   });
@@ -74,6 +75,14 @@ describe("evaluarAccesoMarca", () => {
   test("sin sesión o desactivada va al login", () => {
     expect(evaluarAccesoMarca(null, "m1", "leads")).toBe("login");
     expect(evaluarAccesoMarca({ ...cliente, activa: false }, "m1", "leads")).toBe("login");
+  });
+});
+
+describe("tieneProspeccion", () => {
+  test("solo dinkbit: el envío habla en su nombre", () => {
+    expect(tieneProspeccion("dinkbit")).toBe(true);
+    expect(tieneProspeccion("hydrup")).toBe(false);
+    expect(tieneProspeccion("")).toBe(false);
   });
 });
 

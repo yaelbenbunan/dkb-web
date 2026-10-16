@@ -23,6 +23,16 @@ const config: NextConfig = {
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
   redirects: async () => [
+    // Prospección se mudó a ventas con la unificación del CRM (proyecto 3,
+    // docs/superpowers/specs/2026-10-16-ventas-prospeccion-design.md). Temporal:
+    // el /panel viejo entero se retira en el proyecto 4. Va aquí y no en una
+    // página porque las redirecciones de next.config se aplican antes del
+    // proxy: quien solo tiene sesión de ventas no pasa por el login viejo.
+    {
+      source: "/panel/prospeccion",
+      destination: "/panel/ventas/dinkbit/prospeccion",
+      permanent: false,
+    },
     // «Plataformas a medida» deja de ofrecerse: dinkbit se queda con el
     // marketing de siempre. Su hueco lo ocupa GEO. La URL vieja estaba indexada,
     // así que 301 a desarrollo web, que es lo más parecido que sí se sigue

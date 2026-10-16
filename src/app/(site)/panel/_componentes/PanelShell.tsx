@@ -7,7 +7,7 @@ const PESTANAS = [
   { clave: "ventas", texto: "CRM (ventas) →", ruta: "/panel/ventas/dinkbit" },
   { clave: "leads", texto: "Leads antiguos", ruta: "/panel" },
   { clave: "campanas", texto: "Campañas", ruta: "/panel/campanas" },
-  { clave: "prospeccion", texto: "Prospección", ruta: "/panel/prospeccion" },
+  { clave: "prospeccion", texto: "Prospección", ruta: "/panel/ventas/dinkbit/prospeccion" },
   { clave: "calculadora", texto: "Calculadora", ruta: "/panel/calculadora" },
 ] as const;
 
