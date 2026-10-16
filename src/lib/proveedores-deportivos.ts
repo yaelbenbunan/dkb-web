@@ -61,7 +61,7 @@ export const PD_PRESUPUESTO = [
   { valor: "mas_5000", etiqueta: ">5.000€" },
 ] as const;
 
-/** `a: null` = respuesta pendiente: se pinta como placeholder y no entra en el JSON-LD. */
+/** `a: null` = respuesta pendiente: ni se pinta ni entra en el JSON-LD hasta que se rellene. */
 export const PD_FAQS: readonly { q: string; a: string | null }[] = [
   { q: "¿Cuánto cuesta?", a: `El Pack Campaña + CRM cuesta ${PD_PRECIO} + IVA al mes. La inversión en anuncios de Meta se paga aparte, directamente a Meta.` },
   { q: "¿Qué incluye el CRM?", a: null },
@@ -71,6 +71,9 @@ export const PD_FAQS: readonly { q: string; a: string | null }[] = [
   { q: "¿En cuánto tiempo veo resultados?", a: null },
   { q: "¿Trabajáis con cadenas de gimnasios?", a: null },
 ];
+
+/** Las que se publican (página y JSON-LD): solo las que tienen respuesta. */
+export const PD_FAQS_RESPONDIDAS = PD_FAQS.filter((f): f is { q: string; a: string } => f.a !== null);
 
 type Catalogo = readonly { valor: string; etiqueta: string }[];
 const valores = <C extends Catalogo>(c: C) => c.map((o) => o.valor) as [C[number]["valor"], ...C[number]["valor"][]];

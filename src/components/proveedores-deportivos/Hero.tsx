@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { PD_BADGE, PD_PRECIO, PD_PRECIO_SUFIJO } from "@/lib/proveedores-deportivos";
+import { PD_BADGE } from "@/lib/proveedores-deportivos";
 import { FormularioPack } from "./FormularioPack";
 import { Icono, type NombreIcono } from "./Iconos";
 import { PD, TITULO } from "./tema";
@@ -9,10 +9,10 @@ const COLLAGE = ["hero-pelotas", "hero-camisetas", "hero-magnesio", "hero-toalla
 const BULLETS: { icono: NombreIcono; texto: string }[] = [
   { icono: "megafono", texto: "Campaña en Meta lista para captar centros deportivos" },
   { icono: "crm", texto: "CRM para gestionar cada lead, muestra y pedido" },
-  { icono: "euro", texto: `Todo por ${PD_PRECIO} ${PD_PRECIO_SUFIJO}` },
+  { icono: "filtro", texto: "Solo leads de negocios reales, filtrados" },
 ];
 
-export const TITULAR = "Llenamos tu agenda de gimnasios y clubes que quieren tu producto";
+export const TITULAR = "Más pedidos de centros deportivos";
 
 /**
  * Hero a pantalla completa: collage de producto detrás (en vez de vídeo, que en
@@ -35,20 +35,20 @@ export function Hero() {
           </div>
         ))}
       </div>
-      <div aria-hidden className="absolute inset-0 -z-10" style={{ background: "linear-gradient(180deg, rgba(11,12,14,.80) 0%, rgba(11,12,14,.88) 55%, rgba(11,12,14,1) 100%)" }} />
+      <div aria-hidden className="absolute inset-0 -z-10" style={{ background: "linear-gradient(180deg, rgba(11,12,14,.86) 0%, rgba(11,12,14,.92) 55%, rgba(11,12,14,1) 100%)" }} />
 
       <div className="mx-auto grid min-h-[100svh] max-w-6xl items-center gap-10 px-4 pb-16 pt-24 sm:px-6 md:pt-28 lg:grid-cols-[1.1fr_1fr] lg:gap-14">
         <div>
           <span className="inline-block rounded-full px-4 py-1.5 text-[12px] font-extrabold tracking-[0.08em] text-white sm:text-[13px]" style={{ background: PD.acento }}>
             {PD_BADGE}
           </span>
-          <h1 className="mt-5 text-[44px] uppercase leading-[0.95] sm:text-[56px] lg:text-[72px]" style={TITULO}>
+          <h1 className="mt-6 text-[44px] uppercase leading-[0.95] sm:text-[56px] lg:text-[72px]" style={TITULO}>
             {TITULAR}
           </h1>
-          <p className="mt-5 max-w-xl text-[18px] font-semibold leading-snug sm:text-[20px]" style={{ color: PD.suave }}>
-            Campañas en Meta + muestras gratis = <span style={{ color: PD.texto }}>pedidos recurrentes de centros deportivos</span>
+          <p className="mt-6 max-w-xl text-[18px] font-semibold leading-snug sm:text-[20px]" style={{ color: PD.suave }}>
+            Campañas en Meta que ofrecen muestras gratis a centros deportivos y las convierten en <span style={{ color: PD.texto }}>pedidos recurrentes</span>.
           </p>
-          <ul className="mt-7 space-y-3">
+          <ul className="mt-8 space-y-3">
             {BULLETS.map((b) => (
               <li key={b.icono} className="flex items-center gap-3 text-[16px] font-semibold sm:text-[17px]">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: "rgba(24,123,239,.16)", color: PD.acentoClaro }}>

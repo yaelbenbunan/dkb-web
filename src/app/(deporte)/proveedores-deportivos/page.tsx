@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { LandingProveedoresDeportivos } from "@/components/proveedores-deportivos/Secciones";
-import { PD_FAQS, PD_META_DESCRIPTION, PD_META_TITLE, PD_PATH, PD_PRECIO_NUMERO } from "@/lib/proveedores-deportivos";
+import { PD_FAQS_RESPONDIDAS, PD_META_DESCRIPTION, PD_META_TITLE, PD_PATH, PD_PRECIO_NUMERO } from "@/lib/proveedores-deportivos";
 
 const SITE_URL = "https://www.dinkbit.es";
+const PD_SHARE_IMAGE = "/img/deporte/pista-padel.webp";
 
 export const metadata: Metadata = {
   // `absolute`: el layout raíz añade «— dinkbit» y el título ya lo lleva.
@@ -15,7 +16,14 @@ export const metadata: Metadata = {
     title: PD_META_TITLE,
     description: PD_META_DESCRIPTION,
     siteName: "dinkbit",
-    images: ["/img/deporte/pista-padel.webp"],
+    images: [PD_SHARE_IMAGE],
+  },
+  // Sin esto heredaría el de la home (layout raíz).
+  twitter: {
+    card: "summary_large_image",
+    title: PD_META_TITLE,
+    description: PD_META_DESCRIPTION,
+    images: [PD_SHARE_IMAGE],
   },
 };
 
@@ -49,7 +57,7 @@ const servicioSchema = {
 const faqSchema = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
-  mainEntity: PD_FAQS.filter((f) => f.a !== null).map((f) => ({
+  mainEntity: PD_FAQS_RESPONDIDAS.map((f) => ({
     "@type": "Question",
     name: f.q,
     acceptedAnswer: { "@type": "Answer", text: f.a },

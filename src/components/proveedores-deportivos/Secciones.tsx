@@ -1,10 +1,9 @@
 import Image from "next/image";
 import { AlAparecer } from "@/app/(growth)/growth/_components/AlAparecer";
-import { PD_FAQS, PD_PRECIO, PD_PRECIO_SUFIJO } from "@/lib/proveedores-deportivos";
+import { PD_FAQS_RESPONDIDAS, PD_PRECIO, PD_PRECIO_SUFIJO } from "@/lib/proveedores-deportivos";
 import { Contador } from "./Contador";
 import { CtaMovil } from "./CtaMovil";
 import { Hero, TITULAR } from "./Hero";
-import { Hueco } from "./Hueco";
 import { Icono, type NombreIcono } from "./Iconos";
 import { MovilAnuncio, PortatilCrm } from "./Mockups";
 import { PD, TITULO } from "./tema";
@@ -69,28 +68,41 @@ const PERFILES: { foto: string; titulo: string }[] = [
   { foto: "trofeos", titulo: "Trofeos" },
 ];
 
-const INCLUYE: React.ReactNode[] = [
+const INCLUYE: string[] = [
   "Creación de la campaña en Meta Ads (anuncios, textos y segmentación a gimnasios y clubes)",
   "Formulario de solicitud de muestras con filtro de negocios reales",
   "Acceso al CRM para gestionar todos tus leads",
   "Pipeline visual de cada lead: Muestra solicitada → Muestra enviada → Seguimiento → Pedido",
-  <Hueco key="gestion">[Gestión y optimización de la campaña]</Hueco>,
-  <Hueco key="informe">[Informe de resultados]</Hueco>,
 ];
+
+/**
+ * Cifras reales de la franja de contadores. Mientras alguna sea `null` la franja
+ * no se pinta: un contador con `[X]` o con un número inventado resta.
+ */
+const CIFRAS: { valor: number | null; sufijo?: string; etiqueta: string }[] = [
+  { valor: null, etiqueta: "muestras enviadas" },
+  { valor: null, etiqueta: "centros contactados" },
+  { valor: null, sufijo: "%", etiqueta: "de muestras que acaban en pedido" },
+];
+
+/** Testimonios reales. Vacío = la sección de casos no se pinta. */
+const CASOS: { cliente: string; logo?: string; testimonio: string; resultado: string }[] = [];
 
 export function LandingProveedoresDeportivos() {
   return (
     <>
       <Hero />
 
-      {/* 2. Cifras */}
-      <section className="border-y" style={{ borderColor: PD.linea, background: PD.superficie }}>
-        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:grid-cols-3 sm:px-6">
-          <Contador valor={null} etiqueta="muestras enviadas" />
-          <Contador valor={null} etiqueta="centros contactados" />
-          <Contador valor={null} etiqueta="% de muestras que acaban en pedido" />
-        </div>
-      </section>
+      {/* 2. Cifras: solo con datos reales. */}
+      {CIFRAS.every((c) => c.valor !== null) && (
+        <section className="border-y" style={{ borderColor: PD.linea, background: PD.superficie }}>
+          <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:grid-cols-3 sm:px-6">
+            {CIFRAS.map((c) => (
+              <Contador key={c.etiqueta} valor={c.valor} sufijo={c.sufijo} etiqueta={c.etiqueta} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 3. El problema */}
       <Bloque antetitulo="El problema" titulo="Vender a centros deportivos es lento y caro">
@@ -161,24 +173,24 @@ export function LandingProveedoresDeportivos() {
         </div>
       </Bloque>
 
-      {/* 7. Casos */}
-      <Bloque antetitulo="Casos" titulo="Proveedores que ya venden así">
-        <div className="grid gap-4 md:grid-cols-3">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="rounded-2xl border p-6" style={{ borderColor: PD.linea, background: PD.superficie }}>
-              <div className="flex h-12 items-center">
-                <Hueco>[LOGO CLIENTE]</Hueco>
+      {/* 7. Casos: solo con testimonios reales. */}
+      {CASOS.length > 0 && (
+        <Bloque antetitulo="Casos" titulo="Proveedores que ya venden así">
+          <div className="grid gap-4 md:grid-cols-3">
+            {CASOS.map((c) => (
+              <div key={c.cliente} className="rounded-2xl border p-6" style={{ borderColor: PD.linea, background: PD.superficie }}>
+                <div className="flex h-12 items-center">
+                  {c.logo ? <Image src={c.logo} alt={c.cliente} width={140} height={48} className="h-12 w-auto object-contain" /> : <p className="text-[18px] font-extrabold">{c.cliente}</p>}
+                </div>
+                <p className="mt-4 text-[16px] leading-relaxed">{c.testimonio}</p>
+                <p className="mt-4 text-[15px] font-bold" style={{ color: PD.acentoClaro }}>
+                  {c.resultado}
+                </p>
               </div>
-              <p className="mt-4 text-[16px] leading-relaxed">
-                <Hueco>[TESTIMONIO REAL]</Hueco>
-              </p>
-              <p className="mt-4 text-[15px] font-bold" style={{ color: PD.acentoClaro }}>
-                <Hueco>[RESULTADO]</Hueco>
-              </p>
-            </div>
-          ))}
-        </div>
-      </Bloque>
+            ))}
+          </div>
+        </Bloque>
+      )}
 
       {/* 8. Precio */}
       <Bloque id="precio" antetitulo="Precio" titulo="Pack Campaña + CRM">
@@ -204,7 +216,7 @@ export function LandingProveedoresDeportivos() {
               ))}
             </ul>
             <p className="mt-6 rounded-xl p-3 text-[14px] leading-relaxed" style={{ background: "rgba(255,255,255,.04)", color: PD.suave }}>
-              La inversión publicitaria en Meta no está incluida <Hueco>[presupuesto mínimo recomendado: X€/mes]</Hueco>
+              La inversión publicitaria en Meta no está incluida: se paga aparte, directamente a Meta.
             </p>
             <div className="mt-6">
               <BotonCta>Empezar ahora</BotonCta>
@@ -217,7 +229,7 @@ export function LandingProveedoresDeportivos() {
       {/* 9. FAQ */}
       <Bloque antetitulo="Preguntas frecuentes" titulo="Lo que nos suelen preguntar">
         <div className="mx-auto max-w-3xl divide-y" style={{ borderColor: PD.linea }}>
-          {PD_FAQS.map((f) => (
+          {PD_FAQS_RESPONDIDAS.map((f) => (
             <details key={f.q} className="group py-4" style={{ borderColor: PD.linea }}>
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[18px] font-bold">
                 {f.q}
@@ -226,7 +238,7 @@ export function LandingProveedoresDeportivos() {
                 </span>
               </summary>
               <p className="mt-3 text-[16px] leading-relaxed" style={{ color: PD.suave }}>
-                {f.a ?? <Hueco>[PLACEHOLDER]</Hueco>}
+                {f.a}
               </p>
             </details>
           ))}
@@ -234,13 +246,13 @@ export function LandingProveedoresDeportivos() {
       </Bloque>
 
       {/* 10. CTA final */}
-      <section className="px-4 py-20 text-center sm:px-6" style={{ background: `radial-gradient(ellipse at center, rgba(24,123,239,.25), transparent 70%)` }}>
-        <h2 className="mx-auto max-w-4xl text-[40px] uppercase leading-[0.95] sm:text-[60px]" style={TITULO}>
-          {TITULAR}
-        </h2>
-        <p className="mt-5 text-[18px] font-bold" style={{ color: PD.acentoClaro }}>
+      <section id="cta-final" className="px-4 py-20 text-center sm:px-6" style={{ background: `radial-gradient(ellipse at center, rgba(24,123,239,.25), transparent 70%)` }}>
+        <p className="text-[13px] font-extrabold uppercase tracking-[0.14em]" style={{ color: PD.acentoClaro }}>
           Pack Campaña + CRM · {PD_PRECIO} {PD_PRECIO_SUFIJO}
         </p>
+        <h2 className="mx-auto mt-2 max-w-4xl text-[40px] uppercase leading-[0.95] sm:text-[60px]" style={TITULO}>
+          {TITULAR}
+        </h2>
         <div className="mt-8">
           <BotonCta>Quiero mi pack</BotonCta>
         </div>
