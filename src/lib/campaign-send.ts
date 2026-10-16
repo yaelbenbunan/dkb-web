@@ -14,6 +14,9 @@ import { mintUnsubscribeToken } from "./unsubscribe-token";
 import { blocksSchema, DEFAULT_STYLE, type Block } from "./campaign-blocks";
 import { formatFromHeader, DEFAULT_SENDER_NAME } from "./email-from";
 import { sanitizePreheader } from "./email-preheader";
+import { MODULO_CAMPANAS, remitentesDeMarca, tieneModulo } from "./ventas/campanas";
+import { getMarcaPorId } from "./ventas/db";
+import { listEmailableLeadsDeMarca } from "./ventas/leads-web";
 
 const SITE = "https://www.dinkbit.es";
 const BATCH_SIZE = 100;
@@ -22,7 +25,7 @@ const BATCH_SIZE = 100;
  *  manda con un `from` fuera de este conjunto. */
 export const ALLOWED_SENDERS = (process.env.CAMPAIGN_SENDERS ?? "hola@dinkbit.es")
   .split(",")
-  .map((s) => s.trim())
+  .map((s) => s.trim().toLowerCase())
   .filter(Boolean);
 
 /** Filtro de emailable en código — defensa en profundidad además del filtro
@@ -45,18 +48,21 @@ function chunk<T>(items: T[], size: number): T[][] {
   return out;
 }
 
-export function validateCampaign(campaign: {
-  subject: string | null;
-  from_email: string | null;
-  from_name?: string | null;
-  preheader?: string | null;
-  blocks: unknown;
-}):
+export function validateCampaign(
+  campaign: {
+    subject: string | null;
+    from_email: string | null;
+    from_name?: string | null;
+    preheader?: string | null;
+    blocks: unknown;
+  },
+  remitentes: readonly string[] = ALLOWED_SENDERS,
+):
   | { ok: true; subject: string; from: string; preheader: string; blocks: Block[] }
   | { ok: false; error: string } {
   const subject = campaign.subject?.trim();
   if (!subject) return { ok: false, error: "missing_subject" };
-  if (!campaign.from_email || !ALLOWED_SENDERS.includes(campaign.from_email)) {
+  if (!campaign.from_email || !remitentes.includes(campaign.from_email.trim().toLowerCase())) {
     return { ok: false, error: "from_email_not_allowed" };
   }
   const parsed = blocksSchema.safeParse(campaign.blocks);
@@ -81,6 +87,35 @@ function getResendClient(): Resend {
  *  campaña, o está programada y se intenta mandar a mano. */
 export const CAMPAIGN_NOT_CLAIMABLE = "campaign_not_claimable";
 
+/**
+ * De quién es la campaña y, por tanto, a quién puede ir y desde qué remitentes.
+ * Lo decide la marca guardada en la campaña, no la pantalla desde la que se
+ * pulsa: así ni el cron ni el /panel viejo pueden mandar una campaña de una
+ * marca a los leads de otra. Sin marca (las de antes de 2026-10-16, o sin la
+ * migración) es de dinkbit, como siempre.
+ */
+export async function contextoDeEnvio(campaign: { marca_id?: string | null }): Promise<
+  | { ok: true; remitentes: readonly string[]; destinatarios: () => Promise<LeadRow[]> }
+  | { ok: false; error: "marca_not_found" | "modulo_inactivo" }
+> {
+  if (!campaign.marca_id) return { ok: true, remitentes: ALLOWED_SENDERS, destinatarios: () => listEmailableLeads() };
+  const marcaId = campaign.marca_id;
+  let marca: Awaited<ReturnType<typeof getMarcaPorId>>;
+  try {
+    marca = await getMarcaPorId(marcaId);
+  } catch (error) {
+    console.error("[campaign-send] no se pudo leer la marca de la campaña", error);
+    marca = null;
+  }
+  if (!marca) return { ok: false, error: "marca_not_found" };
+  if (!tieneModulo(marca, MODULO_CAMPANAS)) return { ok: false, error: "modulo_inactivo" };
+  return {
+    ok: true,
+    remitentes: remitentesDeMarca(marca, ALLOWED_SENDERS),
+    destinatarios: () => listEmailableLeadsDeMarca(marcaId),
+  };
+}
+
 /** Envía una campaña por lotes de 100 a los leads indicados, tras filtrar por
  *  consentimiento/email/no-rebote. Best-effort por lote: un lote que falla se
  *  registra como `failed` sin abortar el resto.
@@ -96,7 +131,10 @@ export async function sendCampaign(
   const campaign = await getCampaign(campaignId);
   if (!campaign) return { ok: false, sent: 0, skipped: 0, error: "campaign_not_found" };
 
-  const validated = validateCampaign(campaign);
+  const contexto = await contextoDeEnvio(campaign);
+  if (!contexto.ok) return { ok: false, sent: 0, skipped: 0, error: contexto.error };
+
+  const validated = validateCampaign(campaign, contexto.remitentes);
   if (!validated.ok) return { ok: false, sent: 0, skipped: 0, error: validated.error };
   const { subject, from, preheader, blocks } = validated;
 
@@ -113,7 +151,7 @@ export async function sendCampaign(
   if (!claimed) return { ok: false, sent: 0, skipped: 0, error: CAMPAIGN_NOT_CLAIMABLE };
 
   const wanted = new Set(leadIds);
-  const allEmailable = await listEmailableLeads();
+  const allEmailable = await contexto.destinatarios();
   // Una campaña programada antes de unificar el CRM guarda ids de imagina_leads:
   // el lead migrado los conserva como alternativos.
   const emailable = allEmailable.filter(
@@ -208,14 +246,19 @@ export async function sendCampaignTest(input: {
   preheader?: string | null;
   blocks: unknown;
   toEmails: string[];
+  /** Remitentes de la marca (ver `contextoDeEnvio`); sin ellos, la lista global. */
+  remitentes?: readonly string[];
 }): Promise<{ ok: boolean; error?: string }> {
-  const validated = validateCampaign({
-    subject: input.subject,
-    from_email: input.from_email,
-    from_name: input.from_name,
-    preheader: input.preheader,
-    blocks: input.blocks,
-  });
+  const validated = validateCampaign(
+    {
+      subject: input.subject,
+      from_email: input.from_email,
+      from_name: input.from_name,
+      preheader: input.preheader,
+      blocks: input.blocks,
+    },
+    input.remitentes,
+  );
   if (!validated.ok) return { ok: false, error: validated.error };
   if (input.toEmails.length === 0) return { ok: false, error: "no_recipients" };
 

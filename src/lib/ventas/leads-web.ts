@@ -464,3 +464,13 @@ export async function listEmailableLeads(filter?: { status?: string; campaign?: 
     return legacy.listEmailableLeads(filter);
   }
 }
+
+/**
+ * Destinatarios posibles de una campaña de cualquier marca de ventas (el
+ * módulo de campañas, proyecto 2 de la unificación). Sin respaldo en
+ * imagina_leads: eso solo tiene sentido para dinkbit, y es `listEmailableLeads`.
+ */
+export async function listEmailableLeadsDeMarca(marcaId: string): Promise<LeadRow[]> {
+  const leads = await listarLeadsEmailables(marcaId);
+  return leads.map(aLeadRow);
+}

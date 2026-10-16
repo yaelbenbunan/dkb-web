@@ -35,6 +35,13 @@ vi.mock("../campaigns", () => ({
 const { listEmailableLeadsMock } = vi.hoisted(() => ({ listEmailableLeadsMock: vi.fn() }));
 vi.mock("../imagina-leads", () => ({ listEmailableLeads: listEmailableLeadsMock }));
 
+const { getMarcaPorIdMock, listEmailableLeadsDeMarcaMock } = vi.hoisted(() => ({
+  getMarcaPorIdMock: vi.fn(),
+  listEmailableLeadsDeMarcaMock: vi.fn(),
+}));
+vi.mock("../ventas/db", () => ({ getMarcaPorId: getMarcaPorIdMock }));
+vi.mock("../ventas/leads-web", () => ({ listEmailableLeadsDeMarca: listEmailableLeadsDeMarcaMock }));
+
 import {
   sendCampaign,
   sendCampaignTest,
@@ -469,5 +476,88 @@ describe("texto previo del envío", () => {
     });
     const html = batchSendMock.mock.calls[0][0][0].html as string;
     expect(html).toContain("Vista previa de la plantilla");
+  });
+});
+
+describe("campañas de una marca de ventas", () => {
+  const HYDRUP = { id: "m-hyd", slug: "hydrup", modulos: ["campanas"], campanas_remitentes: ["hola@hydrup.es"] };
+  const CAMPAIGN = {
+    id: "c9",
+    status: "draft",
+    subject: "Asunto",
+    from_email: "hola@hydrup.es",
+    from_name: "Hydrup",
+    blocks: VALID_BLOCKS,
+    marca_id: "m-hyd",
+  };
+
+  beforeEach(() => {
+    batchSendMock.mockReset().mockResolvedValue({ data: { data: [{ id: "msg-9" }] }, error: null });
+    getCampaignMock.mockReset().mockResolvedValue(CAMPAIGN);
+    updateCampaignMock.mockReset().mockResolvedValue(undefined);
+    setCampaignStatusMock.mockReset().mockResolvedValue(undefined);
+    claimCampaignMock.mockReset().mockResolvedValue(true);
+    insertCampaignRecipientsMock.mockReset().mockResolvedValue(undefined);
+    listEmailableLeadsMock.mockReset().mockResolvedValue([makeLead("dink-1")]);
+    listEmailableLeadsDeMarcaMock.mockReset().mockResolvedValue([makeLead("hyd-1")]);
+    getMarcaPorIdMock.mockReset().mockResolvedValue(HYDRUP);
+    listDueScheduledMock.mockReset().mockResolvedValue([]);
+    process.env.RESEND_API_KEY = "test-key";
+    delete process.env.CAMPAIGN_SENDERS;
+  });
+
+  test("los destinatarios salen de los leads de la marca de la campaña", async () => {
+    const res = await sendCampaign("c9", ["hyd-1", "dink-1"]);
+    expect(res).toEqual({ ok: true, sent: 1, skipped: 1 });
+    expect(listEmailableLeadsDeMarcaMock).toHaveBeenCalledWith("m-hyd");
+    expect(listEmailableLeadsMock).not.toHaveBeenCalled();
+    const payload = batchSendMock.mock.calls[0][0];
+    expect(payload[0].to).toBe("hyd-1@example.com");
+    expect(payload[0].from).toBe('"Hydrup" <hola@hydrup.es>');
+    expect(payload[0].html).toContain("id=hyd-1&amp;token=");
+    expect(insertCampaignRecipientsMock.mock.calls[0][0][0]).toMatchObject({ campaign_id: "c9", lead_id: "hyd-1", status: "sent" });
+  });
+
+  test("un id de dinkbit no se cuela en una campaña de otra marca", async () => {
+    const res = await sendCampaign("c9", ["dink-1"]);
+    expect(res).toEqual({ ok: true, sent: 0, skipped: 1 });
+    expect(batchSendMock).not.toHaveBeenCalled();
+  });
+
+  test("el remitente tiene que ser de la marca, no basta con que esté en la lista global", async () => {
+    getCampaignMock.mockResolvedValue({ ...CAMPAIGN, from_email: "hola@dinkbit.es" });
+    const res = await sendCampaign("c9", ["hyd-1"]);
+    expect(res).toMatchObject({ ok: false, error: "from_email_not_allowed" });
+    expect(batchSendMock).not.toHaveBeenCalled();
+  });
+
+  test("sin remitentes propios, la marca usa la lista global", async () => {
+    getMarcaPorIdMock.mockResolvedValue({ ...HYDRUP, campanas_remitentes: [] });
+    getCampaignMock.mockResolvedValue({ ...CAMPAIGN, from_email: "hola@dinkbit.es" });
+    expect(await sendCampaign("c9", ["hyd-1"])).toMatchObject({ ok: true, sent: 1 });
+  });
+
+  test("con el módulo apagado no sale, y la programada queda como error", async () => {
+    getMarcaPorIdMock.mockResolvedValue({ ...HYDRUP, modulos: [] });
+    expect(await sendCampaign("c9", ["hyd-1"])).toMatchObject({ ok: false, error: "modulo_inactivo" });
+    expect(claimCampaignMock).not.toHaveBeenCalled();
+
+    listDueScheduledMock.mockResolvedValue([{ id: "c9", scheduled_lead_ids: ["hyd-1"] }]);
+    getCampaignMock.mockResolvedValue({ ...CAMPAIGN, status: "scheduled" });
+    await sendDueScheduledCampaigns();
+    expect(batchSendMock).not.toHaveBeenCalled();
+    expect(setCampaignStatusMock).toHaveBeenCalledWith("c9", "failed");
+  });
+
+  test("marca que ya no existe: no sale", async () => {
+    getMarcaPorIdMock.mockResolvedValue(null);
+    expect(await sendCampaign("c9", ["hyd-1"])).toMatchObject({ ok: false, error: "marca_not_found" });
+    expect(batchSendMock).not.toHaveBeenCalled();
+  });
+
+  test("la prueba de una marca valida con sus remitentes", async () => {
+    const base = { subject: "A", blocks: VALID_BLOCKS, toEmails: ["yo@dinkbit.com"] };
+    expect(await sendCampaignTest({ ...base, from_email: "hola@hydrup.es", remitentes: ["hola@hydrup.es"] })).toEqual({ ok: true });
+    expect(await sendCampaignTest({ ...base, from_email: "hola@dinkbit.es", remitentes: ["hola@hydrup.es"] })).toMatchObject({ ok: false });
   });
 });
