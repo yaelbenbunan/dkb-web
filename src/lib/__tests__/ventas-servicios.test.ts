@@ -11,6 +11,7 @@ const m = vi.hoisted(() => ({
   registrarActividad: vi.fn(),
   actualizarDatosLead: vi.fn(),
   actualizarExtrasLead: vi.fn(),
+  actualizarAtribucionLead: vi.fn(),
   createManualLead: vi.fn(),
 }));
 vi.mock("../ventas/db", () => m);
@@ -119,6 +120,40 @@ describe("recibirLeadAnuncio", () => {
     const r = await recibirLeadAnuncio({ slug: "hydrup", secreto: "secreto-largo", datos: { company_name: "Box X", email: "box@x.es", socios: "50" } });
     expect(r).toEqual({ status: 200, body: { ok: true, duplicado: false } });
     aviso.mockRestore();
+  });
+
+  test("canal, campaña, conjunto de anuncios y anuncio de Zapier → columnas y extra del lead nuevo", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA);
+    m.crearLeads.mockResolvedValue({ ok: true, creados: 1 });
+    m.buscarLeadPorContacto.mockResolvedValue({ id: "l-new", canal: null, campana: null, extra: { pdf_path: "x.pdf" } });
+    m.actualizarAtribucionLead.mockResolvedValue({ ok: true });
+    await recibirLeadAnuncio({
+      slug: "hydrup",
+      secreto: "secreto-largo",
+      datos: { company_name: "Box X", email: "box@x.es", canal: "Meta", campaign_name: "Growth oct", adset_name: "Madrid 25-55", ad_name: "Vídeo 1" },
+    });
+    expect(m.actualizarAtribucionLead).toHaveBeenCalledWith("l-new", {
+      canal: "Meta",
+      campana: "Growth oct",
+      extra: { pdf_path: "x.pdf", adset_name: "Madrid 25-55", ad_name: "Vídeo 1" },
+    });
+  });
+
+  test("lead repetido → canal y campaña no pisan lo que ya tenía", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA);
+    m.buscarLeadPorContacto.mockResolvedValue({ id: "l7", canal: "Web", campana: null, extra: { ad_name: "Viejo" } });
+    m.actualizarAtribucionLead.mockResolvedValue({ ok: true });
+    await recibirLeadAnuncio({ slug: "hydrup", secreto: "secreto-largo", datos: { negocio: "Ya", email: "ya@a.es", channel: "Meta", campaign: "C2", ad_name: "Nuevo" } });
+    expect(m.actualizarAtribucionLead).toHaveBeenCalledWith("l7", { campana: "C2" });
+  });
+
+  test("si guardar la atribución falla, el lead ya creado responde 200 igual", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA);
+    m.crearLeads.mockResolvedValue({ ok: true, creados: 1 });
+    m.buscarLeadPorContacto.mockResolvedValue({ id: "l-new" });
+    m.actualizarAtribucionLead.mockRejectedValue(new Error("caída"));
+    const r = await recibirLeadAnuncio({ slug: "hydrup", secreto: "secreto-largo", datos: { company_name: "Box X", email: "box@x.es", canal: "Meta" } });
+    expect(r.status).toBe(200);
   });
 
   test("lead repetido → socios y cargo solo rellenan lo que faltaba", async () => {

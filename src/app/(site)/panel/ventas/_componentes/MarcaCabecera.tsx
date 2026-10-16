@@ -8,7 +8,7 @@ import { SECCIONES_CLIENTE, tieneProspeccion } from "@/lib/ventas/rutas";
 const PESTANAS = [
   { clave: "resumen", texto: "Resumen", ruta: "" },
   { clave: "tablero", texto: "Tablero", ruta: "/tablero" },
-  { clave: "leads", texto: "Leads", ruta: "/leads" },
+  { clave: "leads", texto: "Tabla", ruta: "/leads" },
   { clave: "tareas", texto: "Tareas", ruta: "/tareas" },
   { clave: "secuencias", texto: "Secuencias", ruta: "/secuencias" },
   { clave: "conversaciones", texto: "Conversaciones", ruta: "/conversaciones" },

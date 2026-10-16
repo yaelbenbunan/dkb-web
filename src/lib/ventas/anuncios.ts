@@ -24,6 +24,11 @@ export interface ExtrasLead {
   socios: string;
   /** Puesto de quien deja sus datos: «Propietario / socio». */
   cargo: string;
+  /** De dónde viene, tal como lo manda Zapier: «Meta», «Instagram»… */
+  canal: string;
+  /** Conjunto de anuncios y anuncio de Meta. Van a `extra` del lead. */
+  conjunto: string;
+  anuncio: string;
 }
 
 /**
@@ -66,6 +71,9 @@ export function leadDesdeAnuncio(
     extras: {
       socios: limpiarRespuesta(texto("socios", "num_socios", "numero_socios", "usuarios_activos")).slice(0, MAX_EXTRA),
       cargo: limpiarRespuesta(texto("cargo", "puesto", "rol", "job_title")).slice(0, MAX_EXTRA),
+      canal: texto("canal", "channel", "platform", "plataforma").slice(0, MAX_CAMPO),
+      conjunto: texto("conjunto", "adset_name", "adset", "ad_set_name").slice(0, MAX_CAMPO),
+      anuncio: texto("anuncio", "ad_name", "ad").slice(0, MAX_CAMPO),
     },
     lead: {
       negocio,

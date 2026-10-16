@@ -27,6 +27,8 @@ export function OrigenLead({ slug, lead }: { slug: string; lead: Lead }) {
   const [archivando, empezar] = useTransition();
   const consentimiento = lead.consentimiento === true ? "si" : lead.consentimiento === false ? "no" : "";
   const pdf = typeof lead.extra?.pdf_path === "string" && lead.extra.pdf_path;
+  const conjunto = typeof lead.extra?.adset_name === "string" ? lead.extra.adset_name : "";
+  const anuncio = typeof lead.extra?.ad_name === "string" ? lead.extra.ad_name : "";
 
   return (
     <form action={accion} style={{ ...tarjeta, display: "flex", flexDirection: "column", gap: 10 }}>
@@ -39,6 +41,21 @@ export function OrigenLead({ slug, lead }: { slug: string; lead: Lead }) {
         Campaña
         <input name="campana" defaultValue={lead.campana ?? ""} style={campo} />
       </label>
+      {(conjunto || anuncio) && (
+        <p style={{ margin: 0, fontSize: 13, color: "#475569" }}>
+          {conjunto && (
+            <>
+              Conjunto de anuncios: <strong>{conjunto}</strong>
+            </>
+          )}
+          {conjunto && anuncio && <br />}
+          {anuncio && (
+            <>
+              Anuncio: <strong>{anuncio}</strong>
+            </>
+          )}
+        </p>
+      )}
       <label style={etiqueta}>
         Etiquetas (separadas por comas)
         <input name="etiquetas" defaultValue={(lead.etiquetas ?? []).join(", ")} placeholder="kit-digital" style={campo} />
