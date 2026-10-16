@@ -9,13 +9,16 @@ describe("leadDesdeAnuncio", () => {
       phone_number: "+34600111222",
       email: "laura@sol.es",
       campaign_name: "Muestras gimnasios",
+      adset_name: "Madrid 25-55",
+      ad_name: "Carrusel 2",
+      platform: "ig",
       city: "Madrid",
     });
     expect(r).toEqual({
       ok: true,
       campana: "Muestras gimnasios",
       nota: "",
-      extras: { socios: "", cargo: "" },
+      extras: { socios: "", cargo: "", canal: "ig", conjunto: "Madrid 25-55", anuncio: "Carrusel 2" },
       lead: {
         negocio: "Gym Sol",
         contacto: "Laura Pérez",

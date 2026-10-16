@@ -490,6 +490,22 @@ export async function actualizarExtrasLead(id: string, extras: { socios?: string
   return escritura(r, "actualizarExtrasLead");
 }
 
+/**
+ * Canal, campaña, conjunto de anuncios y anuncio con los que llegó el lead.
+ * Aparte de socios y cargo: si faltara su migración, esto se guarda igual.
+ */
+export async function actualizarAtribucionLead(
+  id: string,
+  a: { canal?: string; campana?: string; extra?: Record<string, unknown> },
+): Promise<Escritura> {
+  const fila: Record<string, unknown> = {};
+  if (a.canal !== undefined) fila.canal = vacioANull(a.canal);
+  if (a.campana !== undefined) fila.campana = vacioANull(a.campana);
+  if (a.extra !== undefined) fila.extra = a.extra;
+  if (Object.keys(fila).length === 0) return { ok: true };
+  return escritura(await db().from("ventas_leads").update(fila).eq("id", id), "actualizarAtribucionLead");
+}
+
 export async function asignarLead(id: string, usuariaId: string | null): Promise<Escritura> {
   return escritura(
     await db().from("ventas_leads").update({ asignada_a: usuariaId, updated_at: new Date().toISOString() }).eq("id", id),

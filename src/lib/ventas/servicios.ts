@@ -6,6 +6,7 @@ import { notaFormulario } from "./formulario-web";
 import {
   actualizarDatosLead,
   actualizarExtrasLead,
+  actualizarAtribucionLead,
   actualizarSecuencia,
   buscarLeadPorContacto,
   crearLeads,
@@ -181,6 +182,32 @@ async function guardarExtras(leadId: string, actuales: { socios?: string | null;
   }
 }
 
+/**
+ * Canal, campaña, conjunto de anuncios y anuncio de Meta (Zapier). Como
+ * `guardarExtras`, solo RELLENA huecos y nunca tumba la respuesta del webhook.
+ */
+async function guardarAtribucion(
+  leadId: string,
+  actuales: { canal?: string | null; campana?: string | null; extra?: Record<string, unknown> | null },
+  campana: string,
+  extras: ExtrasLead | undefined,
+) {
+  const cambios: { canal?: string; campana?: string; extra?: Record<string, unknown> } = {};
+  if (extras?.canal && !actuales.canal) cambios.canal = extras.canal;
+  if (campana && campana !== CAMPANA_FORMULARIO_WEB && !actuales.campana) cambios.campana = campana;
+  const nuevosExtra: Record<string, string> = {};
+  if (extras?.conjunto && !actuales.extra?.adset_name) nuevosExtra.adset_name = extras.conjunto;
+  if (extras?.anuncio && !actuales.extra?.ad_name) nuevosExtra.ad_name = extras.anuncio;
+  if (Object.keys(nuevosExtra).length > 0) cambios.extra = { ...(actuales.extra ?? {}), ...nuevosExtra };
+  if (Object.keys(cambios).length === 0) return;
+  try {
+    const res = await actualizarAtribucionLead(leadId, cambios);
+    if (!res.ok) console.error("guardarLeadEntrante: no se pudo guardar canal y campaña:", res.error);
+  } catch (error) {
+    console.error("guardarLeadEntrante: no se pudo guardar canal y campaña", error);
+  }
+}
+
 async function guardarLeadEntrante(input: {
   marca: Marca;
   lead: LeadNuevo;
@@ -189,7 +216,8 @@ async function guardarLeadEntrante(input: {
   extras?: ExtrasLead;
 }): Promise<{ status: number; body: Record<string, unknown> }> {
   const { marca, lead, campana } = input;
-  const hayExtras = Boolean(input.extras?.socios || input.extras?.cargo);
+  const e = input.extras;
+  const hayExtras = Boolean(e?.socios || e?.cargo || e?.canal || e?.conjunto || e?.anuncio || (campana && campana !== CAMPANA_FORMULARIO_WEB));
   const [existentes, exclusiones] = await Promise.all([listContactosLeads(marca.id), listExclusiones(marca.id)]);
   const clasificacion = clasificarLeads([lead], existentes, exclusiones);
 
@@ -214,6 +242,7 @@ async function guardarLeadEntrante(input: {
         console.error("guardarLeadEntrante: no se pudo completar la ficha del lead repetido", error);
       }
       await guardarExtras(existente.id, existente, input.extras);
+      await guardarAtribucion(existente.id, existente, campana, input.extras);
     }
     return { status: 200, body: { ok: true, duplicado: true } };
   }
@@ -234,6 +263,7 @@ async function guardarLeadEntrante(input: {
       if (creado) {
         if (input.notaInicial) await registrarActividad({ leadId: creado.id, usuariaId: null, tipo: "nota", nota: input.notaInicial });
         await guardarExtras(creado.id, creado, input.extras);
+        await guardarAtribucion(creado.id, creado, campana, input.extras);
       }
     } catch (error) {
       console.error("guardarLeadEntrante: no se pudo apuntar la nota inicial ni los datos del centro", error);
