@@ -5,24 +5,39 @@ vi.mock("@/lib/proveedores-deportivos-action", () => ({ enviarSolicitudPack: vi.
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 import { LandingProveedoresDeportivos } from "../Secciones";
-import { PD_FAQS, PD_PRECIO, PD_PRECIO_SUFIJO } from "@/lib/proveedores-deportivos";
+import { PD_FAQS_RESPONDIDAS, PD_META_DESCRIPTION, PD_META_TITLE, PD_PRECIO, PD_PRECIO_SUFIJO } from "@/lib/proveedores-deportivos";
 
 describe("LandingProveedoresDeportivos", () => {
-  test("el precio aparece con su sufijo en badge, bullets, tarjeta y CTA final", () => {
+  test("el precio aparece con su sufijo en badge, tarjeta y CTA final, no en los bullets", () => {
     const { container } = render(<LandingProveedoresDeportivos />);
     const texto = container.textContent!;
     const veces = texto.split(PD_PRECIO).length - 1;
-    expect(veces).toBeGreaterThanOrEqual(4);
+    expect(veces).toBeGreaterThanOrEqual(3);
+    expect(container.querySelector("ul")!.textContent).not.toContain(PD_PRECIO);
     expect(texto).toContain(PD_PRECIO_SUFIJO);
     expect(texto).not.toMatch(/\[\/mes\]/);
   });
 
-  test("los datos que no tenemos se ven como placeholder y no se inventan", () => {
+  test("no se publica ningún placeholder: sin cifras ni casos reales, esas secciones no salen", () => {
     const { container } = render(<LandingProveedoresDeportivos />);
-    const huecos = [...container.querySelectorAll("[data-placeholder]")].map((n) => n.textContent);
-    expect(huecos).toEqual(expect.arrayContaining(["[TESTIMONIO REAL]", "[LOGO CLIENTE]", "[RESULTADO]", "[X]"]));
-    const faqsSinRespuesta = PD_FAQS.filter((f) => f.a === null).length;
-    expect(huecos.filter((h) => h === "[PLACEHOLDER]").length).toBe(faqsSinRespuesta);
+    expect(container.querySelector("[data-placeholder]")).toBeNull();
+    expect(container.textContent).not.toMatch(/\[[^\]]*\]/);
+    expect(container.textContent).not.toContain("Proveedores que ya venden así");
+    expect(container.textContent).not.toContain("muestras enviadas");
+  });
+
+  test("la FAQ solo enseña las preguntas con respuesta", () => {
+    const { container } = render(<LandingProveedoresDeportivos />);
+    expect(container.querySelectorAll("details").length).toBe(PD_FAQS_RESPONDIDAS.length);
+  });
+
+  test("el titular es corto y el CTA final lo repite, con un solo botón", () => {
+    const { container } = render(<LandingProveedoresDeportivos />);
+    const h1 = container.querySelector("h1")!.textContent!;
+    expect(h1.split(/\s+/).length).toBeLessThanOrEqual(8);
+    const final = container.querySelector("#cta-final")!;
+    expect(final.querySelector("h2")!.textContent).toBe(h1);
+    expect(final.querySelectorAll("a").length).toBe(1);
   });
 
   test("todos los CTA llevan al formulario", () => {
@@ -39,5 +54,11 @@ describe("metadata", () => {
     const gracias = await import("@/app/(deporte)/proveedores-deportivos/gracias/page");
     expect(metadata.title).toEqual({ absolute: "Pack Campaña + CRM para proveedores deportivos | dinkbit" });
     expect(gracias.metadata.title).toBe("Solicitud recibida");
+  });
+
+  test("las tarjetas de X son las de esta landing, no las de la home", async () => {
+    const { metadata } = await import("@/app/(deporte)/proveedores-deportivos/page");
+    expect(metadata.twitter).toMatchObject({ title: PD_META_TITLE, description: PD_META_DESCRIPTION });
+    expect((metadata.twitter as { images: unknown }).images).toEqual(metadata.openGraph!.images);
   });
 });
