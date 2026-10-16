@@ -6,7 +6,7 @@ import type {
   ProspectSearchRow,
   ProspectTemplateRow,
 } from "@/lib/prospeccion/tipos";
-import { botonPrimario, botonSecundario } from "../_componentes/estilos";
+import { botonPrimario, botonSecundario } from "../../../_componentes/estilos";
 import { Buscador } from "./Buscador";
 import { Plantillas } from "./Plantillas";
 import { TablaProspectos } from "./TablaProspectos";
@@ -17,7 +17,10 @@ export interface Aviso {
 }
 
 export function Prospeccion(props: {
+  slug: string;
   prospectos: ProspectRow[];
+  /** `lead_id` del prospecto → id del lead de ventas, para enlazar su ficha. */
+  enlaces: Record<string, string>;
   busquedas: ProspectSearchRow[];
   plantillas: ProspectTemplateRow[];
   enviadosHoy: number;
@@ -62,9 +65,11 @@ export function Prospeccion(props: {
 
       {vista === "empresas" ? (
         <>
-          <Buscador pendientes={pendientes} onAviso={setAviso} />
+          <Buscador slug={props.slug} pendientes={pendientes} onAviso={setAviso} />
           <TablaProspectos
+            slug={props.slug}
             prospectos={props.prospectos}
+            enlaces={props.enlaces}
             busquedas={props.busquedas}
             plantillas={props.plantillas}
             remitentes={props.remitentes}
@@ -73,7 +78,7 @@ export function Prospeccion(props: {
           />
         </>
       ) : (
-        <Plantillas plantillas={props.plantillas} onAviso={setAviso} />
+        <Plantillas slug={props.slug} plantillas={props.plantillas} onAviso={setAviso} />
       )}
     </div>
   );

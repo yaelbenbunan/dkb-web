@@ -3,16 +3,18 @@
 import { useState, useTransition } from "react";
 import { VARIABLES } from "@/lib/prospeccion/plantilla";
 import type { ProspectTemplateRow } from "@/lib/prospeccion/tipos";
-import { botonPrimario, botonSecundario, campo, etiqueta, tarjeta, titulo } from "../_componentes/estilos";
-import { borrarPlantillaAction, guardarPlantillaAction } from "./actions";
+import { botonPrimario, botonSecundario, campo, etiqueta, tarjeta, titulo } from "../../../_componentes/estilos";
+import { borrarPlantillaAction, guardarPlantillaAction } from "../../../acciones-prospeccion";
 import type { Aviso } from "./Prospeccion";
 
 const VACIA = { id: undefined as string | undefined, name: "", subject: "", body: "" };
 
 export function Plantillas({
+  slug,
   plantillas,
   onAviso,
 }: {
+  slug: string;
   plantillas: ProspectTemplateRow[];
   onAviso: (a: Aviso | null) => void;
 }) {
@@ -23,7 +25,7 @@ export function Plantillas({
     e.preventDefault();
     startTransition(async () => {
       try {
-        const r = await guardarPlantillaAction(borrador);
+        const r = await guardarPlantillaAction(slug, borrador);
         onAviso({ ok: r.ok, texto: r.ok ? r.mensaje : r.error });
         if (r.ok) setBorrador(VACIA);
       } catch {
@@ -36,7 +38,7 @@ export function Plantillas({
     if (!window.confirm(`¿Borrar la plantilla «${t.name}»?`)) return;
     startTransition(async () => {
       try {
-        const r = await borrarPlantillaAction(t.id);
+        const r = await borrarPlantillaAction(slug, t.id);
         onAviso({ ok: r.ok, texto: r.ok ? r.mensaje : r.error });
         if (r.ok && borrador.id === t.id) setBorrador(VACIA);
       } catch {

@@ -2,7 +2,7 @@
 
 import { datosDeProspecto, renderPlantilla } from "@/lib/prospeccion/plantilla";
 import type { ProspectRow, ProspectTemplateRow } from "@/lib/prospeccion/tipos";
-import { tarjeta } from "../_componentes/estilos";
+import { tarjeta } from "../../../_componentes/estilos";
 
 /** Lo que va a recibir esa empresa, renderizado con el mismo código que el
  *  envío. Si falta un dato, lo dice en vez de enseñar un correo a medias. */

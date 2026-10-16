@@ -1,12 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
-import { createManualLead } from "@/lib/imagina-leads";
-import { PANEL_COOKIE, verifySessionToken } from "@/lib/panel-auth";
 import {
   borrarPlantilla,
-  buscarLeadPorEmail,
   cerrarBusqueda,
   contarPendientes,
   crearBusqueda,
@@ -25,26 +21,33 @@ import { buscarEnOsm, type ErrorOsm } from "@/lib/prospeccion/osm";
 import { TEXTO_BLOQUEO } from "@/lib/prospeccion/reglas-envio";
 import { resumirOmitidos } from "@/lib/prospeccion/resumen-envio";
 import { ESTADOS_DESCARTABLES } from "@/lib/prospeccion/tipos";
+import { accesoMarcaAccion } from "@/lib/ventas/auth";
+import { pasarProspectoAlEmbudo } from "@/lib/ventas/prospeccion";
+import { tieneProspeccion } from "@/lib/ventas/rutas";
 
-const RUTA = "/panel/prospeccion";
+/** Pestaña de Prospección de la marca. Las tablas `prospect_*` son de dinkbit,
+ *  la única marca con prospección por ahora (ver `MARCAS_CON_PROSPECCION`). */
+const ruta = (slug: string) => `/panel/ventas/${slug}/prospeccion`;
 const TANDA = 10;
 
 type Resultado = { ok: true; mensaje: string } | { ok: false; error: string };
 
-const SIN_SESION = { ok: false as const, error: "Sesión caducada. Vuelve a entrar al panel." };
 const SIN_CAMBIOS = {
   ok: false as const,
   error: "No se cambió ninguna: la lista estaba desactualizada. Se ha recargado.",
 };
 const SIN_GUARDAR = { ok: false as const, error: "No se pudo guardar el cambio. Vuelve a intentarlo." };
 
-/** Estas acciones gastan dinero y envían correo: cada una comprueba la sesión
- *  del panel por sí misma, sin fiarse de que el proxy la haya filtrado. Sin
- *  exportar a propósito: en un fichero "use server" lo exportado es una acción
- *  que cualquiera puede llamar. */
-async function haySesion(): Promise<boolean> {
-  const token = (await cookies()).get(PANEL_COOKIE)?.value;
-  return verifySessionToken(token);
+/** Estas acciones envían correo en nombre de dinkbit: cada una comprueba por sí
+ *  misma el acceso de ventas a la sección `prospeccion` de la marca de la URL
+ *  (admin y comercial; la clienta no) y que la marca tenga prospección, sin
+ *  fiarse de que la página la haya filtrado. Sin exportar a propósito: en un
+ *  fichero "use server" lo exportado es una acción que cualquiera puede llamar. */
+async function acceso(slug: string) {
+  const a = await accesoMarcaAccion(slug, "prospeccion");
+  if (!a.ok) return a;
+  if (!tieneProspeccion(a.marca.slug)) return { ok: false as const, error: "Esta marca no tiene prospección." };
+  return a;
 }
 
 const TEXTO_ERROR: Record<ErrorEnvio, string> = {
@@ -69,10 +72,12 @@ const ERROR_BUSQUEDA: Record<ErrorOsm, string> = {
 };
 
 export async function buscarAction(
+  slug: string,
   categoria: string,
   ciudad: string,
 ): Promise<{ ok: true; searchId: string; mensaje: string } | { ok: false; error: string }> {
-  if (!(await haySesion())) return SIN_SESION;
+  const a = await acceso(slug);
+  if (!a.ok) return a;
   const cat = categoriaPorClave(categoria);
   const ciu = ciudad.trim().slice(0, 80);
   if (!cat || !ciu) return { ok: false, error: "Elige qué buscar y escribe la ciudad." };
@@ -85,7 +90,7 @@ export async function buscarAction(
   if (!r.ok) {
     const error = ERROR_BUSQUEDA[r.error];
     await cerrarBusqueda(searchId, { status: "error", error });
-    revalidatePath(RUTA);
+    revalidatePath(ruta(slug));
     return { ok: false, error };
   }
 
@@ -93,11 +98,11 @@ export async function buscarAction(
   if (nuevas === null) {
     const error = "No se pudieron guardar las empresas encontradas. ¿Está ejecutada la migración de prospección?";
     await cerrarBusqueda(searchId, { status: "error", error });
-    revalidatePath(RUTA);
+    revalidatePath(ruta(slug));
     return { ok: false, error };
   }
   await cerrarBusqueda(searchId, { status: "lista", total: r.prospectos.length });
-  revalidatePath(RUTA);
+  revalidatePath(ruta(slug));
   const repetidas = r.prospectos.length - nuevas;
   return {
     ok: true,
@@ -112,9 +117,10 @@ export async function buscarAction(
  *  bucle hasta que `restantes` llega a cero: así ninguna petición es larga y la
  *  barra de progreso avanza de verdad. */
 export async function enriquecerTandaAction(
+  slug: string,
   searchId: string,
 ): Promise<{ procesados: number; restantes: number }> {
-  if (!(await haySesion())) return { procesados: 0, restantes: 0 };
+  if (!(await acceso(slug)).ok) return { procesados: 0, restantes: 0 };
   const tanda = await pendientesDeEnriquecer(searchId, TANDA);
   await Promise.all(
     tanda.map(async (p) => {
@@ -127,22 +133,24 @@ export async function enriquecerTandaAction(
     }),
   );
   const restantes = await contarPendientes(searchId);
-  if (restantes === 0) revalidatePath(RUTA);
+  if (restantes === 0) revalidatePath(ruta(slug));
   // Si una tanda no avanzó (fallo de base de datos), se corta el bucle del cliente.
   return { procesados: tanda.length, restantes: tanda.length === 0 ? 0 : restantes };
 }
 
 export async function enviarAction(
+  slug: string,
   ids: string[],
   plantillaId: string,
   from: string,
   confirmarPersonal: boolean,
 ): Promise<Resultado> {
-  if (!(await haySesion())) return SIN_SESION;
+  const a = await acceso(slug);
+  if (!a.ok) return a;
   if (ids.length === 0) return { ok: false, error: "No hay ninguna empresa seleccionada." };
   if (!plantillaId) return { ok: false, error: "Elige una plantilla." };
   const r = await enviarProspectos(ids.slice(0, 200), plantillaId, { from, confirmarPersonal });
-  revalidatePath(RUTA);
+  revalidatePath(ruta(slug));
   if (!r.ok) return { ok: false, error: TEXTO_ERROR[r.error ?? "fallo_resend"] };
 
   const resumen = resumirOmitidos(r.omitidos, TEXTO_ERROR);
@@ -159,76 +167,71 @@ export async function enviarAction(
 
 /** Descarta desde cualquier estado salvo baja y rebotado. No puede provocar un
  *  segundo correo: descartar no borra `sent_at`, que es lo que mira el envío. */
-export async function descartarAction(ids: string[]): Promise<Resultado> {
-  if (!(await haySesion())) return SIN_SESION;
+export async function descartarAction(slug: string, ids: string[]): Promise<Resultado> {
+  const a = await acceso(slug);
+  if (!a.ok) return a;
   const cambiadas = await marcarEstado(ids, "descartado", ESTADOS_DESCARTABLES);
-  revalidatePath(RUTA);
+  revalidatePath(ruta(slug));
   if (cambiadas === null) return SIN_GUARDAR;
   if (cambiadas === 0) return SIN_CAMBIOS;
   return { ok: true, mensaje: `${cambiadas} descartada${cambiadas === 1 ? "" : "s"}.` };
 }
 
-export async function marcarRespondidoAction(id: string): Promise<Resultado> {
-  if (!(await haySesion())) return SIN_SESION;
+export async function marcarRespondidoAction(slug: string, id: string): Promise<Resultado> {
+  const a = await acceso(slug);
+  if (!a.ok) return a;
   const cambiadas = await marcarEstado([id], "respondido", ["enviado"]);
-  revalidatePath(RUTA);
+  revalidatePath(ruta(slug));
   if (cambiadas === null) return SIN_GUARDAR;
   if (cambiadas === 0) return SIN_CAMBIOS;
   return { ok: true, mensaje: "Marcada como respondida." };
 }
 
-/** Pasa el prospecto al CRM. `consent` se queda sin definir: haber contestado a
- *  un correo no es consentimiento para recibir campañas. */
-export async function convertirEnLeadAction(id: string): Promise<Resultado> {
-  if (!(await haySesion())) return SIN_SESION;
+/** Pasa el prospecto al embudo de la marca: crea su lead en ventas, o lo
+ *  enlaza con el que ya hay por email o teléfono. El consentimiento se queda
+ *  sin definir: haber contestado a un correo no es aceptar campañas. */
+export async function pasarAlEmbudoAction(slug: string, id: string): Promise<Resultado> {
+  const a = await acceso(slug);
+  if (!a.ok) return a;
   const p = await getProspecto(id);
   if (!p) return { ok: false, error: "Esa empresa ya no existe." };
-  if (p.lead_id) return { ok: false, error: "Ya está en el CRM." };
+  if (p.lead_id) return { ok: false, error: "Ya está en el embudo." };
   if (p.status !== "enviado" && p.status !== "respondido") {
-    return { ok: false, error: "Solo se puede convertir en lead una empresa a la que ya se le escribió." };
+    return { ok: false, error: "Solo se puede pasar al embudo una empresa a la que ya se le escribió." };
   }
 
-  const existente = p.email ? await buscarLeadPorEmail(p.email) : null;
-  if (existente) {
-    await enlazarLead(id, existente);
-    revalidatePath(RUTA);
-    return { ok: true, mensaje: "Ya había un lead con ese email: queda enlazada con él." };
-  }
-
-  const alta = await createManualLead({
-    name: p.name,
-    email: p.email,
-    phone: p.phone,
-    website: p.website,
-    channel: "Prospección",
-    notes: [p.sector, p.city].filter(Boolean).join(" · ") || null,
-  });
-  if (!alta.ok || !alta.id) return { ok: false, error: "No se pudo crear el lead." };
-  await enlazarLead(id, alta.id);
-  revalidatePath(RUTA);
-  revalidatePath("/panel");
-  return { ok: true, mensaje: "Convertida en lead del CRM." };
+  const r = await pasarProspectoAlEmbudo({ marca: a.marca, usuaria: a.usuaria, prospecto: p });
+  if (!r.ok) return r;
+  await enlazarLead(id, r.leadId);
+  revalidatePath(ruta(slug));
+  revalidatePath(`/panel/ventas/${slug}`, "layout");
+  return {
+    ok: true,
+    mensaje: r.existia ? "Ya era un lead de la marca: queda enlazada con él." : `Pasada al embudo de ${a.marca.nombre}.`,
+  };
 }
 
-export async function guardarPlantillaAction(p: {
+export async function guardarPlantillaAction(slug: string, p: {
   id?: string;
   name: string;
   subject: string;
   body: string;
 }): Promise<Resultado> {
-  if (!(await haySesion())) return SIN_SESION;
+  const a = await acceso(slug);
+  if (!a.ok) return a;
   const name = p.name.trim().slice(0, 80);
   const subject = p.subject.trim().slice(0, 200);
   const body = p.body.trim().slice(0, 5000);
   if (!name || !subject || !body) return { ok: false, error: "Nombre, asunto y texto son obligatorios." };
   const ok = await guardarPlantilla({ id: p.id, name, subject, body });
-  revalidatePath(RUTA);
+  revalidatePath(ruta(slug));
   return ok ? { ok: true, mensaje: "Plantilla guardada." } : { ok: false, error: "No se pudo guardar." };
 }
 
-export async function borrarPlantillaAction(id: string): Promise<Resultado> {
-  if (!(await haySesion())) return SIN_SESION;
+export async function borrarPlantillaAction(slug: string, id: string): Promise<Resultado> {
+  const a = await acceso(slug);
+  if (!a.ok) return a;
   const ok = await borrarPlantilla(id);
-  revalidatePath(RUTA);
+  revalidatePath(ruta(slug));
   return ok ? { ok: true, mensaje: "Plantilla borrada." } : { ok: false, error: "No se pudo borrar la plantilla." };
 }

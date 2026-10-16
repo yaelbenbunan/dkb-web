@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { FILTROS_VACIOS, filtrarProspectos, type FiltrosProspectos } from "@/lib/prospeccion/filtros";
@@ -11,8 +12,8 @@ import {
   type ProspectSearchRow,
   type ProspectTemplateRow,
 } from "@/lib/prospeccion/tipos";
-import { botonPrimario, botonSecundario, campo, tarjeta, td, th } from "../_componentes/estilos";
-import { convertirEnLeadAction, descartarAction, enviarAction, marcarRespondidoAction } from "./actions";
+import { botonPrimario, botonSecundario, campo, tarjeta, td, th } from "../../../_componentes/estilos";
+import { descartarAction, enviarAction, marcarRespondidoAction, pasarAlEmbudoAction } from "../../../acciones-prospeccion";
 import type { Aviso } from "./Prospeccion";
 import { VistaPrevia } from "./VistaPrevia";
 
@@ -32,14 +33,19 @@ function urlSegura(web: string | null): string | null {
 }
 
 export function TablaProspectos({
+  slug,
   prospectos,
+  enlaces,
   busquedas,
   plantillas,
   remitentes,
   cupo,
   onAviso,
 }: {
+  slug: string;
   prospectos: ProspectRow[];
+  /** `lead_id` → id del lead de ventas (los viejos apuntan a `imagina_leads`). */
+  enlaces: Record<string, string>;
   busquedas: ProspectSearchRow[];
   plantillas: ProspectTemplateRow[];
   remitentes: string[];
@@ -95,13 +101,13 @@ export function TablaProspectos({
     ) {
       return;
     }
-    ejecutar(() => enviarAction([p.id], plantillaId, from, personal));
+    ejecutar(() => enviarAction(slug, [p.id], plantillaId, from, personal));
   }
 
   function enviarSeleccion() {
     const n = Math.min(enviables.length, cupo);
     if (!window.confirm(`Se enviará un correo individual a ${n} empresa${n === 1 ? "" : "s"}. ¿Continuar?`)) return;
-    ejecutar(() => enviarAction(enviables.map((p) => p.id), plantillaId, from, false));
+    ejecutar(() => enviarAction(slug, enviables.map((p) => p.id), plantillaId, from, false));
   }
 
   return (
@@ -152,7 +158,7 @@ export function TablaProspectos({
         <button type="button" disabled={!puedeEnviar || enviables.length === 0 || pendiente} onClick={enviarSeleccion} style={{ ...botonPrimario, opacity: !puedeEnviar || enviables.length === 0 || pendiente ? 0.5 : 1 }}>
           Enviar a {enviables.length} seleccionada{enviables.length === 1 ? "" : "s"}
         </button>
-        <button type="button" disabled={descartables.length === 0 || pendiente} onClick={() => ejecutar(() => descartarAction(descartables.map((p) => p.id)))} style={{ ...botonSecundario, opacity: descartables.length === 0 || pendiente ? 0.5 : 1 }}>
+        <button type="button" disabled={descartables.length === 0 || pendiente} onClick={() => ejecutar(() => descartarAction(slug, descartables.map((p) => p.id)))} style={{ ...botonSecundario, opacity: descartables.length === 0 || pendiente ? 0.5 : 1 }}>
           Descartar
         </button>
         {cupo === 0 && <span style={{ fontSize: 13, color: "#b91c1c" }}>Tope de envíos de hoy alcanzado.</span>}
@@ -235,16 +241,23 @@ export function TablaProspectos({
                         </button>
                       )}
                       {p.status === "enviado" && (
-                        <button type="button" style={enlace} disabled={pendiente} onClick={() => ejecutar(() => marcarRespondidoAction(p.id))}>
+                        <button type="button" style={enlace} disabled={pendiente} onClick={() => ejecutar(() => marcarRespondidoAction(slug, p.id))}>
                           Respondió
                         </button>
                       )}
                       {(p.status === "enviado" || p.status === "respondido") && !p.lead_id && (
-                        <button type="button" style={enlace} disabled={pendiente} onClick={() => ejecutar(() => convertirEnLeadAction(p.id))}>
-                          Convertir en lead
+                        <button type="button" style={enlace} disabled={pendiente} onClick={() => ejecutar(() => pasarAlEmbudoAction(slug, p.id))}>
+                          Pasar al embudo
                         </button>
                       )}
-                      {p.lead_id && <span style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>En el CRM</span>}
+                      {p.lead_id &&
+                        (enlaces[p.lead_id] ? (
+                          <Link href={`/panel/ventas/${slug}/leads/${enlaces[p.lead_id]}`} style={{ ...enlace, textDecoration: "none", color: "#16a34a" }}>
+                            Ver lead →
+                          </Link>
+                        ) : (
+                          <span style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>En el embudo</span>
+                        ))}
                     </td>
                   </tr>
                   {abierta === p.id && plantilla && (
