@@ -5,91 +5,32 @@ import { useState } from "react";
 import { CATEGORIAS } from "@/lib/prospeccion/categorias";
 import { ATRIBUCION_OVERTURE } from "@/lib/prospeccion/overture";
 import { botonPrimario, campo, etiqueta, tarjeta, titulo } from "../../../_componentes/estilos";
-import { buscarAction, enriquecerTandaAction } from "../../../acciones-prospeccion";
+import { buscarAction } from "../../../acciones-prospeccion";
 import type { Aviso } from "./Prospeccion";
 
-/** 200 empresas en tandas de 10 son 20 vueltas; el margen cubre reintentos. Con
- *  tope, un fallo que no deje avanzar no convierte el bucle en infinito. Las
- *  que ya traen email de la fuente no leen su web y van rápidas. */
-const MAX_TANDAS = 24;
-
-export function Buscador({
-  slug,
-  pendientes,
-  onAviso,
-}: {
-  slug: string;
-  /** Búsquedas con empresas aún sin revisar (se cerró la pestaña a medias). */
-  pendientes: Array<{ searchId: string; n: number }>;
-  onAviso: (a: Aviso | null) => void;
-}) {
+/** Busca negocios y los guarda. Ya no lee sus webs en busca de emails: el
+ *  email se pide en la llamada, a quien acepta recibir información (RGPD art.
+ *  5.1.c, minimización). */
+export function Buscador({ slug, onAviso }: { slug: string; onAviso: (a: Aviso | null) => void }) {
   const router = useRouter();
   const [categoria, setCategoria] = useState(CATEGORIAS[0].clave);
   const [ciudad, setCiudad] = useState("");
-  const [fase, setFase] = useState<null | "buscando" | "emails">(null);
-  const [progreso, setProgreso] = useState({ hechos: 0, total: 0 });
+  const [buscando, setBuscando] = useState(false);
 
   async function buscar(e: React.FormEvent) {
     e.preventDefault();
     onAviso(null);
-    setFase("buscando");
-    let searchId: string;
+    setBuscando(true);
     try {
       const r = await buscarAction(slug, categoria, ciudad);
-      if (!r.ok) {
-        setFase(null);
-        onAviso({ ok: false, texto: r.error });
-        return;
-      }
-      onAviso({ ok: true, texto: r.mensaje });
-      searchId = r.searchId;
-      // Las empresas ya están guardadas: se enseñan ya, sin esperar a los emails.
-      router.refresh();
+      onAviso(r.ok ? { ok: true, texto: r.mensaje } : { ok: false, texto: r.error });
     } catch {
-      setFase(null);
-      router.refresh();
       onAviso({ ok: false, texto: "La búsqueda se interrumpió. Vuelve a intentarlo." });
-      return;
-    }
-
-    await revisarWebs([searchId]);
-  }
-
-  /** Emails: tandas de diez hasta que no quede ninguna empresa por mirar. */
-  async function revisarWebs(searchIds: string[]) {
-    setFase("emails");
-    setProgreso({ hechos: 0, total: 0 });
-    let hechos = 0;
-    let quedan = 0;
-    let sinTerminar = 0;
-    try {
-      for (const searchId of searchIds) {
-        quedan = 0;
-        for (let i = 0; i < MAX_TANDAS; i++) {
-          const t = await enriquecerTandaAction(slug, searchId);
-          hechos += t.procesados;
-          quedan = t.restantes;
-          setProgreso({ hechos, total: hechos + t.restantes });
-          // Los emails que va encontrando aparecen en la lista tanda a tanda.
-          router.refresh();
-          if (t.restantes === 0) break;
-        }
-        sinTerminar += quedan;
-      }
-      onAviso(
-        sinTerminar > 0
-          ? { ok: false, texto: `Se revisaron ${hechos} webs, pero quedan empresas sin revisar. Puedes retomarlo desde el enlace de abajo.` }
-          : { ok: true, texto: `Revisión terminada: ${hechos} web${hechos === 1 ? "" : "s"} revisada${hechos === 1 ? "" : "s"}.` },
-      );
-    } catch {
-      onAviso({ ok: false, texto: "La revisión de webs se interrumpió. Lo ya revisado está guardado; puedes retomarla." });
     } finally {
-      setFase(null);
+      setBuscando(false);
       router.refresh();
     }
   }
-
-  const porRevisar = pendientes.reduce((suma, p) => suma + p.n, 0);
 
   return (
     <form onSubmit={buscar} style={{ ...tarjeta, display: "flex", flexDirection: "column", gap: 12 }}>
@@ -107,29 +48,12 @@ export function Buscador({
           Municipio o provincia
           <input style={{ ...campo, width: 200 }} value={ciudad} onChange={(e) => setCiudad(e.target.value)} placeholder="Getafe" required maxLength={80} />
         </label>
-        <button type="submit" disabled={fase !== null} style={{ ...botonPrimario, opacity: fase !== null ? 0.6 : 1 }}>
-          {fase === "buscando" ? "Buscando…" : fase === "emails" ? "Buscando emails…" : "Buscar"}
+        <button type="submit" disabled={buscando} style={{ ...botonPrimario, opacity: buscando ? 0.6 : 1 }}>
+          {buscando ? "Buscando…" : "Buscar"}
         </button>
-        {fase === "emails" && progreso.total > 0 && (
-          <span style={{ fontSize: 13, color: "#475569" }}>
-            {progreso.hechos} de {progreso.total} webs revisadas
-          </span>
-        )}
       </div>
-      {fase === null && porRevisar > 0 && (
-        <p style={{ margin: 0, fontSize: 13, color: "#92400e" }}>
-          Quedan {porRevisar} empresas sin revisar de una búsqueda anterior.{" "}
-          <button
-            type="button"
-            onClick={() => revisarWebs(pendientes.map((p) => p.searchId))}
-            style={{ background: "none", border: "none", padding: 0, color: "#187bef", fontWeight: 600, cursor: "pointer", fontSize: 13 }}
-          >
-            Buscar sus emails
-          </button>
-        </p>
-      )}
       <p style={{ margin: 0, fontSize: 12, color: "#64748b" }}>
-        Hasta 200 negocios nuevos por búsqueda; los que tienen teléfono, primero. Si ya trae email se usa; si no, se lee su web para encontrarlo.
+        Hasta 200 negocios nuevos por búsqueda; los que tienen teléfono, primero. Se les llama: solo a quien acepta recibir información se le pide el email y se le escribe.
       </p>
       <p style={{ margin: 0, fontSize: 12, color: "#64748b" }}>
         Datos de negocios:{" "}

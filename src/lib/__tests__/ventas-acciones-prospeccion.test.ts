@@ -19,6 +19,8 @@ const m = vi.hoisted(() => ({
     guardarProspectos: vi.fn(),
     marcarEstado: vi.fn(),
     pendientesDeEnriquecer: vi.fn(),
+    registrarConsentimiento: vi.fn(),
+    retirarConsentimiento: vi.fn(),
   },
 }));
 
@@ -52,6 +54,9 @@ async function llamarATodas(slug: string) {
     await acciones.pasarAlEmbudoAction(slug, "p1"),
     await acciones.guardarPlantillaAction(slug, { name: "a", subject: "b", body: "c" }),
     await acciones.borrarPlantillaAction(slug, "t1"),
+    await acciones.registrarConsentimientoAction(slug, "p1", "info@bar.es", ""),
+    await acciones.retirarConsentimientoAction(slug, "p1"),
+    await acciones.buscarEmailWebAction(slug, "p1"),
   ];
 }
 
@@ -76,6 +81,7 @@ beforeEach(() => {
     fuente: "overture",
     prospectos: [{ external_id: "x" }, { external_id: "y" }],
     encontradas: 2,
+    yaTenias: 0,
     repetidas: 0,
     quedan: 0,
   });
@@ -88,19 +94,20 @@ describe("acceso", () => {
     expect(Object.keys(acciones).sort()).toEqual([
       "borrarPlantillaAction",
       "buscarAction",
+      "buscarEmailWebAction",
       "descartarAction",
-      "enriquecerTandaAction",
       "enviarAction",
       "guardarPlantillaAction",
       "marcarRespondidoAction",
       "pasarAlEmbudoAction",
+      "registrarConsentimientoAction",
+      "retirarConsentimientoAction",
     ]);
   });
 
   test("sin permiso (la clienta, otra marca) no hacen nada", async () => {
     acceso(SIN_PERMISO);
     for (const r of await llamarATodas("dinkbit")) expect(r).toEqual(SIN_PERMISO);
-    expect(await acciones.enriquecerTandaAction("dinkbit", "s1")).toEqual({ procesados: 0, restantes: 0 });
     nadaTocado();
     // Siempre se pide la sección de prospección de la marca de la URL.
     for (const [slug, seccion] of m.accesoMarcaAccion.mock.calls) {
@@ -112,7 +119,6 @@ describe("acceso", () => {
   test("en una marca sin prospección tampoco", async () => {
     acceso({ ok: true, usuaria: COMERCIAL, marca: HYDRUP });
     for (const r of await llamarATodas("hydrup")) expect(r).toEqual(SIN_PROSPECCION);
-    expect(await acciones.enriquecerTandaAction("hydrup", "s1")).toEqual({ procesados: 0, restantes: 0 });
     nadaTocado();
   });
 });
@@ -127,15 +133,17 @@ describe("con acceso", () => {
     expect(m.revalidatePath).toHaveBeenCalledWith("/panel/ventas/dinkbit/prospeccion");
   });
 
-  test("buscarAction cuenta las repetidas y las que quedan para otra búsqueda", async () => {
-    m.buscarNegocios.mockResolvedValue({ ok: true, fuente: "osm", prospectos: [{ external_id: "x" }], encontradas: 9, repetidas: 3, quedan: 5 });
+  test("buscarAction separa las que ya tenías de las repetidas en los datos, y dice las que quedan", async () => {
+    m.buscarNegocios.mockResolvedValue({ ok: true, fuente: "osm", prospectos: [{ external_id: "x" }], encontradas: 9, yaTenias: 1, repetidas: 2, quedan: 5 });
     m.db.guardarProspectos.mockResolvedValue(1);
     const r = await acciones.buscarAction("dinkbit", "restaurantes", "Madrid");
     expect(m.db.crearBusqueda).toHaveBeenCalledWith("osm", expect.objectContaining({ fuente: "osm" }));
     expect(r).toEqual({
       ok: true,
       searchId: "s1",
-      mensaje: "1 empresa nueva (OpenStreetMap). 3 que ya tenías. Quedan 5 más: repite la búsqueda para traerlas.",
+      mensaje:
+        "1 empresa nueva (OpenStreetMap). 1 ya la tenías. 2 repetidas en los datos (mismo teléfono o web). " +
+        "Quedan 5 más: repite la búsqueda para traerlas.",
     });
   });
 
@@ -148,10 +156,10 @@ describe("con acceso", () => {
   });
 
   test("buscarAction: si todas eran repetidas no guarda nada pero cierra la búsqueda", async () => {
-    m.buscarNegocios.mockResolvedValue({ ok: true, fuente: "overture", prospectos: [], encontradas: 4, repetidas: 4, quedan: 0 });
+    m.buscarNegocios.mockResolvedValue({ ok: true, fuente: "overture", prospectos: [], encontradas: 4, yaTenias: 4, repetidas: 0, quedan: 0 });
     m.db.guardarProspectos.mockResolvedValue(0);
     const r = await acciones.buscarAction("dinkbit", "restaurantes", "Madrid");
-    expect(r).toEqual({ ok: true, searchId: "s1", mensaje: "Ninguna empresa nueva (Overture Maps). 4 que ya tenías." });
+    expect(r).toEqual({ ok: true, searchId: "s1", mensaje: "Ninguna empresa nueva (Overture Maps). 4 ya las tenías." });
   });
 
   test("buscarAction: si no se pueden guardar las empresas, lo dice y cierra la búsqueda con error", async () => {
@@ -194,6 +202,57 @@ describe("con acceso", () => {
     m.enviarProspectos.mockResolvedValue({ ok: true, enviados: 1, omitidos: [] });
     expect(await acciones.enviarAction("dinkbit", ["p1"], "t1", "hola@mail.dinkbit.es", false)).toEqual({ ok: true, mensaje: "1 enviado." });
     expect(m.enviarProspectos).toHaveBeenCalledWith(["p1"], "t1", { from: "hola@mail.dinkbit.es", confirmarPersonal: false });
+  });
+});
+
+describe("consentimiento", () => {
+  test("registrarConsentimientoAction guarda email, nota y quién lo registró", async () => {
+    m.db.registrarConsentimiento.mockResolvedValue("ok");
+    expect(await acciones.registrarConsentimientoAction("dinkbit", "p1", " Info@Bar.es ", " llamada ")).toEqual({
+      ok: true,
+      mensaje: "Consentimiento guardado: ya se le puede escribir a info@bar.es.",
+    });
+    expect(m.db.registrarConsentimiento).toHaveBeenCalledWith("p1", { email: "info@bar.es", nota: "llamada", por: "u1" });
+    expect(m.revalidatePath).toHaveBeenCalledWith("/panel/ventas/dinkbit/prospeccion");
+  });
+
+  test("registrarConsentimientoAction sin email válido no guarda nada", async () => {
+    expect(await acciones.registrarConsentimientoAction("dinkbit", "p1", "nada", "")).toEqual({
+      ok: false,
+      error: "Escribe el email al que quiere que le escribamos.",
+    });
+    expect(m.db.registrarConsentimiento).not.toHaveBeenCalled();
+  });
+
+  test("registrarConsentimientoAction explica por qué no se guardó", async () => {
+    m.db.registrarConsentimiento.mockResolvedValue("estado");
+    expect(await acciones.registrarConsentimientoAction("dinkbit", "p1", "info@bar.es", "")).toMatchObject({ ok: false });
+    m.db.registrarConsentimiento.mockResolvedValue("error");
+    expect(await acciones.registrarConsentimientoAction("dinkbit", "p1", "info@bar.es", "")).toEqual({
+      ok: false,
+      error: "No se pudo guardar el consentimiento. ¿Está ejecutada la migración 2026-10-19-prospeccion-consentimiento.sql?",
+    });
+  });
+
+  test("retirarConsentimientoAction", async () => {
+    m.db.retirarConsentimiento.mockResolvedValue(1);
+    expect(await acciones.retirarConsentimientoAction("dinkbit", "p1")).toEqual({ ok: true, mensaje: "Anotado: ya no se le escribirá." });
+    m.db.retirarConsentimiento.mockResolvedValue(0);
+    expect(await acciones.retirarConsentimientoAction("dinkbit", "p1")).toMatchObject({ ok: false });
+    m.db.retirarConsentimiento.mockResolvedValue(null);
+    expect(await acciones.retirarConsentimientoAction("dinkbit", "p1")).toMatchObject({ ok: false });
+  });
+
+  test("buscarEmailWebAction lee la web de esa empresa y devuelve el email sin guardarlo", async () => {
+    const p = { id: "p1", website: "https://bar.es", email: null };
+    m.db.getProspecto.mockResolvedValue(p);
+    m.enriquecerProspecto.mockResolvedValue({ email: "info@bar.es", tipo: "generica", nota: null });
+    expect(await acciones.buscarEmailWebAction("dinkbit", "p1")).toEqual({ ok: true, email: "info@bar.es" });
+    expect(m.enriquecerProspecto).toHaveBeenCalledWith(p);
+    expect(m.db.guardarEnriquecimiento).not.toHaveBeenCalled();
+
+    m.enriquecerProspecto.mockResolvedValue({ email: null, tipo: null, nota: "La web no publica ningún email." });
+    expect(await acciones.buscarEmailWebAction("dinkbit", "p1")).toEqual({ ok: false, error: "La web no publica ningún email." });
   });
 });
 

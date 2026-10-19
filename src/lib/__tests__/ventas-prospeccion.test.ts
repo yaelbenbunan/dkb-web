@@ -6,6 +6,7 @@ const m = vi.hoisted(() => ({
   crearLeads: vi.fn(),
   actualizarLeadWeb: vi.fn(),
   registrarActividad: vi.fn(),
+  getUsuaria: vi.fn(),
 }));
 vi.mock("../ventas/db", () => m);
 
@@ -131,6 +132,49 @@ describe("pasarProspectoAlEmbudo", () => {
       ok: false,
       error: "No se pudo crear el lead.",
     });
+  });
+
+  test("con consentimiento vigente, el lead entra con consentimiento y la nota dice cuándo y quién lo obtuvo", async () => {
+    m.getUsuaria.mockResolvedValue({ id: "u2", nombre: "Lucía" });
+    const prospecto = {
+      ...PROSPECTO,
+      consentimiento_at: "2026-10-19T08:00:00.000Z",
+      consentimiento_por: "u2",
+      consentimiento_nota: "llamada con la recepcionista",
+      consentimiento_retirado_at: null,
+    };
+    await pasarProspectoAlEmbudo({ marca: MARCA, usuaria: USUARIA, prospecto });
+    expect(m.getUsuaria).toHaveBeenCalledWith("u2");
+    expect(m.actualizarLeadWeb).toHaveBeenCalledWith("lead1", expect.objectContaining({ canal: "Prospección", consentimiento: true }));
+    expect(m.registrarActividad).toHaveBeenCalledWith(
+      expect.objectContaining({
+        nota:
+          "Viene de Prospección (Restaurante · Getafe). Se le escribió el 12/10/2026 y respondió. " +
+          "Aceptó recibir información por teléfono el 19/10/2026 (lo registró Lucía: llamada con la recepcionista).",
+      }),
+    );
+  });
+
+  test("con consentimiento y un lead que ya existía, también se le marca el consentimiento", async () => {
+    m.buscarLeadPorContacto.mockReset().mockResolvedValue({ id: "viejo", marca_id: "m1", extra: {} });
+    m.getUsuaria.mockResolvedValue(null);
+    const prospecto = { ...PROSPECTO, consentimiento_at: "2026-10-19T08:00:00.000Z", consentimiento_por: null };
+    await pasarProspectoAlEmbudo({ marca: MARCA, usuaria: USUARIA, prospecto });
+    expect(m.actualizarLeadWeb).toHaveBeenCalledWith("viejo", { consentimiento: true });
+    expect(m.registrarActividad).toHaveBeenCalledWith(
+      expect.objectContaining({ nota: expect.stringContaining("Aceptó recibir información por teléfono el 19/10/2026.") }),
+    );
+  });
+
+  test("un consentimiento retirado no cuenta", async () => {
+    const prospecto = {
+      ...PROSPECTO,
+      consentimiento_at: "2026-10-19T08:00:00.000Z",
+      consentimiento_retirado_at: "2026-10-20T08:00:00.000Z",
+    };
+    await pasarProspectoAlEmbudo({ marca: MARCA, usuaria: USUARIA, prospecto });
+    expect(m.actualizarLeadWeb.mock.calls[0][1]).not.toHaveProperty("consentimiento");
+    expect(m.registrarActividad.mock.calls[0][0].nota).not.toContain("Aceptó");
   });
 
   test("sin sector, ciudad ni fecha, la nota sigue siendo legible", async () => {
