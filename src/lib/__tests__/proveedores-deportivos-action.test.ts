@@ -36,7 +36,10 @@ describe("enviarSolicitudPack", () => {
   test("válido: crea el lead con la nota y manda CAPI con el mismo eventId", async () => {
     expect(await enviarSolicitudPack(fd())).toEqual({ ok: true });
     const arg = m.recibir.mock.calls[0][0];
-    expect(arg.slug).toBe("proveedores-deportivos");
+    // Es una campaña de dinkbit, no una marca: lead de dinkbit con su campaña.
+    expect(arg.slug).toBe("dinkbit");
+    expect(arg.campana).toBe("Proveedores deportivos");
+    expect(arg.canal).toBe("Web");
     expect(arg.datos).toMatchObject({ contacto: "Laura Gómez", negocio: "Padel Pro SL", email: "laura@padelpro.es", telefono: "600112233", web: "@padelpro" });
     expect(arg.nota).toContain("Qué vende: Material de pádel");
     expect(m.capi).toHaveBeenCalledWith(expect.objectContaining({ eventId: "ev-1", email: "laura@padelpro.es" }));

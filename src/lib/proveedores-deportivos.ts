@@ -9,8 +9,11 @@ import { z } from "zod";
 
 export const PD_PATH = "/proveedores-deportivos";
 export const PD_GRACIAS_PATH = "/proveedores-deportivos/gracias";
-/** Marca de /panel/ventas donde entran las solicitudes. Se crea a mano en el panel. */
-export const MARCA_PROVEEDORES_DEPORTIVOS_SLUG = "proveedores-deportivos";
+/** Es una campaña de captación de dinkbit, no un cliente: las solicitudes
+ *  entran como leads de dinkbit con esta campaña y canal. */
+export const MARCA_PROVEEDORES_DEPORTIVOS_SLUG = "dinkbit";
+export const PD_CAMPANA = "Proveedores deportivos";
+export const PD_CANAL = "Web";
 
 export const PD_PRECIO = "350 €";
 export const PD_PRECIO_NUMERO = "350";

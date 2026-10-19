@@ -3,7 +3,7 @@
 import { cookies, headers } from "next/headers";
 import { CONTACT_INFO } from "./contact-info";
 import { sendMetaLead } from "./meta-capi";
-import { leerSolicitud, MARCA_PROVEEDORES_DEPORTIVOS_SLUG, notaSolicitudPack, type ErroresSolicitud } from "./proveedores-deportivos";
+import { leerSolicitud, MARCA_PROVEEDORES_DEPORTIVOS_SLUG, notaSolicitudPack, PD_CAMPANA, PD_CANAL, type ErroresSolicitud } from "./proveedores-deportivos";
 import { crearLimitador, esEnvioBot } from "./ventas/formulario-web";
 import { recibirLeadFormulario } from "./ventas/servicios";
 
@@ -41,6 +41,8 @@ export async function enviarSolicitudPack(fd: FormData): Promise<ResultadoSolici
       slug: MARCA_PROVEEDORES_DEPORTIVOS_SLUG,
       datos: { contacto: s.nombre, negocio: s.empresa, email: s.email, telefono: s.telefono, web: s.web },
       nota: notaSolicitudPack(s),
+      campana: PD_CAMPANA,
+      canal: PD_CANAL,
     });
   } catch (e) {
     console.error("[proveedores-deportivos] fallo guardando el lead", e);

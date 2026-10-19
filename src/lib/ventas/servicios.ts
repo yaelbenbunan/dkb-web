@@ -296,6 +296,10 @@ export async function recibirLeadFormulario(input: {
   /** Nota inicial ya montada por quien llama (p. ej. la landing de proveedores
    *  deportivos). Sin ella se monta con los campos del formulario de Hydrup. */
   nota?: string | null;
+  /** Campaña y canal propios del formulario (p. ej. una landing de una campaña
+   *  de dinkbit). Sin ellos, el lead llega como «landing-b2b». */
+  campana?: string;
+  canal?: string;
 }): Promise<{ status: number; body: Record<string, unknown> }> {
   const marca = await getMarcaPorSlug(input.slug);
   if (!marca || marca.estado !== "activa") return { status: 404, body: { ok: false, error: "unknown_brand" } };
@@ -303,9 +307,10 @@ export async function recibirLeadFormulario(input: {
     return { status: 400, body: { ok: false, error: "invalid_body" } };
   }
   const datos = input.datos as Record<string, unknown>;
-  const leido = leadDesdeAnuncio({ ...datos, campana: CAMPANA_FORMULARIO_WEB });
+  const campana = input.campana?.trim() || CAMPANA_FORMULARIO_WEB;
+  const leido = leadDesdeAnuncio({ ...datos, campana, canal: input.canal ?? "" });
   if (!leido.ok) return { status: 400, body: { ok: false, error: leido.error } };
-  return guardarLeadEntrante({ marca, lead: leido.lead, campana: CAMPANA_FORMULARIO_WEB, notaInicial: input.nota ?? notaFormulario(datos), extras: leido.extras });
+  return guardarLeadEntrante({ marca, lead: leido.lead, campana, notaInicial: input.nota ?? notaFormulario(datos), extras: leido.extras });
 }
 
 export async function crearLeadManual(input: {

@@ -247,6 +247,16 @@ describe("recibirLeadFormulario", () => {
     expect(m.registrarActividad.mock.calls[0][0].nota).toContain("Qué vende: Trofeos");
   });
 
+  test("con campaña y canal propios, el lead nuevo los guarda (origen y columnas)", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA_ACTIVA);
+    m.crearLeads.mockResolvedValue({ ok: true, creados: 1 });
+    m.buscarLeadPorContacto.mockResolvedValue({ id: "l-new", canal: null, campana: null, extra: {} });
+    m.actualizarAtribucionLead.mockResolvedValue({ ok: true });
+    await recibirLeadFormulario({ slug: "dinkbit", datos: { negocio: "Padel Pro", email: "p@p.es" }, nota: "x", campana: "Proveedores deportivos", canal: "Web" });
+    expect(m.crearLeads).toHaveBeenCalledWith(expect.objectContaining({ origenDetalle: "Proveedores deportivos" }));
+    expect(m.actualizarAtribucionLead).toHaveBeenCalledWith("l-new", { canal: "Web", campana: "Proveedores deportivos" });
+  });
+
   test("marca desconocida → 404 unknown_brand", async () => {
     m.getMarcaPorSlug.mockResolvedValueOnce(null);
     const r = await recibirLeadFormulario({ slug: "nope", datos: { negocio: "Gym", email: "gym@a.es" } });
