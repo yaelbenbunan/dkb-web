@@ -43,6 +43,8 @@ export function Buscador({
       }
       onAviso({ ok: true, texto: r.mensaje });
       searchId = r.searchId;
+      // Las empresas ya están guardadas: se enseñan ya, sin esperar a los emails.
+      router.refresh();
     } catch {
       setFase(null);
       router.refresh();
@@ -68,6 +70,8 @@ export function Buscador({
           hechos += t.procesados;
           quedan = t.restantes;
           setProgreso({ hechos, total: hechos + t.restantes });
+          // Los emails que va encontrando aparecen en la lista tanda a tanda.
+          router.refresh();
           if (t.restantes === 0) break;
         }
         sinTerminar += quedan;
