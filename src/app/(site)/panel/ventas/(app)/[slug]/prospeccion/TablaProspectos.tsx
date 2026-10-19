@@ -322,9 +322,21 @@ export function TablaProspectos({
                           Respondió
                         </button>
                       )}
-                      {(p.status === "enviado" || p.status === "respondido") && !p.lead_id && (
+                      {(p.status === "enviado" || p.status === "respondido" || (consiente && p.status === "listo")) && !p.lead_id && (
                         <button type="button" style={enlace} disabled={pendiente} onClick={() => ejecutar(() => pasarAlEmbudoAction(slug, p.id))}>
                           Pasar al embudo
+                        </button>
+                      )}
+                      {ESTADOS_DESCARTABLES.includes(p.status) && p.status !== "enviado" && p.status !== "respondido" && !p.lead_id && (
+                        <button
+                          type="button"
+                          style={{ ...enlace, color: "#64748b" }}
+                          disabled={pendiente}
+                          aria-label={`Descartar ${p.name}`}
+                          title="Por ejemplo, si en la llamada dice que no le interesa."
+                          onClick={() => ejecutar(() => descartarAction(slug, [p.id]))}
+                        >
+                          Descartar
                         </button>
                       )}
                       {p.lead_id &&

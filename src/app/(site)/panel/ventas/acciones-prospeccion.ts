@@ -13,7 +13,7 @@ import {
   registrarConsentimiento,
   retirarConsentimiento,
 } from "@/lib/prospeccion/db";
-import { validarConsentimiento } from "@/lib/prospeccion/consentimiento";
+import { consentimientoVigente, validarConsentimiento } from "@/lib/prospeccion/consentimiento";
 import { categoriaPorClave } from "@/lib/prospeccion/categorias";
 import { enriquecerProspecto } from "@/lib/prospeccion/enriquecer";
 import { enviarProspectos, type ErrorEnvio } from "@/lib/prospeccion/enviar";
@@ -232,13 +232,18 @@ export async function pasarAlEmbudoAction(slug: string, id: string): Promise<Res
   const p = await getProspecto(id);
   if (!p) return { ok: false, error: "Esa empresa ya no existe." };
   if (p.lead_id) return { ok: false, error: "Ya está en el embudo." };
-  if (p.status !== "enviado" && p.status !== "respondido") {
-    return { ok: false, error: "Solo se puede pasar al embudo una empresa a la que ya se le escribió." };
+  // Con consentimiento vigente se pasa justo tras la llamada, sin correo previo.
+  const conConsentimiento = consentimientoVigente(p) && p.status === "listo";
+  if (p.status !== "enviado" && p.status !== "respondido" && !conConsentimiento) {
+    return {
+      ok: false,
+      error: "Solo se puede pasar al embudo una empresa a la que ya se le escribió o que aceptó por teléfono recibir información.",
+    };
   }
 
   const r = await pasarProspectoAlEmbudo({ marca: a.marca, usuaria: a.usuaria, prospecto: p });
   if (!r.ok) return r;
-  await enlazarLead(id, r.leadId);
+  await enlazarLead(id, r.leadId, { conConsentimiento });
   revalidatePath(ruta(slug));
   revalidatePath(`/panel/ventas/${slug}`, "layout");
   return {

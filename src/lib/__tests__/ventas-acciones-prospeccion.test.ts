@@ -263,7 +263,7 @@ describe("pasarAlEmbudoAction", () => {
     m.db.getProspecto.mockResolvedValue({ ...PROSPECTO, status });
     expect(await acciones.pasarAlEmbudoAction("dinkbit", "p1")).toEqual({
       ok: false,
-      error: "Solo se puede pasar al embudo una empresa a la que ya se le escribió.",
+      error: "Solo se puede pasar al embudo una empresa a la que ya se le escribió o que aceptó por teléfono recibir información.",
     });
     expect(m.pasarProspectoAlEmbudo).not.toHaveBeenCalled();
     expect(m.db.enlazarLead).not.toHaveBeenCalled();
@@ -275,15 +275,39 @@ describe("pasarAlEmbudoAction", () => {
     m.pasarProspectoAlEmbudo.mockResolvedValue({ ok: true, leadId: "lead1", existia: false });
     expect(await acciones.pasarAlEmbudoAction("dinkbit", "p1")).toEqual({ ok: true, mensaje: "Pasada al embudo de dinkbit." });
     expect(m.pasarProspectoAlEmbudo).toHaveBeenCalledWith({ marca: DINKBIT, usuaria: COMERCIAL, prospecto });
-    expect(m.db.enlazarLead).toHaveBeenCalledWith("p1", "lead1");
+    expect(m.db.enlazarLead).toHaveBeenCalledWith("p1", "lead1", { conConsentimiento: false });
     expect(m.revalidatePath).toHaveBeenCalledWith("/panel/ventas/dinkbit", "layout");
+  });
+
+  test("con consentimiento vigente se pasa justo tras la llamada, sin correo previo", async () => {
+    const prospecto = { ...PROSPECTO, status: "listo", consentimiento_at: "2026-10-19T08:00:00Z", consentimiento_retirado_at: null };
+    m.db.getProspecto.mockResolvedValue(prospecto);
+    m.pasarProspectoAlEmbudo.mockResolvedValue({ ok: true, leadId: "lead1", existia: false });
+    expect(await acciones.pasarAlEmbudoAction("dinkbit", "p1")).toEqual({ ok: true, mensaje: "Pasada al embudo de dinkbit." });
+    expect(m.db.enlazarLead).toHaveBeenCalledWith("p1", "lead1", { conConsentimiento: true });
+  });
+
+  test.each(["baja", "rebotado"])("ni con consentimiento se pasa una empresa en «%s»", async (status) => {
+    m.db.getProspecto.mockResolvedValue({ ...PROSPECTO, status, consentimiento_at: "2026-10-19T08:00:00Z" });
+    expect(await acciones.pasarAlEmbudoAction("dinkbit", "p1")).toMatchObject({ ok: false });
+    expect(m.pasarProspectoAlEmbudo).not.toHaveBeenCalled();
+  });
+
+  test("con el consentimiento retirado, vuelve a hacer falta el correo previo", async () => {
+    m.db.getProspecto.mockResolvedValue({
+      ...PROSPECTO,
+      status: "listo",
+      consentimiento_at: "2026-10-19T08:00:00Z",
+      consentimiento_retirado_at: "2026-10-20T08:00:00Z",
+    });
+    expect(await acciones.pasarAlEmbudoAction("dinkbit", "p1")).toMatchObject({ ok: false });
   });
 
   test("si ya era lead de la marca, lo dice", async () => {
     m.db.getProspecto.mockResolvedValue(PROSPECTO);
     m.pasarProspectoAlEmbudo.mockResolvedValue({ ok: true, leadId: "viejo", existia: true });
     expect(await acciones.pasarAlEmbudoAction("dinkbit", "p1")).toEqual({ ok: true, mensaje: "Ya era un lead de la marca: queda enlazada con él." });
-    expect(m.db.enlazarLead).toHaveBeenCalledWith("p1", "viejo");
+    expect(m.db.enlazarLead).toHaveBeenCalledWith("p1", "viejo", { conConsentimiento: false });
   });
 
   test("si el alta falla, no enlaza", async () => {

@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const m = vi.hoisted(() => ({
   refresh: vi.fn(),
+  descartarAction: vi.fn(),
+  pasarAlEmbudoAction: vi.fn(),
   registrarConsentimientoAction: vi.fn(),
   retirarConsentimientoAction: vi.fn(),
   buscarEmailWebAction: vi.fn(),
@@ -10,10 +12,10 @@ const m = vi.hoisted(() => ({
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: m.refresh }) }));
 vi.mock("@/app/(site)/panel/ventas/acciones-prospeccion", () => ({
   buscarEmailWebAction: m.buscarEmailWebAction,
-  descartarAction: vi.fn(),
+  descartarAction: m.descartarAction,
   enviarAction: vi.fn(),
   marcarRespondidoAction: vi.fn(),
-  pasarAlEmbudoAction: vi.fn(),
+  pasarAlEmbudoAction: m.pasarAlEmbudoAction,
   registrarConsentimientoAction: m.registrarConsentimientoAction,
   retirarConsentimientoAction: m.retirarConsentimientoAction,
 }));
@@ -111,6 +113,22 @@ describe("TablaProspectos: consentimiento", () => {
     fireEvent.click(screen.getByRole("button", { name: "Buscar en su web" }));
     await waitFor(() => expect(screen.getByLabelText("Email al que escribir")).toHaveValue("hola@barpepe.es"));
     expect(m.registrarConsentimientoAction).not.toHaveBeenCalled();
+  });
+
+  test("cada fila tiene su «Descartar» (dijo que no en la llamada)", async () => {
+    m.descartarAction.mockResolvedValue({ ok: true, mensaje: "1 descartada." });
+    pintar([base]);
+    fireEvent.click(screen.getByRole("button", { name: "Descartar Bar Pepe" }));
+    await waitFor(() => expect(m.descartarAction).toHaveBeenCalledWith("dinkbit", ["p1"]));
+  });
+
+  test("«Pasar al embudo» justo tras la llamada si aceptó; sin consentimiento, no", async () => {
+    m.pasarAlEmbudoAction.mockResolvedValue({ ok: true, mensaje: "ok" });
+    pintar([base, consentido]);
+    const botones = screen.getAllByRole("button", { name: "Pasar al embudo" });
+    expect(botones).toHaveLength(1);
+    fireEvent.click(botones[0]);
+    await waitFor(() => expect(m.pasarAlEmbudoAction).toHaveBeenCalledWith("dinkbit", "p2"));
   });
 
   test("se puede retirar: «Ya no quiere recibir información»", async () => {

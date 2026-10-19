@@ -18,13 +18,14 @@ import {
   marcarPorResendId,
   prospectosPorIds,
   reclamarParaEnvio,
+  retirarConsentimiento,
 } from "../db";
 
 /** Cadena de supabase-js de mentira: cada método devuelve la misma cadena y
  *  al hacer `await` resuelve con `resultado`. */
 function cadena(resultado: { data?: unknown; error?: { message: string } | null; count?: number }) {
   const c: Record<string, unknown> = {};
-  for (const m of ["update", "upsert", "insert", "delete", "select", "eq", "in", "gte", "order", "limit", "range", "ilike", "not"]) {
+  for (const m of ["update", "upsert", "insert", "delete", "select", "eq", "in", "gte", "order", "limit", "range", "ilike", "not", "is"]) {
     c[m] = vi.fn(() => c);
   }
   c.then = (ok: (v: unknown) => unknown) => Promise.resolve({ error: null, ...resultado }).then(ok);
@@ -191,6 +192,53 @@ describe("enlazarLead", () => {
     expect(c.update).toHaveBeenCalledWith({ lead_id: "lead1", status: "respondido" });
     expect(c.eq).toHaveBeenCalledWith("id", "p1");
     expect(c.in).toHaveBeenCalledWith("status", ["enviado", "respondido"]);
+  });
+
+  test("con consentimiento vigente también enlaza una fila «listo» (justo tras la llamada), sin cambiar su estado", async () => {
+    const escrita = cadena({});
+    const lista = cadena({});
+    fromMock.mockReturnValueOnce(escrita).mockReturnValueOnce(lista);
+    await enlazarLead("p1", "lead1", { conConsentimiento: true });
+    expect(escrita.update).toHaveBeenCalledWith({ lead_id: "lead1", status: "respondido" });
+    expect(lista.update).toHaveBeenCalledWith({ lead_id: "lead1" });
+    expect(lista.eq).toHaveBeenCalledWith("id", "p1");
+    expect(lista.eq).toHaveBeenCalledWith("status", "listo");
+  });
+
+  test("sin consentimiento no toca las filas «listo»", async () => {
+    fromMock.mockReturnValue(cadena({}));
+    await enlazarLead("p1", "lead1", { conConsentimiento: false });
+    expect(fromMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("retirarConsentimiento", () => {
+  test("anota la retirada y veta su email, como la baja por enlace", async () => {
+    const retirar = cadena({ data: [{ id: "p1", email: "Info@Bar.es" }] });
+    const vetar = cadena({});
+    fromMock.mockReturnValueOnce(retirar).mockReturnValueOnce(vetar);
+    expect(await retirarConsentimiento("p1")).toBe(1);
+    expect(retirar.update).toHaveBeenCalledWith({ consentimiento_retirado_at: expect.any(String) });
+    expect(retirar.select).toHaveBeenCalledWith("id, email");
+    expect(vetar.upsert).toHaveBeenCalledWith(
+      [{ value: "info@bar.es", kind: "email", reason: "baja" }],
+      { onConflict: "value", ignoreDuplicates: true },
+    );
+  });
+
+  test("si no se puede vetar el email, devuelve null", async () => {
+    fromMock
+      .mockReturnValueOnce(cadena({ data: [{ id: "p1", email: "info@bar.es" }] }))
+      .mockReturnValueOnce(cadena({ error: { message: "x" } }));
+    expect(await retirarConsentimiento("p1")).toBeNull();
+  });
+
+  test("sin filas cambiadas o sin email, no veta nada", async () => {
+    fromMock.mockReturnValueOnce(cadena({ data: [] }));
+    expect(await retirarConsentimiento("p1")).toBe(0);
+    fromMock.mockReturnValueOnce(cadena({ data: [{ id: "p1", email: null }] }));
+    expect(await retirarConsentimiento("p1")).toBe(1);
+    expect(fromMock).toHaveBeenCalledTimes(2);
   });
 });
 

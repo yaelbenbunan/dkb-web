@@ -235,8 +235,10 @@ export async function registrarConsentimiento(
   return (data?.length ?? 0) > 0 ? "ok" : "estado";
 }
 
-/** «Ya no quiere recibir información»: el consentimiento deja de valer y no se
- *  le vuelve a escribir. Devuelve las filas cambiadas, o null si falló. */
+/** «Ya no quiere recibir información»: el consentimiento deja de valer y su
+ *  email entra en la lista de exclusión, como con la baja por enlace, para que
+ *  no se le escriba desde otra ficha. Devuelve las filas cambiadas, o null si
+ *  algo no se pudo guardar. */
 export async function retirarConsentimiento(id: string): Promise<number | null> {
   const sb = getSupabaseAdmin();
   if (!sb) return null;
@@ -246,12 +248,26 @@ export async function retirarConsentimiento(id: string): Promise<number | null> 
     .eq("id", id)
     .not("consentimiento_at", "is", null)
     .is("consentimiento_retirado_at", null)
-    .select("id");
+    .select("id, email");
   if (error) {
     aviso("retirarConsentimiento", error.message);
     return null;
   }
-  return data?.length ?? 0;
+  const filas = (data ?? []) as Array<{ id: string; email: string | null }>;
+  const emails = [...new Set(filas.map((f) => (f.email ?? "").trim().toLowerCase()).filter(Boolean))];
+  if (emails.length > 0) {
+    const vetado = await sb
+      .from(SUPRESIONES)
+      .upsert(
+        emails.map((value) => ({ value, kind: "email", reason: "baja" })),
+        { onConflict: "value", ignoreDuplicates: true },
+      );
+    if (vetado.error) {
+      aviso("retirarConsentimiento", vetado.error.message);
+      return null;
+    }
+  }
+  return filas.length;
 }
 
 /** Reclama la fila para enviarle un correo. El `where status = 'listo'` es lo
@@ -406,10 +422,15 @@ export async function marcarPorResendId(
   return fila.email ?? null;
 }
 
-/** Enlaza el prospecto con su lead del CRM. Solo desde «enviado» o
- *  «respondido»: una pestaña desactualizada no debe convertir una baja o un
- *  rebote en «respondió». */
-export async function enlazarLead(id: string, leadId: string): Promise<void> {
+/** Enlaza el prospecto con su lead del CRM. Desde «enviado» o «respondido»
+ *  (pasa a «respondido»), y con consentimiento vigente también desde «listo»
+ *  —justo tras la llamada—, sin cambiarle el estado. Nunca desde una baja o un
+ *  rebote: una pestaña desactualizada no debe pisarlos. */
+export async function enlazarLead(
+  id: string,
+  leadId: string,
+  o: { conConsentimiento: boolean } = { conConsentimiento: false },
+): Promise<void> {
   const sb = getSupabaseAdmin();
   if (!sb) return;
   const { error } = await sb
@@ -418,6 +439,9 @@ export async function enlazarLead(id: string, leadId: string): Promise<void> {
     .eq("id", id)
     .in("status", ["enviado", "respondido"]);
   if (error) aviso("enlazarLead", error.message);
+  if (!o.conConsentimiento) return;
+  const lista = await sb.from(PROSPECTOS).update({ lead_id: leadId }).eq("id", id).eq("status", "listo");
+  if (lista.error) aviso("enlazarLead", lista.error.message);
 }
 
 // Supresión ---------------------------------------------------------------
