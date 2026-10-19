@@ -2,6 +2,7 @@ import "server-only";
 import { Resend } from "resend";
 import { formatFromHeader } from "../email-from";
 import { bajaDisponible, urlDeBaja } from "./baja-token";
+import { fechaLarga } from "./consentimiento";
 import {
   anotarEnvioIncierto,
   emailsDeLeads,
@@ -56,28 +57,46 @@ function rechazoSeguro(error: { statusCode?: number | null }): boolean {
   return typeof codigo === "number" && codigo >= 400 && codigo < 500;
 }
 
-const PIE =
-  "Le escribe dinkbit (dinkbit.es · hola@dinkbit.es). Hemos encontrado esta dirección publicada en su web. " +
-  "Si prefiere no recibir más correos nuestros, puede darse de baja aquí:";
+const PRIVACIDAD = "https://www.dinkbit.es/privacidad";
+
+/** El pie dice la verdad: por qué le escribimos (lo pidió por teléfono), quién
+ *  es el responsable, dónde está la política de privacidad y cómo darse de
+ *  baja. Sin fecha (no debería pasar: no se envía sin consentimiento) se omite
+ *  el día en vez de inventarlo. */
+function pie(consentimientoAt: string | null | undefined): string {
+  const fecha = fechaLarga(consentimientoAt);
+  return (
+    `Le escribimos porque ${fecha ? `el ${fecha} ` : ""}nos dijo por teléfono que le enviáramos información. ` +
+    "Responsable: Dinkbit Marketing S.L. (dinkbit.es · hola@dinkbit.es). " +
+    `Puede consultar cómo tratamos sus datos en ${PRIVACIDAD} y darse de baja aquí:`
+  );
+}
 
 /** Cuerpo ya renderizado + pie legal → versiones HTML y texto. Sobrio a
  *  propósito: tiene que leerse como un correo de persona a persona, no como una
  *  campaña. */
-export function componerCorreo(cuerpoTexto: string, bajaUrl: string): { html: string; text: string } {
-  const text = `${cuerpoTexto}\n\n--\n${PIE} ${bajaUrl}`;
+export function componerCorreo(
+  cuerpoTexto: string,
+  bajaUrl: string,
+  consentimientoAt: string | null | undefined,
+): { html: string; text: string } {
+  const texto = pie(consentimientoAt);
+  const text = `${cuerpoTexto}\n\n--\n${texto} ${bajaUrl}`;
   const enlace = bajaUrl.replace(/&/g, "&amp;");
+  const textoHtml = texto.replace(PRIVACIDAD, `<a href="${PRIVACIDAD}" style="color:#64748b;">${PRIVACIDAD}</a>`);
   const html =
     `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.55;color:#0f172a;">` +
     `${textoAHtml(cuerpoTexto)}` +
     `<p style="margin-top:28px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:12px;color:#64748b;">` +
-    `${PIE} <a href="${enlace}" style="color:#64748b;">darme de baja</a>.</p></div>`;
+    `${textoHtml} <a href="${enlace}" style="color:#64748b;">darme de baja</a>.</p></div>`;
   return { html, text };
 }
 
 const fallo = (error: ErrorEnvio): ResultadoEnvio => ({ ok: false, error, enviados: 0, omitidos: [] });
 
 /** Envía la plantilla a cada prospecto, de uno en uno y cada cual en su propio
- *  correo. Lo que no se puede enviar se devuelve con su motivo, sin abortar el
+ *  correo. Solo a quien ha aceptado por teléfono recibir información
+ *  (`motivoBloqueo`), aunque la petición no venga del panel. Lo que no se puede enviar se devuelve con su motivo, sin abortar el
  *  resto. Las direcciones personales solo salen si se pide un único prospecto
  *  con `confirmarPersonal`. */
 export async function enviarProspectos(
@@ -171,7 +190,7 @@ export async function enviarProspectos(
     }
 
     const baja = urlDeBaja(id);
-    const { html, text } = componerCorreo(cuerpo.texto, baja);
+    const { html, text } = componerCorreo(cuerpo.texto, baja, p.consentimiento_at);
     let detalle: string | null = null;
     let incierto: string | null = null;
     let resendId: string | null = null;

@@ -4,6 +4,7 @@
  * Todo lo que frena un envío está aquí y es puro, para poder probarlo sin base
  * de datos ni Resend. Sin `server-only`: el panel usa `TEXTO_BLOQUEO`.
  */
+import { consentimientoVigente } from "./consentimiento";
 import type { ProspectRow } from "./tipos";
 
 const LIMITE_POR_DEFECTO = 30;
@@ -42,6 +43,7 @@ export function inicioDelDiaMadrid(ahora: Date): Date {
 }
 
 export type MotivoBloqueo =
+  | "sin_consentimiento"
   | "estado"
   | "sin_email"
   | "suprimido"
@@ -49,6 +51,7 @@ export type MotivoBloqueo =
   | "personal_sin_confirmar";
 
 export const TEXTO_BLOQUEO: Record<MotivoBloqueo, string> = {
+  sin_consentimiento: "Sin consentimiento: no ha aceptado por teléfono recibir información.",
   estado: "No está pendiente de envío.",
   sin_email: "No tiene email.",
   suprimido: "Pidió no recibir más correos, o su dirección rebotó.",
@@ -56,10 +59,13 @@ export const TEXTO_BLOQUEO: Record<MotivoBloqueo, string> = {
   personal_sin_confirmar: "La dirección parece personal: envíalo de uno en uno y confírmalo.",
 };
 
+/** Lo primero, el consentimiento (LSSI art. 21): sin él no se escribe a nadie,
+ *  esté en el estado que esté. */
 export function motivoBloqueo(
-  p: Pick<ProspectRow, "status" | "email" | "email_kind">,
+  p: Pick<ProspectRow, "status" | "email" | "email_kind" | "consentimiento_at" | "consentimiento_retirado_at">,
   ctx: { suprimidos: Set<string>; emailsDeLeads: Set<string>; confirmarPersonal: boolean },
 ): MotivoBloqueo | null {
+  if (!consentimientoVigente(p)) return "sin_consentimiento";
   if (p.status !== "listo") return "estado";
   const email = (p.email ?? "").trim().toLowerCase();
   if (!email) return "sin_email";

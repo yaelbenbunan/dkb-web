@@ -11,7 +11,7 @@ import {
   remitentesProspeccion,
 } from "@/lib/prospeccion/reglas-envio";
 import { requireAccesoMarca } from "@/lib/ventas/auth";
-import { resolverLeadsEnlazados } from "@/lib/ventas/db";
+import { listUsuarias, resolverLeadsEnlazados } from "@/lib/ventas/db";
 import { tieneProspeccion } from "@/lib/ventas/rutas";
 import { MarcaCabecera } from "../../../_componentes/MarcaCabecera";
 import { Prospeccion } from "./Prospeccion";
@@ -21,7 +21,7 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 export const dynamic = "force-dynamic";
-// Las acciones de esta página son largas: una tanda lee hasta 30 páginas web con 6 s de espera cada una, y un envío múltiple va correo a correo.
+// Las acciones de esta página son largas: «Buscar en su web» lee hasta 3 páginas con 6 s de espera cada una, y un envío múltiple va correo a correo.
 export const maxDuration = 60;
 
 export default async function ProspeccionPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -45,6 +45,12 @@ export default async function ProspeccionPage({ params }: { params: Promise<{ sl
     return new Map<string, string>();
   });
 
+  // Quién registró cada consentimiento. Sin nombres se pinta igual.
+  const nombres = await listUsuarias().catch((error) => {
+    console.error("[prospeccion] no se pudieron leer las usuarias", error);
+    return [];
+  });
+
   return (
     <div>
       <MarcaCabecera marca={marca} activa="prospeccion" rol={usuaria.rol} />
@@ -57,6 +63,7 @@ export default async function ProspeccionPage({ params }: { params: Promise<{ sl
         enviadosHoy={enviadosHoy ?? 0}
         limite={limiteDiario()}
         remitentes={remitentesProspeccion()}
+        nombres={Object.fromEntries(nombres.map((u) => [u.id, u.nombre]))}
       />
     </div>
   );

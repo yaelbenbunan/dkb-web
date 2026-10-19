@@ -4,16 +4,16 @@ import { revalidatePath } from "next/cache";
 import {
   borrarPlantilla,
   cerrarBusqueda,
-  contarPendientes,
   crearBusqueda,
   enlazarLead,
   getProspecto,
-  guardarEnriquecimiento,
   guardarPlantilla,
   guardarProspectos,
   marcarEstado,
-  pendientesDeEnriquecer,
+  registrarConsentimiento,
+  retirarConsentimiento,
 } from "@/lib/prospeccion/db";
+import { consentimientoVigente, validarConsentimiento } from "@/lib/prospeccion/consentimiento";
 import { categoriaPorClave } from "@/lib/prospeccion/categorias";
 import { enriquecerProspecto } from "@/lib/prospeccion/enriquecer";
 import { enviarProspectos, type ErrorEnvio } from "@/lib/prospeccion/enviar";
@@ -30,7 +30,6 @@ import { tieneProspeccion } from "@/lib/ventas/rutas";
 /** Pestaña de Prospección de la marca. Las tablas `prospect_*` son de dinkbit,
  *  la única marca con prospección por ahora (ver `MARCAS_CON_PROSPECCION`). */
 const ruta = (slug: string) => `/panel/ventas/${slug}/prospeccion`;
-const TANDA = 10;
 
 type Resultado = { ok: true; mensaje: string } | { ok: false; error: string };
 
@@ -111,7 +110,7 @@ export async function buscarAction(
   await cerrarBusqueda(searchId, { status: "lista", total: r.prospectos.length });
   revalidatePath(ruta(slug));
   // Las que el upsert no insertó también estaban ya (carrera con otra búsqueda).
-  const repetidas = r.repetidas + (r.prospectos.length - nuevas);
+  const yaTenias = r.yaTenias + (r.prospectos.length - nuevas);
   const fuente = NOMBRE_FUENTE[r.fuente];
   return {
     ok: true,
@@ -120,7 +119,8 @@ export async function buscarAction(
       (nuevas === 0
         ? `Ninguna empresa nueva (${fuente}).`
         : `${nuevas} empresa${nuevas === 1 ? " nueva" : "s nuevas"} (${fuente}).`) +
-      (repetidas > 0 ? ` ${repetidas} que ya tenías.` : "") +
+      (yaTenias > 0 ? ` ${yaTenias} ya la${yaTenias === 1 ? "" : "s"} tenías.` : "") +
+      (r.repetidas > 0 ? ` ${r.repetidas} repetida${r.repetidas === 1 ? "" : "s"} en los datos (mismo teléfono o web).` : "") +
       (r.quedan > 0 ? ` Quedan ${r.quedan} más: repite la búsqueda para traerlas.` : ""),
   };
 }
@@ -175,29 +175,53 @@ export async function buscarEmpresasNuevasAction(
   };
 }
 
-/** Busca el email de hasta diez empresas de la búsqueda. El cliente la llama en
- *  bucle hasta que `restantes` llega a cero: así ninguna petición es larga y la
- *  barra de progreso avanza de verdad. */
-export async function enriquecerTandaAction(
+/** «Buscar en su web», desde el formulario de consentimiento: lee la web de
+ *  esa empresa y devuelve el email que encuentre, sin guardar nada. Ya no se
+ *  leen las webs de todas las empresas de una búsqueda: el email se pide en la
+ *  llamada (RGPD art. 5.1.c, minimización). */
+export async function buscarEmailWebAction(
   slug: string,
-  searchId: string,
-): Promise<{ procesados: number; restantes: number }> {
-  if (!(await acceso(slug)).ok) return { procesados: 0, restantes: 0 };
-  const tanda = await pendientesDeEnriquecer(searchId, TANDA);
-  await Promise.all(
-    tanda.map(async (p) => {
-      const r = await enriquecerProspecto(p).catch(() => ({
-        email: null,
-        tipo: null,
-        nota: "La web no responde.",
-      }));
-      await guardarEnriquecimiento(p.id, r);
-    }),
-  );
-  const restantes = await contarPendientes(searchId);
-  if (restantes === 0) revalidatePath(ruta(slug));
-  // Si una tanda no avanzó (fallo de base de datos), se corta el bucle del cliente.
-  return { procesados: tanda.length, restantes: tanda.length === 0 ? 0 : restantes };
+  id: string,
+): Promise<{ ok: true; email: string } | { ok: false; error: string }> {
+  const a = await acceso(slug);
+  if (!a.ok) return a;
+  const p = await getProspecto(id);
+  if (!p) return { ok: false, error: "Esa empresa ya no existe." };
+  const r = await enriquecerProspecto(p).catch(() => ({ email: null, nota: "La web no responde." }));
+  return r.email ? { ok: true, email: r.email } : { ok: false, error: r.nota ?? "No se encontró ningún email." };
+}
+
+/** Lo aceptó por teléfono: se guarda el email que dio, cuándo, quién lo
+ *  registró y una nota. Desde ahí, y solo desde ahí, se le puede escribir. */
+export async function registrarConsentimientoAction(
+  slug: string,
+  id: string,
+  email: string,
+  nota: string,
+): Promise<Resultado> {
+  const a = await acceso(slug);
+  if (!a.ok) return a;
+  const v = validarConsentimiento(email, nota);
+  if (!v.ok) return v;
+  const r = await registrarConsentimiento(id, { email: v.email, nota: v.nota, por: a.usuaria.id });
+  revalidatePath(ruta(slug));
+  if (r === "estado") {
+    return { ok: false, error: "No se puede marcar: ya se le escribió, se dio de baja o su correo rebotó. Se ha recargado." };
+  }
+  if (r === "error") {
+    return { ok: false, error: "No se pudo guardar el consentimiento. ¿Está ejecutada la migración 2026-10-19-prospeccion-consentimiento.sql?" };
+  }
+  return { ok: true, mensaje: `Consentimiento guardado: ya se le puede escribir a ${v.email}.` };
+}
+
+export async function retirarConsentimientoAction(slug: string, id: string): Promise<Resultado> {
+  const a = await acceso(slug);
+  if (!a.ok) return a;
+  const cambiadas = await retirarConsentimiento(id);
+  revalidatePath(ruta(slug));
+  if (cambiadas === null) return SIN_GUARDAR;
+  if (cambiadas === 0) return SIN_CAMBIOS;
+  return { ok: true, mensaje: "Anotado: ya no se le escribirá." };
 }
 
 export async function enviarAction(
@@ -250,21 +274,27 @@ export async function marcarRespondidoAction(slug: string, id: string): Promise<
 }
 
 /** Pasa el prospecto al embudo de la marca: crea su lead en ventas, o lo
- *  enlaza con el que ya hay por email o teléfono. El consentimiento se queda
- *  sin definir: haber contestado a un correo no es aceptar campañas. */
+ *  enlaza con el que ya hay por email o teléfono. Si aceptó por teléfono
+ *  recibir información (y no lo ha retirado), el lead entra con
+ *  consentimiento; si no, se queda sin definir. */
 export async function pasarAlEmbudoAction(slug: string, id: string): Promise<Resultado> {
   const a = await acceso(slug);
   if (!a.ok) return a;
   const p = await getProspecto(id);
   if (!p) return { ok: false, error: "Esa empresa ya no existe." };
   if (p.lead_id) return { ok: false, error: "Ya está en el embudo." };
-  if (p.status !== "enviado" && p.status !== "respondido") {
-    return { ok: false, error: "Solo se puede pasar al embudo una empresa a la que ya se le escribió." };
+  // Con consentimiento vigente se pasa justo tras la llamada, sin correo previo.
+  const conConsentimiento = consentimientoVigente(p) && p.status === "listo";
+  if (p.status !== "enviado" && p.status !== "respondido" && !conConsentimiento) {
+    return {
+      ok: false,
+      error: "Solo se puede pasar al embudo una empresa a la que ya se le escribió o que aceptó por teléfono recibir información.",
+    };
   }
 
   const r = await pasarProspectoAlEmbudo({ marca: a.marca, usuaria: a.usuaria, prospecto: p });
   if (!r.ok) return r;
-  await enlazarLead(id, r.leadId);
+  await enlazarLead(id, r.leadId, { conConsentimiento });
   revalidatePath(ruta(slug));
   revalidatePath(`/panel/ventas/${slug}`, "layout");
   return {

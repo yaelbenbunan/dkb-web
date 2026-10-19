@@ -27,16 +27,11 @@ export function Prospeccion(props: {
   enviadosHoy: number;
   limite: number;
   remitentes: string[];
+  /** Id de usuaria de ventas → nombre, para decir quién registró un consentimiento. */
+  nombres: Record<string, string>;
 }) {
   const [vista, setVista] = useState<"empresas" | "plantillas">("empresas");
   const [aviso, setAviso] = useState<Aviso | null>(null);
-
-  // Empresas que se quedaron sin revisar, agrupadas por su búsqueda.
-  const cuenta = new Map<string, number>();
-  for (const p of props.prospectos) {
-    if (p.status === "nuevo" && p.search_id) cuenta.set(p.search_id, (cuenta.get(p.search_id) ?? 0) + 1);
-  }
-  const pendientes = [...cuenta].map(([searchId, n]) => ({ searchId, n }));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -66,7 +61,7 @@ export function Prospeccion(props: {
 
       {vista === "empresas" ? (
         <>
-          <Buscador slug={props.slug} pendientes={pendientes} onAviso={setAviso} />
+          <Buscador slug={props.slug} onAviso={setAviso} />
           <EmpresasNuevas slug={props.slug} onAviso={setAviso} />
           <TablaProspectos
             slug={props.slug}
@@ -75,6 +70,7 @@ export function Prospeccion(props: {
             busquedas={props.busquedas}
             plantillas={props.plantillas}
             remitentes={props.remitentes}
+            nombres={props.nombres}
             cupo={Math.max(0, props.limite - props.enviadosHoy)}
             onAviso={setAviso}
           />

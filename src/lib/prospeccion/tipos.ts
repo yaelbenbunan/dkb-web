@@ -47,6 +47,15 @@ export interface ProspectRow {
   send_error: string | null;
   lead_id: string | null;
   created_at: string;
+  /* Consentimiento obtenido por teléfono (docs/sql/2026-10-19-prospeccion-consentimiento.sql).
+   * Opcionales: hasta que se ejecute la migración, las filas no los traen. */
+  /** Cuándo aceptó recibir información por email. */
+  consentimiento_at?: string | null;
+  /** Usuaria de ventas que lo registró. */
+  consentimiento_por?: string | null;
+  consentimiento_nota?: string | null;
+  /** Cuándo dijo que ya no quiere recibir información. */
+  consentimiento_retirado_at?: string | null;
 }
 
 /** Lo que devuelve una fuente antes de guardarse. */

@@ -2,7 +2,7 @@ import "server-only";
 import { constitucionAProspecto } from "./borme";
 import { buscarConstituciones } from "./borme-db";
 import { categoriaPorClave } from "./categorias";
-import { claveTexto, quitarDuplicados } from "./contacto";
+import { claveTexto, separarDuplicados } from "./contacto";
 import { buscarLugares, huellasDeProspectos } from "./lugares-db";
 import { buscarEnOsm, type ErrorOsm } from "./osm";
 import { lugarAProspecto } from "./overture";
@@ -22,6 +22,8 @@ export type ResultadoBusqueda =
       /** Todo lo que devolvió la fuente. */
       encontradas: number;
       /** Ya estaban como prospecto, o son el mismo negocio que uno que ya está. */
+      yaTenias: number;
+      /** Repetidas dentro de los propios datos (mismo teléfono, o web y municipio). */
       repetidas: number;
       /** Nuevas que no cupieron en esta búsqueda. */
       quedan: number;
@@ -70,13 +72,13 @@ export async function buscarNegocios(
   }
 
   const huellas = await d.huellasDeProspectos();
-  if (!huellas) console.error("[prospeccion] sin huellas de prospectos: no se quitan duplicados");
-  const nuevos = huellas
-    ? quitarDuplicados(
-        encontrados.filter((p) => !huellas.ids.has(`${p.source}:${p.external_id}`)),
-        huellas.fichas,
-      )
+  if (!huellas) console.error("[prospeccion] sin huellas de prospectos: no se quitan los que ya estaban");
+  const sinLosYaGuardados = huellas
+    ? encontrados.filter((p) => !huellas.ids.has(`${p.source}:${p.external_id}`))
     : encontrados;
+  // Lo repetido dentro de los propios datos se quita aunque no se puedan leer los prospectos.
+  const separadas = separarDuplicados(sinLosYaGuardados, huellas?.fichas ?? []);
+  const nuevos = separadas.unicos;
   // `sort` es estable: dentro de cada grupo se conserva el orden de la fuente.
   const ordenados = [...nuevos].sort((a, b) => prioridad(a) - prioridad(b));
 
@@ -85,7 +87,8 @@ export async function buscarNegocios(
     fuente,
     prospectos: ordenados.slice(0, MAX_POR_BUSQUEDA),
     encontradas: encontrados.length,
-    repetidas: encontrados.length - nuevos.length,
+    yaTenias: encontrados.length - sinLosYaGuardados.length + separadas.yaEstaban,
+    repetidas: separadas.repetidos,
     quedan: Math.max(0, ordenados.length - MAX_POR_BUSQUEDA),
   };
 }

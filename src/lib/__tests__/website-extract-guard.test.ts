@@ -94,3 +94,16 @@ describe("isBlockedIp", () => {
     expect(isBlockedIp("172.16.0.1")).toBe(true);
   });
 });
+
+describe("isBlockedHost con IP directa (no pasa por DNS)", () => {
+  it("bloquea IPs internas escritas tal cual en la URL", () => {
+    for (const u of ["http://10.0.0.1/", "http://169.254.169.254/latest/meta-data", "http://127.0.0.1:3000/", "http://[::1]/", "http://[::ffff:127.0.0.1]/"]) {
+      expect(isBlockedHost(new URL(u).hostname)).toBe(true);
+    }
+  });
+
+  it("deja pasar IPs públicas y dominios normales", () => {
+    expect(isBlockedHost(new URL("http://8.8.8.8/").hostname)).toBe(false);
+    expect(isBlockedHost("clinica.es")).toBe(false);
+  });
+});

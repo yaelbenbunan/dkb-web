@@ -1,5 +1,15 @@
 import "server-only";
-import { actualizarLeadWeb, buscarLeadPorContacto, crearLeads, listExclusiones, registrarActividad, type Marca, type Usuaria } from "./db";
+import { consentimientoVigente } from "../prospeccion/consentimiento";
+import {
+  actualizarLeadWeb,
+  buscarLeadPorContacto,
+  crearLeads,
+  getUsuaria,
+  listExclusiones,
+  registrarActividad,
+  type Marca,
+  type Usuaria,
+} from "./db";
 import { clasificarLeads, type LeadNuevo } from "./leads-csv";
 
 /**
@@ -11,8 +21,9 @@ import { clasificarLeads, type LeadNuevo } from "./leads-csv";
  * ejecutado la migración de la unificación. Canal y `extra` se escriben
  * después; si esas columnas aún no existen, el lead queda igual de bien.
  *
- * `consentimiento` no se toca: haber contestado a un correo no es aceptar
- * campañas.
+ * `consentimiento` solo se marca si el prospecto aceptó por teléfono recibir
+ * información (y no lo ha retirado); haber contestado a un correo, sin más, no
+ * es aceptar campañas.
  */
 
 export const CANAL_PROSPECCION = "Prospección";
@@ -26,6 +37,10 @@ export interface ProspectoParaEmbudo {
   city: string | null;
   sector: string | null;
   sent_at: string | null;
+  consentimiento_at?: string | null;
+  consentimiento_por?: string | null;
+  consentimiento_nota?: string | null;
+  consentimiento_retirado_at?: string | null;
 }
 
 export type ResultadoEmbudo = { ok: true; leadId: string; existia: boolean } | { ok: false; error: string };
@@ -46,6 +61,17 @@ function notaDeOrigen(p: ProspectoParaEmbudo): string {
     `Viene de Prospección${donde ? ` (${donde})` : ""}.` +
     (fecha ? ` Se le escribió el ${fecha} y respondió.` : " Respondió al correo.")
   );
+}
+
+/** Cuándo y quién obtuvo el consentimiento, para el historial del lead. */
+async function notaDeConsentimiento(p: ProspectoParaEmbudo): Promise<string> {
+  const fecha = fechaMadrid(p.consentimiento_at ?? null);
+  // Sin nombre se apunta igual: lo que importa es la fecha.
+  const quien = p.consentimiento_por ? await getUsuaria(p.consentimiento_por).catch(() => null) : null;
+  const detalle = [quien?.nombre ? `lo registró ${quien.nombre}` : null, p.consentimiento_nota?.trim() || null]
+    .filter(Boolean)
+    .join(": ");
+  return `Aceptó recibir información por teléfono${fecha ? ` el ${fecha}` : ""}${detalle ? ` (${detalle})` : ""}.`;
 }
 
 function datosDeLead(p: ProspectoParaEmbudo): LeadNuevo {
@@ -70,6 +96,16 @@ async function apuntarNota(leadId: string, usuariaId: string, nota: string) {
   }
 }
 
+async function marcarConsentimiento(leadId: string) {
+  // Sin que pueda tumbar el paso, como la nota: el lead ya está.
+  try {
+    const r = await actualizarLeadWeb(leadId, { consentimiento: true });
+    if (!r.ok) console.error("[ventas/prospeccion] consentimiento sin guardar en el lead", leadId);
+  } catch (error) {
+    console.error("[ventas/prospeccion] consentimiento sin guardar en el lead", leadId, error);
+  }
+}
+
 export async function pasarProspectoAlEmbudo(input: {
   marca: Marca;
   usuaria: Usuaria;
@@ -78,7 +114,9 @@ export async function pasarProspectoAlEmbudo(input: {
   const { marca, usuaria, prospecto } = input;
   const datos = datosDeLead(prospecto);
   const contacto = { email: datos.email, telefono: datos.telefono };
-  const nota = notaDeOrigen(prospecto);
+  const consiente = consentimientoVigente(prospecto);
+  const nota = consiente ? `${notaDeOrigen(prospecto)} ${await notaDeConsentimiento(prospecto)}` : notaDeOrigen(prospecto);
+  const conConsentimiento = consiente ? { consentimiento: true } : {};
 
   try {
     const exclusiones = await listExclusiones(marca.id);
@@ -89,6 +127,7 @@ export async function pasarProspectoAlEmbudo(input: {
     // Ya era lead de la marca (por otro cauce): se enlaza, no se duplica.
     const existente = await buscarLeadPorContacto(marca.id, contacto);
     if (existente) {
+      if (consiente) await marcarConsentimiento(existente.id);
       await apuntarNota(existente.id, usuaria.id, nota);
       return { ok: true, leadId: existente.id, existia: true };
     }
@@ -106,6 +145,7 @@ export async function pasarProspectoAlEmbudo(input: {
     if (!lead) return NO_SE_PUDO;
     // Cero creados: otra petición lo dio de alta entre la búsqueda y el insert.
     if (alta.creados === 0) {
+      if (consiente) await marcarConsentimiento(lead.id);
       await apuntarNota(lead.id, usuaria.id, nota);
       return { ok: true, leadId: lead.id, existia: true };
     }
@@ -113,6 +153,7 @@ export async function pasarProspectoAlEmbudo(input: {
     const cambios = await actualizarLeadWeb(lead.id, {
       canal: CANAL_PROSPECCION,
       extra: { ...(lead.extra ?? {}), sector: prospecto.sector, prospecto_id: prospecto.id },
+      ...conConsentimiento,
     });
     if (!cambios.ok) console.error("[ventas/prospeccion] canal y extra sin guardar (¿falta la migración de la unificación?)");
     await apuntarNota(lead.id, usuaria.id, nota);

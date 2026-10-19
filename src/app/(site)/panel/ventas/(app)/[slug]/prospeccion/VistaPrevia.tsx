@@ -25,7 +25,7 @@ export function VistaPrevia({ prospecto, plantilla }: { prospecto: ProspectRow; 
         <>
           <p style={{ margin: "0 0 8px", fontWeight: 700, fontSize: 14 }}>{asunto.ok && asunto.texto}</p>
           <p style={{ margin: 0, fontSize: 14, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{cuerpo.ok && cuerpo.texto}</p>
-          <p style={{ margin: "12px 0 0", fontSize: 12, color: "#94a3b8" }}>+ pie con los datos de dinkbit y el enlace de baja.</p>
+          <p style={{ margin: "12px 0 0", fontSize: 12, color: "#94a3b8" }}>+ pie con la fecha en que aceptó por teléfono, los datos de dinkbit, la política de privacidad y el enlace de baja.</p>
         </>
       )}
     </div>

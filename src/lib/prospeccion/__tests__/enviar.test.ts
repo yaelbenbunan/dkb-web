@@ -34,6 +34,8 @@ const prospecto = (extra: Record<string, unknown> = {}) => ({
   email: "info@barpepe.es",
   email_kind: "generica",
   status: "listo",
+  consentimiento_at: "2026-10-19T08:00:00.000Z",
+  consentimiento_retirado_at: null,
   ...extra,
 });
 
@@ -308,6 +310,28 @@ describe("enviarProspectos", () => {
     expect(r.enviados).toBe(1);
   });
 
+  test("sin consentimiento vigente no sale ningún correo, aunque la petición llegue al servidor", async () => {
+    db.prospectosPorIds.mockResolvedValue([
+      prospecto({ id: "a", email: "info@a.es", consentimiento_at: null }),
+      prospecto({ id: "b", email: "info@b.es", consentimiento_retirado_at: "2026-10-20T08:00:00.000Z" }),
+      prospecto({ id: "c", email: "info@c.es", consentimiento_at: undefined, consentimiento_retirado_at: undefined }),
+    ]);
+    const r = await enviarProspectos(["a", "b", "c"], "t1", { from: FROM });
+    expect(r.enviados).toBe(0);
+    expect(r.omitidos).toEqual([
+      { id: "a", motivo: "sin_consentimiento" },
+      { id: "b", motivo: "sin_consentimiento" },
+      { id: "c", motivo: "sin_consentimiento" },
+    ]);
+    expect(sendMock).not.toHaveBeenCalled();
+    expect(db.reclamarParaEnvio).not.toHaveBeenCalled();
+  });
+
+  test("el pie lleva la fecha en que aceptó por teléfono", async () => {
+    await enviarProspectos(["p1"], "t1", { from: FROM });
+    expect(sendMock.mock.calls[0][0].text).toContain("el 19 de octubre de 2026 nos dijo por teléfono");
+  });
+
   test("un id que no existe se informa como omitido", async () => {
     db.prospectosPorIds.mockResolvedValue([]);
     const r = await enviarProspectos(["fantasma"], "t1", { from: FROM });
@@ -316,10 +340,14 @@ describe("enviarProspectos", () => {
 });
 
 describe("componerCorreo", () => {
-  test("el pie identifica a dinkbit, dice de dónde sale la dirección y enlaza la baja", () => {
-    const { html, text } = componerCorreo("Hola <Bar>", "https://www.dinkbit.es/baja?id=1&token=2");
+  test("el pie dice por qué le escribimos (lo pidió por teléfono), quién es el responsable, la privacidad y la baja", () => {
+    const { html, text } = componerCorreo("Hola <Bar>", "https://www.dinkbit.es/baja?id=1&token=2", "2026-10-19T08:00:00Z");
     expect(text).toContain("Hola <Bar>");
-    expect(text).toContain("publicada en su web");
+    expect(text).toContain("Le escribimos porque el 19 de octubre de 2026 nos dijo por teléfono que le enviáramos información.");
+    expect(text).toContain("Responsable: Dinkbit Marketing S.L.");
+    expect(text).toContain("https://www.dinkbit.es/privacidad");
+    expect(text).not.toContain("publicada en su web");
+    expect(html).toContain('href="https://www.dinkbit.es/privacidad"');
     expect(text).toContain("https://www.dinkbit.es/baja?id=1&token=2");
     expect(html).toContain("Hola &lt;Bar&gt;");
     expect(html).toContain('href="https://www.dinkbit.es/baja?id=1&amp;token=2"');

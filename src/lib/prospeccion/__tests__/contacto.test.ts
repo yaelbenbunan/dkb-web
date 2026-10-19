@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { claveTexto, huellaWeb, normalizarTelefono, quitarDuplicados, webPropia } from "../contacto";
+import { claveTexto, huellaWeb, normalizarTelefono, quitarDuplicados, separarDuplicados, webPropia } from "../contacto";
 
 describe("webPropia", () => {
   test("añade el esquema y descarta redes sociales y basura", () => {
@@ -74,5 +74,26 @@ describe("quitarDuplicados", () => {
 
   test("sin teléfono ni web no se puede comparar: se queda", () => {
     expect(quitarDuplicados([base, base], [base])).toHaveLength(2);
+  });
+});
+
+describe("separarDuplicados", () => {
+  const base = { city: "Madrid", phone: null as string | null, website: null as string | null };
+
+  test("distingue los que ya estaban de los repetidos entre los propios candidatos", () => {
+    const existentes = [{ ...base, phone: "911000001" }];
+    const r = separarDuplicados(
+      [
+        { ...base, phone: "+34 911 000 001" }, // ya estaba
+        { ...base, phone: "911000002" },
+        { ...base, phone: "911000002" }, // repetido (otra sede con el mismo teléfono)
+        { ...base, website: "https://cadena.es" },
+        { ...base, website: "http://www.cadena.es/" }, // repetido (misma web en el municipio)
+      ],
+      existentes,
+    );
+    expect(r.unicos).toHaveLength(2);
+    expect(r.yaEstaban).toBe(1);
+    expect(r.repetidos).toBe(2);
   });
 });

@@ -202,6 +202,77 @@ export async function guardarEnriquecimiento(
   if (error) aviso("guardarEnriquecimiento", error.message);
 }
 
+/** Estados desde los que se puede registrar que aceptó por teléfono recibir
+ *  información: ni ya escrito ni dado de baja ni rebotado. */
+const ESTADOS_PARA_CONSENTIR: EstadoProspecto[] = ["nuevo", "sin_contacto", "listo", "descartado"];
+
+/** Registra que el prospecto aceptó por teléfono recibir información en ese
+ *  email: lo deja «listo» para escribirle. El email lo dio el propio negocio,
+ *  así que deja de contar como «parece personal». "error" también si faltan
+ *  las columnas (migración de 2026-10-19 sin ejecutar). */
+export async function registrarConsentimiento(
+  id: string,
+  c: { email: string; nota: string | null; por: string },
+): Promise<"ok" | "estado" | "error"> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return "error";
+  const { data, error } = await sb
+    .from(PROSPECTOS)
+    .update({
+      email: c.email,
+      email_kind: null,
+      contact_note: null,
+      status: "listo",
+      consentimiento_at: new Date().toISOString(),
+      consentimiento_por: c.por,
+      consentimiento_nota: c.nota,
+      consentimiento_retirado_at: null,
+    })
+    .eq("id", id)
+    .in("status", ESTADOS_PARA_CONSENTIR)
+    .select("id");
+  if (error) {
+    aviso("registrarConsentimiento", error.message);
+    return "error";
+  }
+  return (data?.length ?? 0) > 0 ? "ok" : "estado";
+}
+
+/** «Ya no quiere recibir información»: el consentimiento deja de valer y su
+ *  email entra en la lista de exclusión, como con la baja por enlace, para que
+ *  no se le escriba desde otra ficha. Devuelve las filas cambiadas, o null si
+ *  algo no se pudo guardar. */
+export async function retirarConsentimiento(id: string): Promise<number | null> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return null;
+  const { data, error } = await sb
+    .from(PROSPECTOS)
+    .update({ consentimiento_retirado_at: new Date().toISOString() })
+    .eq("id", id)
+    .not("consentimiento_at", "is", null)
+    .is("consentimiento_retirado_at", null)
+    .select("id, email");
+  if (error) {
+    aviso("retirarConsentimiento", error.message);
+    return null;
+  }
+  const filas = (data ?? []) as Array<{ id: string; email: string | null }>;
+  const emails = [...new Set(filas.map((f) => (f.email ?? "").trim().toLowerCase()).filter(Boolean))];
+  if (emails.length > 0) {
+    const vetado = await sb
+      .from(SUPRESIONES)
+      .upsert(
+        emails.map((value) => ({ value, kind: "email", reason: "baja" })),
+        { onConflict: "value", ignoreDuplicates: true },
+      );
+    if (vetado.error) {
+      aviso("retirarConsentimiento", vetado.error.message);
+      return null;
+    }
+  }
+  return filas.length;
+}
+
 /** Reclama la fila para enviarle un correo. El `where status = 'listo'` es lo
  *  que impide el doble envío: de dos peticiones simultáneas solo una actualiza
  *  la fila; la otra recibe cero filas y se retira. */
@@ -354,10 +425,15 @@ export async function marcarPorResendId(
   return fila.email ?? null;
 }
 
-/** Enlaza el prospecto con su lead del CRM. Solo desde «enviado» o
- *  «respondido»: una pestaña desactualizada no debe convertir una baja o un
- *  rebote en «respondió». */
-export async function enlazarLead(id: string, leadId: string): Promise<void> {
+/** Enlaza el prospecto con su lead del CRM. Desde «enviado» o «respondido»
+ *  (pasa a «respondido»), y con consentimiento vigente también desde «listo»
+ *  —justo tras la llamada—, sin cambiarle el estado. Nunca desde una baja o un
+ *  rebote: una pestaña desactualizada no debe pisarlos. */
+export async function enlazarLead(
+  id: string,
+  leadId: string,
+  o: { conConsentimiento: boolean } = { conConsentimiento: false },
+): Promise<void> {
   const sb = getSupabaseAdmin();
   if (!sb) return;
   const { error } = await sb
@@ -366,6 +442,9 @@ export async function enlazarLead(id: string, leadId: string): Promise<void> {
     .eq("id", id)
     .in("status", ["enviado", "respondido"]);
   if (error) aviso("enlazarLead", error.message);
+  if (!o.conConsentimiento) return;
+  const lista = await sb.from(PROSPECTOS).update({ lead_id: leadId }).eq("id", id).eq("status", "listo");
+  if (lista.error) aviso("enlazarLead", lista.error.message);
 }
 
 // Supresión ---------------------------------------------------------------
