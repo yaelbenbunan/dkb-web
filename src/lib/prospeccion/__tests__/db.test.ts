@@ -64,6 +64,20 @@ describe("guardarProspectos", () => {
     );
   });
 
+  test("con estado inicial: las del BORME entran ya «sin email», con su nota", async () => {
+    const c = cadena({ data: [{ id: "a" }] });
+    fromMock.mockReturnValue(c);
+    await guardarProspectos(
+      "s1",
+      [{ source: "borme", external_id: "2026-1", name: "X SL", sector: null, address: "C/ A 1, Getafe", city: "Getafe", province: "Madrid", phone: null, website: null, rating: null, reviews: null }],
+      { status: "sin_contacto", contact_note: "Carta al domicilio social" },
+    );
+    expect(c.upsert).toHaveBeenCalledWith(
+      [expect.objectContaining({ status: "sin_contacto", contact_note: "Carta al domicilio social" })],
+      { onConflict: "source,external_id", ignoreDuplicates: true },
+    );
+  });
+
   test("sin filas no toca la base", async () => {
     expect(await guardarProspectos("s1", [])).toBe(0);
     expect(fromMock).not.toHaveBeenCalled();

@@ -1,4 +1,6 @@
 import "server-only";
+import { constitucionAProspecto } from "./borme";
+import { buscarConstituciones } from "./borme-db";
 import { categoriaPorClave } from "./categorias";
 import { claveTexto, quitarDuplicados } from "./contacto";
 import { buscarLugares, huellasDeProspectos } from "./lugares-db";
@@ -85,5 +87,44 @@ export async function buscarNegocios(
     encontradas: encontrados.length,
     repetidas: encontrados.length - nuevos.length,
     quedan: Math.max(0, ordenados.length - MAX_POR_BUSQUEDA),
+  };
+}
+
+export type ResultadoEmpresasNuevas =
+  | { ok: true; prospectos: ProspectoNuevo[]; encontradas: number; repetidas: number; quedan: number }
+  /** `sin_datos`: la tabla `prospect_borme` no existe o no se pudo leer. */
+  | { ok: false; error: "sin_datos" };
+
+const defectoBorme = { buscarConstituciones, huellasDeProspectos };
+
+/**
+ * Empresas constituidas en los últimos `dias` días en un municipio (o, si no
+ * hay ninguna y lo escrito es una provincia, en la provincia), de las
+ * importadas del BORME en `prospect_borme`. Se quitan las que ya son
+ * prospecto; las más recientes, primero.
+ */
+export async function buscarEmpresasNuevas(
+  q: { lugar: string; dias: number; objeto: string },
+  d: typeof defectoBorme = defectoBorme,
+  hoy: Date = new Date(),
+): Promise<ResultadoEmpresasNuevas> {
+  const desde = new Date(hoy.getTime() - q.dias * 86_400_000).toISOString().slice(0, 10);
+  let filas = await d.buscarConstituciones({ municipio: claveTexto(q.lugar), desde, objeto: q.objeto });
+  if (filas && filas.length === 0) {
+    const provincia = provinciaDeTexto(q.lugar);
+    if (provincia) filas = await d.buscarConstituciones({ provincia, desde, objeto: q.objeto });
+  }
+  if (!filas) return { ok: false, error: "sin_datos" };
+
+  const encontrados = filas.map(constitucionAProspecto);
+  const huellas = await d.huellasDeProspectos();
+  if (!huellas) console.error("[prospeccion] sin huellas de prospectos: no se quitan duplicados");
+  const nuevos = huellas ? encontrados.filter((p) => !huellas.ids.has(`borme:${p.external_id}`)) : encontrados;
+  return {
+    ok: true,
+    prospectos: nuevos.slice(0, MAX_POR_BUSQUEDA),
+    encontradas: encontrados.length,
+    repetidas: encontrados.length - nuevos.length,
+    quedan: Math.max(0, nuevos.length - MAX_POR_BUSQUEDA),
   };
 }

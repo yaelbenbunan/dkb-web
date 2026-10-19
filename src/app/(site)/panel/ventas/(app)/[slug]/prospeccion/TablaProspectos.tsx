@@ -124,7 +124,7 @@ export function TablaProspectos({
           <option value="">Todas las búsquedas</option>
           {busquedas.map((b) => (
             <option key={b.id} value={b.id}>
-              {b.params.categoria} · {b.params.ciudad} ({b.total}){b.source === "overture" ? " · Overture" : ""}
+              {b.params.categoria} · {b.params.ciudad} ({b.total}){b.source === "overture" ? " · Overture" : b.source === "borme" ? " · BORME" : ""}
             </option>
           ))}
         </select>
@@ -250,6 +250,17 @@ export function TablaProspectos({
                       </span>
                     </td>
                     <td style={{ ...td, whiteSpace: "nowrap" }}>
+                      {p.source === "borme" && p.status === "sin_contacto" && (
+                        <a
+                          href={`/panel/ventas/${slug}/prospeccion/carta/${p.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ ...enlace, textDecoration: "none" }}
+                          title={p.address ?? undefined}
+                        >
+                          Preparar carta
+                        </a>
+                      )}
                       {p.status === "listo" && plantilla && (
                         <button type="button" style={enlace} onClick={() => setAbierta(abierta === p.id ? null : p.id)}>
                           {abierta === p.id ? "Cerrar" : "Ver y enviar"}

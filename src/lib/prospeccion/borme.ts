@@ -28,6 +28,9 @@ export const ATRIBUCION_BORME = {
   url: "https://www.boe.es",
 } as const;
 
+/** Antigüedades que ofrece la búsqueda de empresas nuevas, en días. */
+export const ANTIGUEDADES_BORME = [30, 90];
+
 /** Un documento de la sección A del sumario: los actos de una provincia. */
 export interface DocumentoBorme {
   bormeId: string;

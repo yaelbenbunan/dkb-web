@@ -17,7 +17,8 @@ import {
 import { categoriaPorClave } from "@/lib/prospeccion/categorias";
 import { enriquecerProspecto } from "@/lib/prospeccion/enriquecer";
 import { enviarProspectos, type ErrorEnvio } from "@/lib/prospeccion/enviar";
-import { buscarNegocios } from "@/lib/prospeccion/busqueda";
+import { ANTIGUEDADES_BORME } from "@/lib/prospeccion/borme";
+import { buscarEmpresasNuevas, buscarNegocios } from "@/lib/prospeccion/busqueda";
 import type { ErrorOsm } from "@/lib/prospeccion/osm";
 import { TEXTO_BLOQUEO } from "@/lib/prospeccion/reglas-envio";
 import { resumirOmitidos } from "@/lib/prospeccion/resumen-envio";
@@ -119,6 +120,56 @@ export async function buscarAction(
       (nuevas === 0
         ? `Ninguna empresa nueva (${fuente}).`
         : `${nuevas} empresa${nuevas === 1 ? " nueva" : "s nuevas"} (${fuente}).`) +
+      (repetidas > 0 ? ` ${repetidas} que ya tenías.` : "") +
+      (r.quedan > 0 ? ` Quedan ${r.quedan} más: repite la búsqueda para traerlas.` : ""),
+  };
+}
+
+const NOTA_CARTA = "Recién constituida: carta al domicilio social";
+
+/** Empresas constituidas hace poco (BORME), importadas en `prospect_borme`.
+ *  Entran ya «sin email» con la nota de la carta: no hay web que revisar. */
+export async function buscarEmpresasNuevasAction(
+  slug: string,
+  lugar: string,
+  dias: number,
+  objeto: string,
+): Promise<Resultado> {
+  const a = await acceso(slug);
+  if (!a.ok) return a;
+  const sitio = lugar.trim().slice(0, 80);
+  if (!sitio) return { ok: false, error: "Escribe el municipio o la provincia." };
+  if (!ANTIGUEDADES_BORME.includes(dias)) return { ok: false, error: "Elige la antigüedad." };
+  const palabra = objeto.trim().slice(0, 40);
+
+  const r = await buscarEmpresasNuevas({ lugar: sitio, dias, objeto: palabra });
+  if (!r.ok) {
+    return { ok: false, error: "No hay empresas del BORME importadas. ¿Está ejecutada la migración y lanzado el script de importación?" };
+  }
+  const params = {
+    categoria: palabra ? `Empresas nuevas («${palabra}»)` : "Empresas nuevas",
+    ciudad: sitio,
+    dias: String(dias),
+    fuente: "borme",
+  };
+  const searchId = await crearBusqueda("borme", params);
+  if (!searchId) return { ok: false, error: "No se pudo guardar la búsqueda." };
+  const nuevas = await guardarProspectos(searchId, r.prospectos, { status: "sin_contacto", contact_note: NOTA_CARTA });
+  if (nuevas === null) {
+    const error = "No se pudieron guardar las empresas encontradas.";
+    await cerrarBusqueda(searchId, { status: "error", error });
+    revalidatePath(ruta(slug));
+    return { ok: false, error };
+  }
+  await cerrarBusqueda(searchId, { status: "lista", total: r.prospectos.length });
+  revalidatePath(ruta(slug));
+  const repetidas = r.repetidas + (r.prospectos.length - nuevas);
+  return {
+    ok: true,
+    mensaje:
+      (nuevas === 0
+        ? `Ninguna empresa nueva en los últimos ${dias} días.`
+        : `${nuevas} empresa${nuevas === 1 ? " constituida" : "s constituidas"} en los últimos ${dias} días (BORME).`) +
       (repetidas > 0 ? ` ${repetidas} que ya tenías.` : "") +
       (r.quedan > 0 ? ` Quedan ${r.quedan} más: repite la búsqueda para traerlas.` : ""),
   };

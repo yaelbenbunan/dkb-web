@@ -28,8 +28,12 @@ necesario.
   municipio entre paréntesis, capital, provincia (la del documento). Los
   **nombramientos** (administradores, apoderados, consejeros) son datos
   personales y **no se guardan** (ver §3).
-- **Volumen** (prueba real, ver el plan): del orden de cientos de constituciones
-  por día laborable en España y ~100 en Madrid.
+- **Volumen** (dry-run real del 5 al 16-10-2026, 9 días con BORME): 4.592
+  constituciones, **~510 por día en España** (347–679) y **~110 por día en
+  Madrid** (0–197; el registro de Madrid no publica todos los días). El 100 %
+  trae objeto y capital y el 98 % domicilio con municipio (el resto viene con
+  paréntesis descuadrados en el original y se recupera con una regla aparte);
+  27 declaran ya una web.
 
 ## 2. Condiciones de reutilización
 
@@ -169,9 +173,12 @@ provincia, antigüedad (30 o 90 días) y, opcional, palabra del objeto social
 (p. ej. «restaurante», «estética»). Guarda hasta 200 como prospectos
 `source = 'borme'` en estado «Sin email» con la nota «Recién constituida: carta
 al domicilio social», sin pasar por la revisión de webs. En la tabla, esas filas
-tienen **«Preparar carta»**: abre una página imprimible (Imprimir → PDF del
-navegador) con la dirección de la sociedad, un texto editable y el pie del art.
-14. Debajo de la tarjeta, la atribución del BOE.
+tienen **«Preparar carta»**: abre un PDF A4 (ruta
+`prospeccion/carta/[id]`, mismo acceso que la pestaña) con el remitente, la
+sociedad «a la atención de la dirección» en la ventana del sobre, un texto fijo
+(`src/lib/prospeccion/carta.ts`) y el pie del art. 14. El BORME casi nunca da
+el código postal: hay que añadirlo a mano en el sobre. Debajo de la tarjeta, la
+atribución del BOE.
 
 ### Fuera de alcance
 

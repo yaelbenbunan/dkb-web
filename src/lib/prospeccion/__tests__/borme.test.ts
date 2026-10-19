@@ -140,39 +140,35 @@ describe("provinciaBorme", () => {
 });
 
 describe("documentosSeccionA", () => {
-  const sumario = {
+  const MADRID = {
+    identificador: "BORME-A-2026-200-28",
+    titulo: "MADRID",
+    url_pdf: { texto: DOC.urlPdf },
+    url_xml: "https://www.boe.es/diario_borme/xml.php?id=BORME-A-2026-200-28",
+  };
+  const INDICE = {
+    identificador: "BORME-A-2026-200-99",
+    titulo: "ÍNDICE ALFABÉTICO DE SOCIEDADES",
+    url_xml: "https://www.boe.es/diario_borme/xml.php?id=BORME-A-2026-200-99",
+  };
+  const sumario = (itemA: unknown) => ({
     status: { code: "200" },
     data: {
       sumario: {
         diario: [
           {
             seccion: [
-              {
-                codigo: "A",
-                item: [
-                  {
-                    identificador: "BORME-A-2026-200-28",
-                    titulo: "MADRID",
-                    url_pdf: { texto: DOC.urlPdf },
-                    url_xml: "https://www.boe.es/diario_borme/xml.php?id=BORME-A-2026-200-28",
-                  },
-                  {
-                    identificador: "BORME-A-2026-200-99",
-                    titulo: "ÍNDICE ALFABÉTICO DE SOCIEDADES",
-                    url_xml: "https://www.boe.es/diario_borme/xml.php?id=BORME-A-2026-200-99",
-                  },
-                ],
-              },
+              { codigo: "A", item: itemA },
               { codigo: "C", item: { identificador: "BORME-C-2026-1", titulo: "X" } },
             ],
           },
         ],
       },
     },
-  };
+  });
 
   test("los documentos por provincia de la sección A, sin el índice", () => {
-    expect(documentosSeccionA(sumario)).toEqual([
+    expect(documentosSeccionA(sumario([MADRID, INDICE]))).toEqual([
       {
         bormeId: "BORME-A-2026-200-28",
         provincia: "Madrid",
@@ -183,9 +179,7 @@ describe("documentosSeccionA", () => {
   });
 
   test("un solo item viene como objeto, no como lista", () => {
-    const uno = structuredClone(sumario);
-    (uno.data.sumario.diario[0].seccion[0] as { item: unknown }).item = sumario.data.sumario.diario[0].seccion[0].item[0];
-    expect(documentosSeccionA(uno)).toHaveLength(1);
+    expect(documentosSeccionA(sumario(MADRID))).toHaveLength(1);
   });
 
   test("una respuesta rara no rompe", () => {
@@ -194,9 +188,7 @@ describe("documentosSeccionA", () => {
   });
 
   test("solo URLs del BOE", () => {
-    const ajeno = structuredClone(sumario);
-    ajeno.data.sumario.diario[0].seccion[0].item[0].url_xml = "https://evil.example/x.xml";
-    expect(documentosSeccionA(ajeno)).toEqual([]);
+    expect(documentosSeccionA(sumario([{ ...MADRID, url_xml: "https://evil.example/x.xml" }]))).toEqual([]);
   });
 });
 

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { buscarNegocios, MAX_POR_BUSQUEDA } from "../busqueda";
+import type { FilaBorme } from "../borme";
+import { buscarEmpresasNuevas, buscarNegocios, MAX_POR_BUSQUEDA } from "../busqueda";
 import type { FilaLugar } from "../overture";
 import type { ProspectoNuevo } from "../tipos";
 
@@ -128,5 +129,50 @@ describe("buscarNegocios", () => {
   test("categoría desconocida", async () => {
     expect(await buscarNegocios({ categoria: "nada", ciudad: "Getafe" }, deps)).toEqual({ ok: false, error: "categoria_desconocida" });
     expect(deps.buscarLugares).not.toHaveBeenCalled();
+  });
+});
+
+describe("buscarEmpresasNuevas", () => {
+  const fila = (n: number, extra: Partial<FilaBorme> = {}): FilaBorme => ({
+    id: `2026-${n}`, nombre: `EMPRESA ${n} SL`, fecha_publicacion: "2026-10-16", inicio_operaciones: null,
+    objeto: "Restauración.", domicilio: `C/ MAYOR ${n}`, municipio: "Getafe", municipio_clave: "getafe",
+    provincia: "Madrid", capital: 3000, web: null, borme_id: "BORME-A-2026-200-28", url_pdf: null, ...extra,
+  });
+  const dBorme = { buscarConstituciones: vi.fn(), huellasDeProspectos: vi.fn() };
+  const hoy = new Date("2026-10-19T10:00:00Z");
+
+  beforeEach(() => {
+    dBorme.buscarConstituciones.mockReset();
+    dBorme.huellasDeProspectos.mockReset().mockResolvedValue({ ids: new Set(), fichas: [] });
+  });
+
+  test("por municipio, desde hace N días, como prospectos borme", async () => {
+    dBorme.buscarConstituciones.mockResolvedValue([fila(1), fila(2)]);
+    const r = await buscarEmpresasNuevas({ lugar: "Getafe", dias: 30, objeto: "bar" }, dBorme, hoy);
+    expect(dBorme.buscarConstituciones).toHaveBeenCalledWith({ municipio: "getafe", desde: "2026-09-19", objeto: "bar" });
+    expect(r).toMatchObject({ ok: true, encontradas: 2, repetidas: 0, quedan: 0 });
+    if (!r.ok) throw new Error();
+    expect(r.prospectos.map((p) => [p.source, p.external_id])).toEqual([["borme", "2026-1"], ["borme", "2026-2"]]);
+  });
+
+  test("si no hay nada en el municipio y es una provincia, por provincia", async () => {
+    dBorme.buscarConstituciones.mockResolvedValueOnce([]).mockResolvedValueOnce([fila(1)]);
+    await buscarEmpresasNuevas({ lugar: "madrid", dias: 90, objeto: "" }, dBorme, hoy);
+    expect(dBorme.buscarConstituciones).toHaveBeenLastCalledWith({ provincia: "Madrid", desde: "2026-07-21", objeto: "" });
+  });
+
+  test("quita las que ya son prospecto y corta en el máximo", async () => {
+    dBorme.buscarConstituciones.mockResolvedValue(Array.from({ length: MAX_POR_BUSQUEDA + 5 }, (_, i) => fila(i)));
+    dBorme.huellasDeProspectos.mockResolvedValue({ ids: new Set(["borme:2026-0", "osm:2026-1"]), fichas: [] });
+    const r = await buscarEmpresasNuevas({ lugar: "Getafe", dias: 30, objeto: "" }, dBorme, hoy);
+    expect(r).toMatchObject({ ok: true, encontradas: MAX_POR_BUSQUEDA + 5, repetidas: 1, quedan: 4 });
+    if (!r.ok) throw new Error();
+    expect(r.prospectos).toHaveLength(MAX_POR_BUSQUEDA);
+    expect(r.prospectos[0].external_id).toBe("2026-1");
+  });
+
+  test("sin la tabla importada, error claro", async () => {
+    dBorme.buscarConstituciones.mockResolvedValue(null);
+    expect(await buscarEmpresasNuevas({ lugar: "Getafe", dias: 30, objeto: "" }, dBorme, hoy)).toEqual({ ok: false, error: "sin_datos" });
   });
 });

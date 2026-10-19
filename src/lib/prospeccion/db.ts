@@ -70,15 +70,18 @@ export async function listarBusquedas(limit = 50): Promise<ProspectSearchRow[]> 
 /** Guarda las empresas de una búsqueda. Las que ya existían (misma fuente e
  *  identificador) no se tocan: conservan su estado y su historial de envío, así
  *  que una empresa ya contactada no vuelve a aparecer como nueva. Devuelve
- *  cuántas eran realmente nuevas, o null si no se pudieron guardar. */
+ *  cuántas eran realmente nuevas, o null si no se pudieron guardar. Las del
+ *  BORME entran con `inicial` («sin email» y la nota de la carta): no tienen
+ *  web que revisar. */
 export async function guardarProspectos(
   searchId: string,
   nuevos: ProspectoNuevo[],
+  inicial: { status: "sin_contacto"; contact_note: string } | null = null,
 ): Promise<number | null> {
   if (nuevos.length === 0) return 0;
   const sb = getSupabaseAdmin();
   if (!sb) return null;
-  const filas = nuevos.map((p) => ({ ...p, search_id: searchId, status: "nuevo" }));
+  const filas = nuevos.map((p) => ({ ...p, search_id: searchId, status: "nuevo", ...inicial }));
   const { data, error } = await sb
     .from(PROSPECTOS)
     .upsert(filas, { onConflict: "source,external_id", ignoreDuplicates: true })

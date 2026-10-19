@@ -8,6 +8,7 @@ import type {
 } from "@/lib/prospeccion/tipos";
 import { botonPrimario, botonSecundario } from "../../../_componentes/estilos";
 import { Buscador } from "./Buscador";
+import { EmpresasNuevas } from "./EmpresasNuevas";
 import { Plantillas } from "./Plantillas";
 import { TablaProspectos } from "./TablaProspectos";
 
@@ -66,6 +67,7 @@ export function Prospeccion(props: {
       {vista === "empresas" ? (
         <>
           <Buscador slug={props.slug} pendientes={pendientes} onAviso={setAviso} />
+          <EmpresasNuevas slug={props.slug} onAviso={setAviso} />
           <TablaProspectos
             slug={props.slug}
             prospectos={props.prospectos}

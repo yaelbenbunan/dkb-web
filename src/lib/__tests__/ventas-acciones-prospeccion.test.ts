@@ -4,6 +4,7 @@ const m = vi.hoisted(() => ({
   accesoMarcaAccion: vi.fn(),
   revalidatePath: vi.fn(),
   buscarNegocios: vi.fn(),
+  buscarEmpresasNuevas: vi.fn(),
   enviarProspectos: vi.fn(),
   enriquecerProspecto: vi.fn(),
   pasarProspectoAlEmbudo: vi.fn(),
@@ -28,7 +29,7 @@ vi.mock("@/lib/ventas/prospeccion", () => ({ pasarProspectoAlEmbudo: m.pasarPros
 vi.mock("@/lib/prospeccion/db", () => m.db);
 vi.mock("@/lib/prospeccion/enriquecer", () => ({ enriquecerProspecto: m.enriquecerProspecto }));
 vi.mock("@/lib/prospeccion/enviar", () => ({ enviarProspectos: m.enviarProspectos }));
-vi.mock("@/lib/prospeccion/busqueda", () => ({ buscarNegocios: m.buscarNegocios }));
+vi.mock("@/lib/prospeccion/busqueda", () => ({ buscarNegocios: m.buscarNegocios, buscarEmpresasNuevas: m.buscarEmpresasNuevas }));
 
 import * as acciones from "@/app/(site)/panel/ventas/acciones-prospeccion";
 
@@ -46,6 +47,7 @@ function acceso(resultado: unknown) {
 async function llamarATodas(slug: string) {
   return [
     await acciones.buscarAction(slug, "restaurantes", "Madrid"),
+    await acciones.buscarEmpresasNuevasAction(slug, "Getafe", 30, ""),
     await acciones.enviarAction(slug, ["p1"], "t1", "hola@mail.dinkbit.es", false),
     await acciones.descartarAction(slug, ["p1"]),
     await acciones.marcarRespondidoAction(slug, "p1"),
@@ -58,6 +60,7 @@ async function llamarATodas(slug: string) {
 function nadaTocado() {
   for (const f of Object.values(m.db)) expect(f).not.toHaveBeenCalled();
   expect(m.buscarNegocios).not.toHaveBeenCalled();
+  expect(m.buscarEmpresasNuevas).not.toHaveBeenCalled();
   expect(m.enviarProspectos).not.toHaveBeenCalled();
   expect(m.enriquecerProspecto).not.toHaveBeenCalled();
   expect(m.pasarProspectoAlEmbudo).not.toHaveBeenCalled();
@@ -67,6 +70,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   for (const f of Object.values(m.db)) f.mockReset();
   m.buscarNegocios.mockReset();
+  m.buscarEmpresasNuevas.mockReset();
   m.enviarProspectos.mockReset();
   m.pasarProspectoAlEmbudo.mockReset();
   acceso({ ok: true, usuaria: COMERCIAL, marca: DINKBIT });
@@ -88,6 +92,7 @@ describe("acceso", () => {
     expect(Object.keys(acciones).sort()).toEqual([
       "borrarPlantillaAction",
       "buscarAction",
+      "buscarEmpresasNuevasAction",
       "descartarAction",
       "enriquecerTandaAction",
       "enviarAction",
@@ -159,6 +164,27 @@ describe("con acceso", () => {
     const error = "No se pudieron guardar las empresas encontradas. ¿Está ejecutada la migración de prospección?";
     expect(await acciones.buscarAction("dinkbit", "restaurantes", "Madrid")).toEqual({ ok: false, error });
     expect(m.db.cerrarBusqueda).toHaveBeenCalledWith("s1", { status: "error", error });
+  });
+
+  test("buscarEmpresasNuevasAction guarda las del BORME ya «sin email», con la nota de la carta", async () => {
+    m.buscarEmpresasNuevas.mockResolvedValue({ ok: true, prospectos: [{ external_id: "2026-1" }], encontradas: 3, repetidas: 2, quedan: 0 });
+    m.db.guardarProspectos.mockResolvedValue(1);
+    const r = await acciones.buscarEmpresasNuevasAction("dinkbit", " Getafe ", 90, "bar");
+    expect(m.buscarEmpresasNuevas).toHaveBeenCalledWith({ lugar: "Getafe", dias: 90, objeto: "bar" });
+    expect(m.db.crearBusqueda).toHaveBeenCalledWith("borme", { categoria: "Empresas nuevas («bar»)", ciudad: "Getafe", dias: "90", fuente: "borme" });
+    expect(m.db.guardarProspectos).toHaveBeenCalledWith("s1", [{ external_id: "2026-1" }], {
+      status: "sin_contacto",
+      contact_note: "Recién constituida: carta al domicilio social",
+    });
+    expect(r).toEqual({ ok: true, mensaje: "1 empresa constituida en los últimos 90 días (BORME). 2 que ya tenías." });
+  });
+
+  test("buscarEmpresasNuevasAction: antigüedad no ofrecida o sin tabla importada", async () => {
+    expect(await acciones.buscarEmpresasNuevasAction("dinkbit", "Getafe", 7, "")).toEqual({ ok: false, error: "Elige la antigüedad." });
+    m.buscarEmpresasNuevas.mockResolvedValue({ ok: false, error: "sin_datos" });
+    const r = await acciones.buscarEmpresasNuevasAction("dinkbit", "Getafe", 30, "");
+    expect(r.ok).toBe(false);
+    expect(m.db.crearBusqueda).not.toHaveBeenCalled();
   });
 
   test("descartarAction descarta desde cualquier estado menos baja y rebotado", async () => {
