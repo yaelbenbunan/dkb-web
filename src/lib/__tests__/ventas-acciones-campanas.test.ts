@@ -97,7 +97,7 @@ describe("permisos y módulo", () => {
 
   test("con el módulo apagado no se crea ni se envía", async () => {
     m.accesoMarcaAccion.mockResolvedValue({ ok: true, usuaria, marca: { ...HYDRUP, modulos: [] } });
-    expect(await crearBorradorCampanaAction("hydrup")).toEqual({ error: "El módulo de campañas no está activado en esta marca." });
+    expect(await crearBorradorCampanaAction("hydrup")).toEqual({ error: "El módulo de mailing no está activado en esta marca." });
     expect((await enviarCampanaAction("hydrup", "c1", "l1")).ok).toBe(false);
     expect(m.crearCampanaDeMarca).not.toHaveBeenCalled();
     expect(m.sendCampaign).not.toHaveBeenCalled();

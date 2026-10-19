@@ -37,7 +37,7 @@ import type { ResultadoAccion } from "@/lib/ventas/resultado";
 
 type Resultado = { ok: boolean; error?: string };
 
-const MODULO_APAGADO = "El módulo de campañas no está activado en esta marca.";
+const MODULO_APAGADO = "El módulo de mailing no está activado en esta marca.";
 const NO_ENCONTRADA = "Campaña no encontrada.";
 
 async function accesoCampanas(slug: string): Promise<{ ok: true; marca: Marca } | { ok: false; error: string }> {
@@ -266,5 +266,5 @@ export async function actualizarModulosAction(marcaId: string, _prev: ResultadoA
   });
   if (!res.ok) return res;
   revalidatePath("/panel/ventas", "layout");
-  return { ok: true, mensaje: leido.datos.campanas ? "Módulo de campañas activado." : "Módulo de campañas desactivado." };
+  return { ok: true, mensaje: leido.datos.campanas ? "Mailing activado." : "Mailing desactivado." };
 }

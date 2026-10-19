@@ -30,7 +30,7 @@ export function ModulosForm({
       <fieldset disabled={!editable} style={{ display: "contents" }}>
         <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 600 }}>
           <input type="checkbox" name="campanas" defaultChecked={campanas} />
-          Campañas de email (servicio de pago)
+          Mailing (servicio de pago)
         </label>
         <label style={etiqueta}>
           Remitentes permitidos (separados por comas)

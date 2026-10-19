@@ -57,6 +57,8 @@ export interface TarjetaLead {
   negocio: string;
   tipo: string | null;
   ciudad: string | null;
+  /** Campaña del anuncio o del formulario por el que llegó. */
+  campana: string | null;
   telefono: string | null;
   fase: Fase;
   excluido: boolean;
@@ -348,6 +350,11 @@ function Tarjeta({
         <div style={{ minWidth: 0 }}>
           <strong style={{ display: "block", fontSize: 14, color: "#0f172a", lineHeight: 1.25, overflowWrap: "anywhere" }}>{lead.negocio}</strong>
           {detalle && <span style={{ display: "block", fontSize: 12, color: "#64748b", marginTop: 2 }}>{detalle}</span>}
+          {lead.campana && (
+            <span title="Campaña" style={{ display: "block", fontSize: 11, color: "#3730a3", fontWeight: 600, marginTop: 3, overflowWrap: "anywhere" }}>
+              {lead.campana}
+            </span>
+          )}
         </div>
         {lead.asignada && (
           <span

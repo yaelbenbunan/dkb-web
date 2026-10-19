@@ -45,6 +45,7 @@ export default async function TableroPage({
         negocio: l.negocio,
         tipo: l.tipo_negocio ? TIPO_NEGOCIO_LABELS[l.tipo_negocio] : null,
         ciudad: l.ciudad,
+        campana: l.campana ?? l.origen_detalle ?? null,
         telefono: l.telefono,
         fase: l.fase,
         excluido: l.excluido,

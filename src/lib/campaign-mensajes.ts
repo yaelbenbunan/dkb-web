@@ -23,7 +23,7 @@ const SEND_ERROR_MESSAGE: Record<string, string> = {
   campaign_not_found: "Campaña no encontrada.",
   [CAMPAIGN_NOT_CLAIMABLE]:
     "La campaña ya se está enviando o está programada. Si está programada, cancela la programación antes de enviarla a mano.",
-  modulo_inactivo: "El módulo de campañas no está activado en esta marca.",
+  modulo_inactivo: "El módulo de mailing no está activado en esta marca.",
   marca_not_found: "La marca de esta campaña ya no existe.",
 };
 

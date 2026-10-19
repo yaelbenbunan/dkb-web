@@ -39,7 +39,7 @@ export default async function CampanaMarcaPage({ params }: { params: Promise<{ s
 
   const volver = (
     <Link href={`/panel/ventas/${marca.slug}/campanas`} style={{ fontSize: 13, color: "#187bef", textDecoration: "none" }}>
-      ← Campañas
+      ← Mailing
     </Link>
   );
   const encontrada = await getCampaign(id);
