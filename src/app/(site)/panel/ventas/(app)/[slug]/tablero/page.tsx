@@ -36,7 +36,7 @@ export default async function TableroPage({
   // Al cliente solo van datos planos del lead: nada de la marca (lleva el secreto del webhook).
   const leads: TarjetaLead[] = todos
     .filter((l) => !atrasados || estadoSeguimiento(l.proximo_seguimiento, l.proximo_seguimiento_hora ?? null, l.fase, ahora) === "atrasado")
-    .filter((l) => !q || [l.negocio, l.ciudad, l.contacto].some((v) => v?.toLowerCase().includes(q)))
+    .filter((l) => !q || [l.negocio, l.ciudad, l.contacto, l.email, l.telefono].some((v) => v?.toLowerCase().includes(q)))
     .map((l) => {
       const nombre = l.asignada_a ? nombres.get(l.asignada_a) : undefined;
       const nota = notas.get(l.id);
@@ -46,7 +46,9 @@ export default async function TableroPage({
         tipo: l.tipo_negocio ? TIPO_NEGOCIO_LABELS[l.tipo_negocio] : null,
         ciudad: l.ciudad,
         campana: l.campana ?? l.origen_detalle ?? null,
+        contacto: l.contacto,
         telefono: l.telefono,
+        email: l.email,
         fase: l.fase,
         excluido: l.excluido,
         proximo_seguimiento: l.proximo_seguimiento,

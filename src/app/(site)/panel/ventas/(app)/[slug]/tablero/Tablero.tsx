@@ -59,7 +59,9 @@ export interface TarjetaLead {
   ciudad: string | null;
   /** Campaña del anuncio o del formulario por el que llegó. */
   campana: string | null;
+  contacto: string | null;
   telefono: string | null;
+  email: string | null;
   fase: Fase;
   excluido: boolean;
   proximo_seguimiento: string | null;
@@ -172,7 +174,7 @@ export function Tablero({
           const destacada = sobre === columna.id;
           const aceptaSoltar = origenArrastre !== undefined && columna.id !== COLUMNA_OTROS.id && columnaDeFase(origenArrastre.fase, slug) !== columna.id;
           const color = columna.fases[0] ? FASE_COLORES[columna.fases[0]] : { bg: "#f1f5f9", text: "#64748b" };
-          const ancho = columna.id === "descartados" ? 220 : 260;
+          const ancho = columna.id === "descartados" ? 260 : 300;
           return (
             <section
               key={columna.id}
@@ -377,6 +379,22 @@ function Tarjeta({
           </span>
         )}
       </div>
+
+      {(lead.contacto || lead.telefono || lead.email) && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 2, fontSize: 12, color: "#334155", lineHeight: 1.35 }}>
+          {lead.contacto && <span style={{ fontWeight: 600, overflowWrap: "anywhere" }}>{lead.contacto}</span>}
+          {lead.telefono && (
+            <a href={`tel:${lead.telefono}`} style={{ color: "#187bef", textDecoration: "none", width: "fit-content" }}>
+              {lead.telefono}
+            </a>
+          )}
+          {lead.email && (
+            <a href={`mailto:${lead.email}`} style={{ color: "#187bef", textDecoration: "none", wordBreak: "break-all" }}>
+              {lead.email}
+            </a>
+          )}
+        </div>
+      )}
 
       {(lead.excluido || enDescartados || seguimiento) && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
