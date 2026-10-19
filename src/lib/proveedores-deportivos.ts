@@ -12,7 +12,9 @@ export const PD_GRACIAS_PATH = "/proveedores-deportivos/gracias";
 /** Es una campaña de captación de dinkbit, no un cliente: las solicitudes
  *  entran como leads de dinkbit con esta campaña y canal. */
 export const MARCA_PROVEEDORES_DEPORTIVOS_SLUG = "dinkbit";
-export const PD_CAMPANA = "Proveedores deportivos";
+/** El mismo nombre que ponen los anuncios de Meta vía Zapier: así el filtro
+ *  por campaña junta los de la landing y los del formulario de Meta. */
+export const PD_CAMPANA = "Leads - proveedores deportivos";
 export const PD_CANAL = "Web";
 
 export const PD_PRECIO = "350 €";

@@ -12,6 +12,7 @@ const m = vi.hoisted(() => ({
   actualizarDatosLead: vi.fn(),
   actualizarExtrasLead: vi.fn(),
   actualizarAtribucionLead: vi.fn(),
+  actualizarLeadWeb: vi.fn(),
   createManualLead: vi.fn(),
 }));
 vi.mock("../ventas/db", () => m);
@@ -255,6 +256,23 @@ describe("recibirLeadFormulario", () => {
     await recibirLeadFormulario({ slug: "dinkbit", datos: { negocio: "Padel Pro", email: "p@p.es" }, nota: "x", campana: "Proveedores deportivos", canal: "Web" });
     expect(m.crearLeads).toHaveBeenCalledWith(expect.objectContaining({ origenDetalle: "Proveedores deportivos" }));
     expect(m.actualizarAtribucionLead).toHaveBeenCalledWith("l-new", { canal: "Web", campana: "Proveedores deportivos" });
+  });
+
+  test("un lead archivado que vuelve a llegar sale del archivo, con nota", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA_ACTIVA);
+    m.buscarLeadPorContacto.mockResolvedValue({ id: "l-viejo", email: "ya@a.es", telefono: null, archivado: true });
+    m.actualizarLeadWeb.mockResolvedValue({ ok: true });
+    const r = await recibirLeadFormulario({ slug: "dinkbit", datos: { negocio: "Padel Pro", email: "ya@a.es" }, nota: "x", campana: "Leads - proveedores deportivos" });
+    expect(r).toEqual({ status: 200, body: { ok: true, duplicado: true } });
+    expect(m.actualizarLeadWeb).toHaveBeenCalledWith("l-viejo", { archivado: false });
+    expect(m.registrarActividad.mock.calls[0][0].nota).toContain("Estaba archivado: se recupera.");
+  });
+
+  test("un lead repetido que no estaba archivado no se toca el archivo", async () => {
+    m.getMarcaPorSlug.mockResolvedValue(MARCA_ACTIVA);
+    m.buscarLeadPorContacto.mockResolvedValue({ id: "l-viejo", email: "ya@a.es", telefono: null, archivado: false });
+    await recibirLeadFormulario({ slug: "dinkbit", datos: { negocio: "Padel Pro", email: "ya@a.es" } });
+    expect(m.actualizarLeadWeb).not.toHaveBeenCalled();
   });
 
   test("marca desconocida → 404 unknown_brand", async () => {

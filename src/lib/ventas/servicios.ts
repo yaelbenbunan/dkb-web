@@ -7,6 +7,7 @@ import {
   actualizarDatosLead,
   actualizarExtrasLead,
   actualizarAtribucionLead,
+  actualizarLeadWeb,
   actualizarSecuencia,
   buscarLeadPorContacto,
   crearLeads,
@@ -224,7 +225,10 @@ async function guardarLeadEntrante(input: {
   if (clasificacion.duplicados.length > 0) {
     const existente = await buscarLeadPorContacto(marca.id, lead);
     if (existente) {
-      const vuelta = `Ha vuelto a llegar desde ${campana === CAMPANA_FORMULARIO_WEB ? "la web" : "anuncios"}${campana ? ` (${campana})` : ""}.`;
+      const archivado = existente.archivado === true;
+      const vuelta =
+        `Ha vuelto a llegar desde ${campana === CAMPANA_FORMULARIO_WEB ? "la web" : "anuncios"}${campana ? ` (${campana})` : ""}.` +
+        (archivado ? " Estaba archivado: se recupera." : "");
       await registrarActividad({
         leadId: existente.id,
         usuariaId: null,
@@ -243,6 +247,16 @@ async function guardarLeadEntrante(input: {
       }
       await guardarExtras(existente.id, existente, input.extras);
       await guardarAtribucion(existente.id, existente, campana, input.extras);
+      // Quien vuelve a pedir información vuelve a ser una oportunidad: si estaba
+      // archivado, sale del archivo (con su fase e historial) para que se vea.
+      if (archivado) {
+        try {
+          const res = await actualizarLeadWeb(existente.id, { archivado: false });
+          if (!res.ok) console.error("guardarLeadEntrante: no se pudo recuperar el lead archivado:", res.error);
+        } catch (error) {
+          console.error("guardarLeadEntrante: no se pudo recuperar el lead archivado", error);
+        }
+      }
     }
     return { status: 200, body: { ok: true, duplicado: true } };
   }

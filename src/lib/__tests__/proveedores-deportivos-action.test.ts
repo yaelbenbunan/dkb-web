@@ -38,7 +38,7 @@ describe("enviarSolicitudPack", () => {
     const arg = m.recibir.mock.calls[0][0];
     // Es una campaña de dinkbit, no una marca: lead de dinkbit con su campaña.
     expect(arg.slug).toBe("dinkbit");
-    expect(arg.campana).toBe("Proveedores deportivos");
+    expect(arg.campana).toBe("Leads - proveedores deportivos");
     expect(arg.canal).toBe("Web");
     expect(arg.datos).toMatchObject({ contacto: "Laura Gómez", negocio: "Padel Pro SL", email: "laura@padelpro.es", telefono: "600112233", web: "@padelpro" });
     expect(arg.nota).toContain("Qué vende: Material de pádel");
