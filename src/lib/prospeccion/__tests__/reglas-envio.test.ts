@@ -7,7 +7,13 @@ import {
 } from "../reglas-envio";
 
 const ctx = { suprimidos: new Set<string>(), emailsDeLeads: new Set<string>(), confirmarPersonal: false };
-const listo = { status: "listo", email: "info@bar.es", email_kind: "generica" } as const;
+const listo = {
+  status: "listo",
+  email: "info@bar.es",
+  email_kind: "generica",
+  consentimiento_at: "2026-10-19T10:00:00Z",
+  consentimiento_retirado_at: null,
+} as const;
 
 describe("motivoBloqueo", () => {
   test("un prospecto listo con buzón genérico se puede enviar", () => {
@@ -18,6 +24,14 @@ describe("motivoBloqueo", () => {
     for (const status of ["nuevo", "sin_contacto", "enviado", "respondido", "rebotado", "baja", "descartado"] as const) {
       expect(motivoBloqueo({ ...listo, status }, ctx)).toBe("estado");
     }
+  });
+
+  test("sin consentimiento vigente no hay envío, sea cual sea su estado", () => {
+    expect(motivoBloqueo({ ...listo, consentimiento_at: null }, ctx)).toBe("sin_consentimiento");
+    expect(motivoBloqueo({ ...listo, consentimiento_retirado_at: "2026-10-20T10:00:00Z" }, ctx)).toBe("sin_consentimiento");
+    expect(motivoBloqueo({ ...listo, status: "nuevo", consentimiento_at: null }, ctx)).toBe("sin_consentimiento");
+    // Sin las columnas (migración sin ejecutar), tampoco.
+    expect(motivoBloqueo({ status: "listo", email: "info@bar.es", email_kind: "generica" }, ctx)).toBe("sin_consentimiento");
   });
 
   test("sin email no hay envío", () => {

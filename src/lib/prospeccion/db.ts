@@ -199,6 +199,61 @@ export async function guardarEnriquecimiento(
   if (error) aviso("guardarEnriquecimiento", error.message);
 }
 
+/** Estados desde los que se puede registrar que aceptó por teléfono recibir
+ *  información: ni ya escrito ni dado de baja ni rebotado. */
+const ESTADOS_PARA_CONSENTIR: EstadoProspecto[] = ["nuevo", "sin_contacto", "listo", "descartado"];
+
+/** Registra que el prospecto aceptó por teléfono recibir información en ese
+ *  email: lo deja «listo» para escribirle. El email lo dio el propio negocio,
+ *  así que deja de contar como «parece personal». "error" también si faltan
+ *  las columnas (migración de 2026-10-19 sin ejecutar). */
+export async function registrarConsentimiento(
+  id: string,
+  c: { email: string; nota: string | null; por: string },
+): Promise<"ok" | "estado" | "error"> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return "error";
+  const { data, error } = await sb
+    .from(PROSPECTOS)
+    .update({
+      email: c.email,
+      email_kind: null,
+      contact_note: null,
+      status: "listo",
+      consentimiento_at: new Date().toISOString(),
+      consentimiento_por: c.por,
+      consentimiento_nota: c.nota,
+      consentimiento_retirado_at: null,
+    })
+    .eq("id", id)
+    .in("status", ESTADOS_PARA_CONSENTIR)
+    .select("id");
+  if (error) {
+    aviso("registrarConsentimiento", error.message);
+    return "error";
+  }
+  return (data?.length ?? 0) > 0 ? "ok" : "estado";
+}
+
+/** «Ya no quiere recibir información»: el consentimiento deja de valer y no se
+ *  le vuelve a escribir. Devuelve las filas cambiadas, o null si falló. */
+export async function retirarConsentimiento(id: string): Promise<number | null> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return null;
+  const { data, error } = await sb
+    .from(PROSPECTOS)
+    .update({ consentimiento_retirado_at: new Date().toISOString() })
+    .eq("id", id)
+    .not("consentimiento_at", "is", null)
+    .is("consentimiento_retirado_at", null)
+    .select("id");
+  if (error) {
+    aviso("retirarConsentimiento", error.message);
+    return null;
+  }
+  return data?.length ?? 0;
+}
+
 /** Reclama la fila para enviarle un correo. El `where status = 'listo'` es lo
  *  que impide el doble envío: de dos peticiones simultáneas solo una actualiza
  *  la fila; la otra recibe cero filas y se retira. */
