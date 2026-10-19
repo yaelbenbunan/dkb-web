@@ -67,27 +67,59 @@ export interface FichaComparable {
   website: string | null;
 }
 
-/** Quita de `candidatos` los que ya están en `existentes` o repetidos entre sí.
- *  Dos fichas son el mismo negocio si comparten teléfono, o web y municipio: la
- *  web sola no basta, porque las sedes de una cadena comparten dominio. */
-export function quitarDuplicados<T extends FichaComparable>(candidatos: T[], existentes: FichaComparable[]): T[] {
+/** Huellas de un conjunto de fichas: teléfonos, y webs por municipio. */
+function huellas() {
   const telefonos = new Set<string>();
   const webs = new Set<string>();
-  const anotar = (f: FichaComparable) => {
-    const tel = normalizarTelefono(f.phone);
+  const clave = (f: FichaComparable) => {
     const web = huellaWeb(f.website);
-    if (tel) telefonos.add(tel);
-    if (web) webs.add(`${claveTexto(f.city)}|${web}`);
+    return { tel: normalizarTelefono(f.phone), web: web ? `${claveTexto(f.city)}|${web}` : null };
   };
-  existentes.forEach(anotar);
+  return {
+    anotar(f: FichaComparable) {
+      const { tel, web } = clave(f);
+      if (tel) telefonos.add(tel);
+      if (web) webs.add(web);
+    },
+    tiene(f: FichaComparable) {
+      const { tel, web } = clave(f);
+      return Boolean((tel && telefonos.has(tel)) || (web && webs.has(web)));
+    },
+  };
+}
 
-  const salida: T[] = [];
+/** Separa de `candidatos` los que ya están en `existentes` (`yaEstaban`) y los
+ *  repetidos entre sí (`repetidos`: sedes de una cadena con el mismo teléfono,
+ *  la misma ficha en dos fuentes…). Dos fichas son el mismo negocio si
+ *  comparten teléfono, o web y municipio: la web sola no basta, porque las
+ *  sedes de una cadena comparten dominio. */
+export function separarDuplicados<T extends FichaComparable>(
+  candidatos: T[],
+  existentes: FichaComparable[],
+): { unicos: T[]; yaEstaban: number; repetidos: number } {
+  const previas = huellas();
+  existentes.forEach(previas.anotar);
+  const vistas = huellas();
+
+  const unicos: T[] = [];
+  let yaEstaban = 0;
+  let repetidos = 0;
   for (const c of candidatos) {
-    const tel = normalizarTelefono(c.phone);
-    const web = huellaWeb(c.website);
-    if ((tel && telefonos.has(tel)) || (web && webs.has(`${claveTexto(c.city)}|${web}`))) continue;
-    anotar(c);
-    salida.push(c);
+    if (previas.tiene(c)) {
+      yaEstaban += 1;
+      continue;
+    }
+    if (vistas.tiene(c)) {
+      repetidos += 1;
+      continue;
+    }
+    vistas.anotar(c);
+    unicos.push(c);
   }
-  return salida;
+  return { unicos, yaEstaban, repetidos };
+}
+
+/** Quita de `candidatos` los que ya están en `existentes` o repetidos entre sí. */
+export function quitarDuplicados<T extends FichaComparable>(candidatos: T[], existentes: FichaComparable[]): T[] {
+  return separarDuplicados(candidatos, existentes).unicos;
 }

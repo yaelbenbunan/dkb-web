@@ -52,7 +52,7 @@ describe("buscarNegocios", () => {
     const r = await buscarNegocios({ categoria: "dentistas", ciudad: "Getafe" }, deps);
     expect(deps.buscarLugares).toHaveBeenCalledWith({ clave: "dentistas", municipio: "getafe" });
     expect(deps.buscarEnOsm).not.toHaveBeenCalled();
-    expect(r).toMatchObject({ ok: true, fuente: "overture", encontradas: 2, repetidas: 0, quedan: 0 });
+    expect(r).toMatchObject({ ok: true, fuente: "overture", encontradas: 2, yaTenias: 0, repetidas: 0, quedan: 0 });
     if (!r.ok) throw new Error();
     expect(r.prospectos.map((p) => [p.source, p.external_id, p.sector])).toEqual([
       ["overture", "ov-1", "Clínicas dentales"],
@@ -95,7 +95,20 @@ describe("buscarNegocios", () => {
     const r = await buscarNegocios({ categoria: "dentistas", ciudad: "Getafe" }, deps);
     if (!r.ok) throw new Error();
     expect(r.prospectos.map((p) => p.external_id)).toEqual(["ov-4"]);
-    expect(r).toMatchObject({ encontradas: 4, repetidas: 3 });
+    expect(r).toMatchObject({ encontradas: 4, yaTenias: 3, repetidas: 0 });
+  });
+
+  test("las sedes repetidas dentro de los datos (mismo teléfono) no cuentan como «ya las tenías»", async () => {
+    // Sin ningún prospecto guardado: lo repetido viene de la propia fuente.
+    deps.buscarLugares.mockResolvedValue([
+      lugar(1),
+      lugar(2, { telefono: "+34910000001", telefono_clave: "910000001" }),
+      lugar(3, { telefono: "+34910000001", telefono_clave: "910000001" }),
+    ]);
+    const r = await buscarNegocios({ categoria: "dentistas", ciudad: "Getafe" }, deps);
+    if (!r.ok) throw new Error();
+    expect(r.prospectos.map((p) => p.external_id)).toEqual(["ov-1"]);
+    expect(r).toMatchObject({ encontradas: 3, yaTenias: 0, repetidas: 2 });
   });
 
   test("el mismo filtro se aplica a lo que llega de OSM", async () => {
@@ -110,7 +123,7 @@ describe("buscarNegocios", () => {
   test("si no se pueden leer los prospectos, sigue sin quitar duplicados", async () => {
     deps.buscarLugares.mockResolvedValue([lugar(1)]);
     deps.huellasDeProspectos.mockResolvedValue(null);
-    expect(await buscarNegocios({ categoria: "dentistas", ciudad: "Getafe" }, deps)).toMatchObject({ ok: true, encontradas: 1, repetidas: 0 });
+    expect(await buscarNegocios({ categoria: "dentistas", ciudad: "Getafe" }, deps)).toMatchObject({ ok: true, encontradas: 1, yaTenias: 0, repetidas: 0 });
   });
 
   test("guarda como mucho MAX_POR_BUSQUEDA, primero los que tienen teléfono, y dice cuántos quedan", async () => {
