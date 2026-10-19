@@ -8,9 +8,11 @@ const m = vi.hoisted(() => ({
   registrarConsentimientoAction: vi.fn(),
   retirarConsentimientoAction: vi.fn(),
   buscarEmailWebAction: vi.fn(),
+  borrarBusquedaAction: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: m.refresh }) }));
 vi.mock("@/app/(site)/panel/ventas/acciones-prospeccion", () => ({
+  borrarBusquedaAction: m.borrarBusquedaAction,
   buscarEmailWebAction: m.buscarEmailWebAction,
   descartarAction: m.descartarAction,
   enviarAction: vi.fn(),
@@ -22,6 +24,8 @@ vi.mock("@/app/(site)/panel/ventas/acciones-prospeccion", () => ({
 
 import { TablaProspectos } from "@/app/(site)/panel/ventas/(app)/[slug]/prospeccion/TablaProspectos";
 import type { ProspectRow } from "@/lib/prospeccion/tipos";
+
+type TablaProps = Parameters<typeof TablaProspectos>[0];
 
 const base: ProspectRow = {
   id: "p1",
@@ -61,13 +65,13 @@ const consentido: ProspectRow = {
   consentimiento_retirado_at: null,
 };
 
-function pintar(prospectos: ProspectRow[]) {
+function pintar(prospectos: ProspectRow[], busquedas: TablaProps["busquedas"] = []) {
   render(
     <TablaProspectos
       slug="dinkbit"
       prospectos={prospectos}
       enlaces={{}}
-      busquedas={[]}
+      busquedas={busquedas}
       plantillas={[]}
       remitentes={[]}
       nombres={{ u1: "Lucía" }}
@@ -138,5 +142,22 @@ describe("TablaProspectos: consentimiento", () => {
     expect(screen.queryByRole("button", { name: "Ha aceptado recibir información" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Ya no quiere recibir información" }));
     await waitFor(() => expect(m.retirarConsentimientoAction).toHaveBeenCalledWith("dinkbit", "p2"));
+  });
+});
+
+describe("TablaProspectos: borrar una búsqueda", () => {
+  const busqueda = { id: "s1", source: "overture", params: { categoria: "Clínicas dentales", ciudad: "Madrid" }, status: "lista", error: null, total: 200, created_at: "2026-10-19T08:00:00Z" } as unknown as TablaProps["busquedas"][number];
+
+  test("el botón solo aparece con una búsqueda elegida, pide confirmación y la borra", async () => {
+    m.borrarBusquedaAction.mockResolvedValue({ ok: true, mensaje: "Búsqueda borrada." });
+    pintar([base], [busqueda]);
+    expect(screen.queryByRole("button", { name: /Borrar esta búsqueda/ })).toBeNull();
+    fireEvent.change(screen.getByLabelText("Búsqueda de origen"), { target: { value: "s1" } });
+    const confirmar = vi.spyOn(window, "confirm").mockReturnValueOnce(false).mockReturnValueOnce(true);
+    fireEvent.click(screen.getByRole("button", { name: /Borrar esta búsqueda/ }));
+    expect(m.borrarBusquedaAction).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: /Borrar esta búsqueda/ }));
+    await waitFor(() => expect(m.borrarBusquedaAction).toHaveBeenCalledWith("dinkbit", "s1"));
+    confirmar.mockRestore();
   });
 });

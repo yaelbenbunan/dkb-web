@@ -65,6 +65,45 @@ export async function listarBusquedas(limit = 50): Promise<ProspectSearchRow[]> 
   return (data ?? []) as ProspectSearchRow[];
 }
 
+/** Estados de una empresa en la que todavía no se ha hecho nada. */
+const ESTADOS_SIN_ACTIVIDAD: EstadoProspecto[] = ["nuevo", "listo", "sin_contacto", "descartado"];
+
+/**
+ * Borra una búsqueda (vacías o de prueba). Se llevan por delante solo sus
+ * empresas sin actividad: sin correo enviado, sin consentimiento y sin lead.
+ * Las demás (enviadas, bajas, rebotes, consentimientos) se conservan, porque
+ * son la constancia de lo que se hizo con ellas; la base de datos les quita la
+ * búsqueda (`on delete set null`). null si falló algo.
+ */
+export async function borrarBusqueda(id: string): Promise<{ borradas: number; conservadas: number } | null> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return null;
+  const borrar = await sb
+    .from(PROSPECTOS)
+    .delete()
+    .eq("search_id", id)
+    .in("status", ESTADOS_SIN_ACTIVIDAD)
+    .is("sent_at", null)
+    .is("lead_id", null)
+    .is("consentimiento_at", null)
+    .select("id");
+  if (borrar.error) {
+    aviso("borrarBusqueda (empresas)", borrar.error.message);
+    return null;
+  }
+  const quedan = await sb.from(PROSPECTOS).select("id").eq("search_id", id);
+  if (quedan.error) {
+    aviso("borrarBusqueda (recuento)", quedan.error.message);
+    return null;
+  }
+  const busqueda = await sb.from(BUSQUEDAS).delete().eq("id", id).select("id");
+  if (busqueda.error) {
+    aviso("borrarBusqueda", busqueda.error.message);
+    return null;
+  }
+  return { borradas: borrar.data?.length ?? 0, conservadas: quedan.data?.length ?? 0 };
+}
+
 // Prospectos --------------------------------------------------------------
 
 /** Guarda las empresas de una búsqueda. Las que ya existían (misma fuente e

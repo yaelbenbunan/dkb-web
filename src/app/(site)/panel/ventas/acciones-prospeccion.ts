@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import {
+  borrarBusqueda,
   borrarPlantilla,
   cerrarBusqueda,
   crearBusqueda,
@@ -253,6 +254,22 @@ export async function enviarAction(
 
 /** Descarta desde cualquier estado salvo baja y rebotado. No puede provocar un
  *  segundo correo: descartar no borra `sent_at`, que es lo que mira el envío. */
+export async function borrarBusquedaAction(slug: string, id: string): Promise<Resultado> {
+  const a = await acceso(slug);
+  if (!a.ok) return a;
+  const r = await borrarBusqueda(id);
+  revalidatePath(ruta(slug));
+  if (!r) return SIN_GUARDAR;
+  return {
+    ok: true,
+    mensaje:
+      `Búsqueda borrada${r.borradas > 0 ? ` con ${r.borradas} empresa${r.borradas === 1 ? "" : "s"}` : ""}.` +
+      (r.conservadas > 0
+        ? ` Se conservan ${r.conservadas} con actividad (correo, consentimiento, baja o lead).`
+        : ""),
+  };
+}
+
 export async function descartarAction(slug: string, ids: string[]): Promise<Resultado> {
   const a = await acceso(slug);
   if (!a.ok) return a;

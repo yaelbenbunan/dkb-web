@@ -15,6 +15,7 @@ import {
 } from "@/lib/prospeccion/tipos";
 import { botonPrimario, botonSecundario, campo, etiqueta, tarjeta, td, th } from "../../../_componentes/estilos";
 import {
+  borrarBusquedaAction,
   buscarEmailWebAction,
   descartarAction,
   enviarAction,
@@ -149,6 +150,21 @@ export function TablaProspectos({
             </option>
           ))}
         </select>
+        {filtros.busqueda && (
+          <button
+            type="button"
+            style={{ ...botonSecundario, color: "#b91c1c" }}
+            disabled={pendiente}
+            onClick={() => {
+              const id = filtros.busqueda;
+              if (!window.confirm("¿Borrar esta búsqueda? Se borran sus empresas sin actividad; las que ya tienen correo, consentimiento, baja o lead se conservan.")) return;
+              cambiar({ busqueda: "" });
+              ejecutar(() => borrarBusquedaAction(slug, id));
+            }}
+          >
+            × Borrar esta búsqueda
+          </button>
+        )}
         <select style={campo} value={filtros.estado} onChange={(e) => cambiar({ estado: e.target.value as EstadoProspecto | "" })} aria-label="Estado">
           <option value="">Todos los estados</option>
           {ESTADOS_PROSPECTO.map((e) => (

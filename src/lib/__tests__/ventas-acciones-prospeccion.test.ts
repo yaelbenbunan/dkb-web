@@ -9,6 +9,7 @@ const m = vi.hoisted(() => ({
   enriquecerProspecto: vi.fn(),
   pasarProspectoAlEmbudo: vi.fn(),
   db: {
+    borrarBusqueda: vi.fn(),
     borrarPlantilla: vi.fn(),
     cerrarBusqueda: vi.fn(),
     contarPendientes: vi.fn(),
@@ -59,6 +60,7 @@ async function llamarATodas(slug: string) {
     await acciones.registrarConsentimientoAction(slug, "p1", "info@bar.es", ""),
     await acciones.retirarConsentimientoAction(slug, "p1"),
     await acciones.buscarEmailWebAction(slug, "p1"),
+    await acciones.borrarBusquedaAction(slug, "s1"),
   ];
 }
 
@@ -96,6 +98,7 @@ describe("acceso", () => {
   test("todas las acciones exportadas están en la lista (y comprueban el acceso)", () => {
     // Si se añade una acción nueva sin la comprobación, esta lista deja de cuadrar.
     expect(Object.keys(acciones).sort()).toEqual([
+      "borrarBusquedaAction",
       "borrarPlantillaAction",
       "buscarAction",
       "buscarEmailWebAction",
@@ -129,6 +132,15 @@ describe("acceso", () => {
 });
 
 describe("con acceso", () => {
+  test("borrarBusquedaAction borra la búsqueda y cuenta lo que se conserva", async () => {
+    m.db.borrarBusqueda.mockResolvedValue({ borradas: 198, conservadas: 2 });
+    const r = await acciones.borrarBusquedaAction("dinkbit", "s1");
+    expect(m.db.borrarBusqueda).toHaveBeenCalledWith("s1");
+    expect(r).toEqual({ ok: true, mensaje: "Búsqueda borrada con 198 empresas. Se conservan 2 con actividad (correo, consentimiento, baja o lead)." });
+    m.db.borrarBusqueda.mockResolvedValue(null);
+    expect(await acciones.borrarBusquedaAction("dinkbit", "s1")).toMatchObject({ ok: false });
+  });
+
   test("buscarAction busca (Overture o OSM), guarda la búsqueda con su fuente y refresca la pestaña de la marca", async () => {
     const r = await acciones.buscarAction("dinkbit", "restaurantes", "Madrid");
     expect(m.buscarNegocios).toHaveBeenCalledWith({ categoria: "restaurantes", ciudad: "Madrid" });

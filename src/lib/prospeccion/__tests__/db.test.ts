@@ -6,6 +6,7 @@ vi.mock("../../supabase-admin", () => ({
 }));
 
 import {
+  borrarBusqueda,
   borrarPlantilla,
   darDeBaja,
   emailsDeLeads,
@@ -355,5 +356,27 @@ describe("leads del CRM (unificado en ventas)", () => {
     const r = await emailsDeLeads();
     expect(r && [...r].sort()).toEqual(["nuevo@b.es", "viejo@a.es"]);
     expect(fromMock.mock.calls.map((c) => c[0])).toEqual(["imagina_leads", "imagina_leads", "ventas_leads", "ventas_leads"]);
+  });
+});
+
+describe("borrarBusqueda", () => {
+  test("solo borra las empresas sin actividad y después la búsqueda", async () => {
+    const empresas = cadena({ data: [{ id: "a" }, { id: "b" }] });
+    const quedan = cadena({ data: [{ id: "c" }] });
+    const busqueda = cadena({ data: [{ id: "s1" }] });
+    fromMock.mockReturnValueOnce(empresas).mockReturnValueOnce(quedan).mockReturnValueOnce(busqueda);
+    expect(await borrarBusqueda("s1")).toEqual({ borradas: 2, conservadas: 1 });
+    expect(empresas.delete).toHaveBeenCalled();
+    expect(empresas.eq).toHaveBeenCalledWith("search_id", "s1");
+    expect(empresas.in).toHaveBeenCalledWith("status", ["nuevo", "listo", "sin_contacto", "descartado"]);
+    for (const col of ["sent_at", "lead_id", "consentimiento_at"]) expect(empresas.is).toHaveBeenCalledWith(col, null);
+    expect(busqueda.delete).toHaveBeenCalled();
+    expect(busqueda.eq).toHaveBeenCalledWith("id", "s1");
+  });
+
+  test("si falla el borrado de empresas no toca la búsqueda", async () => {
+    fromMock.mockReturnValueOnce(cadena({ error: { message: "caída" } }));
+    expect(await borrarBusqueda("s1")).toBeNull();
+    expect(fromMock).toHaveBeenCalledTimes(1);
   });
 });
