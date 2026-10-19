@@ -37,7 +37,16 @@ export function isBlockedHost(hostname: string): boolean {
   if (host === "localhost" || host.endsWith(".localhost")) return true;
   if (host.endsWith(".local") || host.endsWith(".internal")) return true;
   if (!host.includes(".") && !host.includes(":")) return true; // bare → internal
+  // An IP literal never goes through DNS (so never through ssrfLookup): it has
+  // to be vetted here, by the same rules as a resolved address.
+  if (isIpLiteral(host)) return isBlockedIp(host);
   return false;
+}
+
+/** "10.0.0.1", "[::1]", "::1"… (URL.hostname keeps the brackets for IPv6). */
+export function isIpLiteral(hostname: string): boolean {
+  const h = hostname.replace(/^\[|\]$/g, "");
+  return /^\d{1,3}(\.\d{1,3}){3}$/.test(h) || (h.includes(":") && /^[0-9a-f:.%]+$/i.test(h));
 }
 
 /** Authoritative SSRF check: is this resolved IP address in a range we must

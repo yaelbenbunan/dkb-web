@@ -1,8 +1,8 @@
 import "server-only";
 import dns from "node:dns";
 import type { LookupFunction } from "node:net";
-import { Agent, fetch as undiciFetch } from "undici";
-import { isBlockedHost, isBlockedIp } from "./website-extract-guard";
+import { Agent, buildConnector, fetch as undiciFetch } from "undici";
+import { isBlockedHost, isBlockedIp, isIpLiteral } from "./website-extract-guard";
 
 /** Custom DNS resolver for undici. Runs for EVERY connection the dispatcher
  *  opens — the initial request and each redirect hop — and rejects the
@@ -41,8 +41,17 @@ export const ssrfLookup: LookupFunction = (hostname, options, callback) => {
 /** Agente de undici cuyas conexiones pasan todas por {@link ssrfLookup}. Quien
  *  lo crea lo cierra (`agente.close()`). */
 export function crearAgenteSeguro(timeoutMs: number): Agent {
+  const conectar = buildConnector({ lookup: ssrfLookup });
   return new Agent({
-    connect: { lookup: ssrfLookup },
+    // Un host que es una IP no pasa por `ssrfLookup` (no hay DNS): se revisa
+    // aquí, antes de abrir el socket, en la petición y en cada redirección.
+    connect: (opciones, callback) => {
+      if (isIpLiteral(opciones.hostname) && isBlockedIp(opciones.hostname)) {
+        callback(new Error(`Blocked by SSRF guard: ${opciones.hostname}`), null);
+        return;
+      }
+      conectar(opciones, callback);
+    },
     headersTimeout: timeoutMs,
     bodyTimeout: timeoutMs,
   });
