@@ -60,7 +60,7 @@ describe("FormularioPack", () => {
     rellenarPasoUno();
     fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
     rellenarPasoDos();
-    const enviar = screen.getByRole("button", { name: /QUIERO MI PACK/i });
+    const enviar = screen.getByRole("button", { name: /ENVIAR SOLICITUD/i });
     fireEvent.submit(enviar.closest("form")!);
     await waitFor(() => expect(screen.getByRole("button", { name: /Enviando/i })).toBeDisabled());
     fireEvent.submit(enviar.closest("form")!);
@@ -75,7 +75,7 @@ describe("FormularioPack", () => {
     rellenarPasoUno();
     fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
     rellenarPasoDos();
-    fireEvent.submit(screen.getByRole("button", { name: /QUIERO MI PACK/i }).closest("form")!);
+    fireEvent.submit(screen.getByRole("button", { name: /ENVIAR SOLICITUD/i }).closest("form")!);
     const alerta = await screen.findByRole("alert");
     expect(alerta).toHaveTextContent("No hemos podido enviar");
     expect(alerta.querySelector("a")).toHaveAttribute("href", "https://wa.me/34657559397");
@@ -87,7 +87,7 @@ describe("FormularioPack", () => {
     rellenarPasoUno();
     fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
     rellenarPasoDos();
-    const form = screen.getByRole("button", { name: /QUIERO MI PACK/i }).closest("form")!;
+    const form = screen.getByRole("button", { name: /ENVIAR SOLICITUD/i }).closest("form")!;
     fireEvent.submit(form);
     const alerta = await screen.findByRole("alert");
     expect(alerta.querySelector("a")?.getAttribute("href")).toContain("wa.me");
@@ -117,7 +117,7 @@ describe("FormularioPack", () => {
     render(<FormularioPack />);
     rellenarPasoUno();
     fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
-    fireEvent.submit(screen.getByRole("button", { name: /QUIERO MI PACK/i }).closest("form")!);
+    fireEvent.submit(screen.getByRole("button", { name: /ENVIAR SOLICITUD/i }).closest("form")!);
     expect(m.enviar).not.toHaveBeenCalled();
     expect(screen.getByText(/Elige al menos uno/i)).toBeInTheDocument();
     expect(screen.getByText(/aceptar la política de privacidad/i)).toBeInTheDocument();

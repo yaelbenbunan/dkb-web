@@ -295,7 +295,7 @@ export function FormularioPack({ id = "solicitud" }: { id?: string }) {
           className="min-h-[56px] w-full rounded-xl px-6 text-[18px] font-extrabold uppercase tracking-[0.04em] text-white transition-transform hover:-translate-y-0.5 disabled:opacity-60"
           style={{ background: PD.acento }}
         >
-          {pending ? "Enviando…" : "QUIERO MI PACK"}
+          {pending ? "Enviando…" : "ENVIAR SOLICITUD"}
         </button>
         <div className="flex items-center justify-between text-[13px]" style={{ color: PD.suave }}>
           <button type="button" onClick={() => irAPaso(1)} className="underline underline-offset-4">
