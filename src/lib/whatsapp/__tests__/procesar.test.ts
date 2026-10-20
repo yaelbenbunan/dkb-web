@@ -432,7 +432,8 @@ function depsFalsas(
     },
   });
   const marcasConNumero = new Map<string, Marca>([[HYDRUP.whatsapp_phone_number_id as string, HYDRUP]]);
-  const leadsCreados: Array<Parameters<Deps["crearLeadDeWhatsApp"]>[0]> = [];
+  const leadsCreados: Array<Omit<Parameters<Deps["crearLeadDeWhatsApp"]>[0], "exclusiones">> = [];
+  const exclusionesRecibidas: unknown[] = [];
   /** Tarea 7 del plan por marca: historial, contactos y avisos de cuenta. */
   const marcasPorWaba = new Map<string, Marca>([["WABA-HYDRUP", HYDRUP]]);
   const historial: Array<{ conversacionId: string; wamid: string; deNegocio: boolean; texto: string | null }> = [];
@@ -546,12 +547,18 @@ function depsFalsas(
       const lead = leadsPorTelefono.get(telefono);
       return lead ? conDatosCompletos(lead) : null;
     },
-    async crearLeadDeWhatsApp(input) {
+    async crearLeadDeWhatsApp({ exclusiones, ...input }) {
       contadorLead += 1;
       const lead = { id: `lead-${contadorLead}`, contacto: input.nombre };
       leadsPorTelefono.set(input.telefono ?? input.waId, lead);
+      // `exclusiones` se registra aparte: los tests de siempre comparan la
+      // entrada del lead sin ellas.
       leadsCreados.push(input);
+      exclusionesRecibidas.push(exclusiones);
       return conDatosCompletos(lead);
+    },
+    async listExclusiones() {
+      return [];
     },
     async listSecuencias(marcaId) {
       return secuencias.filter((s) => s.marca_id === marcaId);
@@ -603,6 +610,7 @@ function depsFalsas(
     actividades,
     fases,
     historial,
+    exclusionesRecibidas,
     contactos,
     contactosDeLead,
     desconexiones,
@@ -2280,6 +2288,93 @@ describe("historial de WhatsApp", () => {
     expect(estadosHistorial).toEqual([{ marcaId: HYDRUP.id, estado: "completo" }]);
   });
 
+  it("importa los hilos de un lote con como mucho 8 a la vez", async () => {
+    const { deps, estadosHistorial } = depsFalsas();
+    let activos = 0;
+    let maximo = 0;
+    let soltar!: () => void;
+    const puerta = new Promise<void>((r) => (soltar = r));
+    deps.guardarHistorial = async () => {
+      activos += 1;
+      maximo = Math.max(maximo, activos);
+      await puerta;
+      activos -= 1;
+      return 1;
+    };
+    const guardarSpy = vi.spyOn(deps, "guardarHistorial");
+    const cuerpo = sobreCampo("history", {
+      history: [
+        {
+          metadata: { phase: 0, progress: 100 },
+          threads: Array.from({ length: 20 }, (_, i) => ({
+            id: `346000000${String(i).padStart(2, "0")}`,
+            messages: [{ from: "34900000000", id: `wamid.P${i}`, timestamp: "1790000000", type: "text", text: { body: "x" } }],
+          })),
+        },
+      ],
+    });
+
+    const procesado = procesarWebhook({ cuerpo, deps });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(activos).toBe(8);
+    expect(estadosHistorial).toHaveLength(0);
+    soltar();
+    await procesado;
+
+    expect(maximo).toBe(8);
+    expect(guardarSpy).toHaveBeenCalledTimes(20);
+    expect(estadosHistorial).toEqual([{ marcaId: HYDRUP.id, estado: "completo" }]);
+  });
+
+  it("si falla un hilo, los demás terminan, el lote no queda completo y el error se propaga", async () => {
+    const { deps, estadosHistorial } = depsFalsas();
+    const importados: string[] = [];
+    deps.guardarHistorial = async ({ mensajes }) => {
+      if (mensajes[0].wamid === "wamid.P1") throw new Error("supabase caído");
+      await new Promise((r) => setTimeout(r, 0));
+      importados.push(mensajes[0].wamid);
+      return 1;
+    };
+    const cuerpo = sobreCampo("history", {
+      history: [
+        {
+          metadata: { phase: 0, progress: 100 },
+          threads: Array.from({ length: 3 }, (_, i) => ({
+            id: `34600000${i}`,
+            messages: [{ from: "34900000000", id: `wamid.P${i}`, timestamp: "1790000000", type: "text", text: { body: "x" } }],
+          })),
+        },
+      ],
+    });
+
+    await expect(procesarWebhook({ cuerpo, deps })).rejects.toThrow("supabase caído");
+    expect(importados.sort()).toEqual(["wamid.P0", "wamid.P2"]);
+    expect(estadosHistorial).toHaveLength(0);
+  });
+
+  it("las exclusiones de la marca se leen una sola vez por webhook", async () => {
+    const { deps, leadsCreados, exclusionesRecibidas } = depsFalsas();
+    const exclusionesSpy = vi.spyOn(deps, "listExclusiones");
+    const cuerpo = sobreCampo("history", {
+      history: [
+        {
+          metadata: { phase: 0, progress: 50 },
+          threads: Array.from({ length: 5 }, (_, i) => ({
+            id: `34600000${i}`,
+            messages: [{ from: `34600000${i}`, id: `wamid.X${i}`, timestamp: "1790000000", type: "text", text: { body: "x" } }],
+          })),
+        },
+      ],
+    });
+
+    await procesarWebhook({ cuerpo, deps });
+
+    expect(leadsCreados).toHaveLength(5);
+    expect(exclusionesSpy).toHaveBeenCalledTimes(1);
+    expect(exclusionesSpy).toHaveBeenCalledWith(HYDRUP.id);
+    expect(exclusionesRecibidas).toEqual(Array(5).fill([]));
+  });
+
   it("un hilo sin mensajes no crea nada", async () => {
     const { deps, conversaciones, leadsCreados } = depsFalsas();
 
@@ -2400,6 +2495,20 @@ describe("crearLeadDeWhatsApp", () => {
     const entrada = crearLeadsMock.mock.calls[0][0];
     expect(entrada).toMatchObject({ marcaId: HYDRUP.id, origen: "whatsapp", origenDetalle: null });
     expect(entrada.leads[0]).toMatchObject({ contacto: "Marta", telefono: "611222333", excluido: false });
+  });
+
+  it("con las exclusiones ya leídas no vuelve a pedirlas", async () => {
+    await crearLeadDeWhatsApp({
+      marcaId: HYDRUP.id,
+      waId: "34611222333",
+      telefono: "611222333",
+      nombre: null,
+      origen: "whatsapp",
+      anuncio: null,
+      exclusiones: [{ id: "x1", marca_id: HYDRUP.id, nombre: null, email: null, telefono: "611222333", cif: null, created_at: "2026-01-01T00:00:00Z" }],
+    });
+    expect(listExclusionesMock).not.toHaveBeenCalled();
+    expect(crearLeadsMock.mock.calls[0][0].leads[0].excluido).toBe(true);
   });
 
   it("sin nombre de perfil deja el contacto vacío", async () => {

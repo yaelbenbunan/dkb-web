@@ -43,6 +43,7 @@ import {
   listExclusiones,
   listSecuencias,
   registrarActividad,
+  type Exclusion,
   type Marca,
   type SecuenciaRow,
 } from "../ventas/db";
@@ -121,7 +122,13 @@ export interface Deps {
     nombre: string | null;
     origen: "anuncio" | "whatsapp";
     anuncio: string | null;
+    /** Las exclusiones de la marca ya leídas (una vez por webhook, ver
+     *  `procesarWebhook`). Sin ellas, se leen aquí. */
+    exclusiones?: Exclusion[];
   }) => Promise<{ id: string; negocio: string; contacto: string | null; ciudad: string | null }>;
+  /** Las exclusiones de la marca. En `Deps` para que `procesarWebhook` las lea
+   *  una sola vez por marca y webhook, no una por lead creado. */
+  listExclusiones: (marcaId: string) => Promise<Exclusion[]>;
   /** Las secuencias activas de la marca, para elegir la que sirve al anuncio
    *  del lead (task-7-brief.md). Ya existe en `ventas/db.ts`: no es un dato
    *  nuevo, solo entra en `Deps` para poder sustituirla en los tests. */
@@ -163,7 +170,8 @@ export async function crearLeadDeWhatsApp(input: Parameters<Deps["crearLeadDeWha
 }> {
   const { marcaId, waId, telefono, nombre, origen, anuncio } = input;
   const telefonoLead = telefono ?? waId;
-  const { excluidos } = clasificarLeads([{ telefono: telefonoLead }], [], await listExclusiones(marcaId));
+  const exclusiones = input.exclusiones ?? (await listExclusiones(marcaId));
+  const { excluidos } = clasificarLeads([{ telefono: telefonoLead }], [], exclusiones);
   const resultado = await crearLeads({
     marcaId,
     usuariaId: null,
@@ -218,6 +226,7 @@ function depsReales(): Deps {
       return lead ? { id: lead.id, negocio: lead.negocio, contacto: lead.contacto, ciudad: lead.ciudad } : null;
     },
     crearLeadDeWhatsApp,
+    listExclusiones,
     listSecuencias,
     marcaPorWaba: getMarcaPorWaba,
     marcarDesconectada,
@@ -1616,13 +1625,43 @@ async function procesarHistorial(lotes: LoteHistorial[], marcaPropiaDe: MarcaPro
       if (lote.error.codigo === CODIGO_HISTORIAL_RECHAZADO) await deps.setHistorialMarca(marca.id, "rechazado");
       else console.error("[whatsapp] fallo en la sincronización del historial", marca.id, lote.error.codigo, lote.error.mensaje);
     }
-    for (const hilo of lote.hilos) {
-      if (hilo.mensajes.length > 0) await importarHilo(marca, hilo, deps);
-    }
+    // Los hilos son independientes (un waId cada uno) y un lote puede traer
+    // cientos: en serie, con ~10 idas a la base por hilo, no cabrían en el
+    // tiempo de la función, y Meta reenviaría el mismo lote para siempre.
+    await enParalelo(
+      lote.hilos.filter((h) => h.mensajes.length > 0),
+      HILOS_A_LA_VEZ,
+      (hilo) => importarHilo(marca, hilo, deps),
+    );
     // Después de importar: si el lote falla a medias, el reintento lo repite
     // y el historial no queda como completo antes de tiempo.
     if (lote.progreso === 100) await deps.setHistorialMarca(marca.id, "completo");
   }
+}
+
+/** Cuántos hilos del historial se importan a la vez. */
+const HILOS_A_LA_VEZ = 8;
+
+/**
+ * Ejecuta `tarea` sobre cada elemento con como mucho `limite` en marcha a la
+ * vez. Si alguna falla, espera a que terminen las demás (ninguna queda a
+ * medias escribiendo tras el 500) y lanza el primer error.
+ */
+async function enParalelo<T>(elementos: T[], limite: number, tarea: (elemento: T) => Promise<void>): Promise<void> {
+  let siguiente = 0;
+  const errores: unknown[] = [];
+  const trabajador = async () => {
+    while (siguiente < elementos.length) {
+      const elemento = elementos[siguiente++];
+      try {
+        await tarea(elemento);
+      } catch (e) {
+        errores.push(e);
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limite, elementos.length) }, trabajador));
+  if (errores.length > 0) throw errores[0];
 }
 
 /** La empresa desactivó en la app compartir el historial. */
@@ -1730,7 +1769,26 @@ export async function procesarWebhook(input: {
   deps?: Deps;
   ahora?: Date;
 }): Promise<{ procesados: number }> {
-  const deps = input.deps ?? depsReales();
+  const depsBase = input.deps ?? depsReales();
+  // Las exclusiones de cada marca se leen una vez por webhook: un lote de
+  // historial puede crear cientos de leads de la misma marca.
+  const exclusionesPorMarca = new Map<string, Promise<Exclusion[]>>();
+  const exclusionesDe = (marcaId: string): Promise<Exclusion[]> => {
+    let pendiente = exclusionesPorMarca.get(marcaId);
+    if (!pendiente) {
+      pendiente = depsBase.listExclusiones(marcaId);
+      // Un fallo no se queda en la caché: lanza para este lead (fase A) y
+      // el siguiente lo vuelve a intentar.
+      pendiente.catch(() => exclusionesPorMarca.delete(marcaId));
+      exclusionesPorMarca.set(marcaId, pendiente);
+    }
+    return pendiente;
+  };
+  const deps: Deps = {
+    ...depsBase,
+    crearLeadDeWhatsApp: async (lead) =>
+      depsBase.crearLeadDeWhatsApp({ ...lead, exclusiones: lead.exclusiones ?? (await exclusionesDe(lead.marcaId)) }),
+  };
 
   // La marca de cada mensaje se resuelve ANTES de tocar nada (ni estados ni
   // mensajes), igual que antes se buscaba Dinkbit lo primero: si algo de esto
