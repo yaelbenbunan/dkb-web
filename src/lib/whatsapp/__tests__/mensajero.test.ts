@@ -170,3 +170,25 @@ describe("enviarBotones", () => {
     await expect(m.enviarBotones("34660415514", "t", ["Esta opción se pasa de largo"])).rejects.toThrow(/20 caracteres/);
   });
 });
+
+describe("exigirProduccion", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("con credenciales explícitas, fuera de producción queda simulado", async () => {
+    vi.stubEnv("VERCEL_ENV", "preview");
+    vi.stubEnv("WHATSAPP_ENVIO_REAL", "");
+    const fetchMock = vi.fn();
+    const m = crearMensajero({ token: "t", phoneNumberId: "1", fetchImpl: fetchMock, exigirProduccion: true });
+    expect(await m.enviarTexto("34600", "hola")).toEqual({ ok: true, wamid: null });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("en producción envía de verdad", async () => {
+    vi.stubEnv("VERCEL_ENV", "production");
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ messages: [{ id: "w" }] }) });
+    const m = crearMensajero({ token: "t", phoneNumberId: "1", fetchImpl: fetchMock, exigirProduccion: true });
+    expect(await m.enviarTexto("34600", "hola")).toEqual({ ok: true, wamid: "w" });
+  });
+});

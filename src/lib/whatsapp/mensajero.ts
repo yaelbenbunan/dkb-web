@@ -33,6 +33,12 @@ export interface ConfigMensajero {
   token?: string;
   phoneNumberId?: string;
   fetchImpl?: typeof fetch;
+  /**
+   * Con credenciales explícitas, aplica igualmente la barrera de producción
+   * (VERCEL_ENV=production o WHATSAPP_ENVIO_REAL=1). Lo usan los números por
+   * marca: llegan de la base de datos y una preview comparte esa base.
+   */
+  exigirProduccion?: boolean;
 }
 
 /** Guarda lo que se habría enviado. Para tests y para entornos sin credenciales. */
@@ -74,7 +80,7 @@ export function crearMensajero(config: ConfigMensajero = {}): MensajeroWhatsApp 
   const phoneNumberId = config.phoneNumberId ?? process.env.WHATSAPP_PHONE_NUMBER_ID ?? "";
   if (!token || !phoneNumberId) return mensajeroSimulado();
 
-  if (!credencialesExplicitas) {
+  if (!credencialesExplicitas || config.exigirProduccion) {
     const esProduccion = process.env.VERCEL_ENV === "production";
     const envioRealForzado = process.env.WHATSAPP_ENVIO_REAL === "1";
     if (!esProduccion && !envioRealForzado) return mensajeroSimulado();

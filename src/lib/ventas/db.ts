@@ -179,7 +179,7 @@ function db() {
 }
 
 /** Error de lectura que conserva el código de Postgres/PostgREST. */
-class ErrorLectura extends Error {
+export class ErrorLectura extends Error {
   constructor(mensaje: string, readonly codigo?: string) {
     super(mensaje);
   }
@@ -194,7 +194,7 @@ function comprobar<T>(r: Respuesta<T>, contexto: string): T | null {
  * Códigos con los que la base contesta cuando le falta algo de una migración:
  * función, tabla o columna que no existe (los de PostgREST y los de Postgres).
  */
-const FALTA_EN_LA_BASE = new Set(["PGRST202", "PGRST204", "PGRST205", "42883", "42P01", "42703"]);
+export const FALTA_EN_LA_BASE = new Set(["PGRST202", "PGRST204", "PGRST205", "42883", "42P01", "42703"]);
 
 /**
  * Para lecturas que dependen de una migración reciente y no son imprescindibles
@@ -202,7 +202,7 @@ const FALTA_EN_LA_BASE = new Set(["PGRST202", "PGRST204", "PGRST205", "42883", "
  * devuelve `alternativa` y lo deja en el log, en vez de tumbar el panel entero.
  * Cualquier otro fallo (red, permisos) se sigue lanzando: ese sí hay que verlo.
  */
-async function tolerarMigracionPendiente<T>(lectura: () => Promise<T>, alternativa: () => T | Promise<T>, contexto: string): Promise<T> {
+export async function tolerarMigracionPendiente<T>(lectura: () => Promise<T>, alternativa: () => T | Promise<T>, contexto: string): Promise<T> {
   try {
     return await lectura();
   } catch (error) {
