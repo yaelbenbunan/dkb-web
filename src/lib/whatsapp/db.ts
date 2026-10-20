@@ -1,5 +1,6 @@
 import "server-only";
 import { getSupabaseAdmin } from "../supabase-admin";
+import { FALTA_EN_LA_BASE } from "../ventas/db";
 
 /**
  * Acceso a `ventas_conversaciones` y `ventas_mensajes` con la clave de
@@ -58,6 +59,39 @@ function db() {
   return sb;
 }
 
+type ErrorBase = { message: string; code?: string } | null;
+
+/**
+ * Escribe `fila` con las columnas de la coexistencia (`nuevas`: `origen`,
+ * `nombre_contacto`) y, si la base aún no las tiene (la migración
+ * docs/sql/2026-10-20-whatsapp-por-marca.sql es MANUAL), repite la MISMA
+ * escritura sin ellas. Así Dinkbit sigue recibiendo mensajes el día del
+ * despliegue aunque nadie haya ejecutado el SQL todavía: perder el `origen` de
+ * un mensaje es un dato de menos; perder el mensaje es un lead de menos.
+ *
+ * Las `nuevas` que llegan `undefined` no se escriben. Si sin ellas no queda
+ * nada que escribir (p.ej. un update que solo traía el nombre), no se repite.
+ */
+async function conColumnasNuevas<R extends { error: ErrorBase }>(
+  contexto: string,
+  fila: Record<string, unknown>,
+  nuevas: Record<string, unknown>,
+  escribir: (fila: Record<string, unknown>) => PromiseLike<R>,
+): Promise<R | null> {
+  const presentes = Object.fromEntries(Object.entries(nuevas).filter(([, v]) => v !== undefined));
+  const claves = Object.keys(presentes);
+  if (claves.length === 0) return escribir(fila);
+
+  const r = await escribir({ ...fila, ...presentes });
+  if (!r.error?.code || !FALTA_EN_LA_BASE.has(r.error.code)) return r;
+  console.error(
+    `[whatsapp/db] ${contexto}: falta ejecutar la migración de WhatsApp por marca (${r.error.code}); se guarda sin ${claves.join(", ")}.`,
+    r.error.message,
+  );
+  if (Object.keys(fila).length === 0) return null;
+  return escribir(fila);
+}
+
 /* Conversaciones -------------------------------------------------------- */
 
 export async function getConversacion(marcaId: string, waId: string): Promise<Conversacion | null> {
@@ -86,19 +120,22 @@ export async function crearConversacion(input: {
   leadId: string | null;
   estado: Conversacion["estado"];
   ventanaHasta: Date;
+  /** Nombre del perfil de WhatsApp, si Meta lo mandó. */
+  nombreContacto?: string | null;
 }): Promise<Conversacion> {
-  const r = await db()
-    .from("ventas_conversaciones")
-    .insert({
+  const r = await conColumnasNuevas(
+    "crearConversacion",
+    {
       marca_id: input.marcaId,
       wa_id: input.waId,
       lead_id: input.leadId,
       estado: input.estado,
       ventana_hasta: input.ventanaHasta.toISOString(),
-    })
-    .select("*")
-    .single();
-  if (r.error) throw new Error(`[whatsapp/db] crearConversacion: ${r.error.message}`);
+    },
+    { nombre_contacto: input.nombreContacto ?? undefined },
+    (fila) => db().from("ventas_conversaciones").insert(fila).select("*").single(),
+  );
+  if (!r || r.error) throw new Error(`[whatsapp/db] crearConversacion: ${r?.error?.message ?? "sin fila"}`);
   return r.data as Conversacion;
 }
 
@@ -112,6 +149,7 @@ export async function actualizarConversacion(
     pasoActual?: string | null;
     datos?: Record<string, string>;
     reanudarEn?: Date | null;
+    nombreContacto?: string | null;
   },
 ): Promise<void> {
   // `leadId`/`pasoActual`/`secuenciaId`/`reanudarEn` pueden venir
@@ -128,10 +166,15 @@ export async function actualizarConversacion(
   if (cambios.reanudarEn !== undefined) {
     patch.reanudar_en = cambios.reanudarEn ? cambios.reanudarEn.toISOString() : null;
   }
-  if (Object.keys(patch).length === 0) return;
+  if (Object.keys(patch).length === 0 && cambios.nombreContacto === undefined) return;
 
-  const { error } = await db().from("ventas_conversaciones").update(patch).eq("id", id);
-  if (error) throw new Error(`[whatsapp/db] actualizarConversacion: ${error.message}`);
+  const r = await conColumnasNuevas(
+    "actualizarConversacion",
+    patch,
+    { nombre_contacto: cambios.nombreContacto },
+    (fila) => db().from("ventas_conversaciones").update(fila).eq("id", id),
+  );
+  if (r?.error) throw new Error(`[whatsapp/db] actualizarConversacion: ${r.error.message}`);
 }
 
 /**
@@ -223,23 +266,24 @@ export async function guardarEntrante(input: {
   wamid: string;
   texto: string | null;
   payload: unknown;
+  /** Quién lo escribió; el webhook guarda `"cliente"`. */
+  origen?: Mensaje["origen"];
 }): Promise<{ nuevo: boolean }> {
-  const { data, error } = await db()
-    .from("ventas_mensajes")
-    .upsert(
-      {
-        conversacion_id: input.conversacionId,
-        direccion: "entrante",
-        wamid: input.wamid,
-        texto: input.texto,
-        payload: input.payload ?? {},
-        estado: "entregado",
-      },
-      { onConflict: "wamid", ignoreDuplicates: true },
-    )
-    .select("id");
-  if (error) throw new Error(`[whatsapp/db] guardarEntrante: ${error.message}`);
-  const nuevo = (data ?? []).length > 0;
+  const r = await conColumnasNuevas(
+    "guardarEntrante",
+    {
+      conversacion_id: input.conversacionId,
+      direccion: "entrante",
+      wamid: input.wamid,
+      texto: input.texto,
+      payload: input.payload ?? {},
+      estado: "entregado",
+    },
+    { origen: input.origen ?? undefined },
+    (fila) => db().from("ventas_mensajes").upsert(fila, { onConflict: "wamid", ignoreDuplicates: true }).select("id"),
+  );
+  if (!r || r.error) throw new Error(`[whatsapp/db] guardarEntrante: ${r?.error?.message ?? "sin respuesta"}`);
+  const nuevo = (r.data ?? []).length > 0;
 
   // Solo se toca la conversación si el mensaje era nuevo: un reintento de
   // Meta del mismo wamid no debe reescribir ultimo_texto/ultimo_mensaje_at,
@@ -269,15 +313,17 @@ export async function guardarSaliente(input: {
   error?: string;
   /** Rótulos de los botones con los que se mandó, si los llevaba. */
   botones?: readonly string[];
+  /** Quién lo escribió: `"bot"` para los del guion y el respaldo. */
+  origen?: Mensaje["origen"];
 }): Promise<void> {
   // `wamid` puede ser null (envío simulado): el índice único de `wamid` NO es
   // parcial (los NULL nunca chocan entre sí en un índice único de Postgres),
   // así que aquí basta un `insert` normal — no hace falta la idempotencia de
   // arriba porque cada envío saliente es un mensaje nuevo, nunca un reintento
   // de Meta.
-  const { error } = await db()
-    .from("ventas_mensajes")
-    .insert({
+  const r = await conColumnasNuevas(
+    "guardarSaliente",
+    {
       conversacion_id: input.conversacionId,
       direccion: "saliente",
       wamid: input.wamid,
@@ -285,8 +331,11 @@ export async function guardarSaliente(input: {
       estado: input.error ? "fallido" : "enviado",
       error: input.error ?? null,
       ...(input.botones && input.botones.length > 0 ? { payload: { botones: [...input.botones] } } : {}),
-    });
-  if (error) throw new Error(`[whatsapp/db] guardarSaliente: ${error.message}`);
+    },
+    { origen: input.origen ?? undefined },
+    (fila) => db().from("ventas_mensajes").insert(fila),
+  );
+  if (r?.error) throw new Error(`[whatsapp/db] guardarSaliente: ${r.error.message}`);
 
   // Ya hay que tocar la fila de la conversación de todos modos (no añade una
   // escritura nueva): se aprovecha para mantener el resumen desnormalizado

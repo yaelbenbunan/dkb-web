@@ -12,18 +12,23 @@ import {
 import { opcionesAutorespuesta, REMITENTE, textoAutorespuesta } from "./autorespuesta";
 import { decidir, extraerEstados, extraerMensajes, type MensajeEntrante } from "./entrante";
 import { elegirSecuencia } from "./eleccion";
+import { elegirMarca } from "./enrutado";
 import { aEstadoGuardado, desdeEstadoGuardado, indiceDeBoton, mensajesAEnviar, type EstadoGuardado } from "./guion";
-import { crearMensajero, type MensajeroWhatsApp } from "./mensajero";
+import type { MensajeroWhatsApp } from "./mensajero";
+import { getMarcaPorNumero, mensajeroDeMarca } from "./numeros";
 import { calcularVentana, telefonoDeWaId } from "./ventana";
 import { esFaseDescarte, MARCA_DINKBIT_SLUG, type Fase } from "../ventas/dominio";
 import {
   buscarLeadPorContacto,
   crearLeads,
   getMarcaPorSlug,
+  listExclusiones,
   listSecuencias,
   registrarActividad,
+  type Marca,
   type SecuenciaRow,
 } from "../ventas/db";
+import { clasificarLeads } from "../ventas/leads-csv";
 import { parsearSecuencia } from "../ventas/secuencias";
 import {
   iniciarSimulacion,
@@ -38,7 +43,7 @@ import {
  * `entrante.ts` y ejecuta la acción (crear lead, responder, guardar,
  * actualizar estados) contra las dependencias reales o unas de test.
  *
- * `buscarLeadPorTelefono` y `crearLeadDeAnuncio` NO viven en `whatsapp/db.ts`:
+ * `buscarLeadPorTelefono` y `crearLeadDeWhatsApp` NO viven en `whatsapp/db.ts`:
  * son wiring sobre `src/lib/ventas/db.ts` (los leads son del dominio de
  * ventas, que ya tiene su propio acceso a datos). Mezclarlos en el módulo del
  * canal crearía dos caminos de escritura a la misma tabla.
@@ -47,7 +52,7 @@ import {
  * guardar el mensaje entrante se propaga (es reintentable, la ruta responde
  * 500); lo de DESPUÉS se traga y se registra (es best-effort, nunca debe
  * costar el mensaje ya guardado ni forzar un reintento que no arreglaría
- * nada). `getMarcaPorSlug` es fase A: si `getMarcaPorSlug("dinkbit")`
+ * nada). Resolver la marca es fase A: si `marcaDinkbit()`
  * devuelve `null` (las migraciones son MANUALES, así que el día del
  * despliegue es el momento más probable de que la fila todavía no exista) se
  * LANZA a propósito, no se traga: no se ha persistido nada todavía, así que
@@ -58,7 +63,15 @@ import {
  * arreglos 2).
  */
 export interface Deps {
-  mensajero: MensajeroWhatsApp;
+  /** El `phone_number_id` de entorno (`WHATSAPP_PHONE_NUMBER_ID`): el número
+   *  de Dinkbit desde antes de la coexistencia. `null` si no está configurado. */
+  numeroEntorno: string | null;
+  /** La marca que tiene conectado ese número propio, o `null`. */
+  marcaDeNumero: (numeroId: string) => Promise<Marca | null>;
+  /** La marca Dinkbit, dueña del número de entorno. */
+  marcaDinkbit: () => Promise<Marca | null>;
+  /** El mensajero que envía por el número de ESA marca (ver numeros.ts). */
+  mensajeroDeMarca: (marca: Marca) => Promise<MensajeroWhatsApp>;
   getConversacion: typeof getConversacion;
   crearConversacion: typeof crearConversacion;
   actualizarConversacion: typeof actualizarConversacion;
@@ -78,11 +91,15 @@ export interface Deps {
     marcaId: string,
     telefono: string,
   ) => Promise<{ id: string; negocio: string; contacto: string | null; ciudad: string | null } | null>;
-  crearLeadDeAnuncio: (input: {
+  /** Crea el lead de una conversación de WhatsApp: `"anuncio"` si llegó por
+   *  un clic de anuncio, `"whatsapp"` si escribió sin más a una marca con
+   *  número propio. `nombre` es el del perfil de WhatsApp, si Meta lo mandó. */
+  crearLeadDeWhatsApp: (input: {
     marcaId: string;
     waId: string;
     telefono: string | null;
-    campana: string | null;
+    nombre: string | null;
+    origen: "anuncio" | "whatsapp";
     anuncio: string | null;
   }) => Promise<{ id: string; negocio: string; contacto: string | null; ciudad: string | null }>;
   /** Las secuencias activas de la marca, para elegir la que sirve al anuncio
@@ -91,15 +108,74 @@ export interface Deps {
   listSecuencias: (marcaId: string) => Promise<SecuenciaRow[]>;
 }
 
+/** Si la marca tiene su propio número de WhatsApp conectado (coexistencia). */
+export function tieneNumeroPropio(marca: Marca): boolean {
+  return !!marca.whatsapp_phone_number_id;
+}
+
 /**
- * Dependencias reales: `crearMensajero()` se llama SIN argumentos a
- * propósito. Pasarle `process.env.WHATSAPP_TOKEN` a mano marcaría las
- * credenciales como "explícitas" y saltaría la barrera que impide enviar
- * mensajes reales desde un entorno que no es producción (ver mensajero.ts).
+ * Crea el lead de una conversación de WhatsApp. Exportada (y no escondida en
+ * `depsReales`) para poder probar la marca de exclusión sin Supabase.
+ *
+ * Meta no manda nombre de negocio en un mensaje de WhatsApp: no hay dato que
+ * rellenar ahí, así que se deja un rótulo identificable en vez de inventar
+ * uno (memoria "Casos: solo lo que te dan"). El nombre del perfil, si llega,
+ * va a `contacto`, que es lo que de verdad es.
+ *
+ * Un teléfono que ya era cliente de la marca (sus exclusiones) se crea igual,
+ * pero marcado `excluido`: la conversación existe y la comercial tiene que
+ * verla, pero no debe entrar en la prospección como si fuera nuevo.
+ */
+export async function crearLeadDeWhatsApp(input: Parameters<Deps["crearLeadDeWhatsApp"]>[0]): Promise<{
+  id: string;
+  negocio: string;
+  contacto: string | null;
+  ciudad: string | null;
+}> {
+  const { marcaId, waId, telefono, nombre, origen, anuncio } = input;
+  const telefonoLead = telefono ?? waId;
+  const { excluidos } = clasificarLeads([{ telefono: telefonoLead }], [], await listExclusiones(marcaId));
+  const resultado = await crearLeads({
+    marcaId,
+    usuariaId: null,
+    origen,
+    origenDetalle: anuncio,
+    leads: [
+      {
+        negocio: `Lead de WhatsApp (${telefonoLead})`,
+        tipo_negocio: null,
+        contacto: nombre ?? "",
+        telefono: telefonoLead,
+        email: "",
+        ciudad: "",
+        cif: "",
+        web: "",
+        excluido: excluidos.length > 0,
+      },
+    ],
+  });
+  if (!resultado.ok) throw new Error(`[whatsapp] crearLeadDeWhatsApp: ${resultado.error}`);
+  // La RPC solo devuelve un contador, no el id creado: se recupera
+  // buscando por el mismo teléfono con el que se acaba de crear.
+  const creado = await buscarLeadPorContacto(marcaId, { telefono: telefonoLead });
+  if (!creado) throw new Error("[whatsapp] crearLeadDeWhatsApp: no se encontró el lead recién creado");
+  return { id: creado.id, negocio: creado.negocio, contacto: creado.contacto, ciudad: creado.ciudad };
+}
+
+/**
+ * Dependencias reales. El mensajero ya no es uno global: `mensajeroDeMarca`
+ * da el de cada marca, y para Dinkbit (sin número propio) sigue siendo
+ * `crearMensajero()` SIN argumentos, a propósito — pasarle
+ * `process.env.WHATSAPP_TOKEN` a mano marcaría las credenciales como
+ * "explícitas" y saltaría la barrera que impide enviar mensajes reales desde
+ * un entorno que no es producción (ver mensajero.ts y numeros.ts).
  */
 function depsReales(): Deps {
   return {
-    mensajero: crearMensajero(),
+    numeroEntorno: process.env.WHATSAPP_PHONE_NUMBER_ID ?? null,
+    marcaDeNumero: getMarcaPorNumero,
+    marcaDinkbit: () => getMarcaPorSlug(MARCA_DINKBIT_SLUG),
+    mensajeroDeMarca,
     getConversacion,
     crearConversacion,
     actualizarConversacion,
@@ -111,36 +187,7 @@ function depsReales(): Deps {
       const lead = await buscarLeadPorContacto(marcaId, { telefono });
       return lead ? { id: lead.id, negocio: lead.negocio, contacto: lead.contacto, ciudad: lead.ciudad } : null;
     },
-    async crearLeadDeAnuncio({ marcaId, waId, telefono, anuncio }) {
-      // Meta no manda nombre de negocio en un mensaje de WhatsApp: no hay
-      // dato que rellenar ahí, así que se deja un rótulo identificable en vez
-      // de inventar uno (memoria "Casos: solo lo que te dan").
-      const resultado = await crearLeads({
-        marcaId,
-        usuariaId: null,
-        origen: "anuncio",
-        origenDetalle: anuncio,
-        leads: [
-          {
-            negocio: `Lead de WhatsApp (${telefono ?? waId})`,
-            tipo_negocio: null,
-            contacto: "",
-            telefono: telefono ?? waId,
-            email: "",
-            ciudad: "",
-            cif: "",
-            web: "",
-            excluido: false,
-          },
-        ],
-      });
-      if (!resultado.ok) throw new Error(`[whatsapp] crearLeadDeAnuncio: ${resultado.error}`);
-      // La RPC solo devuelve un contador, no el id creado: se recupera
-      // buscando por el mismo teléfono con el que se acaba de crear.
-      const creado = await buscarLeadPorContacto(marcaId, { telefono: telefono ?? waId });
-      if (!creado) throw new Error("[whatsapp] crearLeadDeAnuncio: no se encontró el lead recién creado");
-      return { id: creado.id, negocio: creado.negocio, contacto: creado.contacto, ciudad: creado.ciudad };
-    },
+    crearLeadDeWhatsApp,
     listSecuencias,
   };
 }
@@ -540,7 +587,7 @@ async function avisarComercial(
 async function actualizarYDevolver(
   deps: Pick<Deps, "actualizarConversacion">,
   actual: Conversacion,
-  cambios: { estado: Conversacion["estado"]; leadId: string | null; ventanaHasta: Date },
+  cambios: { estado: Conversacion["estado"]; leadId: string | null; ventanaHasta: Date; nombreContacto?: string },
 ): Promise<Conversacion> {
   await deps.actualizarConversacion(actual.id, cambios);
   return {
@@ -548,7 +595,15 @@ async function actualizarYDevolver(
     estado: cambios.estado,
     lead_id: cambios.leadId,
     ventana_hasta: cambios.ventanaHasta.toISOString(),
+    ...(cambios.nombreContacto !== undefined ? { nombre_contacto: cambios.nombreContacto } : {}),
   };
+}
+
+/** El nombre del perfil, solo si la conversación todavía no tenía uno: el
+ *  que ya hay (p.ej. corregido a mano) no se pisa con cada mensaje. */
+function nombreNuevo(existente: Conversacion | null, nombrePerfil: string | null): { nombreContacto?: string } {
+  if (!nombrePerfil || existente?.nombre_contacto) return {};
+  return { nombreContacto: nombrePerfil };
 }
 
 /**
@@ -566,15 +621,22 @@ async function actualizarYDevolver(
  */
 async function crearConversacionOReleer(
   deps: Pick<Deps, "crearConversacion" | "getConversacion">,
-  input: { marcaId: string; waId: string; ventanaHasta: Date },
+  input: {
+    marcaId: string;
+    waId: string;
+    estado: Conversacion["estado"];
+    ventanaHasta: Date;
+    nombreContacto?: string;
+  },
 ): Promise<Conversacion> {
   try {
     return await deps.crearConversacion({
       marcaId: input.marcaId,
       waId: input.waId,
       leadId: null,
-      estado: "bot",
+      estado: input.estado,
       ventanaHasta: input.ventanaHasta,
+      nombreContacto: input.nombreContacto,
     });
   } catch (e) {
     const existente = await deps.getConversacion(input.marcaId, input.waId);
@@ -591,7 +653,7 @@ async function crearConversacionOReleer(
  *
  * FASE A (todo lo de antes de `guardarEntrante`): el mensaje TODAVÍA no está
  * persistido. Un fallo aquí (un hipo transitorio de Supabase en
- * `getConversacion`, `buscarLeadPorTelefono`, `crearLeadDeAnuncio`,
+ * `getConversacion`, `buscarLeadPorTelefono`, `crearLeadDeWhatsApp`,
  * `crearConversacion`...) se deja propagar a propósito: `procesarWebhook` y
  * la ruta no lo atrapan, así que la ruta responde 500 y Meta reintenta. Como
  * el wamid todavía no existe en `ventas_mensajes`, el reintento no duplica
@@ -602,14 +664,20 @@ async function crearConversacionOReleer(
  * procesado: se registra con `console.error` y se sigue. Propagarlo sería
  * peor que perder el acuse, porque el gate de idempotencia de arriba
  * impediría que un reintento de Meta lo repare.
+ *
+ * `marca` y `mensajero` son los del número que recibió el mensaje (ver
+ * `procesarWebhook`): todo lo que se envía aquí sale por ESE número, nunca por
+ * el de otra marca del mismo lote.
  */
 async function procesarMensaje(
-  marcaId: string,
-  marcaNombre: string,
+  marca: Marca,
+  mensajero: MensajeroWhatsApp,
   mensaje: MensajeEntrante,
   deps: Deps,
   ahora: Date,
 ): Promise<boolean> {
+  const marcaId = marca.id;
+  const marcaNombre = marca.nombre;
   // ---- FASE A: reintentable ----------------------------------------------
   const conversacionExistente = await deps.getConversacion(marcaId, mensaje.waId);
   const telefono = telefonoDeWaId(mensaje.waId);
@@ -678,19 +746,27 @@ async function procesarMensaje(
           estado: "bot",
           leadId: conversacionExistente.lead_id,
           ventanaHasta,
+          ...nombreNuevo(conversacionExistente, mensaje.nombrePerfil),
         })
-      : await crearConversacionOReleer(deps, { marcaId, waId: mensaje.waId, ventanaHasta });
+      : await crearConversacionOReleer(deps, {
+          marcaId,
+          waId: mensaje.waId,
+          estado: "bot",
+          ventanaHasta,
+          ...nombreNuevo(null, mensaje.nombrePerfil),
+        });
 
     if (conversacion.lead_id) {
       // Ya tenía lead: lo creó la otra entrega concurrente que ganó la
       // carrera, o ya lo tenía de una conversación previa sin referral.
       leadId = conversacion.lead_id;
     } else {
-      const creado = await deps.crearLeadDeAnuncio({
+      const creado = await deps.crearLeadDeWhatsApp({
         marcaId,
         waId: mensaje.waId,
         telefono,
-        campana: referral.campana,
+        nombre: mensaje.nombrePerfil,
+        origen: "anuncio",
         anuncio: referral.anuncio,
       });
       leadId = creado.id;
@@ -726,9 +802,41 @@ async function procesarMensaje(
     }
 
     const ventanaHasta = ventanaExtendida(conversacionExistente, calcularVentana(recibidoEn, deAnuncio));
-    conversacion = conversacionExistente
-      ? await actualizarYDevolver(deps, conversacionExistente, { estado, leadId, ventanaHasta })
-      : await deps.crearConversacion({ marcaId, waId: mensaje.waId, leadId, estado, ventanaHasta });
+    const nombre = nombreNuevo(conversacionExistente, mensaje.nombrePerfil);
+    // Una marca con número propio recibe en él TODAS sus conversaciones, no
+    // solo las de anuncios: cada una tiene que acabar en su CRM como lead,
+    // aunque `decidir` diga `solo_guardar` (con Dinkbit, quien escribe sin
+    // anuncio no es un lead de la campaña, y eso no cambia). `!leadExiste`
+    // cubre también el reintento de Meta tras un fallo entre crear la
+    // conversación y crear el lead: la conversación ya existe, sin lead.
+    const leadDeWhatsApp = tieneNumeroPropio(marca) && !leadExiste;
+    if (conversacionExistente) {
+      conversacion = await actualizarYDevolver(deps, conversacionExistente, { estado, leadId, ventanaHasta, ...nombre });
+    } else if (leadDeWhatsApp) {
+      // Mismo orden y mismo mutex que el camino del anuncio: conversación
+      // primero, lead después, para que dos entregas a la vez no creen dos.
+      conversacion = await crearConversacionOReleer(deps, { marcaId, waId: mensaje.waId, estado, ventanaHasta, ...nombre });
+    } else {
+      conversacion = await deps.crearConversacion({ marcaId, waId: mensaje.waId, leadId, estado, ventanaHasta, ...nombre });
+    }
+
+    if (leadDeWhatsApp) {
+      if (conversacion.lead_id) {
+        leadId = conversacion.lead_id;
+      } else {
+        const creado = await deps.crearLeadDeWhatsApp({
+          marcaId,
+          waId: mensaje.waId,
+          telefono,
+          nombre: mensaje.nombrePerfil,
+          origen: "whatsapp",
+          anuncio: null,
+        });
+        leadId = creado.id;
+        leadDatos = { negocio: creado.negocio, contacto: creado.contacto, ciudad: creado.ciudad };
+        conversacion = await actualizarYDevolver(deps, conversacion, { estado: conversacion.estado, leadId, ventanaHasta });
+      }
+    }
   }
 
   const { nuevo } = await deps.guardarEntrante({
@@ -739,6 +847,7 @@ async function procesarMensaje(
     // normalizado): la columna jsonb existe para poder recuperar más
     // adelante lo que `entrante.ts` no extrae, como adjuntos.
     payload: mensaje.crudo,
+    origen: "cliente",
   });
   // Reintento de Meta del mismo wamid: ya se procesó la primera vez. Ni se
   // responde de nuevo ni se registra actividad otra vez.
@@ -880,14 +989,15 @@ async function procesarMensaje(
             for (const entrada of arrancada.mensajes) {
               const resultado =
                 entrada.botones && entrada.botones.length > 0
-                  ? await deps.mensajero.enviarBotones(mensaje.waId, entrada.texto, entrada.botones)
-                  : await deps.mensajero.enviarTexto(mensaje.waId, entrada.texto);
+                  ? await mensajero.enviarBotones(mensaje.waId, entrada.texto, entrada.botones)
+                  : await mensajero.enviarTexto(mensaje.waId, entrada.texto);
               await deps.guardarSaliente({
                 conversacionId: conversacion.id,
                 wamid: resultado.ok ? resultado.wamid : null,
                 texto: entrada.texto,
                 error: resultado.ok ? undefined : resultado.error,
                 botones: entrada.botones,
+                origen: "bot",
               });
             }
           } catch (e) {
@@ -912,11 +1022,28 @@ async function procesarMensaje(
             }
           }
         }
+      } else if (marca.slug !== MARCA_DINKBIT_SLUG) {
+        // El respaldo de `autorespuesta.ts` habla de clínicas y firma Paula:
+        // es el guion de Dinkbit, no sirve para otra marca. Sin secuencia
+        // propia que conteste, la conversación pasa a una persona en vez de
+        // mandarle al cliente de otra marca un texto que no es el suyo.
+        console.warn(
+          "[whatsapp] la marca no tiene secuencia para este anuncio, se pasa a humana sin autorespuesta",
+          marca.slug,
+          mensaje.waId,
+        );
+        try {
+          await deps.actualizarConversacion(conversacion.id, { estado: "humana" });
+          conversacion = { ...conversacion, estado: "humana" };
+        } catch (e) {
+          console.error("[whatsapp] fallo pasando a humana la conversación sin secuencia", mensaje.waId, e);
+        }
       } else {
         // RESPALDO, NO la fuente: solo se manda si ninguna secuencia activa
         // sirve a este anuncio, si la que sirve no parsea, o si arrancarla
         // falló (capturado arriba). El canal no puede quedarse mudo porque
-        // alguien archive una secuencia por error.
+        // alguien archive una secuencia por error. Solo para Dinkbit (ver la
+        // rama de arriba).
         const texto = textoAutorespuesta({ anuncio });
 
         // Se limpia el puntero de la secuencia que traía la conversación de
@@ -970,12 +1097,13 @@ async function procesarMensaje(
         // `button_reply` y `entrante.ts` la guarda igual que un texto, así que
         // queda en su ficha. Es además lo que más sube la tasa de respuesta.
         const opciones = opcionesAutorespuesta(anuncio);
-        const resultado = await deps.mensajero.enviarBotones(mensaje.waId, texto, opciones);
+        const resultado = await mensajero.enviarBotones(mensaje.waId, texto, opciones);
         await deps.guardarSaliente({
           conversacionId: conversacion.id,
           wamid: resultado.ok ? resultado.wamid : null,
           texto,
           botones: opciones,
+          origen: "bot",
           // Un fallo de ENVÍO no tumba el procesado: el saliente queda con su
           // error para que se vea en la bandeja (esto no lanza, es un
           // resultado tipado de `enviarTexto`/`enviarBotones`).
@@ -1163,14 +1291,15 @@ async function procesarMensaje(
               for (const entrada of avanzada.mensajes) {
                 const resultado =
                   entrada.botones && entrada.botones.length > 0
-                    ? await deps.mensajero.enviarBotones(mensaje.waId, entrada.texto, entrada.botones)
-                    : await deps.mensajero.enviarTexto(mensaje.waId, entrada.texto);
+                    ? await mensajero.enviarBotones(mensaje.waId, entrada.texto, entrada.botones)
+                    : await mensajero.enviarTexto(mensaje.waId, entrada.texto);
                 await deps.guardarSaliente({
                   conversacionId: conversacion.id,
                   wamid: resultado.ok ? resultado.wamid : null,
                   texto: entrada.texto,
                   error: resultado.ok ? undefined : resultado.error,
                   botones: entrada.botones,
+                  origen: "bot",
                 });
               }
             } catch (e) {
@@ -1248,8 +1377,9 @@ async function procesarMensaje(
   // Actividad en la ficha del lead: cuando se reutiliza uno ya existente
   // ("responder"), cuando responde a la pregunta del bot
   // ("guardar_respuesta"), o cuando escribe por primera vez sin conversación
-  // previa y ya era un lead conocido por teléfono ("solo_guardar" de
-  // primer contacto). Si la conversación YA estaba en marcha (`humana`), no
+  // previa y ya era un lead conocido por teléfono —o se le acaba de crear
+  // por escribir al número propio de su marca— ("solo_guardar" de primer
+  // contacto). Si la conversación YA estaba en marcha (`humana`), no
   // se anota cada mensaje suelto — eso ensuciaría la ficha sin aportar nada.
   //
   // `notaGenerica` (tarea 9): cuando el motor de la secuencia llegó a
@@ -1285,6 +1415,56 @@ async function procesarMensaje(
   return true;
 }
 
+/**
+ * Resuelve la marca de cada mensaje por el número que lo recibió
+ * (`elegirMarca`), con una caché por webhook: un lote trae casi siempre varios
+ * mensajes del mismo número, y no hace falta preguntar a la base por cada uno.
+ * Dinkbit solo se busca si algún mensaje es suyo.
+ *
+ * Es fase A entera: no se ha guardado nada, así que cualquier fallo de lectura
+ * se propaga y la ruta responde 500 (reintentable). Lo mismo si Dinkbit hace
+ * falta y no existe (ver la cabecera del fichero, Hallazgo I2).
+ */
+function resolutorDeMarcas(deps: Deps) {
+  const porNumero = new Map<string, Promise<Marca | null>>();
+  let dinkbit: Promise<Marca> | null = null;
+
+  const marcaDinkbit = (): Promise<Marca> => {
+    dinkbit ??= deps.marcaDinkbit().then((marca) => {
+      // Se LANZA a propósito (Hallazgo I2, ronda de arreglos 2): todavía no se
+      // ha persistido nada, así que la ruta responde 500 sin riesgo de
+      // duplicado y Meta reintenta durante horas. Las migraciones son
+      // MANUALES, así que "la marca todavía no está insertada" es el estado
+      // más probable el día del despliegue — tragárselo aquí respondería 200,
+      // Meta daría el mensaje por entregado, y el lead (y el anuncio pagado
+      // que lo trajo) se perderían para siempre.
+      if (!marca) throw new Error(`[whatsapp] no existe la marca "${MARCA_DINKBIT_SLUG}"`);
+      return marca;
+    });
+    return dinkbit;
+  };
+
+  return async (numeroId: string | null): Promise<Marca | null> => {
+    let asignada: Marca | null = null;
+    if (numeroId) {
+      let pendiente = porNumero.get(numeroId);
+      if (!pendiente) {
+        pendiente = deps.marcaDeNumero(numeroId);
+        porNumero.set(numeroId, pendiente);
+      }
+      asignada = await pendiente;
+    }
+    switch (elegirMarca({ numeroId, numeroEntorno: deps.numeroEntorno, asignada })) {
+      case "asignada":
+        return asignada;
+      case "dinkbit":
+        return marcaDinkbit();
+      case "desconocida":
+        return null;
+    }
+  };
+}
+
 export async function procesarWebhook(input: {
   cuerpo: unknown;
   deps?: Deps;
@@ -1292,16 +1472,28 @@ export async function procesarWebhook(input: {
 }): Promise<{ procesados: number }> {
   const deps = input.deps ?? depsReales();
 
-  const marca = await getMarcaPorSlug(MARCA_DINKBIT_SLUG);
-  if (!marca) {
-    // Se LANZA a propósito (Hallazgo I2, ronda de arreglos 2): todavía no se
-    // ha persistido nada, así que la ruta responde 500 sin riesgo de
-    // duplicado y Meta reintenta durante horas. Las tres migraciones son
-    // MANUALES, así que "la marca todavía no está insertada" es el estado
-    // más probable el día del despliegue — tragárselo aquí respondería 200,
-    // Meta daría el mensaje por entregado, y el lead (y el anuncio pagado
-    // que lo trajo) se perderían para siempre.
-    throw new Error(`[whatsapp] no existe la marca "${MARCA_DINKBIT_SLUG}"`);
+  // La marca de cada mensaje se resuelve ANTES de tocar nada (ni estados ni
+  // mensajes), igual que antes se buscaba Dinkbit lo primero: si algo de esto
+  // falla, el 500 llega sin haber escrito nada.
+  const marcaDe = resolutorDeMarcas(deps);
+  const mensajes: Array<{ mensaje: MensajeEntrante; marca: Marca }> = [];
+  for (const mensaje of extraerMensajes(input.cuerpo)) {
+    const marca = await marcaDe(mensaje.numeroId);
+    if (!marca) {
+      // Un número que no es de ninguna marca ni el de entorno: no se atribuye
+      // a nadie. Se registra y se salta, sin 500 — reintentar no lo arreglaría.
+      console.error("[whatsapp] mensaje de un número desconocido, se ignora", mensaje.numeroId, mensaje.wamid);
+      continue;
+    }
+    mensajes.push({ mensaje, marca });
+  }
+
+  // Un mensajero por marca y webhook: cada mensaje sale por el número de SU
+  // marca, nunca por el de otra del mismo lote. También fase A: leer el token
+  // cifrado puede fallar, y entonces se reintenta el lote.
+  const mensajeros = new Map<string, MensajeroWhatsApp>();
+  for (const { marca } of mensajes) {
+    if (!mensajeros.has(marca.id)) mensajeros.set(marca.id, await deps.mensajeroDeMarca(marca));
   }
 
   // `statuses[]` primero: son independientes de los mensajes y una entrada
@@ -1316,14 +1508,15 @@ export async function procesarWebhook(input: {
 
   const ahora = input.ahora ?? new Date();
   let procesados = 0;
-  for (const mensaje of extraerMensajes(input.cuerpo)) {
+  for (const { mensaje, marca } of mensajes) {
     // NO se atrapa aquí a propósito: por construcción, `procesarMensaje` solo
     // deja escapar fallos de FASE A (antes de `guardarEntrante`), que son
     // reintentables — todo lo de fase B ya se atrapa dentro. Se propaga hasta
     // la ruta para que responda 500 y Meta reintente el lote entero; el resto
     // de mensajes de este lote que ya se hubieran guardado son idempotentes
     // por wamid, así que el reintento no los duplica.
-    if (await procesarMensaje(marca.id, marca.nombre, mensaje, deps, ahora)) procesados += 1;
+    const mensajero = mensajeros.get(marca.id) as MensajeroWhatsApp;
+    if (await procesarMensaje(marca, mensajero, mensaje, deps, ahora)) procesados += 1;
   }
 
   return { procesados };

@@ -8,6 +8,8 @@ const insertMock = vi.fn();
 // El doble de `ventas_conversaciones.update(...).eq(...)`, para comprobar que
 // guardarEntrante/guardarSaliente actualizan (o no) el resumen desnormalizado.
 const actualizarConversacionMock = vi.fn();
+// `ventas_conversaciones.insert(...).select("*").single()`, para crearConversacion.
+const insertConversacionMock = vi.fn();
 
 vi.mock("../../supabase-admin", () => ({
   // `db()` exige un cliente no nulo; el doble simula Supabase ya configurado.
@@ -15,19 +17,23 @@ vi.mock("../../supabase-admin", () => ({
     from: (tabla: string) => {
       if (tabla === "ventas_mensajes") return { upsert: upsertMock, insert: insertMock };
       if (tabla === "ventas_conversaciones") {
-        return { update: (patch: unknown) => ({ eq: (_col: string, id: string) => actualizarConversacionMock(patch, id) }) };
+        return {
+          update: (patch: unknown) => ({ eq: (_col: string, id: string) => actualizarConversacionMock(patch, id) }),
+          insert: (fila: unknown) => ({ select: () => ({ single: () => insertConversacionMock(fila) }) }),
+        };
       }
       throw new Error(`tabla inesperada en el test: ${tabla}`);
     },
   }),
 }));
 
-import { actualizarConversacion, guardarEntrante, guardarSaliente } from "../db";
+import { actualizarConversacion, crearConversacion, guardarEntrante, guardarSaliente } from "../db";
 
 beforeEach(() => {
   upsertMock.mockReset();
   insertMock.mockReset().mockReturnValue({ error: null });
   actualizarConversacionMock.mockReset().mockReturnValue({ error: null });
+  insertConversacionMock.mockReset().mockImplementation((fila: Record<string, unknown>) => ({ data: { id: "c1", ...fila }, error: null }));
 });
 
 describe("guardarEntrante", () => {
@@ -154,5 +160,99 @@ describe("actualizarConversacion", () => {
     actualizarConversacionMock.mockClear().mockReturnValue({ error: null });
     await actualizarConversacion("c1", { reanudarEn: null });
     expect(actualizarConversacionMock.mock.calls[0][0]).toEqual({ reanudar_en: null });
+  });
+});
+
+// Las columnas nuevas de la coexistencia (`ventas_mensajes.origen` y
+// `ventas_conversaciones.nombre_contacto`) dependen de una migración MANUAL:
+// hasta que alguien la ejecute, la escritura se repite sin ellas en vez de
+// tumbar el webhook de Dinkbit.
+describe("columnas nuevas sin la migración", () => {
+  const faltaColumna = { message: "Could not find the 'origen' column", code: "PGRST204" };
+
+  it("guardarEntrante escribe el origen cuando la columna existe", async () => {
+    upsertMock.mockReturnValue({ select: () => ({ data: [{ id: "m1" }], error: null }) });
+    await guardarEntrante({ conversacionId: "c1", wamid: "w1", texto: "hola", payload: {}, origen: "cliente" });
+    expect(upsertMock).toHaveBeenCalledTimes(1);
+    expect(upsertMock.mock.calls[0][0]).toMatchObject({ origen: "cliente" });
+  });
+
+  it("guardarEntrante repite sin origen si falta la columna", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    upsertMock
+      .mockReturnValueOnce({ select: () => ({ data: null, error: faltaColumna }) })
+      .mockReturnValueOnce({ select: () => ({ data: [{ id: "m1" }], error: null }) });
+
+    await expect(
+      guardarEntrante({ conversacionId: "c1", wamid: "w1", texto: "hola", payload: {}, origen: "cliente" }),
+    ).resolves.toEqual({ nuevo: true });
+    expect(upsertMock).toHaveBeenCalledTimes(2);
+    expect(upsertMock.mock.calls[1][0]).not.toHaveProperty("origen");
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    errorSpy.mockRestore();
+  });
+
+  it("guardarEntrante no repite por otros errores", async () => {
+    upsertMock.mockReturnValue({ select: () => ({ data: null, error: { message: "timeout", code: "57014" } }) });
+    await expect(
+      guardarEntrante({ conversacionId: "c1", wamid: "w1", texto: "hola", payload: {}, origen: "cliente" }),
+    ).rejects.toThrow("timeout");
+    expect(upsertMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("guardarSaliente repite sin origen si falta la columna", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    insertMock.mockReturnValueOnce({ error: faltaColumna }).mockReturnValueOnce({ error: null });
+
+    await guardarSaliente({ conversacionId: "c1", wamid: "w-out", texto: "hola", origen: "bot" });
+
+    expect(insertMock.mock.calls[0][0]).toMatchObject({ origen: "bot" });
+    expect(insertMock.mock.calls[1][0]).not.toHaveProperty("origen");
+    expect(insertMock.mock.calls[1][0]).toMatchObject({ texto: "hola", direccion: "saliente" });
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    errorSpy.mockRestore();
+  });
+
+  it("sin origen no escribe la columna", async () => {
+    await guardarSaliente({ conversacionId: "c1", wamid: "w-out", texto: "hola" });
+    expect(insertMock.mock.calls[0][0]).not.toHaveProperty("origen");
+  });
+
+  it("crearConversacion guarda el nombre del contacto y lo omite si falta la columna", async () => {
+    await crearConversacion({ marcaId: "m1", waId: "34600", leadId: null, estado: "humana", ventanaHasta: new Date(0), nombreContacto: "Ana" });
+    expect(insertConversacionMock.mock.calls[0][0]).toMatchObject({ nombre_contacto: "Ana" });
+
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    insertConversacionMock.mockReset();
+    insertConversacionMock
+      .mockReturnValueOnce({ data: null, error: { message: "column nombre_contacto does not exist", code: "42703" } })
+      .mockImplementationOnce((fila: Record<string, unknown>) => ({ data: { id: "c2", ...fila }, error: null }));
+
+    const conv = await crearConversacion({
+      marcaId: "m1",
+      waId: "34600",
+      leadId: null,
+      estado: "humana",
+      ventanaHasta: new Date(0),
+      nombreContacto: "Ana",
+    });
+    expect(conv.id).toBe("c2");
+    expect(insertConversacionMock.mock.calls[1][0]).not.toHaveProperty("nombre_contacto");
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    errorSpy.mockRestore();
+  });
+
+  it("actualizarConversacion repite sin el nombre si falta la columna, y no escribe nada si solo traía el nombre", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    actualizarConversacionMock.mockReturnValueOnce({ error: faltaColumna }).mockReturnValueOnce({ error: null });
+    await actualizarConversacion("c1", { estado: "humana", nombreContacto: "Ana" });
+    expect(actualizarConversacionMock.mock.calls[0][0]).toEqual({ estado: "humana", nombre_contacto: "Ana" });
+    expect(actualizarConversacionMock.mock.calls[1][0]).toEqual({ estado: "humana" });
+
+    actualizarConversacionMock.mockReset().mockReturnValueOnce({ error: faltaColumna });
+    await expect(actualizarConversacion("c1", { nombreContacto: "Ana" })).resolves.toBeUndefined();
+    expect(actualizarConversacionMock).toHaveBeenCalledTimes(1);
+    expect(errorSpy).toHaveBeenCalledTimes(2);
+    errorSpy.mockRestore();
   });
 });

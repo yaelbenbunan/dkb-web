@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { Conversacion } from "../db";
 import type { MensajeroWhatsApp, ResultadoEnvio } from "../mensajero";
-import type { SecuenciaRow } from "../../ventas/db";
+import type { Marca, SecuenciaRow } from "../../ventas/db";
 import type { Secuencia } from "../../ventas/secuencias";
 import { SECUENCIA_DENTAL, SECUENCIA_PSICOLOGIA } from "../../ventas/secuencias-plantilla";
 
@@ -17,23 +17,31 @@ const registrarActividadMock = vi.fn();
 // propio `deps`), pero el módulo los importa, así que necesitan un doble.
 const buscarLeadPorContactoMock = vi.fn();
 const crearLeadsMock = vi.fn();
+const listExclusionesMock = vi.fn();
 
 vi.mock("../../ventas/db", () => ({
   getMarcaPorSlug: (...args: unknown[]) => getMarcaPorSlugMock(...args),
   registrarActividad: (...args: unknown[]) => registrarActividadMock(...args),
   buscarLeadPorContacto: (...args: unknown[]) => buscarLeadPorContactoMock(...args),
   crearLeads: (...args: unknown[]) => crearLeadsMock(...args),
+  listExclusiones: (...args: unknown[]) => listExclusionesMock(...args),
+  FALTA_EN_LA_BASE: new Set<string>(),
 }));
 
-import { procesarWebhook, type Deps } from "../procesar";
+import { crearLeadDeWhatsApp, procesarWebhook, type Deps } from "../procesar";
 
-const MARCA = { id: "marca-1", slug: "dinkbit" };
+const MARCA = { id: "marca-1", slug: "dinkbit", nombre: "Dinkbit" } as Marca;
+/** Marca con número propio (coexistencia, tarea 5 del plan por marca). */
+const HYDRUP = { id: "marca-hydrup", slug: "hydrup", nombre: "Hydrup", whatsapp_phone_number_id: "PN-HYDRUP" } as Marca;
+/** El número de WhatsApp de entorno (el de Dinkbit) en los tests. */
+const NUMERO_ENTORNO = "PN-ENTORNO";
 
 beforeEach(() => {
   getMarcaPorSlugMock.mockReset().mockResolvedValue(MARCA);
   registrarActividadMock.mockReset().mockResolvedValue({ ok: true });
   buscarLeadPorContactoMock.mockReset();
   crearLeadsMock.mockReset();
+  listExclusionesMock.mockReset().mockResolvedValue([]);
 });
 
 /* Sobres de Meta ------------------------------------------------------------ */
@@ -307,16 +315,24 @@ type LeadFalso = { id: string; negocio?: string; contacto?: string | null; ciuda
 function depsFalsas(
   opts: {
     enviar?: (waId: string, texto: string) => Promise<ResultadoEnvio>;
-    secuencias?: SecuenciaFalsa[];
+    secuencias?: Array<SecuenciaFalsa & { marca_id?: string }>;
   } = {},
 ) {
   const conversaciones = new Map<string, Conversacion>();
   const wamidsGuardados = new Set<string>();
-  const salientes: Array<{ conversacionId: string; wamid: string | null; texto: string; error?: string; botones?: readonly string[] }> = [];
+  const salientes: Array<{
+    conversacionId: string;
+    wamid: string | null;
+    texto: string;
+    error?: string;
+    botones?: readonly string[];
+    origen?: string | null;
+  }> = [];
+  const entrantes: Array<{ conversacionId: string; wamid: string; origen?: string | null }> = [];
   const leadsPorTelefono = new Map<string, LeadFalso>();
   const estadosSeteados: Array<{ wamid: string; estado: string }> = [];
   const secuencias: SecuenciaRow[] = (opts.secuencias ?? []).map((s) => ({
-    marca_id: MARCA.id,
+    marca_id: s.marca_id ?? MARCA.id,
     nombre: s.id,
     creada_por: null,
     created_at: new Date().toISOString(),
@@ -392,24 +408,46 @@ function depsFalsas(
   // opciones: sin esto (ronda de arreglos 1, Hallazgo 3) un test podía pasar
   // aunque el código llamara siempre a `enviarTexto`, porque ambos métodos
   // delegaban en el mismo `enviar` sin dejar rastro de cuál se usó.
-  const enviosMensajero: Array<{ metodo: "texto" | "botones"; waId: string; texto: string; opciones?: readonly string[] }> = [];
-  const mensajero: MensajeroWhatsApp = {
+  // `marcaId` dice con el mensajero de QUÉ marca salió cada envío (tarea 5 del
+  // plan por marca): en un lote mixto, cada mensaje tiene que salir por el
+  // número de su marca, nunca por el de otra.
+  const enviosMensajero: Array<{
+    marcaId: string;
+    metodo: "texto" | "botones";
+    waId: string;
+    texto: string;
+    opciones?: readonly string[];
+  }> = [];
+  const mensajeroPara = (marcaId: string): MensajeroWhatsApp => ({
     async enviarTexto(waId, texto) {
-      enviosMensajero.push({ metodo: "texto", waId, texto });
+      enviosMensajero.push({ marcaId, metodo: "texto", waId, texto });
       return enviar(waId, texto);
     },
     async enviarBotones(waId, texto, opciones) {
-      enviosMensajero.push({ metodo: "botones", waId, texto, opciones });
+      enviosMensajero.push({ marcaId, metodo: "botones", waId, texto, opciones });
       return enviar(waId, texto);
     },
-  };
+  });
+  const marcasConNumero = new Map<string, Marca>([[HYDRUP.whatsapp_phone_number_id as string, HYDRUP]]);
+  const leadsCreados: Array<Parameters<Deps["crearLeadDeWhatsApp"]>[0]> = [];
 
   const deps: Deps = {
-    mensajero,
+    numeroEntorno: NUMERO_ENTORNO,
+    async marcaDeNumero(numeroId) {
+      return marcasConNumero.get(numeroId) ?? null;
+    },
+    // Delega en el mock de `getMarcaPorSlug` para que los tests de siempre
+    // (p.ej. «si la marca no existe») sigan controlando la marca Dinkbit.
+    async marcaDinkbit() {
+      return getMarcaPorSlugMock("dinkbit");
+    },
+    async mensajeroDeMarca(marca) {
+      return mensajeroPara(marca.id);
+    },
     async getConversacion(marcaId, waId) {
       return conversaciones.get(clave(marcaId, waId)) ?? null;
     },
-    async crearConversacion({ marcaId, waId, leadId, estado, ventanaHasta }) {
+    async crearConversacion({ marcaId, waId, leadId, estado, ventanaHasta, nombreContacto }) {
       contadorConv += 1;
       const conv: Conversacion = {
         id: `conv-${contadorConv}`,
@@ -425,6 +463,7 @@ function depsFalsas(
         paso_actual: null,
         datos: {},
         reanudar_en: null,
+        nombre_contacto: nombreContacto ?? null,
       };
       conversaciones.set(clave(marcaId, waId), conv);
       return conv;
@@ -441,6 +480,7 @@ function depsFalsas(
         if (cambios.reanudarEn !== undefined) {
           conv.reanudar_en = cambios.reanudarEn ? cambios.reanudarEn.toISOString() : null;
         }
+        if (cambios.nombreContacto !== undefined) conv.nombre_contacto = cambios.nombreContacto;
       }
     },
     // Doble del update CONDICIONAL de la ronda B1 (arreglo 1): comprueba el
@@ -467,13 +507,21 @@ function depsFalsas(
       }
       return false;
     },
-    async guardarEntrante({ wamid }) {
+    async guardarEntrante({ conversacionId, wamid, origen }) {
       if (wamidsGuardados.has(wamid)) return { nuevo: false };
       wamidsGuardados.add(wamid);
+      entrantes.push({ conversacionId, wamid, origen });
       return { nuevo: true };
     },
     async guardarSaliente(input) {
-      salientes.push({ conversacionId: input.conversacionId, wamid: input.wamid, texto: input.texto, error: input.error, botones: input.botones });
+      salientes.push({
+        conversacionId: input.conversacionId,
+        wamid: input.wamid,
+        texto: input.texto,
+        error: input.error,
+        botones: input.botones,
+        origen: input.origen,
+      });
     },
     async setEstadoMensaje(wamid, estado) {
       estadosSeteados.push({ wamid, estado });
@@ -482,18 +530,31 @@ function depsFalsas(
       const lead = leadsPorTelefono.get(telefono);
       return lead ? conDatosCompletos(lead) : null;
     },
-    async crearLeadDeAnuncio({ telefono, waId }) {
+    async crearLeadDeWhatsApp(input) {
       contadorLead += 1;
-      const lead = { id: `lead-${contadorLead}` };
-      leadsPorTelefono.set(telefono ?? waId, lead);
+      const lead = { id: `lead-${contadorLead}`, contacto: input.nombre };
+      leadsPorTelefono.set(input.telefono ?? input.waId, lead);
+      leadsCreados.push(input);
       return conDatosCompletos(lead);
     },
-    async listSecuencias() {
-      return secuencias;
+    async listSecuencias(marcaId) {
+      return secuencias.filter((s) => s.marca_id === marcaId);
     },
   };
 
-  return { deps, conversaciones, salientes, leadsPorTelefono, estadosSeteados, enviosMensajero, secuencias, actividades, fases };
+  return {
+    deps,
+    conversaciones,
+    salientes,
+    entrantes,
+    leadsPorTelefono,
+    leadsCreados,
+    estadosSeteados,
+    enviosMensajero,
+    secuencias,
+    actividades,
+    fases,
+  };
 }
 
 /* Tests ------------------------------------------------------------------ */
@@ -563,11 +624,11 @@ describe("procesarWebhook", () => {
   it("responder reutiliza el lead existente, no crea uno nuevo y registra actividad", async () => {
     const { deps, leadsPorTelefono, conversaciones } = depsFalsas();
     leadsPorTelefono.set("660415514", { id: "lead-preexistente" });
-    const crearLeadDeAnuncioSpy = vi.spyOn(deps, "crearLeadDeAnuncio");
+    const crearLeadDeWhatsAppSpy = vi.spyOn(deps, "crearLeadDeWhatsApp");
 
     await procesarWebhook({ cuerpo: sobreDeAnuncio(), deps });
 
-    expect(crearLeadDeAnuncioSpy).not.toHaveBeenCalled();
+    expect(crearLeadDeWhatsAppSpy).not.toHaveBeenCalled();
     const conv = conversaciones.get(`${MARCA.id}:34660415514`);
     expect(conv?.lead_id).toBe("lead-preexistente");
     expect(conv?.estado).toBe("bot");
@@ -1632,4 +1693,246 @@ describe.each<[string, Secuencia]>([
       expect(notas[0].nota).toBe(`El lead respondió: «${rotulo}». Avisar a la comercial.`);
     },
   );
+});
+
+/* Coexistencia: cada mensaje a su marca (tarea 5 del plan por marca) ---------- */
+
+/** Sobre con un `entry` por número, como lo manda Meta cuando el webhook de la
+ *  app recibe a la vez mensajes de varios números. */
+function sobrePorNumeros(entradas: Array<{ numeroId: string; mensajes: Record<string, unknown>[]; nombre?: string }>) {
+  return {
+    object: "whatsapp_business_account",
+    entry: entradas.map((e, i) => ({
+      id: `waba-${i}`,
+      changes: [
+        {
+          field: "messages",
+          value: {
+            messaging_product: "whatsapp",
+            metadata: { phone_number_id: e.numeroId, display_phone_number: "34900000000" },
+            ...(e.nombre
+              ? { contacts: e.mensajes.map((m) => ({ wa_id: m.from, profile: { name: e.nombre } })) }
+              : {}),
+            messages: e.mensajes,
+          },
+        },
+      ],
+    })),
+  };
+}
+
+const textoLibre = (id: string, from = "34611222333", body = "Hola, ¿tenéis agua sin gas?") => ({
+  id,
+  from,
+  timestamp: "1790000000",
+  type: "text",
+  text: { body },
+});
+
+describe("procesarWebhook por marca", () => {
+  it("un anuncio que entra por el número de Hydrup va a Hydrup y sale con su mensajero", async () => {
+    const { deps, conversaciones, enviosMensajero, leadsCreados } = depsFalsas({
+      secuencias: [{ id: "s-hydrup", marca_id: HYDRUP.id, estado: "activa", anuncios: ["AD-H"], pasos: SECUENCIA_MINIMA }],
+    });
+    const mensajeroSpy = vi.spyOn(deps, "mensajeroDeMarca");
+    const cuerpo = sobrePorNumeros([
+      {
+        numeroId: "PN-HYDRUP",
+        nombre: "Marta",
+        mensajes: [mensajeDeAnuncio({ referral: { source_id: "AD-H", headline: "Agua" } })],
+      },
+    ]);
+
+    await expect(procesarWebhook({ cuerpo, deps })).resolves.toEqual({ procesados: 1 });
+
+    expect(conversaciones.get(`${HYDRUP.id}:34660415514`)?.estado).toBe("bot");
+    expect(conversaciones.get(`${MARCA.id}:34660415514`)).toBeUndefined();
+    expect(mensajeroSpy).toHaveBeenCalledWith(HYDRUP);
+    expect(enviosMensajero.map((e) => e.marcaId)).toEqual([HYDRUP.id]);
+    expect(leadsCreados).toEqual([
+      expect.objectContaining({ marcaId: HYDRUP.id, origen: "anuncio", anuncio: "AD-H", nombre: "Marta" }),
+    ]);
+    // Sin Dinkbit en el lote no hace falta ni buscarla.
+    expect(getMarcaPorSlugMock).not.toHaveBeenCalled();
+  });
+
+  // Review Focus 2: en un lote mixto, cada mensaje con SU marca y SU mensajero.
+  it("un cuerpo con dos entry (Dinkbit por entorno y Hydrup) lleva cada mensaje a su marca", async () => {
+    const { deps, conversaciones, enviosMensajero } = depsFalsas({
+      secuencias: [
+        { id: "s-dinkbit", estado: "activa", anuncios: ["AD-D"], pasos: SECUENCIA_MINIMA },
+        { id: "s-hydrup", marca_id: HYDRUP.id, estado: "activa", anuncios: ["AD-H"], pasos: SECUENCIA_MINIMA },
+      ],
+    });
+    const cuerpo = sobrePorNumeros([
+      {
+        numeroId: NUMERO_ENTORNO,
+        mensajes: [mensajeDeAnuncio({ id: "wamid.D", from: "34600000001", referral: { source_id: "AD-D", headline: "Web" } })],
+      },
+      {
+        numeroId: "PN-HYDRUP",
+        mensajes: [mensajeDeAnuncio({ id: "wamid.H", from: "34600000002", referral: { source_id: "AD-H", headline: "Agua" } })],
+      },
+    ]);
+
+    await expect(procesarWebhook({ cuerpo, deps })).resolves.toEqual({ procesados: 2 });
+
+    expect(conversaciones.get(`${MARCA.id}:34600000001`)).toBeDefined();
+    expect(conversaciones.get(`${HYDRUP.id}:34600000002`)).toBeDefined();
+    expect(conversaciones.get(`${HYDRUP.id}:34600000001`)).toBeUndefined();
+    expect(conversaciones.get(`${MARCA.id}:34600000002`)).toBeUndefined();
+    expect(enviosMensajero.map((e) => [e.waId, e.marcaId])).toEqual([
+      ["34600000001", MARCA.id],
+      ["34600000002", HYDRUP.id],
+    ]);
+  });
+
+  it("un número que no es de ninguna marca ni el de entorno no guarda nada y no lanza", async () => {
+    const { deps, conversaciones, entrantes, enviosMensajero } = depsFalsas();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const cuerpo = sobrePorNumeros([{ numeroId: "PN-AJENO", mensajes: [mensajeDeAnuncio()] }]);
+
+    await expect(procesarWebhook({ cuerpo, deps })).resolves.toEqual({ procesados: 0 });
+
+    expect(conversaciones.size).toBe(0);
+    expect(entrantes).toHaveLength(0);
+    expect(enviosMensajero).toHaveLength(0);
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("número desconocido"), "PN-AJENO", "wamid.ANUNCIO");
+    errorSpy.mockRestore();
+  });
+
+  it("Hydrup sin referral de un teléfono nuevo crea lead de WhatsApp con el nombre del perfil y no envía nada", async () => {
+    const { deps, conversaciones, enviosMensajero, leadsCreados, entrantes } = depsFalsas();
+    const cuerpo = sobrePorNumeros([{ numeroId: "PN-HYDRUP", nombre: "Marta López", mensajes: [textoLibre("wamid.L1")] }]);
+
+    await expect(procesarWebhook({ cuerpo, deps })).resolves.toEqual({ procesados: 1 });
+
+    expect(leadsCreados).toEqual([
+      {
+        marcaId: HYDRUP.id,
+        waId: "34611222333",
+        telefono: "611222333",
+        nombre: "Marta López",
+        origen: "whatsapp",
+        anuncio: null,
+      },
+    ]);
+    const conv = conversaciones.get(`${HYDRUP.id}:34611222333`);
+    expect(conv?.estado).toBe("humana");
+    expect(conv?.lead_id).toBe("lead-1");
+    expect(conv?.nombre_contacto).toBe("Marta López");
+    expect(enviosMensajero).toHaveLength(0);
+    expect(entrantes).toEqual([expect.objectContaining({ wamid: "wamid.L1", origen: "cliente" })]);
+  });
+
+  it("Hydrup no vuelve a crear el lead si la conversación ya lo tiene", async () => {
+    const { deps, leadsCreados } = depsFalsas();
+    await procesarWebhook({ cuerpo: sobrePorNumeros([{ numeroId: "PN-HYDRUP", mensajes: [textoLibre("wamid.L1")] }]), deps });
+    await procesarWebhook({
+      cuerpo: sobrePorNumeros([{ numeroId: "PN-HYDRUP", mensajes: [textoLibre("wamid.L2", undefined, "¿Y con gas?")] }]),
+      deps,
+    });
+
+    expect(leadsCreados).toHaveLength(1);
+  });
+
+  it("Hydrup con referral y sin secuencia que sirva pasa a humana sin autorespuesta", async () => {
+    const { deps, conversaciones, enviosMensajero, salientes, leadsCreados } = depsFalsas({
+      // Una secuencia de OTRA marca que sí serviría al anuncio: no cuenta.
+      secuencias: [{ id: "s-dinkbit", estado: "activa", anuncios: ["AD-H"], pasos: SECUENCIA_MINIMA }],
+    });
+    const cuerpo = sobrePorNumeros([
+      { numeroId: "PN-HYDRUP", mensajes: [mensajeDeAnuncio({ referral: { source_id: "AD-H", headline: "Agua" } })] },
+    ]);
+
+    await expect(procesarWebhook({ cuerpo, deps })).resolves.toEqual({ procesados: 1 });
+
+    expect(conversaciones.get(`${HYDRUP.id}:34660415514`)?.estado).toBe("humana");
+    expect(enviosMensajero).toHaveLength(0);
+    expect(salientes).toHaveLength(0);
+    expect(leadsCreados).toEqual([expect.objectContaining({ origen: "anuncio", anuncio: "AD-H" })]);
+  });
+
+  it("Dinkbit sin referral sigue sin crear lead", async () => {
+    const { deps, conversaciones, leadsCreados } = depsFalsas();
+    const cuerpo = sobrePorNumeros([{ numeroId: NUMERO_ENTORNO, nombre: "Ana", mensajes: [textoLibre("wamid.D1")] }]);
+
+    await expect(procesarWebhook({ cuerpo, deps })).resolves.toEqual({ procesados: 1 });
+
+    expect(leadsCreados).toHaveLength(0);
+    const conv = conversaciones.get(`${MARCA.id}:34611222333`);
+    expect(conv?.estado).toBe("humana");
+    expect(conv?.lead_id).toBeNull();
+    expect(conv?.nombre_contacto).toBe("Ana");
+  });
+
+  it("guarda el nombre del perfil en una conversación que todavía no lo tenía", async () => {
+    const { deps, conversaciones } = depsFalsas();
+    await procesarWebhook({ cuerpo: sobrePorNumeros([{ numeroId: NUMERO_ENTORNO, mensajes: [textoLibre("wamid.D1")] }]), deps });
+    expect(conversaciones.get(`${MARCA.id}:34611222333`)?.nombre_contacto).toBeNull();
+
+    await procesarWebhook({
+      cuerpo: sobrePorNumeros([{ numeroId: NUMERO_ENTORNO, nombre: "Ana", mensajes: [textoLibre("wamid.D2")] }]),
+      deps,
+    });
+    expect(conversaciones.get(`${MARCA.id}:34611222333`)?.nombre_contacto).toBe("Ana");
+  });
+
+  it("los salientes del bot se guardan con origen bot", async () => {
+    const { deps, salientes } = depsFalsas();
+    await procesarWebhook({ cuerpo: sobreDeAnuncio(), deps });
+    expect(salientes.map((s) => s.origen)).toEqual(["bot"]);
+  });
+
+  it("si Dinkbit hace falta y no existe, lanza aunque el lote traiga también mensajes de otra marca", async () => {
+    getMarcaPorSlugMock.mockResolvedValue(null);
+    const { deps, entrantes } = depsFalsas();
+    const cuerpo = sobrePorNumeros([
+      { numeroId: "PN-HYDRUP", mensajes: [textoLibre("wamid.H1")] },
+      { numeroId: NUMERO_ENTORNO, mensajes: [textoLibre("wamid.D1", "34600000009")] },
+    ]);
+
+    await expect(procesarWebhook({ cuerpo, deps })).rejects.toThrow('no existe la marca "dinkbit"');
+    // Se lanza antes de guardar nada: el reintento de Meta no duplica.
+    expect(entrantes).toHaveLength(0);
+  });
+});
+
+describe("crearLeadDeWhatsApp", () => {
+  beforeEach(() => {
+    crearLeadsMock.mockResolvedValue({ ok: true, creados: 1 });
+    buscarLeadPorContactoMock.mockResolvedValue({ id: "lead-9", negocio: "Lead de WhatsApp (611222333)", contacto: "Marta", ciudad: "" });
+  });
+
+  it("crea el lead con el nombre del perfil como contacto y su origen", async () => {
+    const lead = await crearLeadDeWhatsApp({
+      marcaId: HYDRUP.id,
+      waId: "34611222333",
+      telefono: "611222333",
+      nombre: "Marta",
+      origen: "whatsapp",
+      anuncio: null,
+    });
+
+    expect(lead).toEqual({ id: "lead-9", negocio: "Lead de WhatsApp (611222333)", contacto: "Marta", ciudad: "" });
+    expect(listExclusionesMock).toHaveBeenCalledWith(HYDRUP.id);
+    const entrada = crearLeadsMock.mock.calls[0][0];
+    expect(entrada).toMatchObject({ marcaId: HYDRUP.id, origen: "whatsapp", origenDetalle: null });
+    expect(entrada.leads[0]).toMatchObject({ contacto: "Marta", telefono: "611222333", excluido: false });
+  });
+
+  it("sin nombre de perfil deja el contacto vacío", async () => {
+    await crearLeadDeWhatsApp({ marcaId: HYDRUP.id, waId: "34611222333", telefono: "611222333", nombre: null, origen: "anuncio", anuncio: "AD-H" });
+    const entrada = crearLeadsMock.mock.calls[0][0];
+    expect(entrada).toMatchObject({ origen: "anuncio", origenDetalle: "AD-H" });
+    expect(entrada.leads[0].contacto).toBe("");
+  });
+
+  it("un teléfono que está en las exclusiones de la marca crea el lead marcado como excluido", async () => {
+    listExclusionesMock.mockResolvedValue([{ id: "x1", marca_id: HYDRUP.id, nombre: null, email: null, telefono: "+34 611 22 23 33", cif: null }]);
+
+    await crearLeadDeWhatsApp({ marcaId: HYDRUP.id, waId: "34611222333", telefono: "611222333", nombre: "Marta", origen: "whatsapp", anuncio: null });
+
+    expect(crearLeadsMock.mock.calls[0][0].leads[0].excluido).toBe(true);
+  });
 });
