@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 
 let tokenGuardado: string | null = null;
 let errorUpdate: { message: string; code?: string } | null = null;
+const ordenEscrituras: string[] = [];
 let errorLectura: { message: string; code?: string } | null = null;
 
 vi.mock("../../supabase-admin", () => ({
@@ -18,11 +19,11 @@ vi.mock("../../supabase-admin", () => ({
                   : { data: tokenGuardado ? { token_cifrado: tokenGuardado } : null, error: null },
             }),
           }),
-          upsert: async () => ({ error: null }),
+          upsert: async () => (ordenEscrituras.push("token"), { error: null }),
         };
       }
       return {
-        update: () => ({ eq: async () => ({ error: errorUpdate }) }),
+        update: () => ({ eq: async () => (ordenEscrituras.push("marca"), { error: errorUpdate }) }),
         select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: errorLectura }) }) }),
       };
     },
@@ -62,7 +63,7 @@ describe("mensajeroDeMarca", () => {
   });
 
   it("marca con número y token válido envía con su número y token", async () => {
-    tokenGuardado = cifrarToken("tok-marca", clave);
+    tokenGuardado = cifrarToken("tok-marca", clave, "m1");
     const res = await (await mensajeroDeMarca(marca({ whatsapp_phone_number_id: "999" }))).enviarTexto("34600", "hola");
     expect(res.ok).toBe(true);
     const [url, init] = fetchMock.mock.calls[0];
@@ -81,6 +82,13 @@ describe("mensajeroDeMarca", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("token cifrado para otra marca: credenciales inválidas y sin fetch", async () => {
+    tokenGuardado = cifrarToken("tok-otra", clave, "otra-marca");
+    const m = await mensajeroDeMarca(marca({ whatsapp_phone_number_id: "999" }));
+    expect((await m.enviarTexto("34600", "hola")).ok).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("sin token guardado también falla sin fetch", async () => {
     const m = await mensajeroDeMarca(marca({ whatsapp_phone_number_id: "999" }));
     expect((await m.enviarTexto("34600", "hola")).ok).toBe(false);
@@ -89,7 +97,7 @@ describe("mensajeroDeMarca", () => {
 
   it("exigirProduccion: fuera de producción queda simulado", async () => {
     vi.stubEnv("VERCEL_ENV", "preview");
-    tokenGuardado = cifrarToken("tok-marca", clave);
+    tokenGuardado = cifrarToken("tok-marca", clave, "m1");
     const res = await (await mensajeroDeMarca(marca({ whatsapp_phone_number_id: "999" }))).enviarTexto("34600", "hola");
     expect(res).toEqual({ ok: true, wamid: null });
     expect(fetchMock).not.toHaveBeenCalled();
@@ -121,7 +129,9 @@ describe("lecturas tolerantes y escritura", () => {
     expect(r).toEqual({ ok: false, error: "Ese número ya está conectado a otra marca." });
   });
 
-  it("guardarConexion correcto", async () => {
+  it("guardarConexion correcto: primero el token y luego la marca", async () => {
+    ordenEscrituras.length = 0;
     expect(await guardarConexion("m1", { wabaId: "w", numeroId: "n", tokenCifrado: "x" })).toEqual({ ok: true });
+    expect(ordenEscrituras).toEqual(["token", "marca"]);
   });
 });

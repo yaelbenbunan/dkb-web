@@ -42,6 +42,12 @@ export async function guardarConexion(
   c: { wabaId: string; numeroId: string; tokenCifrado: string },
 ): Promise<Escritura> {
   const ahora = new Date().toISOString();
+  // Primero el token: si la marca quedara conectada sin token, los envíos fallarían.
+  const t = await sb()
+    .from("ventas_whatsapp_credenciales")
+    .upsert({ marca_id: marcaId, token_cifrado: c.tokenCifrado, actualizado_en: ahora }, { onConflict: "marca_id" });
+  if (t.error) return fallo(t.error, "guardarConexion (token)");
+
   const u = await sb()
     .from("ventas_marcas")
     .update({
@@ -53,11 +59,6 @@ export async function guardarConexion(
     })
     .eq("id", marcaId);
   if (u.error) return fallo(u.error, "guardarConexion");
-
-  const t = await sb()
-    .from("ventas_whatsapp_credenciales")
-    .upsert({ marca_id: marcaId, token_cifrado: c.tokenCifrado, actualizado_en: ahora }, { onConflict: "marca_id" });
-  if (t.error) return fallo(t.error, "guardarConexion (token)");
   return { ok: true };
 }
 
@@ -106,7 +107,7 @@ export async function mensajeroDeMarca(marca: Marca): Promise<MensajeroWhatsApp>
     const cifrado = await getTokenCifrado(marca.id);
     const clave = claveDeEntorno();
     if (!cifrado || !clave) return mensajeroSinCredenciales();
-    const token = descifrarToken(cifrado, clave);
+    const token = descifrarToken(cifrado, clave, marca.id);
     return crearMensajero({ token, phoneNumberId: numeroId, exigirProduccion: true });
   } catch {
     // Sin detalle: el error de descifrado no debe arrastrar token ni clave.
