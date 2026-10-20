@@ -86,21 +86,24 @@ function numeroIdDe(valor: Record<string, unknown>): string | null {
 }
 
 /**
- * Los nombres de perfil/contacto los controla quien escribe: se quitan los
- * caracteres de control, los de ancho cero y los de dirección (bidi) que sirven
- * para suplantar a otra persona en la bandeja, se colapsan los espacios y se
- * recorta a 40. `null` si no queda nada.
+ * Los nombres de perfil/contacto los controla quien escribe: se normalizan
+ * (NFKC), se quitan los caracteres de formato (ancho cero, bidi y demás Cf),
+ * los suplentes sueltos, los de uso privado y los no asignados, que sirven para
+ * suplantar a otra persona en la bandeja; los de control pasan a espacio. Se
+ * colapsan los espacios y se recorta a 40 puntos de código (nunca a mitad de un
+ * emoji: un suplente suelto rompe el JSON que se manda a Postgres). `null` si
+ * no queda ninguna letra ni cifra.
  */
 export function limpiarNombre(nombre: string | null | undefined): string | null {
   if (typeof nombre !== "string") return null;
   const limpio = nombre
-    .replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g, "")
-    .replace(/[\u0000-\u001F\u007F-\u009F]/g, " ")
+    .normalize("NFKC")
+    .replace(/[\p{Cf}\p{Cs}\p{Co}\p{Cn}]/gu, "")
+    .replace(/\p{Cc}/gu, " ")
     .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 40)
     .trim();
-  return limpio || null;
+  const recortado = Array.from(limpio).slice(0, 40).join("").trim();
+  return /[\p{L}\p{N}]/u.test(recortado) ? recortado : null;
 }
 
 /** Nombre de perfil del `contacts[]` cuyo `wa_id` es `waId`, o null. */

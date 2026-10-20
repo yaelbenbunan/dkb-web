@@ -553,8 +553,26 @@ describe("limpiarNombre", () => {
   it("quita bidi, ancho cero y control, y colapsa espacios", () => {
     expect(limpiarNombre("\u202Eabc\u200B\u0007  d\uFEFFe\u2066")).toBe("abc de");
   });
-  it("recorta a 40 caracteres", () => {
+  it("recorta a 40 puntos de código", () => {
     expect(limpiarNombre("a".repeat(60))).toBe("a".repeat(40));
+  });
+  it("recorta por puntos de código sin partir un emoji", () => {
+    const r = limpiarNombre("a".repeat(39) + "😀" + "b");
+    expect(r).toBe("a".repeat(39) + "😀");
+    expect(JSON.parse(JSON.stringify(r))).toBe(r);
+    expect(/[\uD800-\uDFFF]/u.test(r!)).toBe(false);
+  });
+  it("quita cualquier carácter de formato (U+061C, U+2060) y suplentes sueltos", () => {
+    expect(limpiarNombre("A\u061Cna\u2060 Paz")).toBe("Ana Paz");
+    expect(limpiarNombre("Eva\uD800")).toBe("Eva");
+  });
+  it("normaliza NFKC", () => {
+    expect(limpiarNombre("ＡＮＡ")).toBe("ANA");
+  });
+  it("null si no queda ninguna letra ni cifra", () => {
+    expect(limpiarNombre("... --- !!!")).toBeNull();
+    expect(limpiarNombre("\u2060\u061C")).toBeNull();
+    expect(limpiarNombre("7")).toBe("7");
   });
   it("devuelve null si queda vacío o no hay nombre", () => {
     expect(limpiarNombre("\u200B \u202E")).toBeNull();
