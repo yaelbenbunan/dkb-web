@@ -329,6 +329,9 @@ function depsFalsas(
     origen?: string | null;
   }> = [];
   const entrantes: Array<{ conversacionId: string; wamid: string; origen?: string | null }> = [];
+  /** Los ecos del móvil guardados (tarea 6 del plan por marca). Comparten
+   *  `wamidsGuardados` con los entrantes: en la base es el mismo índice único. */
+  const ecos: Array<{ conversacionId: string; wamid: string; texto: string | null; enviadoEn: Date }> = [];
   const leadsPorTelefono = new Map<string, LeadFalso>();
   const estadosSeteados: Array<{ wamid: string; estado: string }> = [];
   const secuencias: SecuenciaRow[] = (opts.secuencias ?? []).map((s) => ({
@@ -513,6 +516,12 @@ function depsFalsas(
       entrantes.push({ conversacionId, wamid, origen });
       return { nuevo: true };
     },
+    async guardarEco({ conversacionId, wamid, texto, enviadoEn }) {
+      if (wamidsGuardados.has(wamid)) return { nuevo: false };
+      wamidsGuardados.add(wamid);
+      ecos.push({ conversacionId, wamid, texto, enviadoEn });
+      return { nuevo: true };
+    },
     async guardarSaliente(input) {
       salientes.push({
         conversacionId: input.conversacionId,
@@ -547,6 +556,7 @@ function depsFalsas(
     conversaciones,
     salientes,
     entrantes,
+    ecos,
     leadsPorTelefono,
     leadsCreados,
     estadosSeteados,
@@ -1895,6 +1905,197 @@ describe("procesarWebhook por marca", () => {
     await expect(procesarWebhook({ cuerpo, deps })).rejects.toThrow('no existe la marca "dinkbit"');
     // Se lanza antes de guardar nada: el reintento de Meta no duplica.
     expect(entrantes).toHaveLength(0);
+  });
+});
+
+/* Ecos del móvil (tarea 6 del plan por marca) ------------------------------- */
+
+/** Sobre `smb_message_echoes`: lo que manda Meta cuando alguien escribe desde
+ *  la app de WhatsApp Business del móvil en un número en coexistencia. */
+function sobreConEcos(numeroId: string, ecos: Array<{ id: string; to?: string; texto?: string }>) {
+  return {
+    object: "whatsapp_business_account",
+    entry: [
+      {
+        id: "waba-eco",
+        changes: [
+          {
+            field: "smb_message_echoes",
+            value: {
+              messaging_product: "whatsapp",
+              metadata: { phone_number_id: numeroId, display_phone_number: "34900000000" },
+              message_echoes: ecos.map((e) => ({
+                from: "34900000000",
+                to: e.to ?? "34611222333",
+                id: e.id,
+                timestamp: "1790000200",
+                type: "text",
+                text: { body: e.texto ?? "Te llamo en cinco minutos" },
+              })),
+            },
+          },
+        ],
+      },
+    ],
+  };
+}
+
+const ENVIADO_EN = new Date(1790000200 * 1000);
+
+/** Una conversación de Hydrup con el bot a mitad de secuencia. */
+function conversacionEnBot(overrides: Partial<Conversacion> = {}): Conversacion {
+  return {
+    id: "conv-bot",
+    marca_id: HYDRUP.id,
+    lead_id: "lead-previo",
+    wa_id: "34611222333",
+    estado: "bot",
+    ventana_hasta: "2026-09-22T10:00:00.000Z",
+    ultimo_mensaje_at: "2026-09-21T10:00:00.000Z",
+    secuencia_id: "s-hydrup",
+    paso_actual: "inicio",
+    datos: {},
+    reanudar_en: null,
+    nombre_contacto: null,
+    ...overrides,
+  };
+}
+
+describe("ecos del móvil", () => {
+  it("un eco en una conversación del bot la pasa a humana, para la secuencia y no toca la ventana", async () => {
+    const { deps, conversaciones, ecos, leadsCreados, enviosMensajero } = depsFalsas();
+    conversaciones.set(`${HYDRUP.id}:34611222333`, conversacionEnBot());
+
+    await procesarWebhook({ cuerpo: sobreConEcos("PN-HYDRUP", [{ id: "wamid.ECO1" }]), deps });
+
+    const conv = conversaciones.get(`${HYDRUP.id}:34611222333`);
+    expect(conv?.estado).toBe("humana");
+    expect(conv?.paso_actual).toBeNull();
+    expect(conv?.ventana_hasta).toBe("2026-09-22T10:00:00.000Z");
+    expect(ecos).toEqual([
+      { conversacionId: "conv-bot", wamid: "wamid.ECO1", texto: "Te llamo en cinco minutos", enviadoEn: ENVIADO_EN },
+    ]);
+    expect(leadsCreados).toHaveLength(0);
+    expect(enviosMensajero).toHaveLength(0);
+  });
+
+  // Review Focus 3: la comercial escribe desde el móvil a alguien que nunca
+  // escribió al número: la conversación tiene que aparecer en el panel, con su lead.
+  it("un eco a un waId sin conversación crea la conversación en humana y un lead de WhatsApp", async () => {
+    const { deps, conversaciones, ecos, leadsCreados } = depsFalsas();
+
+    await procesarWebhook({ cuerpo: sobreConEcos("PN-HYDRUP", [{ id: "wamid.ECO1" }]), deps });
+
+    expect(leadsCreados).toEqual([
+      { marcaId: HYDRUP.id, waId: "34611222333", telefono: "611222333", nombre: null, origen: "whatsapp", anuncio: null },
+    ]);
+    const conv = conversaciones.get(`${HYDRUP.id}:34611222333`);
+    expect(conv?.estado).toBe("humana");
+    expect(conv?.lead_id).toBe("lead-1");
+    // Un mensaje de la empresa no abre la ventana de servicio: nace cerrada.
+    expect(conv?.ventana_hasta).toBe(ENVIADO_EN.toISOString());
+    expect(ecos).toEqual([expect.objectContaining({ conversacionId: conv?.id, wamid: "wamid.ECO1" })]);
+  });
+
+  it("un eco a un teléfono que ya es lead lo vincula en vez de crear otro", async () => {
+    const { deps, conversaciones, leadsPorTelefono, leadsCreados } = depsFalsas();
+    leadsPorTelefono.set("611222333", { id: "lead-conocido" });
+
+    await procesarWebhook({ cuerpo: sobreConEcos("PN-HYDRUP", [{ id: "wamid.ECO1" }]), deps });
+
+    expect(leadsCreados).toHaveLength(0);
+    expect(conversaciones.get(`${HYDRUP.id}:34611222333`)?.lead_id).toBe("lead-conocido");
+  });
+
+  it("un eco repetido (mismo wamid) no vuelve a escribir nada", async () => {
+    const { deps, conversaciones, ecos } = depsFalsas();
+    conversaciones.set(`${HYDRUP.id}:34611222333`, conversacionEnBot());
+    const cuerpo = sobreConEcos("PN-HYDRUP", [{ id: "wamid.ECO1" }]);
+    await procesarWebhook({ cuerpo, deps });
+
+    // Entre medias el bot volvió a arrancar (p.ej. el lead pulsó otro anuncio):
+    // el reintento de Meta del eco viejo no puede pararlo otra vez.
+    conversaciones.set(`${HYDRUP.id}:34611222333`, conversacionEnBot());
+    const actualizarSpy = vi.spyOn(deps, "actualizarConversacion");
+    const crearSpy = vi.spyOn(deps, "crearConversacion");
+    await procesarWebhook({ cuerpo, deps });
+
+    expect(ecos).toHaveLength(1);
+    expect(actualizarSpy).not.toHaveBeenCalled();
+    expect(crearSpy).not.toHaveBeenCalled();
+    expect(conversaciones.get(`${HYDRUP.id}:34611222333`)?.estado).toBe("bot");
+  });
+
+  it("en Dinkbit un eco sin conversación la crea en humana pero sin lead", async () => {
+    const { deps, conversaciones, ecos, leadsCreados } = depsFalsas();
+
+    await procesarWebhook({ cuerpo: sobreConEcos(NUMERO_ENTORNO, [{ id: "wamid.ECO1" }]), deps });
+
+    expect(leadsCreados).toHaveLength(0);
+    const conv = conversaciones.get(`${MARCA.id}:34611222333`);
+    expect(conv?.estado).toBe("humana");
+    expect(conv?.lead_id).toBeNull();
+    expect(ecos).toHaveLength(1);
+  });
+
+  it("un eco de un número desconocido se ignora sin lanzar", async () => {
+    const { deps, conversaciones, ecos } = depsFalsas();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(procesarWebhook({ cuerpo: sobreConEcos("PN-AJENO", [{ id: "wamid.ECO1" }]), deps })).resolves.toEqual({
+      procesados: 0,
+    });
+
+    expect(conversaciones.size).toBe(0);
+    expect(ecos).toHaveLength(0);
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("número desconocido"), "PN-AJENO", "wamid.ECO1");
+    errorSpy.mockRestore();
+  });
+
+  it("los ecos se procesan después de los mensajes del mismo lote", async () => {
+    const { deps, conversaciones, enviosMensajero } = depsFalsas({
+      secuencias: [{ id: "s-hydrup", marca_id: HYDRUP.id, estado: "activa", anuncios: ["AD-H"], pasos: SECUENCIA_MINIMA }],
+    });
+    const mensajes = sobrePorNumeros([
+      {
+        numeroId: "PN-HYDRUP",
+        mensajes: [mensajeDeAnuncio({ from: "34611222333", referral: { source_id: "AD-H", headline: "Agua" } })],
+      },
+    ]);
+    const cuerpo = { ...mensajes, entry: [...mensajes.entry, ...sobreConEcos("PN-HYDRUP", [{ id: "wamid.ECO1" }]).entry] };
+
+    await procesarWebhook({ cuerpo, deps });
+
+    // El anuncio arrancó la secuencia y el eco, que va detrás, la paró.
+    expect(enviosMensajero).toHaveLength(1);
+    const conv = conversaciones.get(`${HYDRUP.id}:34611222333`);
+    expect(conv?.estado).toBe("humana");
+    expect(conv?.paso_actual).toBeNull();
+  });
+
+  it("un fallo antes de guardar el eco se propaga para que Meta reintente", async () => {
+    const { deps } = depsFalsas();
+    deps.guardarEco = async () => {
+      throw new Error("supabase caído");
+    };
+
+    await expect(procesarWebhook({ cuerpo: sobreConEcos("PN-HYDRUP", [{ id: "wamid.ECO1" }]), deps })).rejects.toThrow(
+      "supabase caído",
+    );
+  });
+
+  it("si falla parar la secuencia tras guardar el eco, se registra y no lanza", async () => {
+    const { deps, conversaciones, ecos } = depsFalsas();
+    conversaciones.set(`${HYDRUP.id}:34611222333`, conversacionEnBot());
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    deps.actualizarConversacion = async () => {
+      throw new Error("boom");
+    };
+
+    await expect(procesarWebhook({ cuerpo: sobreConEcos("PN-HYDRUP", [{ id: "wamid.ECO1" }]), deps })).resolves.toBeDefined();
+    expect(ecos).toHaveLength(1);
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("eco"), "wamid.ECO1", expect.any(Error));
+    errorSpy.mockRestore();
   });
 });
 

@@ -306,6 +306,50 @@ export async function guardarEntrante(input: {
   return { nuevo };
 }
 
+/**
+ * Guarda un mensaje escrito desde la app de WhatsApp Business del móvil (un
+ * «eco» de un número en coexistencia). Es un saliente, pero llega por el
+ * webhook igual que un entrante, así que necesita la misma idempotencia por
+ * `wamid`: Meta también reintenta los ecos. `created_at` es la hora en que se
+ * envió desde el móvil, no la de llegada del webhook, para que el hilo de la
+ * bandeja quede en el orden real.
+ */
+export async function guardarEco(input: {
+  conversacionId: string;
+  wamid: string;
+  texto: string | null;
+  enviadoEn: Date;
+  payload: unknown;
+}): Promise<{ nuevo: boolean }> {
+  const enviadoEn = input.enviadoEn.toISOString();
+  const r = await conColumnasNuevas(
+    "guardarEco",
+    {
+      conversacion_id: input.conversacionId,
+      direccion: "saliente",
+      wamid: input.wamid,
+      texto: input.texto,
+      payload: input.payload ?? {},
+      estado: "enviado",
+      created_at: enviadoEn,
+    },
+    { origen: "movil" },
+    (fila) => db().from("ventas_mensajes").upsert(fila, { onConflict: "wamid", ignoreDuplicates: true }).select("id"),
+  );
+  if (!r || r.error) throw new Error(`[whatsapp/db] guardarEco: ${r?.error?.message ?? "sin respuesta"}`);
+  const nuevo = (r.data ?? []).length > 0;
+
+  // Mismo criterio que guardarEntrante: solo si era nuevo, y best-effort.
+  if (nuevo) {
+    const conv = await db()
+      .from("ventas_conversaciones")
+      .update({ ultimo_texto: input.texto, ultimo_mensaje_at: enviadoEn })
+      .eq("id", input.conversacionId);
+    if (conv.error) console.error(`[whatsapp/db] guardarEco (conversación): ${conv.error.message}`);
+  }
+  return { nuevo };
+}
+
 export async function guardarSaliente(input: {
   conversacionId: string;
   wamid: string | null;

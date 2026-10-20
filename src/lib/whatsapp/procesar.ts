@@ -3,6 +3,7 @@ import {
   actualizarConversacion,
   crearConversacion,
   getConversacion,
+  guardarEco,
   guardarEntrante,
   guardarSaliente,
   reclamarPaso,
@@ -10,7 +11,14 @@ import {
   type Conversacion,
 } from "./db";
 import { opcionesAutorespuesta, REMITENTE, textoAutorespuesta } from "./autorespuesta";
-import { decidir, extraerEstados, extraerMensajes, type MensajeEntrante } from "./entrante";
+import {
+  decidir,
+  extraerEcos,
+  extraerEstados,
+  extraerMensajes,
+  type EcoSaliente,
+  type MensajeEntrante,
+} from "./entrante";
 import { elegirSecuencia } from "./eleccion";
 import { elegirMarca } from "./enrutado";
 import { aEstadoGuardado, desdeEstadoGuardado, indiceDeBoton, mensajesAEnviar, type EstadoGuardado } from "./guion";
@@ -81,6 +89,8 @@ export interface Deps {
    *  sustituirla para reproducir la carrera. */
   reclamarPaso: typeof reclamarPaso;
   guardarEntrante: typeof guardarEntrante;
+  /** Los mensajes escritos desde el móvil (ecos de coexistencia). */
+  guardarEco: typeof guardarEco;
   guardarSaliente: typeof guardarSaliente;
   setEstadoMensaje: typeof setEstadoMensaje;
   /** `negocio`/`contacto`/`ciudad` van aquí (ronda de arreglos 1, tarea 7)
@@ -181,6 +191,7 @@ function depsReales(): Deps {
     actualizarConversacion,
     reclamarPaso,
     guardarEntrante,
+    guardarEco,
     guardarSaliente,
     setEstadoMensaje,
     async buscarLeadPorTelefono(marcaId, telefono) {
@@ -1416,6 +1427,86 @@ async function procesarMensaje(
 }
 
 /**
+ * Procesa un mensaje escrito desde la app de WhatsApp Business del móvil (un
+ * eco). Devuelve `true` si era nuevo. Un eco solo existe en números en
+ * coexistencia, pero si su número cae en Dinkbit por entorno se trata igual.
+ *
+ * Misma política de fases que `procesarMensaje`, separadas por `guardarEco`:
+ *
+ * FASE A: encontrar o crear la conversación y su lead. Se propaga: el eco
+ * todavía no está guardado, así que el 500 es reintentable sin duplicar. El
+ * lead sigue la misma regla que un mensaje sin anuncio: el que ya tiene la
+ * conversación, el que ya existe con ese teléfono o, en una marca con número
+ * propio, uno nuevo de origen `"whatsapp"` (sin nombre: el eco no trae el
+ * perfil del destinatario). En Dinkbit no se crea lead, como siempre.
+ *
+ * FASE B: si alguien escribe desde el móvil, esa conversación ya la lleva una
+ * persona: pasa a `humana` y se limpia el paso, igual que cuando el guion la
+ * entrega (así el siguiente mensaje del lead no reactiva el bot). La ventana
+ * NO se toca: un mensaje de la empresa no la abre. Best-effort: el eco ya está
+ * guardado y un reintento de Meta no repararía nada (lo cortaría el wamid).
+ */
+async function procesarEco(marca: Marca, eco: EcoSaliente, deps: Deps): Promise<boolean> {
+  const marcaId = marca.id;
+  // ---- FASE A: reintentable ----------------------------------------------
+  const existente = await deps.getConversacion(marcaId, eco.waId);
+  const telefono = telefonoDeWaId(eco.waId);
+
+  let leadId: string | null = existente?.lead_id ?? null;
+  if (!leadId && telefono) leadId = (await deps.buscarLeadPorTelefono(marcaId, telefono))?.id ?? null;
+  const leadDeWhatsApp = tieneNumeroPropio(marca) && !leadId;
+
+  let conversacion: Conversacion;
+  if (existente) {
+    conversacion = existente;
+    if (leadId && !existente.lead_id) {
+      await deps.actualizarConversacion(existente.id, { leadId });
+      conversacion = { ...existente, lead_id: leadId };
+    }
+  } else {
+    // Sin conversación previa nadie le ha escrito a la empresa, así que no hay
+    // ventana abierta: nace ya vencida (`enviadoEn`), y en `humana`, que es
+    // justo quien la lleva.
+    const nueva = { marcaId, waId: eco.waId, estado: "humana" as const, ventanaHasta: eco.enviadoEn };
+    conversacion = leadDeWhatsApp
+      ? await crearConversacionOReleer(deps, nueva)
+      : await deps.crearConversacion({ ...nueva, leadId });
+  }
+
+  if (leadDeWhatsApp && !conversacion.lead_id) {
+    const creado = await deps.crearLeadDeWhatsApp({
+      marcaId,
+      waId: eco.waId,
+      telefono,
+      nombre: null,
+      origen: "whatsapp",
+      anuncio: null,
+    });
+    await deps.actualizarConversacion(conversacion.id, { leadId: creado.id });
+    conversacion = { ...conversacion, lead_id: creado.id };
+  }
+
+  const { nuevo } = await deps.guardarEco({
+    conversacionId: conversacion.id,
+    wamid: eco.wamid,
+    texto: eco.texto,
+    enviadoEn: eco.enviadoEn,
+    payload: eco.crudo,
+  });
+  if (!nuevo) return false;
+
+  // ---- FASE B: best-effort ------------------------------------------------
+  if (conversacion.estado !== "humana" || conversacion.paso_actual) {
+    try {
+      await deps.actualizarConversacion(conversacion.id, { estado: "humana", pasoActual: null });
+    } catch (e) {
+      console.error("[whatsapp] fallo parando la secuencia tras un eco del móvil", eco.wamid, e);
+    }
+  }
+  return true;
+}
+
+/**
  * Resuelve la marca de cada mensaje por el número que lo recibió
  * (`elegirMarca`), con una caché por webhook: un lote trae casi siempre varios
  * mensajes del mismo número, y no hace falta preguntar a la base por cada uno.
@@ -1487,6 +1578,16 @@ export async function procesarWebhook(input: {
     }
     mensajes.push({ mensaje, marca });
   }
+  // Los ecos del móvil, con el mismo resolutor (y la misma caché).
+  const ecos: Array<{ eco: EcoSaliente; marca: Marca }> = [];
+  for (const eco of extraerEcos(input.cuerpo)) {
+    const marca = await marcaDe(eco.numeroId);
+    if (!marca) {
+      console.error("[whatsapp] eco de un número desconocido, se ignora", eco.numeroId, eco.wamid);
+      continue;
+    }
+    ecos.push({ eco, marca });
+  }
 
   // Un mensajero por marca y webhook: cada mensaje sale por el número de SU
   // marca, nunca por el de otra del mismo lote. También fase A: leer el token
@@ -1517,6 +1618,15 @@ export async function procesarWebhook(input: {
     // por wamid, así que el reintento no los duplica.
     const mensajero = mensajeros.get(marca.id) as MensajeroWhatsApp;
     if (await procesarMensaje(marca, mensajero, mensaje, deps, ahora)) procesados += 1;
+  }
+
+  // Los ecos DESPUÉS de los mensajes: si el lote trae a la vez lo que escribió
+  // el lead y lo que se le contestó desde el móvil, la respuesta de la persona
+  // es lo último y tiene que ser la que deja la conversación parada. Tampoco se
+  // atrapan aquí: lo que escapa es fase A, reintentable igual que arriba.
+  // `procesados` sigue contando solo los mensajes del lead.
+  for (const { eco, marca } of ecos) {
+    await procesarEco(marca, eco, deps);
   }
 
   return { procesados };

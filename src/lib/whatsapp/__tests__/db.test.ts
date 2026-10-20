@@ -27,7 +27,7 @@ vi.mock("../../supabase-admin", () => ({
   }),
 }));
 
-import { actualizarConversacion, crearConversacion, guardarEntrante, guardarSaliente } from "../db";
+import { actualizarConversacion, crearConversacion, guardarEco, guardarEntrante, guardarSaliente } from "../db";
 
 beforeEach(() => {
   upsertMock.mockReset();
@@ -72,6 +72,55 @@ describe("guardarEntrante", () => {
       guardarEntrante({ conversacionId: "c1", wamid: "w1", texto: "hola", payload: {} }),
     ).resolves.toEqual({ nuevo: true });
     expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+});
+
+describe("guardarEco", () => {
+  const eco = {
+    conversacionId: "c1",
+    wamid: "wamid.E",
+    texto: "Te llamo ahora",
+    enviadoEn: new Date(1790000000 * 1000),
+    payload: { id: "wamid.E" },
+  };
+
+  // Meta reintenta también los ecos: el mismo wamid no puede entrar dos veces.
+  it("hace upsert por wamid como saliente del móvil con la hora en que se envió", async () => {
+    upsertMock.mockReturnValue({ select: () => ({ data: [{ id: "m1" }], error: null }) });
+    expect(await guardarEco(eco)).toEqual({ nuevo: true });
+
+    const [fila, opciones] = upsertMock.mock.calls[0];
+    expect(opciones).toEqual({ onConflict: "wamid", ignoreDuplicates: true });
+    expect(fila).toEqual({
+      conversacion_id: "c1",
+      direccion: "saliente",
+      wamid: "wamid.E",
+      texto: "Te llamo ahora",
+      payload: { id: "wamid.E" },
+      estado: "enviado",
+      origen: "movil",
+      created_at: "2026-09-21T14:13:20.000Z",
+    });
+    const [patch, id] = actualizarConversacionMock.mock.calls[0];
+    expect(id).toBe("c1");
+    expect(patch).toEqual({ ultimo_texto: "Te llamo ahora", ultimo_mensaje_at: "2026-09-21T14:13:20.000Z" });
+  });
+
+  it("un eco repetido dice que no es nuevo y no toca la conversación", async () => {
+    upsertMock.mockReturnValue({ select: () => ({ data: [], error: null }) });
+    expect(await guardarEco(eco)).toEqual({ nuevo: false });
+    expect(actualizarConversacionMock).not.toHaveBeenCalled();
+  });
+
+  it("repite sin origen si falta la columna", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    upsertMock
+      .mockReturnValueOnce({ select: () => ({ data: null, error: { code: "PGRST204", message: "sin origen" } }) })
+      .mockReturnValueOnce({ select: () => ({ data: [{ id: "m1" }], error: null }) });
+
+    expect(await guardarEco(eco)).toEqual({ nuevo: true });
+    expect(upsertMock.mock.calls[1][0]).not.toHaveProperty("origen");
     errorSpy.mockRestore();
   });
 });
