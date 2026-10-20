@@ -1,22 +1,11 @@
 import { requireAccesoMarca } from "@/lib/ventas/auth";
 import { evaluarAccesoMarca } from "@/lib/ventas/rutas";
 import { listLeads } from "@/lib/ventas/db";
-import { botonesDePayload, etiquetaVentana, extracto } from "@/lib/whatsapp/bandeja";
+import { botonesDePayload, etiquetaOrigen, etiquetaVentana, extracto, nombreConversacion } from "@/lib/whatsapp/bandeja";
 import { getConversacionPorId, listConversaciones, listMensajes } from "@/lib/whatsapp/db";
-import { telefonoDeWaId, ventanaAbierta } from "@/lib/whatsapp/ventana";
+import { ventanaAbierta } from "@/lib/whatsapp/ventana";
 import { MarcaCabecera } from "../../../_componentes/MarcaCabecera";
 import { Conversaciones, type Hilo, type TarjetaConversacion } from "./Conversaciones";
-
-/** «Nombre» que se enseña de una conversación: el negocio/contacto del lead
- *  vinculado, o el teléfono cuando todavía no hay lead (p.ej. alguien que
- *  escribe antes de que la venta lo dé de alta). */
-function nombreConversacion(waId: string, leadId: string | null, nombres: Map<string, string>): string {
-  if (leadId) {
-    const nombre = nombres.get(leadId);
-    if (nombre) return nombre;
-  }
-  return telefonoDeWaId(waId) ?? waId;
-}
 
 export default async function ConversacionesPage({
   params,
@@ -34,7 +23,7 @@ export default async function ConversacionesPage({
 
   const lista: TarjetaConversacion[] = conversaciones.map((c) => ({
     id: c.id,
-    nombre: nombreConversacion(c.wa_id, c.lead_id, nombres),
+    nombre: nombreConversacion(c.wa_id, c.lead_id, nombres, c.nombre_contacto),
     extracto: extracto(c.ultimo_texto),
     etiquetaVentana: etiquetaVentana(c.ventana_hasta, ahora),
     ultimoMensajeAt: c.ultimo_mensaje_at,
@@ -49,7 +38,7 @@ export default async function ConversacionesPage({
   const hilo: Hilo | null = seleccionada
     ? {
         id: seleccionada.id,
-        nombre: nombreConversacion(seleccionada.wa_id, seleccionada.lead_id, nombres),
+        nombre: nombreConversacion(seleccionada.wa_id, seleccionada.lead_id, nombres, seleccionada.nombre_contacto),
         leadId: seleccionada.lead_id,
         etiquetaVentana: etiquetaVentana(seleccionada.ventana_hasta, ahora),
         ventanaAbierta: ventanaAbierta(seleccionada.ventana_hasta, ahora),
@@ -60,6 +49,7 @@ export default async function ConversacionesPage({
           estado: m.estado,
           error: m.error,
           botones: botonesDePayload(m.payload),
+          origen: etiquetaOrigen(m.origen),
           createdAt: m.created_at,
         })),
       }

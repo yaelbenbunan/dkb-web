@@ -1,4 +1,5 @@
-import { ventanaAbierta } from "./ventana";
+import type { Mensaje } from "./db";
+import { telefonoDeWaId, ventanaAbierta } from "./ventana";
 
 const LARGO_EXTRACTO = 80;
 
@@ -49,4 +50,28 @@ export function etiquetaVentana(ventanaHasta: string | null, ahora: Date): strin
 
   const horas = Math.floor(minutos / 60);
   return `Abierta · quedan ${horas} h`;
+}
+
+/** Rótulo del origen de un mensaje para la bandeja; los que salen o llegan por
+ *  el camino normal (cliente, panel) no llevan etiqueta. */
+export function etiquetaOrigen(origen: Mensaje["origen"] | undefined): string | null {
+  if (origen === "movil") return "Desde el móvil";
+  if (origen === "historial") return "Importado";
+  if (origen === "bot") return "Bot";
+  return null;
+}
+
+/** «Nombre» que se enseña de una conversación: el del lead vinculado, luego el
+ *  nombre de contacto que dio WhatsApp, y por último el teléfono. */
+export function nombreConversacion(
+  waId: string,
+  leadId: string | null,
+  nombres: Map<string, string>,
+  nombreContacto?: string | null,
+): string {
+  if (leadId) {
+    const nombre = nombres.get(leadId);
+    if (nombre) return nombre;
+  }
+  return nombreContacto?.trim() || (telefonoDeWaId(waId) ?? waId);
 }

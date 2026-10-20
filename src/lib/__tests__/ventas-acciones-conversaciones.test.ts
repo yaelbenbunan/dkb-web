@@ -5,12 +5,14 @@ const m = vi.hoisted(() => ({
   getConversacionPorId: vi.fn(),
   guardarSaliente: vi.fn(),
   crearMensajero: vi.fn(),
+  mensajeroDeMarca: vi.fn(),
   enviarTexto: vi.fn(),
   revalidatePath: vi.fn(),
 }));
 vi.mock("@/lib/ventas/auth", () => ({ accesoMarcaAccion: m.accesoMarcaAccion }));
 vi.mock("@/lib/whatsapp/db", () => ({ getConversacionPorId: m.getConversacionPorId, guardarSaliente: m.guardarSaliente }));
 vi.mock("@/lib/whatsapp/mensajero", () => ({ crearMensajero: m.crearMensajero }));
+vi.mock("@/lib/whatsapp/numeros", () => ({ mensajeroDeMarca: m.mensajeroDeMarca }));
 vi.mock("next/cache", () => ({ revalidatePath: m.revalidatePath }));
 
 import { responder } from "@/app/(site)/panel/ventas/(app)/[slug]/conversaciones/acciones";
@@ -25,6 +27,7 @@ beforeEach(() => {
   m.getConversacionPorId.mockResolvedValue(CONVERSACION);
   m.enviarTexto.mockResolvedValue({ ok: true, wamid: "w1" });
   m.crearMensajero.mockReturnValue({ enviarTexto: m.enviarTexto });
+  m.mensajeroDeMarca.mockResolvedValue({ enviarTexto: m.enviarTexto });
 });
 
 describe("responder", () => {
@@ -32,7 +35,7 @@ describe("responder", () => {
     m.accesoMarcaAccion.mockResolvedValue({ ok: false, error: "No tienes permiso para esto." });
     expect(await responder("hydrup", "c1", "Hola")).toEqual({ ok: false, error: "No tienes permiso para esto." });
     expect(m.getConversacionPorId).not.toHaveBeenCalled();
-    expect(m.crearMensajero).not.toHaveBeenCalled();
+    expect(m.mensajeroDeMarca).not.toHaveBeenCalled();
     expect(m.enviarTexto).not.toHaveBeenCalled();
     expect(m.guardarSaliente).not.toHaveBeenCalled();
   });
@@ -46,7 +49,7 @@ describe("responder", () => {
   test("una conversación de otra marca se rechaza sin enviar ni guardar", async () => {
     m.getConversacionPorId.mockResolvedValue({ ...CONVERSACION, marca_id: "otra" });
     expect(await responder("hydrup", "c1", "Hola")).toEqual({ ok: false, error: "Conversación no encontrada." });
-    expect(m.crearMensajero).not.toHaveBeenCalled();
+    expect(m.mensajeroDeMarca).not.toHaveBeenCalled();
     expect(m.enviarTexto).not.toHaveBeenCalled();
     expect(m.guardarSaliente).not.toHaveBeenCalled();
   });
@@ -54,6 +57,31 @@ describe("responder", () => {
   test("una conversación de la marca se envía y se guarda", async () => {
     expect(await responder("hydrup", "c1", " Hola ")).toEqual({ ok: true });
     expect(m.enviarTexto).toHaveBeenCalledWith("34600111222", "Hola");
-    expect(m.guardarSaliente).toHaveBeenCalledWith({ conversacionId: "c1", wamid: "w1", texto: "Hola" });
+    expect(m.guardarSaliente).toHaveBeenCalledWith({ conversacionId: "c1", wamid: "w1", texto: "Hola", origen: "panel" });
+  });
+
+  test("envía con el mensajero de la marca de la conversación, no con el de entorno", async () => {
+    await responder("hydrup", "c1", "Hola");
+    expect(m.mensajeroDeMarca).toHaveBeenCalledWith(MARCA);
+    expect(m.crearMensajero).not.toHaveBeenCalled();
+  });
+
+  test("un cliente de Hydrup responde en Hydrup y no en Dinkbit", async () => {
+    m.accesoMarcaAccion.mockImplementation(async (slug: string) =>
+      slug === "hydrup" ? { ok: true, usuaria: { id: "u2", rol: "cliente" }, marca: MARCA } : { ok: false, error: "No tienes permiso para esto." },
+    );
+    expect(await responder("hydrup", "c1", "Hola")).toEqual({ ok: true });
+    expect(await responder("dinkbit", "c1", "Hola")).toEqual({ ok: false, error: "No tienes permiso para esto." });
+    expect(m.enviarTexto).toHaveBeenCalledTimes(1);
+  });
+
+  test("si no se puede leer el número de la marca no envía ni cae a otro mensajero", async () => {
+    m.mensajeroDeMarca.mockRejectedValue(new Error("db"));
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await responder("hydrup", "c1", "Hola")).toEqual({ ok: false, error: "No se pudo enviar. Vuelve a intentarlo." });
+    expect(m.crearMensajero).not.toHaveBeenCalled();
+    expect(m.enviarTexto).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalled();
+    log.mockRestore();
   });
 });

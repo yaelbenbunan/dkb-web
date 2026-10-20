@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import type { Mensaje } from "@/lib/whatsapp/db";
 import { formatoFechaHora } from "@/lib/ventas/metricas";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
@@ -26,6 +26,8 @@ export interface MensajeHilo {
   error: string | null;
   /** Rótulos de los botones que se mandaron con el mensaje; vacío si no llevaba. */
   botones: string[];
+  /** «Desde el móvil», «Importado», «Bot»; `null` si no lleva etiqueta. */
+  origen: string | null;
   createdAt: string;
 }
 
@@ -42,8 +44,9 @@ export interface Hilo {
 }
 
 /** Solo pinta: la lista de conversaciones y, si hay una abierta, su hilo
- *  completo con el campo de respuesta. Sin tiempo real: se refresca al
- *  navegar (cambiar de conversación) o al enviar un mensaje. */
+ *  completo con el campo de respuesta. Se refresca sola cada 10 s mientras la
+ *  pestaña está visible (y una vez al volver a ella), además de al navegar o
+ *  al enviar un mensaje. */
 export function Conversaciones({
   slug,
   conversaciones,
@@ -56,6 +59,25 @@ export function Conversaciones({
   /** Si puede abrir la ficha del lead (la agente, no). */
   conFicha: boolean;
 }) {
+  const router = useRouter();
+  // Lo marca el hilo mientras hay un envío en curso, para no refrescar encima.
+  const enviandoRef = useRef(false);
+
+  useEffect(() => {
+    const refrescar = () => {
+      if (document.visibilityState === "visible" && !enviandoRef.current) router.refresh();
+    };
+    const id = setInterval(refrescar, 10_000);
+    const alVolver = () => {
+      if (document.visibilityState === "visible") refrescar();
+    };
+    document.addEventListener("visibilitychange", alVolver);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", alVolver);
+    };
+  }, [router]);
+
   return (
     <div style={{ display: "grid", gridTemplateColumns: "minmax(240px, 320px) 1fr", gap: 16, alignItems: "start" }}>
       <section style={{ ...tarjeta, padding: 0, overflow: "hidden" }}>
@@ -63,7 +85,7 @@ export function Conversaciones({
       </section>
 
       <section style={{ ...tarjeta, minHeight: 400, display: "flex", flexDirection: "column" }}>
-        {hilo ? <HiloConversacion key={hilo.id} slug={slug} hilo={hilo} conFicha={conFicha} /> : <SinSeleccion vacio={conversaciones.length === 0} />}
+        {hilo ? <HiloConversacion key={hilo.id} slug={slug} hilo={hilo} conFicha={conFicha} enviandoRef={enviandoRef} /> : <SinSeleccion vacio={conversaciones.length === 0} />}
       </section>
     </div>
   );
@@ -137,7 +159,10 @@ function BurbujaMensaje({ mensaje }: { mensaje: MensajeHilo }) {
             ))}
           </div>
         )}
-        <div style={{ fontSize: 11, color: "#64748b" }}>{formatoFechaHora(mensaje.createdAt)}</div>
+        <div style={{ fontSize: 11, color: "#64748b" }}>
+          {formatoFechaHora(mensaje.createdAt)}
+          {mensaje.origen && ` · ${mensaje.origen}`}
+        </div>
         {mensaje.estado === "fallido" && (
           <div style={{ fontSize: 12, color: "#b91c1c", fontWeight: 600 }}>No se pudo enviar{mensaje.error ? `: ${mensaje.error}` : "."}</div>
         )}
@@ -146,7 +171,7 @@ function BurbujaMensaje({ mensaje }: { mensaje: MensajeHilo }) {
   );
 }
 
-function HiloConversacion({ slug, hilo, conFicha }: { slug: string; hilo: Hilo; conFicha: boolean }) {
+function HiloConversacion({ slug, hilo, conFicha, enviandoRef }: { slug: string; hilo: Hilo; conFicha: boolean; enviandoRef: { current: boolean } }) {
   const router = useRouter();
   const [texto, setTexto] = useState("");
   const [resultado, setResultado] = useState<ResultadoAccion | null>(null);
@@ -155,12 +180,19 @@ function HiloConversacion({ slug, hilo, conFicha }: { slug: string; hilo: Hilo; 
   function enviar(e: React.FormEvent) {
     e.preventDefault();
     setResultado(null);
+    enviandoRef.current = true;
     startTransition(async () => {
-      const r = await responder(slug, hilo.id, texto);
-      setResultado(r);
-      if (r.ok) {
-        setTexto("");
-        router.refresh();
+      try {
+        const r = await responder(slug, hilo.id, texto);
+        setResultado(r);
+        if (r.ok) {
+          setTexto("");
+          router.refresh();
+        }
+      } catch {
+        setResultado({ ok: false, error: "No se pudo enviar. Vuelve a intentarlo." });
+      } finally {
+        enviandoRef.current = false;
       }
     });
   }

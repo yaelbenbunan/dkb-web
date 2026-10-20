@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { accesoMarcaAccion } from "@/lib/ventas/auth";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
 import { getConversacionPorId, guardarSaliente } from "@/lib/whatsapp/db";
-import { crearMensajero } from "@/lib/whatsapp/mensajero";
+import { mensajeroDeMarca } from "@/lib/whatsapp/numeros";
 import { ventanaAbierta } from "@/lib/whatsapp/ventana";
 
 const LARGO_MAXIMO = 1024;
@@ -37,7 +37,16 @@ export async function responder(slug: string, conversacionId: string, texto: str
     return { ok: false, error: "La ventana de 24 h está cerrada: hace falta una plantilla aprobada." };
   }
 
-  const mensajero = crearMensajero();
+  // Siempre el número de la marca de la conversación. Si no se puede leer (error
+  // de base de datos) no se cae a otro número: sería contestar desde la marca
+  // equivocada.
+  let mensajero;
+  try {
+    mensajero = await mensajeroDeMarca(acceso.marca);
+  } catch (e) {
+    console.error("[conversaciones] no se pudo obtener el mensajero de la marca", marca.id, e);
+    return { ok: false, error: "No se pudo enviar. Vuelve a intentarlo." };
+  }
   const resultado = await mensajero.enviarTexto(conversacion.wa_id, limpio);
   revalidatePath(`/panel/ventas/${slug}/conversaciones`);
 
@@ -48,7 +57,7 @@ export async function responder(slug: string, conversacionId: string, texto: str
     // «Enviar» otra vez y mandarlo DOS VECES a un cliente real. Se registra
     // el fallo y se avisa sin alarmar — el envío en sí fue bien.
     try {
-      await guardarSaliente({ conversacionId, wamid: resultado.wamid, texto: limpio });
+      await guardarSaliente({ conversacionId, wamid: resultado.wamid, texto: limpio, origen: "panel" });
       return { ok: true };
     } catch (e) {
       console.error("[conversaciones] el mensaje se envió pero no se pudo registrar", conversacionId, e);
@@ -61,7 +70,7 @@ export async function responder(slug: string, conversacionId: string, texto: str
   // también falla, basta con registrarlo — el error real que interesa a la
   // comercial es el del envío, que ya se devuelve.
   try {
-    await guardarSaliente({ conversacionId, wamid: null, texto: limpio, error: resultado.error });
+    await guardarSaliente({ conversacionId, wamid: null, texto: limpio, error: resultado.error, origen: "panel" });
   } catch (e) {
     console.error("[conversaciones] no se pudo registrar el envío fallido", conversacionId, e);
   }

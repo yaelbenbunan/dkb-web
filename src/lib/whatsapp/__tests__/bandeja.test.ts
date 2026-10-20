@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { botonesDePayload, etiquetaVentana, extracto } from "../bandeja";
+import { botonesDePayload, etiquetaOrigen, etiquetaVentana, extracto, nombreConversacion } from "../bandeja";
 
 describe("extracto", () => {
   it("deja pasar los textos cortos", () => {
@@ -59,5 +59,31 @@ describe("etiquetaVentana", () => {
   it("avisa de que hace falta plantilla si está cerrada", () => {
     expect(etiquetaVentana("2026-09-23T09:00:00Z", ahora)).toBe("Cerrada, hace falta plantilla");
     expect(etiquetaVentana(null, ahora)).toBe("Cerrada, hace falta plantilla");
+  });
+});
+
+describe("etiquetaOrigen", () => {
+  it("rotula móvil, historial y bot; el resto no lleva etiqueta", () => {
+    expect(etiquetaOrigen("movil")).toBe("Desde el móvil");
+    expect(etiquetaOrigen("historial")).toBe("Importado");
+    expect(etiquetaOrigen("bot")).toBe("Bot");
+    expect(etiquetaOrigen("panel")).toBeNull();
+    expect(etiquetaOrigen("cliente")).toBeNull();
+    expect(etiquetaOrigen(null)).toBeNull();
+    expect(etiquetaOrigen(undefined)).toBeNull();
+  });
+});
+
+describe("nombreConversacion", () => {
+  const nombres = new Map([["l1", "Hydrup SL"]]);
+  it("prefiere el nombre del lead", () => {
+    expect(nombreConversacion("34600111222", "l1", nombres, "Ana")).toBe("Hydrup SL");
+  });
+  it("sin lead usa el nombre de contacto", () => {
+    expect(nombreConversacion("34600111222", null, nombres, "Ana")).toBe("Ana");
+  });
+  it("sin lead ni nombre usa el teléfono", () => {
+    expect(nombreConversacion("34600111222", null, nombres, null)).toBe("600111222");
+    expect(nombreConversacion("34600111222", "otro", nombres)).toBe("600111222");
   });
 });
