@@ -44,7 +44,18 @@ export interface Hilo {
 /** Solo pinta: la lista de conversaciones y, si hay una abierta, su hilo
  *  completo con el campo de respuesta. Sin tiempo real: se refresca al
  *  navegar (cambiar de conversación) o al enviar un mensaje. */
-export function Conversaciones({ slug, conversaciones, hilo }: { slug: string; conversaciones: TarjetaConversacion[]; hilo: Hilo | null }) {
+export function Conversaciones({
+  slug,
+  conversaciones,
+  hilo,
+  conFicha,
+}: {
+  slug: string;
+  conversaciones: TarjetaConversacion[];
+  hilo: Hilo | null;
+  /** Si puede abrir la ficha del lead (la agente, no). */
+  conFicha: boolean;
+}) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "minmax(240px, 320px) 1fr", gap: 16, alignItems: "start" }}>
       <section style={{ ...tarjeta, padding: 0, overflow: "hidden" }}>
@@ -52,7 +63,7 @@ export function Conversaciones({ slug, conversaciones, hilo }: { slug: string; c
       </section>
 
       <section style={{ ...tarjeta, minHeight: 400, display: "flex", flexDirection: "column" }}>
-        {hilo ? <HiloConversacion key={hilo.id} slug={slug} hilo={hilo} /> : <SinSeleccion vacio={conversaciones.length === 0} />}
+        {hilo ? <HiloConversacion key={hilo.id} slug={slug} hilo={hilo} conFicha={conFicha} /> : <SinSeleccion vacio={conversaciones.length === 0} />}
       </section>
     </div>
   );
@@ -135,7 +146,7 @@ function BurbujaMensaje({ mensaje }: { mensaje: MensajeHilo }) {
   );
 }
 
-function HiloConversacion({ slug, hilo }: { slug: string; hilo: Hilo }) {
+function HiloConversacion({ slug, hilo, conFicha }: { slug: string; hilo: Hilo; conFicha: boolean }) {
   const router = useRouter();
   const [texto, setTexto] = useState("");
   const [resultado, setResultado] = useState<ResultadoAccion | null>(null);
@@ -159,7 +170,7 @@ function HiloConversacion({ slug, hilo }: { slug: string; hilo: Hilo }) {
       <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
         <h2 style={{ margin: 0, fontSize: 18 }}>{hilo.nombre}</h2>
         <span style={{ fontSize: 13, fontWeight: 600, color: hilo.ventanaAbierta ? "#16a34a" : "#b91c1c" }}>{hilo.etiquetaVentana}</span>
-        {hilo.leadId && (
+        {conFicha && hilo.leadId && (
           <Link
             href={`/panel/ventas/${slug}/leads/${hilo.leadId}`}
             style={{ fontSize: 13, fontWeight: 600, color: "#187bef", textDecoration: "none" }}

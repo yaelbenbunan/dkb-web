@@ -2,6 +2,7 @@ import { flujoDeMarca } from "@/lib/ventas/dominio";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireUsuaria } from "@/lib/ventas/auth";
+import { inicioDeMarca, rolConMarca } from "@/lib/ventas/rutas";
 import { getMarcaPorId, listMarcas } from "@/lib/ventas/db";
 import { hoyMadrid } from "@/lib/ventas/metricas";
 import { cargarPanelMarca, mesDeConsulta } from "@/lib/ventas/paneles";
@@ -21,9 +22,9 @@ function Cifra({ texto, valor, alerta = false }: { texto: string; valor: number;
 
 export default async function PanelVentasPage({ searchParams }: { searchParams: Promise<{ aviso?: string; mes?: string }> }) {
   const usuaria = await requireUsuaria();
-  if (usuaria.rol === "cliente") {
+  if (rolConMarca(usuaria.rol)) {
     const marca = usuaria.marca_id ? await getMarcaPorId(usuaria.marca_id) : null;
-    redirect(marca ? `/panel/ventas/${marca.slug}` : "/panel/ventas/login?aviso=sin-marca");
+    redirect(marca ? inicioDeMarca(usuaria.rol, marca.slug) : "/panel/ventas/login?aviso=sin-marca");
   }
   const sp = await searchParams;
   const mes = mesDeConsulta(sp.mes);

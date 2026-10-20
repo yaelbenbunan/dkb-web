@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { clasificarRutaPanel, destinoTrasLogin, esAsignableEnMarca, evaluarAcceso, evaluarAccesoMarca, tieneProspeccion } from "../ventas/rutas";
+import { clasificarRutaPanel, destinoTrasLogin, esAsignableEnMarca, evaluarAcceso, evaluarAccesoMarca, inicioDeMarca, rolConMarca, seccionesDeRol, tieneProspeccion } from "../ventas/rutas";
 
 describe("clasificarRutaPanel", () => {
   test("separa ventas del panel de leads", () => {
@@ -114,5 +114,45 @@ describe("esAsignableEnMarca", () => {
   });
   test("un rol desconocido no", () => {
     expect(esAsignableEnMarca(u("invitada", true, "m1"), "m1")).toBe(false);
+  });
+});
+
+describe("rol «agente» (solo conversaciones)", () => {
+  const agente = { rol: "agente", activa: true, marca_id: "m1" };
+
+  test("solo entra en Conversaciones de su marca", () => {
+    expect(evaluarAccesoMarca(agente, "m1", "conversaciones")).toBe("ok");
+    for (const s of ["resumen", "tablero", "leads", "tareas", "secuencias", "condiciones", "campanas", "prospeccion"] as const) {
+      expect(evaluarAccesoMarca(agente, "m1", s)).toBe("permiso");
+    }
+  });
+
+  test("no entra en una marca ajena, ni sin marca", () => {
+    expect(evaluarAccesoMarca(agente, "m2", "conversaciones")).toBe("permiso");
+    expect(evaluarAccesoMarca({ ...agente, marca_id: null }, "m1", "conversaciones")).toBe("permiso");
+  });
+
+  test("no entra en las páginas del equipo ni de admin", () => {
+    expect(evaluarAcceso(agente, "equipo")).toBe("permiso");
+    expect(evaluarAcceso(agente, "admin")).toBe("permiso");
+  });
+
+  test("no se le pueden asignar leads ni tareas", () => {
+    expect(esAsignableEnMarca(agente, "m1")).toBe(false);
+  });
+
+  test("sus pestañas y su página de inicio", () => {
+    expect(seccionesDeRol("agente")).toEqual(["conversaciones"]);
+    expect(seccionesDeRol("cliente")).toEqual(["resumen", "tablero", "leads", "tareas"]);
+    expect(seccionesDeRol("admin")).toBeNull();
+    expect(inicioDeMarca("agente", "dinkbit")).toBe("/panel/ventas/dinkbit/conversaciones");
+    expect(inicioDeMarca("cliente", "hydrup")).toBe("/panel/ventas/hydrup");
+  });
+
+  test("qué roles van ligados a una marca", () => {
+    expect(rolConMarca("cliente")).toBe(true);
+    expect(rolConMarca("agente")).toBe(true);
+    expect(rolConMarca("admin")).toBe(false);
+    expect(rolConMarca("comercial")).toBe(false);
   });
 });

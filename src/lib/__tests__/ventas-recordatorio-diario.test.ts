@@ -60,6 +60,9 @@ describe("esDestinatariaRecordatorio", () => {
     expect(esDestinatariaRecordatorio({ rol: "comercial", activa: true })).toBe(true);
     expect(esDestinatariaRecordatorio({ rol: "comercial", activa: false })).toBe(false);
   });
+  test("la agente no: no tiene leads ni tareas, y el enlace la mandaría a donde no entra", () => {
+    expect(esDestinatariaRecordatorio({ rol: "agente", activa: true })).toBe(false);
+  });
 });
 
 describe("pendientesDelDia", () => {

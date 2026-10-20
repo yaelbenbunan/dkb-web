@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { Marca } from "@/lib/ventas/db";
 import type { Rol } from "@/lib/ventas/dominio";
 import { MODULO_CAMPANAS, tieneModulo } from "@/lib/ventas/campanas";
-import { SECCIONES_CLIENTE, tieneProspeccion } from "@/lib/ventas/rutas";
+import { rolConMarca, seccionesDeRol, tieneProspeccion } from "@/lib/ventas/rutas";
 
 const PESTANAS = [
   { clave: "resumen", texto: "Resumen", ruta: "" },
@@ -33,8 +33,9 @@ const LOGOS_MARCA: Record<string, { src: string; ancho: number; alto: number }> 
 const ALTO_LOGO = 30;
 
 export function MarcaCabecera({ marca, activa, rol }: { marca: Marca; activa: Pestana; rol: Rol }) {
-  // La clienta solo ve las secciones que el servidor le deja abrir.
-  const porRol = rol === "cliente" ? PESTANAS.filter((p) => (SECCIONES_CLIENTE as readonly string[]).includes(p.clave)) : PESTANAS;
+  // La clienta y la agente solo ven las secciones que el servidor les deja abrir.
+  const secciones = seccionesDeRol(rol) as readonly string[] | null;
+  const porRol = secciones ? PESTANAS.filter((p) => secciones.includes(p.clave)) : PESTANAS;
   // Campañas es un módulo de pago: la pestaña solo aparece si la marca lo tiene.
   // Prospección solo en las marcas que la tienen (hoy, dinkbit).
   const visibles = porRol.filter(
@@ -44,7 +45,7 @@ export function MarcaCabecera({ marca, activa, rol }: { marca: Marca; activa: Pe
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        {rol !== "cliente" && <Link href="/panel/ventas" style={{ fontSize: 13, color: "#64748b", textDecoration: "none" }}>← Panel</Link>}
+        {!rolConMarca(rol) && <Link href="/panel/ventas" style={{ fontSize: 13, color: "#64748b", textDecoration: "none" }}>← Panel</Link>}
         <h1 style={{ margin: 0, fontSize: 24, lineHeight: 1, display: "flex" }}>
           {logo ? (
             <Image

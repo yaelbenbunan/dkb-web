@@ -58,7 +58,7 @@ export function tocaRecordatorio(now: Date): boolean {
  * admins y clientas; desde el 15/10/2026 también las comerciales.
  */
 export function esDestinatariaRecordatorio(u: { rol: Rol; activa: boolean }): boolean {
-  return u.activa;
+  return u.activa && u.rol !== "agente";
 }
 
 /** Lo atrasado y lo de hoy. La hora cuenta: una cita de hoy a las 10:00 está atrasada a las 10:01. */

@@ -10,7 +10,7 @@ import {
   leerLlamada,
   leerNotaSeguimiento,
   leerCambioFase,
-  leerNuevaTarea, leerOrigenLead } from "../ventas/validacion";
+  leerNuevaTarea, leerOrigenLead, leerCambioRol } from "../ventas/validacion";
 
 function fd(campos: Record<string, string>): FormData {
   const f = new FormData();
@@ -39,7 +39,7 @@ describe("leerNuevaUsuaria con rol cliente", () => {
     expect(leerNuevaUsuaria(fd({ ...base, rol: "cliente", marca_id: UUID }))).toEqual({ ok: true, datos: { ...base, rol: "cliente", marca_id: UUID } });
   });
   test("cliente sin marca: error", () => {
-    expect(leerNuevaUsuaria(fd({ ...base, rol: "cliente" }))).toEqual({ ok: false, error: "Elige la marca del cliente." });
+    expect(leerNuevaUsuaria(fd({ ...base, rol: "cliente" }))).toEqual({ ok: false, error: "Elige la marca." });
   });
   test("comercial: la marca se ignora aunque venga", () => {
     const r = leerNuevaUsuaria(fd({ ...base, rol: "comercial", marca_id: UUID }));
@@ -208,5 +208,32 @@ describe("leerOrigenLead", () => {
   test("como mucho 10 etiquetas de 40 caracteres", () => {
     expect(leerOrigenLead(fd({ etiquetas: Array.from({ length: 11 }, (_, i) => `e${i}`).join(",") })).ok).toBe(false);
     expect(leerOrigenLead(fd({ etiquetas: "x".repeat(41) })).ok).toBe(false);
+  });
+});
+
+describe("leerNuevaUsuaria con rol agente", () => {
+  const base = { nombre: "Revisor", email: "meta-review@dinkbit.es", password: "1234567890ab" };
+  const UUID = "3f0c2a4e-1b2c-4d5e-8f90-123456789abc";
+  test("agente con marca: válido", () => {
+    expect(leerNuevaUsuaria(fd({ ...base, rol: "agente", marca_id: UUID }))).toEqual({ ok: true, datos: { ...base, rol: "agente", marca_id: UUID } });
+  });
+  test("agente sin marca: error", () => {
+    expect(leerNuevaUsuaria(fd({ ...base, rol: "agente" }))).toEqual({ ok: false, error: "Elige la marca." });
+  });
+});
+
+describe("leerCambioRol", () => {
+  const UUID = "3f0c2a4e-1b2c-4d5e-8f90-123456789abc";
+  test("comercial: sin marca aunque venga", () => {
+    expect(leerCambioRol({ rol: "comercial", marca_id: UUID })).toEqual({ ok: true, datos: { rol: "comercial", marca_id: null } });
+  });
+  test("cliente y agente necesitan marca", () => {
+    expect(leerCambioRol({ rol: "agente", marca_id: UUID })).toEqual({ ok: true, datos: { rol: "agente", marca_id: UUID } });
+    expect(leerCambioRol({ rol: "cliente", marca_id: "" })).toEqual({ ok: false, error: "Elige la marca." });
+  });
+  test("rechaza un rol inventado o una marca que no es un id", () => {
+    expect(leerCambioRol({ rol: "jefa", marca_id: null })).toMatchObject({ ok: false });
+    expect(leerCambioRol({ rol: "agente", marca_id: "hydrup" })).toMatchObject({ ok: false });
+    expect(leerCambioRol(null)).toMatchObject({ ok: false });
   });
 });

@@ -45,6 +45,28 @@ export type SeccionMarca = "resumen" | "tablero" | "leads" | "tareas" | "secuenc
 /** Lo único que ve una usuaria con rol «cliente», y solo en su marca. */
 export const SECCIONES_CLIENTE: readonly SeccionMarca[] = ["resumen", "tablero", "leads", "tareas"];
 
+/** Roles ligados a una sola marca, con las únicas secciones que pueden abrir en ella. */
+const SECCIONES_POR_ROL: Readonly<Record<string, readonly SeccionMarca[]>> = {
+  cliente: SECCIONES_CLIENTE,
+  agente: ["conversaciones"],
+};
+
+/** Las secciones de un rol ligado a marca; null si el rol ve todas (admin, comercial). */
+export function seccionesDeRol(rol: string): readonly SeccionMarca[] | null {
+  return Object.hasOwn(SECCIONES_POR_ROL, rol) ? SECCIONES_POR_ROL[rol] : null;
+}
+
+/** El rol va ligado a una marca (y la base exige `marca_id`). */
+export function rolConMarca(rol: string): boolean {
+  return seccionesDeRol(rol) !== null;
+}
+
+/** Adónde va al entrar un rol ligado a marca: la primera sección que puede abrir. */
+export function inicioDeMarca(rol: string, slug: string): string {
+  const primera = seccionesDeRol(rol)?.[0];
+  return !primera || primera === "resumen" ? `/panel/ventas/${slug}` : `/panel/ventas/${slug}/${primera}`;
+}
+
 export function evaluarAccesoMarca(
   usuaria: { rol: string; activa: boolean; marca_id: string | null } | null,
   marcaId: string,
@@ -53,8 +75,9 @@ export function evaluarAccesoMarca(
   if (!usuaria || !usuaria.activa) return "login";
   // Lista cerrada: un rol que no conocemos no hereda el acceso total.
   if (usuaria.rol === "admin" || usuaria.rol === "comercial") return "ok";
-  if (usuaria.rol !== "cliente") return "permiso";
-  return usuaria.marca_id === marcaId && SECCIONES_CLIENTE.includes(seccion) ? "ok" : "permiso";
+  const secciones = seccionesDeRol(usuaria.rol);
+  if (!secciones) return "permiso";
+  return usuaria.marca_id === marcaId && secciones.includes(seccion) ? "ok" : "permiso";
 }
 
 /**

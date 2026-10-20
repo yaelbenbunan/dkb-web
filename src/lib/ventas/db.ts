@@ -15,7 +15,8 @@ import {
 } from "./dominio";
 import type { Contacto, LeadNuevo } from "./leads-csv";
 import type { TareaManual } from "./tareas";
-import type { Condiciones, NuevaExclusion, NuevaUsuaria } from "./validacion";
+import { rolConMarca } from "./rutas";
+import type { CambioRol, Condiciones, NuevaExclusion, NuevaUsuaria } from "./validacion";
 
 /**
  * Acceso a las tablas `ventas_*` con la clave de servicio. Las lecturas lanzan
@@ -278,7 +279,7 @@ export async function crearUsuariaCompleta(u: NuevaUsuaria): Promise<{ ok: true;
     nombre: u.nombre,
     email: u.email,
     rol: u.rol,
-    // Solo las clientas llevan marca; no mandarla en los demás roles deja el
+    // Solo los roles ligados a marca la llevan; no mandarla en los demás deja el
     // alta de comerciales funcionando aunque la columna aún no exista.
     ...(u.marca_id ? { marca_id: u.marca_id } : {}),
   });
@@ -289,9 +290,8 @@ export async function crearUsuariaCompleta(u: NuevaUsuaria): Promise<{ ok: true;
     // Una clienta que la base rechaza por el rol (23514) o por no conocer la
     // columna de marca: es la migración del rol cliente, que no se ha ejecutado.
     const codigo = (perfil.error as { code?: string }).code;
-    if (u.rol === "cliente" && codigo && (codigo === "23514" || FALTA_EN_LA_BASE.has(codigo))) {
-      return { ok: false, error: "Para crear clientes falta ejecutar en Supabase la migración del rol cliente (docs/sql/2026-10-09-ventas-tareas-rol-cliente.sql)." };
-    }
+    const falta = falloPorMigracionDeRol(u.rol, codigo);
+    if (falta) return { ok: false, error: falta };
     return { ok: false, error: "No se pudo crear el perfil del usuario." };
   }
   return { ok: true, id: authId };
@@ -304,6 +304,31 @@ export async function setUsuariaActiva(id: string, activa: boolean): Promise<Esc
   const auth = await sb.auth.admin.updateUserById(id, { ban_duration: activa ? "none" : "876000h" });
   if (auth.error) return escritura(auth, "setUsuariaActiva auth");
   return escritura(await sb.from("ventas_usuarias").update({ activa }).eq("id", id), "setUsuariaActiva");
+}
+
+/** La base rechaza un rol nuevo (CHECK, 23514) o no conoce la columna de marca:
+ *  falta la migración de ese rol. Devuelve el aviso, o null si el fallo es otro. */
+function falloPorMigracionDeRol(rol: string, codigo: string | undefined): string | null {
+  if (!codigo || (codigo !== "23514" && !FALTA_EN_LA_BASE.has(codigo))) return null;
+  if (rol === "agente") return "Para usar el rol Agente falta ejecutar en Supabase docs/sql/2026-10-20-ventas-rol-agente.sql.";
+  if (rol === "cliente") return "Para crear clientes falta ejecutar en Supabase la migración del rol cliente (docs/sql/2026-10-09-ventas-tareas-rol-cliente.sql).";
+  return null;
+}
+
+/** Cambia rol y marca a la vez: la base exige que vayan de la mano. */
+export async function setRolUsuaria(id: string, cambio: CambioRol): Promise<Escritura> {
+  const r = await db()
+    .from("ventas_usuarias")
+    .update({ rol: cambio.rol, marca_id: rolConMarca(cambio.rol) ? cambio.marca_id : null })
+    .eq("id", id);
+  if (r.error) {
+    const falta = falloPorMigracionDeRol(cambio.rol, (r.error as { code?: string }).code);
+    if (falta) {
+      console.error("[ventas/db] setRolUsuaria:", r.error.message);
+      return { ok: false, error: falta };
+    }
+  }
+  return escritura(r, "setRolUsuaria");
 }
 
 export async function setPasswordUsuaria(id: string, password: string): Promise<Escritura> {

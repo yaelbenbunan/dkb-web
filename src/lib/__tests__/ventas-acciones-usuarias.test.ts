@@ -5,6 +5,7 @@ const m = vi.hoisted(() => ({
   crearUsuariaCompleta: vi.fn(),
   setUsuariaActiva: vi.fn(),
   setPasswordUsuaria: vi.fn(),
+  setRolUsuaria: vi.fn(),
   getUsuaria: vi.fn(),
   getMarcaPorId: vi.fn(),
   revalidatePath: vi.fn(),
@@ -14,12 +15,13 @@ vi.mock("@/lib/ventas/db", () => ({
   crearUsuariaCompleta: m.crearUsuariaCompleta,
   setUsuariaActiva: m.setUsuariaActiva,
   setPasswordUsuaria: m.setPasswordUsuaria,
+  setRolUsuaria: m.setRolUsuaria,
   getUsuaria: m.getUsuaria,
   getMarcaPorId: m.getMarcaPorId,
 }));
 vi.mock("next/cache", () => ({ revalidatePath: m.revalidatePath }));
 
-import { crearUsuariaAction, setUsuariaActivaAction, cambiarPasswordAction } from "@/app/(site)/panel/ventas/acciones-usuarias";
+import { crearUsuariaAction, setUsuariaActivaAction, cambiarPasswordAction, cambiarRolAction } from "@/app/(site)/panel/ventas/acciones-usuarias";
 
 const ADMIN = { id: "a1", rol: "admin", activa: true };
 
@@ -96,5 +98,49 @@ describe("acciones de usuarias", () => {
     expect(m.setUsuariaActiva).not.toHaveBeenCalled();
     expect(await setUsuariaActivaAction("u2", false)).toEqual({ ok: true, mensaje: "Acceso desactivado." });
     expect(m.setUsuariaActiva).toHaveBeenCalledWith("u2", false);
+  });
+});
+
+describe("cambiarRolAction", () => {
+  const MARCA_ID = "3f0c2a4e-1b2c-4d5e-8f90-123456789abc";
+  beforeEach(() => {
+    Object.values(m).forEach((f) => f.mockReset());
+    m.requireUsuaria.mockResolvedValue(ADMIN);
+    m.getUsuaria.mockResolvedValue({ id: "u2", rol: "comercial", activa: true });
+    m.getMarcaPorId.mockResolvedValue({ id: MARCA_ID, slug: "dinkbit" });
+    m.setRolUsuaria.mockResolvedValue({ ok: true });
+  });
+
+  test("solo admin", async () => {
+    m.requireUsuaria.mockRejectedValue(new Error("NEXT_REDIRECT"));
+    await expect(cambiarRolAction("u2", { rol: "agente", marca_id: MARCA_ID })).rejects.toThrow();
+    expect(m.requireUsuaria).toHaveBeenCalledWith("admin");
+    expect(m.setRolUsuaria).not.toHaveBeenCalled();
+  });
+
+  test("pasa a agente de una marca que existe", async () => {
+    const r = await cambiarRolAction("u2", { rol: "agente", marca_id: MARCA_ID });
+    expect(r).toEqual({ ok: true, mensaje: "Rol cambiado." });
+    expect(m.setRolUsuaria).toHaveBeenCalledWith("u2", { rol: "agente", marca_id: MARCA_ID });
+    expect(m.revalidatePath).toHaveBeenCalledWith("/panel/ventas/usuarias");
+  });
+
+  test("a comercial se le quita la marca aunque llegue", async () => {
+    await cambiarRolAction("u2", { rol: "comercial", marca_id: MARCA_ID });
+    expect(m.setRolUsuaria).toHaveBeenCalledWith("u2", { rol: "comercial", marca_id: null });
+  });
+
+  test("no deja cambiarse el rol a una misma", async () => {
+    expect(await cambiarRolAction("a1", { rol: "comercial", marca_id: null })).toEqual({ ok: false, error: "No puedes cambiar tu propio rol." });
+    expect(m.setRolUsuaria).not.toHaveBeenCalled();
+  });
+
+  test("rechaza marca inexistente, rol con marca sin ella y usuaria que no existe", async () => {
+    m.getMarcaPorId.mockResolvedValue(null);
+    expect(await cambiarRolAction("u2", { rol: "agente", marca_id: MARCA_ID })).toEqual({ ok: false, error: "Esa marca no existe." });
+    expect(await cambiarRolAction("u2", { rol: "cliente", marca_id: null })).toEqual({ ok: false, error: "Elige la marca." });
+    m.getUsuaria.mockResolvedValue(null);
+    expect(await cambiarRolAction("u9", { rol: "comercial", marca_id: null })).toEqual({ ok: false, error: "Usuario no encontrado." });
+    expect(m.setRolUsuaria).not.toHaveBeenCalled();
   });
 });

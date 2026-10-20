@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Usuaria } from "@/lib/ventas/db";
 import { ROL_LABELS } from "@/lib/ventas/dominio";
+import { rolConMarca } from "@/lib/ventas/rutas";
 import { ventasLogout } from "../login/actions";
 
 export function VentasShell({ usuaria, children }: { usuaria: Usuaria; children: React.ReactNode }) {
@@ -36,7 +37,7 @@ export function VentasShell({ usuaria, children }: { usuaria: Usuaria; children:
         <nav style={{ display: "flex", alignItems: "baseline", gap: 18, flexWrap: "wrap" }}>
           <Image src="/img/logo/dinkbit.svg" alt="dinkbit" width={80} height={24} priority style={{ height: 24, width: 80, alignSelf: "center" }} />
           <strong style={{ fontSize: 16 }}>Ventas B2B</strong>
-          {usuaria.rol !== "cliente" && (
+          {!rolConMarca(usuaria.rol) && (
             <>
               <Link href="/panel/ventas" style={enlace}>Panel</Link>
               <Link href="/panel/ventas/hoy" style={enlace}>Mi día</Link>

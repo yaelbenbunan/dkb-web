@@ -22,6 +22,7 @@ import {
   type Rol,
 } from "./dominio";
 import { EMAIL_RE, type LeadNuevo } from "./leads-csv";
+import { rolConMarca } from "./rutas";
 
 export type Leido<T> = { ok: true; datos: T } | { ok: false; error: string };
 
@@ -57,7 +58,7 @@ export interface NuevaUsuaria {
   email: string;
   password: string;
   rol: Rol;
-  /** Solo la clienta lleva marca; el resto, null (lo exige también un CHECK en la base). */
+  /** Solo los roles ligados a marca (cliente, agente) la llevan; el resto, null (lo exige también un CHECK en la base). */
   marca_id: string | null;
 }
 
@@ -85,10 +86,31 @@ export function leerNuevaUsuaria(fd: FormData): Leido<NuevaUsuaria> {
     },
   );
   if (!r.ok) return r;
-  // La marca solo cuenta para la clienta: a las demás se les descarta aunque llegue.
-  if (r.datos.rol !== "cliente") return { ok: true, datos: { ...r.datos, marca_id: null } };
-  if (!r.datos.marca_id) return { ok: false, error: "Elige la marca del cliente." };
-  return r;
+  const marca = marcaDelRol(r.datos.rol, r.datos.marca_id);
+  return marca.ok ? { ok: true, datos: { ...r.datos, marca_id: marca.datos } } : marca;
+}
+
+/** La marca solo cuenta para los roles ligados a una (cliente, agente): a los demás se les descarta aunque llegue. */
+function marcaDelRol(rol: Rol, marcaId: string | null): Leido<string | null> {
+  if (!rolConMarca(rol)) return { ok: true, datos: null };
+  return marcaId ? { ok: true, datos: marcaId } : { ok: false, error: "Elige la marca." };
+}
+
+export interface CambioRol {
+  rol: Rol;
+  marca_id: string | null;
+}
+
+/** Lo llama una server action con datos sin tipar: puede llegar cualquier cosa. */
+export function leerCambioRol(raw: unknown): Leido<CambioRol> {
+  const obj = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
+  const r = leer(
+    z.object({ rol: z.enum(ROLES, { message: "Elige un rol." }), marca_id: z.uuid("Marca no válida.").nullable() }),
+    { rol: obj.rol, marca_id: typeof obj.marca_id === "string" && obj.marca_id !== "" ? obj.marca_id : null },
+  );
+  if (!r.ok) return r;
+  const marca = marcaDelRol(r.datos.rol, r.datos.marca_id);
+  return marca.ok ? { ok: true, datos: { rol: r.datos.rol, marca_id: marca.datos } } : marca;
 }
 
 /* Marcas -------------------------------------------------------------------- */

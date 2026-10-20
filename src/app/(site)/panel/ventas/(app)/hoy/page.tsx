@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireUsuaria } from "@/lib/ventas/auth";
+import { inicioDeMarca, rolConMarca } from "@/lib/ventas/rutas";
 import { getMarcaPorId, listSeguimientosUsuaria, listTareasUsuaria, type LeadConMarca } from "@/lib/ventas/db";
 import { TIPO_NEGOCIO_LABELS } from "@/lib/ventas/dominio";
 import { ahoraMadrid, formatoFecha, formatoSeguimiento } from "@/lib/ventas/metricas";
@@ -46,9 +47,9 @@ function Tabla({ leads, atrasados }: { leads: LeadConMarca[]; atrasados: boolean
 
 export default async function MiDiaPage() {
   const usuaria = await requireUsuaria();
-  if (usuaria.rol === "cliente") {
+  if (rolConMarca(usuaria.rol)) {
     const marca = usuaria.marca_id ? await getMarcaPorId(usuaria.marca_id) : null;
-    redirect(marca ? `/panel/ventas/${marca.slug}` : "/panel/ventas/login?aviso=sin-marca");
+    redirect(marca ? inicioDeMarca(usuaria.rol, marca.slug) : "/panel/ventas/login?aviso=sin-marca");
   }
   const ahora = ahoraMadrid();
   const [seguimientos, tareas] = await Promise.all([listSeguimientosUsuaria(usuaria.id, ahora.fecha), listTareasUsuaria(usuaria.id)]);

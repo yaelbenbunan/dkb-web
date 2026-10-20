@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUsuaria } from "@/lib/ventas/auth";
-import { crearUsuariaCompleta, getMarcaPorId, getUsuaria, setPasswordUsuaria, setUsuariaActiva } from "@/lib/ventas/db";
+import { crearUsuariaCompleta, getMarcaPorId, getUsuaria, setPasswordUsuaria, setRolUsuaria, setUsuariaActiva } from "@/lib/ventas/db";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
-import { leerNuevaUsuaria, leerPassword } from "@/lib/ventas/validacion";
+import { leerCambioRol, leerNuevaUsuaria, leerPassword } from "@/lib/ventas/validacion";
 
 const RUTA = "/panel/ventas/usuarias";
 const NO_ENCONTRADA = { ok: false, error: "Usuario no encontrado." } as const;
@@ -40,4 +40,18 @@ export async function cambiarPasswordAction(id: string, password: string): Promi
   if (!(await getUsuaria(id))) return NO_ENCONTRADA;
   const res = await setPasswordUsuaria(id, leido.datos);
   return res.ok ? { ok: true, mensaje: "Contraseña cambiada." } : res;
+}
+
+export async function cambiarRolAction(id: string, cambio: { rol: string; marca_id: string | null }): Promise<ResultadoAccion> {
+  const admin = await requireUsuaria("admin");
+  // Quitarse el rol de admin a una misma dejaría el panel sin nadie que pueda deshacerlo.
+  if (id === admin.id) return { ok: false, error: "No puedes cambiar tu propio rol." };
+  const leido = leerCambioRol(cambio);
+  if (!leido.ok) return leido;
+  if (leido.datos.marca_id && !(await getMarcaPorId(leido.datos.marca_id))) return { ok: false, error: "Esa marca no existe." };
+  if (!(await getUsuaria(id))) return NO_ENCONTRADA;
+  const res = await setRolUsuaria(id, leido.datos);
+  if (!res.ok) return res;
+  revalidatePath(RUTA);
+  return { ok: true, mensaje: "Rol cambiado." };
 }

@@ -1,4 +1,5 @@
 import { requireAccesoMarca } from "@/lib/ventas/auth";
+import { evaluarAccesoMarca } from "@/lib/ventas/rutas";
 import { listLeads } from "@/lib/ventas/db";
 import { botonesDePayload, etiquetaVentana, extracto } from "@/lib/whatsapp/bandeja";
 import { getConversacionPorId, listConversaciones, listMensajes } from "@/lib/whatsapp/db";
@@ -67,7 +68,8 @@ export default async function ConversacionesPage({
   return (
     <div>
       <MarcaCabecera marca={marca} activa="conversaciones" rol={usuaria.rol} />
-      <Conversaciones slug={slug} conversaciones={lista} hilo={hilo} />
+      {/* La agente solo atiende el chat: sin acceso a Leads, el enlace a la ficha la mandaría a un «sin permiso». */}
+      <Conversaciones slug={slug} conversaciones={lista} hilo={hilo} conFicha={evaluarAccesoMarca(usuaria, marca.id, "leads") === "ok"} />
     </div>
   );
 }
