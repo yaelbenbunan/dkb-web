@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 let tokenGuardado: string | null = null;
 let errorUpdate: { message: string; code?: string } | null = null;
 const ordenEscrituras: string[] = [];
+let dueñaDelNumero: { id: string } | null = null;
 let errorLectura: { message: string; code?: string } | null = null;
 
 vi.mock("../../supabase-admin", () => ({
@@ -24,7 +25,7 @@ vi.mock("../../supabase-admin", () => ({
       }
       return {
         update: () => ({ eq: async () => (ordenEscrituras.push("marca"), { error: errorUpdate }) }),
-        select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: errorLectura }) }) }),
+        select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: errorLectura ? null : dueñaDelNumero, error: errorLectura }) }) }),
       };
     },
   }),
@@ -89,6 +90,27 @@ describe("mensajeroDeMarca", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("un fallo de lectura del token se propaga", async () => {
+    errorLectura = { message: "red", code: "08006" };
+    await expect(mensajeroDeMarca(marca({ whatsapp_phone_number_id: "999" }))).rejects.toThrow();
+  });
+
+  it("fallo de descifrado registra un mensaje fijo sin el error", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    tokenGuardado = "v1:basura:basura:SECRETO";
+    await mensajeroDeMarca(marca({ whatsapp_phone_number_id: "999" }));
+    expect(log).toHaveBeenCalledTimes(1);
+    expect(log).toHaveBeenCalledWith("[whatsapp] no se pudo descifrar el token de la marca", "m1");
+    log.mockRestore();
+  });
+
+  it("token que descifra a cadena vacía: credenciales inválidas", async () => {
+    tokenGuardado = cifrarToken("", clave, "m1");
+    const m = await mensajeroDeMarca(marca({ whatsapp_phone_number_id: "999" }));
+    expect((await m.enviarTexto("34600", "hola")).ok).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("sin token guardado también falla sin fetch", async () => {
     const m = await mensajeroDeMarca(marca({ whatsapp_phone_number_id: "999" }));
     expect((await m.enviarTexto("34600", "hola")).ok).toBe(false);
@@ -109,6 +131,7 @@ describe("lecturas tolerantes y escritura", () => {
     errorLectura = null;
     errorUpdate = null;
     tokenGuardado = null;
+    dueñaDelNumero = null;
   });
 
   it("con la migración pendiente las lecturas devuelven null", async () => {
@@ -127,6 +150,19 @@ describe("lecturas tolerantes y escritura", () => {
     errorUpdate = { message: "duplicate key", code: "23505" };
     const r = await guardarConexion("m1", { wabaId: "w", numeroId: "n", tokenCifrado: "SECRETO" });
     expect(r).toEqual({ ok: false, error: "Ese número ya está conectado a otra marca." });
+  });
+
+  it("número de otra marca: error de duplicado y ninguna escritura", async () => {
+    dueñaDelNumero = { id: "otra" };
+    ordenEscrituras.length = 0;
+    const r = await guardarConexion("m1", { wabaId: "w", numeroId: "n", tokenCifrado: "x" });
+    expect(r).toEqual({ ok: false, error: "Ese número ya está conectado a otra marca." });
+    expect(ordenEscrituras).toEqual([]);
+  });
+
+  it("reconexión de la misma marca sí escribe", async () => {
+    dueñaDelNumero = { id: "m1" };
+    expect(await guardarConexion("m1", { wabaId: "w", numeroId: "n", tokenCifrado: "x" })).toEqual({ ok: true });
   });
 
   it("guardarConexion correcto: primero el token y luego la marca", async () => {

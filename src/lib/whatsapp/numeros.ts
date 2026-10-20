@@ -41,6 +41,10 @@ export async function guardarConexion(
   marcaId: string,
   c: { wabaId: string; numeroId: string; tokenCifrado: string },
 ): Promise<Escritura> {
+  // Antes de escribir nada: si el número es de otra marca, no se toca su token.
+  const dueña = await getMarcaPorNumero(c.numeroId);
+  if (dueña && dueña.id !== marcaId) return { ok: false, error: "Ese número ya está conectado a otra marca." };
+
   const ahora = new Date().toISOString();
   // Primero el token: si la marca quedara conectada sin token, los envíos fallarían.
   const t = await sb()
@@ -103,14 +107,19 @@ export async function mensajeroDeMarca(marca: Marca): Promise<MensajeroWhatsApp>
   const numeroId = marca.whatsapp_phone_number_id;
   if (!numeroId) return crearMensajero();
 
+  // Un fallo de lectura es de la base, no de las credenciales: se propaga.
+  const cifrado = await getTokenCifrado(marca.id);
+  const clave = claveDeEntorno();
+  if (!cifrado || !clave) return mensajeroSinCredenciales();
+
+  let token: string;
   try {
-    const cifrado = await getTokenCifrado(marca.id);
-    const clave = claveDeEntorno();
-    if (!cifrado || !clave) return mensajeroSinCredenciales();
-    const token = descifrarToken(cifrado, clave, marca.id);
-    return crearMensajero({ token, phoneNumberId: numeroId, exigirProduccion: true });
+    token = descifrarToken(cifrado, clave, marca.id);
   } catch {
-    // Sin detalle: el error de descifrado no debe arrastrar token ni clave.
+    // Mensaje fijo: el error de descifrado no debe arrastrar token ni clave.
+    console.error("[whatsapp] no se pudo descifrar el token de la marca", marca.id);
     return mensajeroSinCredenciales();
   }
+  if (!token) return mensajeroSinCredenciales();
+  return crearMensajero({ token, phoneNumberId: numeroId, exigirProduccion: true });
 }
