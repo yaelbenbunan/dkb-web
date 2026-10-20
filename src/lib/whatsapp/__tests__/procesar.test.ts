@@ -435,7 +435,7 @@ function depsFalsas(
   const leadsCreados: Array<Omit<Parameters<Deps["crearLeadDeWhatsApp"]>[0], "exclusiones">> = [];
   const exclusionesRecibidas: unknown[] = [];
   /** Tarea 7 del plan por marca: historial, contactos y avisos de cuenta. */
-  const marcasPorWaba = new Map<string, Marca>([["WABA-HYDRUP", HYDRUP]]);
+  const marcasPorWaba = new Map<string, Marca[]>([["WABA-HYDRUP", [HYDRUP]]]);
   const historial: Array<{ conversacionId: string; wamid: string; deNegocio: boolean; texto: string | null }> = [];
   const contactos = new Map<string, string>();
   const contactosDeLead: Array<{ leadId: string; nombre: string }> = [];
@@ -563,8 +563,8 @@ function depsFalsas(
     async listSecuencias(marcaId) {
       return secuencias.filter((s) => s.marca_id === marcaId);
     },
-    async marcaPorWaba(wabaId) {
-      return marcasPorWaba.get(wabaId) ?? null;
+    async marcasPorWaba(wabaId) {
+      return marcasPorWaba.get(wabaId) ?? [];
     },
     async marcarDesconectada(marcaId, motivo) {
       desconexiones.push({ marcaId, motivo });
@@ -614,6 +614,7 @@ function depsFalsas(
     contactos,
     contactosDeLead,
     desconexiones,
+    marcasPorWaba,
     estadosHistorial,
   };
 }
@@ -2457,6 +2458,37 @@ describe("avisos de la cuenta", () => {
     await procesarWebhook({ cuerpo, deps });
 
     expect(desconexiones).toEqual([{ marcaId: HYDRUP.id, motivo: "PRIMARY_INACTIVITY" }]);
+  });
+
+  it("PARTNER_REMOVED de una WABA compartida desconecta todas sus marcas", async () => {
+    const { deps, desconexiones, marcasPorWaba } = depsFalsas();
+    const OTRA = { id: "marca-otra", slug: "otra", nombre: "Otra" } as Marca;
+    marcasPorWaba.set("WABA-HYDRUP", [HYDRUP, OTRA]);
+    const cuerpo = sobreCampo("account_update", {
+      event: "PARTNER_REMOVED",
+      waba_info: { waba_id: "WABA-HYDRUP" },
+      disconnection_info: { reason: "PRIMARY_INACTIVITY" },
+    });
+
+    await procesarWebhook({ cuerpo, deps });
+
+    expect(desconexiones).toEqual([
+      { marcaId: HYDRUP.id, motivo: "PRIMARY_INACTIVITY" },
+      { marcaId: OTRA.id, motivo: "PRIMARY_INACTIVITY" },
+    ]);
+  });
+
+  it("PARTNER_REMOVED de una WABA sin marca no desconecta nada", async () => {
+    const { deps, desconexiones } = depsFalsas();
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+
+    await procesarWebhook({
+      cuerpo: sobreCampo("account_update", { event: "PARTNER_REMOVED", waba_info: { waba_id: "WABA-NADIE" } }),
+      deps,
+    });
+
+    expect(desconexiones).toHaveLength(0);
+    infoSpy.mockRestore();
   });
 
   it("otros avisos solo se registran", async () => {

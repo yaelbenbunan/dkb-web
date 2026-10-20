@@ -1,6 +1,7 @@
 import "server-only";
 import { getSupabaseAdmin } from "../supabase-admin";
 import { ErrorLectura, tolerarMigracionPendiente, type Escritura, type Marca } from "../ventas/db";
+import { MARCA_DINKBIT_SLUG } from "../ventas/dominio";
 import { descifrarToken, claveDeEntorno } from "./cifrado";
 import { crearMensajero, type MensajeroWhatsApp, type ResultadoEnvio } from "./mensajero";
 
@@ -21,20 +22,27 @@ function leer<T>(r: { data: T | null; error: { message: string; code?: string } 
   return r.data;
 }
 
-async function marcaPor(columna: "whatsapp_phone_number_id" | "whatsapp_waba_id", valor: string, contexto: string): Promise<Marca | null> {
+export function getMarcaPorNumero(numeroId: string): Promise<Marca | null> {
   return tolerarMigracionPendiente(
-    async () => leer(await sb().from("ventas_marcas").select("*").eq(columna, valor).maybeSingle(), contexto) as Marca | null,
+    async () =>
+      leer(
+        await sb().from("ventas_marcas").select("*").eq("whatsapp_phone_number_id", numeroId).maybeSingle(),
+        "getMarcaPorNumero",
+      ) as Marca | null,
     () => null,
-    contexto,
+    "getMarcaPorNumero",
   );
 }
 
-export function getMarcaPorNumero(numeroId: string): Promise<Marca | null> {
-  return marcaPor("whatsapp_phone_number_id", numeroId, "getMarcaPorNumero");
-}
-
-export function getMarcaPorWaba(wabaId: string): Promise<Marca | null> {
-  return marcaPor("whatsapp_waba_id", wabaId, "getMarcaPorWaba");
+/** Todas las marcas de una WABA: varias pueden compartirla (una por número),
+ *  así que no se pide una sola fila. */
+export function getMarcasPorWaba(wabaId: string): Promise<Marca[]> {
+  return tolerarMigracionPendiente(
+    async () =>
+      (leer(await sb().from("ventas_marcas").select("*").eq("whatsapp_waba_id", wabaId), "getMarcasPorWaba") as Marca[] | null) ?? [],
+    () => [],
+    "getMarcasPorWaba",
+  );
 }
 
 export async function guardarConexion(
@@ -105,7 +113,9 @@ function mensajeroSinCredenciales(): MensajeroWhatsApp {
 
 export async function mensajeroDeMarca(marca: Marca): Promise<MensajeroWhatsApp> {
   const numeroId = marca.whatsapp_phone_number_id;
-  if (!numeroId) return crearMensajero();
+  // Solo Dinkbit envía con el número del entorno; cualquier otra marca sin
+  // número propio no puede escribir desde el de Dinkbit.
+  if (!numeroId) return marca.slug === MARCA_DINKBIT_SLUG ? crearMensajero() : mensajeroSinCredenciales();
 
   // Un fallo de lectura es de la base, no de las credenciales: se propaga.
   const cifrado = await getTokenCifrado(marca.id);

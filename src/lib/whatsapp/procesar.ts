@@ -32,7 +32,7 @@ import { elegirSecuencia } from "./eleccion";
 import { elegirMarca } from "./enrutado";
 import { aEstadoGuardado, desdeEstadoGuardado, indiceDeBoton, mensajesAEnviar, type EstadoGuardado } from "./guion";
 import type { MensajeroWhatsApp } from "./mensajero";
-import { getMarcaPorNumero, getMarcaPorWaba, marcarDesconectada, mensajeroDeMarca, setHistorialMarca } from "./numeros";
+import { getMarcaPorNumero, getMarcasPorWaba, marcarDesconectada, mensajeroDeMarca, setHistorialMarca } from "./numeros";
 import { calcularVentana, telefonoDeWaId } from "./ventana";
 import { esFaseDescarte, MARCA_DINKBIT_SLUG, type Fase } from "../ventas/dominio";
 import {
@@ -133,8 +133,9 @@ export interface Deps {
    *  del lead (task-7-brief.md). Ya existe en `ventas/db.ts`: no es un dato
    *  nuevo, solo entra en `Deps` para poder sustituirla en los tests. */
   listSecuencias: (marcaId: string) => Promise<SecuenciaRow[]>;
-  /** La marca de una WABA, para los avisos de cuenta (`account_update`). */
-  marcaPorWaba: (wabaId: string) => Promise<Marca | null>;
+  /** Las marcas de una WABA (puede haber varias), para los avisos de cuenta
+   *  (`account_update`). */
+  marcasPorWaba: (wabaId: string) => Promise<Marca[]>;
   marcarDesconectada: typeof marcarDesconectada;
   setHistorialMarca: typeof setHistorialMarca;
   guardarHistorial: typeof guardarHistorial;
@@ -228,7 +229,7 @@ function depsReales(): Deps {
     crearLeadDeWhatsApp,
     listExclusiones,
     listSecuencias,
-    marcaPorWaba: getMarcaPorWaba,
+    marcasPorWaba: getMarcasPorWaba,
     marcarDesconectada,
     setHistorialMarca,
     guardarHistorial,
@@ -1549,9 +1550,9 @@ async function procesarEco(marca: Marca, eco: EcoSaliente, deps: Deps): Promise<
 
 /**
  * Avisos de la cuenta de WhatsApp Business. Solo `PARTNER_REMOVED` (la empresa
- * desvinculó el número, o Meta lo hizo por inactividad) cambia algo: la marca
- * queda desconectada con el motivo, para que el panel pida reconectarla. El
- * resto solo se registra.
+ * desvinculó el número, o Meta lo hizo por inactividad) cambia algo: cada
+ * marca de esa WABA queda desconectada con el motivo, para que el panel pida
+ * reconectarla. El resto solo se registra.
  */
 async function procesarAvisos(avisos: AvisoCuenta[], deps: Deps): Promise<void> {
   for (const aviso of avisos) {
@@ -1559,12 +1560,12 @@ async function procesarAvisos(avisos: AvisoCuenta[], deps: Deps): Promise<void> 
       console.info("[whatsapp] aviso de cuenta", aviso.evento, aviso.wabaId);
       continue;
     }
-    const marca = aviso.wabaId ? await deps.marcaPorWaba(aviso.wabaId) : null;
-    if (!marca) {
+    const marcas = aviso.wabaId ? await deps.marcasPorWaba(aviso.wabaId) : [];
+    if (marcas.length === 0) {
       console.info("[whatsapp] PARTNER_REMOVED de una WABA sin marca, se ignora", aviso.wabaId);
       continue;
     }
-    await deps.marcarDesconectada(marca.id, aviso.motivo);
+    for (const marca of marcas) await deps.marcarDesconectada(marca.id, aviso.motivo);
   }
 }
 

@@ -6,6 +6,7 @@ let errorUpdate: { message: string; code?: string } | null = null;
 const ordenEscrituras: string[] = [];
 let dueñaDelNumero: { id: string } | null = null;
 let errorLectura: { message: string; code?: string } | null = null;
+let marcasDeLaWaba: Array<{ id: string }> = [];
 
 vi.mock("../../supabase-admin", () => ({
   getSupabaseAdmin: () => ({
@@ -25,14 +26,20 @@ vi.mock("../../supabase-admin", () => ({
       }
       return {
         update: () => ({ eq: async () => (ordenEscrituras.push("marca"), { error: errorUpdate }) }),
-        select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: errorLectura ? null : dueñaDelNumero, error: errorLectura }) }) }),
+        select: () => ({
+          eq: () =>
+            // Sin `maybeSingle` se lee la lista (getMarcasPorWaba); con él, una sola fila.
+            Object.assign(Promise.resolve({ data: errorLectura ? null : marcasDeLaWaba, error: errorLectura }), {
+              maybeSingle: async () => ({ data: errorLectura ? null : dueñaDelNumero, error: errorLectura }),
+            }),
+        }),
       };
     },
   }),
 }));
 
 import { cifrarToken } from "../cifrado";
-import { getMarcaPorNumero, getTokenCifrado, guardarConexion, mensajeroDeMarca } from "../numeros";
+import { getMarcaPorNumero, getMarcasPorWaba, getTokenCifrado, guardarConexion, mensajeroDeMarca } from "../numeros";
 import type { Marca } from "../../ventas/db";
 
 const clave = randomBytes(32).toString("base64");
@@ -55,12 +62,22 @@ describe("mensajeroDeMarca", () => {
     vi.unstubAllGlobals();
   });
 
-  it("marca sin número usa las credenciales de entorno", async () => {
+  it("Dinkbit sin número propio usa las credenciales de entorno", async () => {
     vi.stubEnv("WHATSAPP_TOKEN", "tok-env");
     vi.stubEnv("WHATSAPP_PHONE_NUMBER_ID", "env-1");
-    const res = await (await mensajeroDeMarca(marca())).enviarTexto("34600", "hola");
+    const res = await (await mensajeroDeMarca(marca({ slug: "dinkbit" }))).enviarTexto("34600", "hola");
     expect(res.ok).toBe(true);
     expect(fetchMock.mock.calls[0][0]).toContain("/env-1/messages");
+  });
+
+  it("otra marca sin número propio no usa el número de Dinkbit: credenciales inválidas y sin fetch", async () => {
+    vi.stubEnv("WHATSAPP_TOKEN", "tok-env");
+    vi.stubEnv("WHATSAPP_PHONE_NUMBER_ID", "env-1");
+    const m = await mensajeroDeMarca(marca({ slug: "hydrup" }));
+    const esperado = { ok: false, error: "La marca no tiene credenciales de WhatsApp válidas: reconéctala." };
+    expect(await m.enviarTexto("34600", "hola")).toEqual(esperado);
+    expect(await m.enviarBotones("34600", "hola", ["Sí"])).toEqual(esperado);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("marca con número y token válido envía con su número y token", async () => {
@@ -132,6 +149,21 @@ describe("lecturas tolerantes y escritura", () => {
     errorUpdate = null;
     tokenGuardado = null;
     dueñaDelNumero = null;
+    marcasDeLaWaba = [];
+  });
+
+  it("getMarcasPorWaba devuelve todas las marcas de la WABA, aunque sean varias", async () => {
+    marcasDeLaWaba = [{ id: "m1" }, { id: "m2" }];
+    expect((await getMarcasPorWaba("w")).map((m) => m.id)).toEqual(["m1", "m2"]);
+    marcasDeLaWaba = [];
+    expect(await getMarcasPorWaba("w")).toEqual([]);
+  });
+
+  it("getMarcasPorWaba con la migración pendiente devuelve [] y con otros errores lanza", async () => {
+    errorLectura = { message: "no existe", code: "42703" };
+    expect(await getMarcasPorWaba("w")).toEqual([]);
+    errorLectura = { message: "red", code: "08006" };
+    await expect(getMarcasPorWaba("w")).rejects.toThrow();
   });
 
   it("con la migración pendiente las lecturas devuelven null", async () => {
