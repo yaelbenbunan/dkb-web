@@ -53,6 +53,14 @@ export interface Marca {
   modulos?: string[] | null;
   /** Remitentes permitidos para sus campañas; vacío = la lista global. */
   campanas_remitentes?: string[] | null;
+  /** Número de WhatsApp propio de la marca (coexistencia). Sin la migración
+   *  (docs/sql/2026-10-20-whatsapp-por-marca.sql), la fila no lo trae. */
+  whatsapp_phone_number_id?: string | null;
+  whatsapp_waba_id?: string | null;
+  whatsapp_conectado_en?: string | null;
+  whatsapp_estado?: "conectado" | "desconectado" | null;
+  whatsapp_motivo?: string | null;
+  whatsapp_historial?: "pedido" | "completo" | "rechazado" | null;
 }
 
 export interface Exclusion {

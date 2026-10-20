@@ -30,6 +30,8 @@ export interface Conversacion {
   /** Solo tiene valor si un paso usó `esperar_dias`. Sirve para ver, sin
    *  cron todavía, que una conversación quedó parada esperando. */
   reanudar_en: string | null;
+  /** Nombre del perfil de WhatsApp del contacto. Opcional: depende de la migración. */
+  nombre_contacto?: string | null;
 }
 
 export interface Mensaje {
@@ -42,6 +44,8 @@ export interface Mensaje {
   /** Entrante: el mensaje crudo de Meta. Saliente: `{ botones }` si se mandó
    *  con botones (ver `botonesDePayload` en `bandeja.ts`). */
   payload: unknown;
+  /** Quién lo escribió. Opcional: depende de la migración. */
+  origen?: "cliente" | "bot" | "panel" | "movil" | "historial" | null;
   created_at: string;
 }
 

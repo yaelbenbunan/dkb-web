@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   FASES,
+  ORIGENES,
+  ORIGEN_LABELS,
   FASE_COLORES,
   FASE_LABELS,
   RESULTADOS_LLAMADA,
@@ -141,5 +143,12 @@ describe("descartar por «no busca lo que ofrecemos» desde la llamada", () => {
     // Un lead descartado no puede seguir apareciendo en la lista de llamadas
     // del día: es justo lo que se quería quitar de en medio.
     expect(seguimientoTrasLlamada("fuera_de_perfil", "2026-10-05")).toBeNull();
+  });
+});
+
+describe("origen whatsapp", () => {
+  it("el origen whatsapp existe y tiene etiqueta", () => {
+    expect(ORIGENES).toContain("whatsapp");
+    expect(ORIGEN_LABELS.whatsapp).toBe("WhatsApp");
   });
 });
