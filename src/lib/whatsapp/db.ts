@@ -510,14 +510,23 @@ export async function guardarSaliente(input: {
   if (conv.error) console.error(`[whatsapp/db] guardarSaliente (conversación): ${conv.error.message}`);
 }
 
+const COLUMNAS_MENSAJE = "id, direccion, wamid, texto, estado, error, payload, created_at";
+let avisadoSinOrigen = false;
+
 export async function listMensajes(conversacionId: string): Promise<Mensaje[]> {
-  const r = await db()
-    .from("ventas_mensajes")
-    .select("id, direccion, wamid, texto, estado, error, payload, created_at")
-    .eq("conversacion_id", conversacionId)
-    .order("created_at", { ascending: true });
+  const leer = (columnas: string) =>
+    db().from("ventas_mensajes").select(columnas).eq("conversacion_id", conversacionId).order("created_at", { ascending: true });
+  let r = await leer(`${COLUMNAS_MENSAJE}, origen`);
+  // Migración sin ejecutar: la bandeja sigue funcionando, solo sin etiquetas de origen.
+  if (r.error?.code && FALTA_EN_LA_BASE.has(r.error.code)) {
+    if (!avisadoSinOrigen) {
+      avisadoSinOrigen = true;
+      console.error(`[whatsapp/db] listMensajes: falta ejecutar la migración de WhatsApp por marca (${r.error.code}); se lee sin origen.`);
+    }
+    r = await leer(COLUMNAS_MENSAJE);
+  }
   if (r.error) throw new Error(`[whatsapp/db] listMensajes: ${r.error.message}`);
-  return (r.data ?? []) as Mensaje[];
+  return (r.data ?? []) as unknown as Mensaje[];
 }
 
 /* Recordatorio automático ------------------------------------------------- */

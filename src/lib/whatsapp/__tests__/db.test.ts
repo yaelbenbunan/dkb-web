@@ -18,12 +18,20 @@ const lteMock = vi.fn((_col: string, _valor: string, r: unknown) => r);
 // `ventas_whatsapp_contactos`: upsert de guardarContactos y lectura de nombreDeContacto.
 const upsertContactosMock = vi.fn();
 const leerContactoMock = vi.fn();
+// `ventas_mensajes.select(cols).eq(...).order(...)`, para listMensajes.
+const listarMensajesMock = vi.fn();
 
 vi.mock("../../supabase-admin", () => ({
   // `db()` exige un cliente no nulo; el doble simula Supabase ya configurado.
   getSupabaseAdmin: () => ({
     from: (tabla: string) => {
-      if (tabla === "ventas_mensajes") return { upsert: upsertMock, insert: insertMock };
+      if (tabla === "ventas_mensajes") {
+        return {
+          upsert: upsertMock,
+          insert: insertMock,
+          select: (cols: string) => ({ eq: () => ({ order: () => listarMensajesMock(cols) }) }),
+        };
+      }
       if (tabla === "ventas_conversaciones") {
         return {
           update: (patch: unknown) => ({
@@ -62,6 +70,7 @@ import {
   guardarEntrante,
   guardarHistorial,
   guardarSaliente,
+  listMensajes,
   nombreDeContacto,
 } from "../db";
 
@@ -73,6 +82,7 @@ beforeEach(() => {
   lteMock.mockClear();
   upsertContactosMock.mockReset().mockReturnValue({ error: null });
   leerContactoMock.mockReset().mockReturnValue({ data: null, error: null });
+  listarMensajesMock.mockReset();
   insertConversacionMock.mockReset().mockImplementation((fila: Record<string, unknown>) => ({ data: { id: "c1", ...fila }, error: null }));
 });
 
@@ -475,5 +485,32 @@ describe("contactos", () => {
     leerContactoMock.mockReturnValueOnce({ data: null, error: { message: "no existe", code: "42P01" } });
     expect(await nombreDeContacto("m1", "1")).toBeNull();
     errorSpy.mockRestore();
+  });
+});
+
+describe("listMensajes", () => {
+  it("pide y devuelve el origen de cada mensaje", async () => {
+    listarMensajesMock.mockReturnValueOnce({ data: [{ id: "m1", origen: "movil" }], error: null });
+    expect(await listMensajes("c1")).toEqual([{ id: "m1", origen: "movil" }]);
+    expect(listarMensajesMock.mock.calls[0][0]).toContain("origen");
+  });
+
+  it("si falta la columna origen reintenta sin ella y avisa una sola vez", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const faltante = { data: null, error: { message: "column origen does not exist", code: "42703" } };
+    listarMensajesMock.mockReturnValueOnce(faltante).mockReturnValueOnce({ data: [{ id: "m1" }], error: null });
+    expect(await listMensajes("c1")).toEqual([{ id: "m1" }]);
+    expect(listarMensajesMock.mock.calls[1][0]).not.toContain("origen");
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+
+    listarMensajesMock.mockReturnValueOnce(faltante).mockReturnValueOnce({ data: [], error: null });
+    await listMensajes("c1");
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    errorSpy.mockRestore();
+  });
+
+  it("otros errores se propagan", async () => {
+    listarMensajesMock.mockReturnValueOnce({ data: null, error: { message: "caído", code: "XX000" } });
+    await expect(listMensajes("c1")).rejects.toThrow("caído");
   });
 });
