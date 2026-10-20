@@ -13,6 +13,11 @@ const actualizarConversacionMock = vi.fn();
 const ltMock = vi.fn((_col: string, _valor: string, r: unknown) => r);
 // `ventas_conversaciones.insert(...).select("*").single()`, para crearConversacion.
 const insertConversacionMock = vi.fn();
+// El `.lte(...)` que usa guardarHistorial para no mover el resumen hacia atrás.
+const lteMock = vi.fn((_col: string, _valor: string, r: unknown) => r);
+// `ventas_whatsapp_contactos`: upsert de guardarContactos y lectura de nombreDeContacto.
+const upsertContactosMock = vi.fn();
+const leerContactoMock = vi.fn();
 
 vi.mock("../../supabase-admin", () => ({
   // `db()` exige un cliente no nulo; el doble simula Supabase ya configurado.
@@ -24,10 +29,24 @@ vi.mock("../../supabase-admin", () => ({
           update: (patch: unknown) => ({
             eq: (_col: string, id: string) => {
               const r = actualizarConversacionMock(patch, id);
-              return { ...r, lt: (col: string, valor: string) => ltMock(col, valor, r) };
+              return {
+                ...r,
+                lt: (col: string, valor: string) => ltMock(col, valor, r),
+                lte: (col: string, valor: string) => lteMock(col, valor, r),
+              };
             },
           }),
           insert: (fila: unknown) => ({ select: () => ({ single: () => insertConversacionMock(fila) }) }),
+        };
+      }
+      if (tabla === "ventas_whatsapp_contactos") {
+        return {
+          upsert: upsertContactosMock,
+          select: () => ({
+            eq: (_c1: string, marcaId: string) => ({
+              eq: (_c2: string, waId: string) => ({ maybeSingle: () => leerContactoMock(marcaId, waId) }),
+            }),
+          }),
         };
       }
       throw new Error(`tabla inesperada en el test: ${tabla}`);
@@ -35,13 +54,25 @@ vi.mock("../../supabase-admin", () => ({
   }),
 }));
 
-import { actualizarConversacion, crearConversacion, guardarEco, guardarEntrante, guardarSaliente } from "../db";
+import {
+  actualizarConversacion,
+  crearConversacion,
+  guardarContactos,
+  guardarEco,
+  guardarEntrante,
+  guardarHistorial,
+  guardarSaliente,
+  nombreDeContacto,
+} from "../db";
 
 beforeEach(() => {
   upsertMock.mockReset();
   insertMock.mockReset().mockReturnValue({ error: null });
   actualizarConversacionMock.mockReset().mockReturnValue({ error: null });
   ltMock.mockClear();
+  lteMock.mockClear();
+  upsertContactosMock.mockReset().mockReturnValue({ error: null });
+  leerContactoMock.mockReset().mockReturnValue({ data: null, error: null });
   insertConversacionMock.mockReset().mockImplementation((fila: Record<string, unknown>) => ({ data: { id: "c1", ...fila }, error: null }));
 });
 
@@ -321,6 +352,128 @@ describe("columnas nuevas sin la migración", () => {
     await expect(actualizarConversacion("c1", { nombreContacto: "Ana" })).resolves.toBeUndefined();
     expect(actualizarConversacionMock).toHaveBeenCalledTimes(1);
     expect(errorSpy).toHaveBeenCalledTimes(2);
+    errorSpy.mockRestore();
+  });
+});
+
+describe("crearConversacion para el historial", () => {
+  // Una conversación importada no tiene ventana abierta, y nace con la hora de
+  // su mensaje más antiguo para que guardarHistorial pueda subirla al último.
+  it("acepta ventana null y la hora del último mensaje", async () => {
+    const desde = new Date(1790000000 * 1000);
+    await crearConversacion({ marcaId: "m1", waId: "34600", leadId: null, estado: "humana", ventanaHasta: null, ultimoMensajeAt: desde });
+    expect(insertConversacionMock.mock.calls[0][0]).toMatchObject({ ventana_hasta: null, ultimo_mensaje_at: desde.toISOString() });
+  });
+});
+
+describe("guardarHistorial", () => {
+  const H1 = new Date(1790000000 * 1000);
+  const H2 = new Date(1790000100 * 1000);
+  const lote = {
+    conversacionId: "c1",
+    mensajes: [
+      { wamid: "wamid.H1", deNegocio: false, texto: "hola", enviadoEn: H1, crudo: { id: "wamid.H1" } },
+      { wamid: "wamid.H2", deNegocio: true, texto: "qué tal", enviadoEn: H2, crudo: { id: "wamid.H2" } },
+    ],
+  };
+
+  it("un solo upsert por wamid, con dirección según quién lo envió, origen historial y su hora real", async () => {
+    upsertMock.mockReturnValue({ select: () => ({ data: [{ wamid: "wamid.H1" }, { wamid: "wamid.H2" }], error: null }) });
+    expect(await guardarHistorial(lote)).toBe(2);
+
+    expect(upsertMock).toHaveBeenCalledTimes(1);
+    const [filas, opciones] = upsertMock.mock.calls[0];
+    expect(opciones).toEqual({ onConflict: "wamid", ignoreDuplicates: true });
+    expect(filas).toEqual([
+      {
+        conversacion_id: "c1",
+        direccion: "entrante",
+        wamid: "wamid.H1",
+        texto: "hola",
+        payload: { id: "wamid.H1" },
+        estado: "entregado",
+        created_at: H1.toISOString(),
+        origen: "historial",
+      },
+      {
+        conversacion_id: "c1",
+        direccion: "saliente",
+        wamid: "wamid.H2",
+        texto: "qué tal",
+        payload: { id: "wamid.H2" },
+        estado: "enviado",
+        created_at: H2.toISOString(),
+        origen: "historial",
+      },
+    ]);
+    // El resumen pasa al último importado, solo si no hay nada más reciente.
+    expect(actualizarConversacionMock).toHaveBeenCalledWith({ ultimo_texto: "qué tal", ultimo_mensaje_at: H2.toISOString() }, "c1");
+    expect(lteMock).toHaveBeenCalledWith("ultimo_mensaje_at", H2.toISOString(), expect.anything());
+  });
+
+  it("si todos los wamid ya estaban (eco o reintento) devuelve 0 y no toca la conversación", async () => {
+    upsertMock.mockReturnValue({ select: () => ({ data: [], error: null }) });
+    expect(await guardarHistorial(lote)).toBe(0);
+    expect(actualizarConversacionMock).not.toHaveBeenCalled();
+  });
+
+  it("el resumen sale del más reciente de los que sí se insertaron", async () => {
+    upsertMock.mockReturnValue({ select: () => ({ data: [{ wamid: "wamid.H1" }], error: null }) });
+    expect(await guardarHistorial(lote)).toBe(1);
+    expect(actualizarConversacionMock).toHaveBeenCalledWith({ ultimo_texto: "hola", ultimo_mensaje_at: H1.toISOString() }, "c1");
+  });
+
+  it("sin mensajes no escribe nada", async () => {
+    expect(await guardarHistorial({ conversacionId: "c1", mensajes: [] })).toBe(0);
+    expect(upsertMock).not.toHaveBeenCalled();
+  });
+
+  it("si falta la columna origen repite el upsert sin ella", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    upsertMock
+      .mockReturnValueOnce({ select: () => ({ data: null, error: { message: "no origen", code: "PGRST204" } }) })
+      .mockReturnValueOnce({ select: () => ({ data: [{ wamid: "wamid.H1" }], error: null }) });
+    expect(await guardarHistorial(lote)).toBe(1);
+    expect(upsertMock.mock.calls[1][0][0]).not.toHaveProperty("origen");
+    errorSpy.mockRestore();
+  });
+
+  it("lanza si falla el upsert por otra razón", async () => {
+    upsertMock.mockReturnValue({ select: () => ({ data: null, error: { message: "boom" } }) });
+    await expect(guardarHistorial(lote)).rejects.toThrow("boom");
+  });
+});
+
+describe("contactos", () => {
+  it("guardarContactos hace upsert por marca y wa_id", async () => {
+    await guardarContactos("m1", [{ waId: "34600112233", nombre: "Ana Pérez" }]);
+    const [filas, opciones] = upsertContactosMock.mock.calls[0];
+    expect(opciones).toEqual({ onConflict: "marca_id,wa_id" });
+    expect(filas).toEqual([
+      { marca_id: "m1", wa_id: "34600112233", nombre: "Ana Pérez", actualizado_en: expect.any(String) },
+    ]);
+  });
+
+  it("guardarContactos sin la tabla (migración pendiente) no lanza", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    upsertContactosMock.mockReturnValue({ error: { message: "no existe", code: "42P01" } });
+    await expect(guardarContactos("m1", [{ waId: "1", nombre: "A" }])).resolves.toBeUndefined();
+    errorSpy.mockRestore();
+  });
+
+  it("guardarContactos lanza con otros fallos", async () => {
+    upsertContactosMock.mockReturnValue({ error: { message: "boom" } });
+    await expect(guardarContactos("m1", [{ waId: "1", nombre: "A" }])).rejects.toThrow("boom");
+  });
+
+  it("nombreDeContacto devuelve el nombre guardado, o null sin la tabla", async () => {
+    leerContactoMock.mockReturnValueOnce({ data: { nombre: "Ana" }, error: null });
+    expect(await nombreDeContacto("m1", "34600112233")).toBe("Ana");
+    expect(leerContactoMock).toHaveBeenCalledWith("m1", "34600112233");
+
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    leerContactoMock.mockReturnValueOnce({ data: null, error: { message: "no existe", code: "42P01" } });
+    expect(await nombreDeContacto("m1", "1")).toBeNull();
     errorSpy.mockRestore();
   });
 });

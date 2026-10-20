@@ -3,9 +3,12 @@ import {
   actualizarConversacion,
   crearConversacion,
   getConversacion,
+  guardarContactos,
   guardarEco,
   guardarEntrante,
+  guardarHistorial,
   guardarSaliente,
+  nombreDeContacto,
   reclamarPaso,
   setEstadoMensaje,
   type Conversacion,
@@ -13,20 +16,27 @@ import {
 import { opcionesAutorespuesta, REMITENTE, textoAutorespuesta } from "./autorespuesta";
 import {
   decidir,
+  extraerAvisosCuenta,
+  extraerContactos,
   extraerEcos,
   extraerEstados,
+  extraerHistorial,
   extraerMensajes,
+  type AvisoCuenta,
+  type ContactoSync,
   type EcoSaliente,
+  type LoteHistorial,
   type MensajeEntrante,
 } from "./entrante";
 import { elegirSecuencia } from "./eleccion";
 import { elegirMarca } from "./enrutado";
 import { aEstadoGuardado, desdeEstadoGuardado, indiceDeBoton, mensajesAEnviar, type EstadoGuardado } from "./guion";
 import type { MensajeroWhatsApp } from "./mensajero";
-import { getMarcaPorNumero, mensajeroDeMarca } from "./numeros";
+import { getMarcaPorNumero, getMarcaPorWaba, marcarDesconectada, mensajeroDeMarca, setHistorialMarca } from "./numeros";
 import { calcularVentana, telefonoDeWaId } from "./ventana";
 import { esFaseDescarte, MARCA_DINKBIT_SLUG, type Fase } from "../ventas/dominio";
 import {
+  actualizarLeadWeb,
   buscarLeadPorContacto,
   crearLeads,
   getMarcaPorSlug,
@@ -116,6 +126,15 @@ export interface Deps {
    *  del lead (task-7-brief.md). Ya existe en `ventas/db.ts`: no es un dato
    *  nuevo, solo entra en `Deps` para poder sustituirla en los tests. */
   listSecuencias: (marcaId: string) => Promise<SecuenciaRow[]>;
+  /** La marca de una WABA, para los avisos de cuenta (`account_update`). */
+  marcaPorWaba: (wabaId: string) => Promise<Marca | null>;
+  marcarDesconectada: typeof marcarDesconectada;
+  setHistorialMarca: typeof setHistorialMarca;
+  guardarHistorial: typeof guardarHistorial;
+  guardarContactos: typeof guardarContactos;
+  nombreDeContacto: typeof nombreDeContacto;
+  /** Pone el nombre de la agenda en `contacto` de un lead que no lo tenía. */
+  rellenarContactoLead: (leadId: string, nombre: string) => Promise<void>;
 }
 
 /** Si la marca tiene su propio número de WhatsApp conectado (coexistencia). */
@@ -200,6 +219,17 @@ function depsReales(): Deps {
     },
     crearLeadDeWhatsApp,
     listSecuencias,
+    marcaPorWaba: getMarcaPorWaba,
+    marcarDesconectada,
+    setHistorialMarca,
+    guardarHistorial,
+    guardarContactos,
+    nombreDeContacto,
+    async rellenarContactoLead(leadId, nombre) {
+      // Un nombre de menos no merece tumbar el webhook: actualizarLeadWeb ya
+      // deja el fallo en el log.
+      await actualizarLeadWeb(leadId, { contacto: nombre });
+    },
   };
 }
 
@@ -636,8 +666,9 @@ async function crearConversacionOReleer(
     marcaId: string;
     waId: string;
     estado: Conversacion["estado"];
-    ventanaHasta: Date;
+    ventanaHasta: Date | null;
     nombreContacto?: string;
+    ultimoMensajeAt?: Date;
   },
 ): Promise<Conversacion> {
   try {
@@ -648,6 +679,7 @@ async function crearConversacionOReleer(
       estado: input.estado,
       ventanaHasta: input.ventanaHasta,
       nombreContacto: input.nombreContacto,
+      ultimoMensajeAt: input.ultimoMensajeAt,
     });
   } catch (e) {
     const existente = await deps.getConversacion(input.marcaId, input.waId);
@@ -1507,6 +1539,133 @@ async function procesarEco(marca: Marca, eco: EcoSaliente, deps: Deps): Promise<
 }
 
 /**
+ * Avisos de la cuenta de WhatsApp Business. Solo `PARTNER_REMOVED` (la empresa
+ * desvinculó el número, o Meta lo hizo por inactividad) cambia algo: la marca
+ * queda desconectada con el motivo, para que el panel pida reconectarla. El
+ * resto solo se registra.
+ */
+async function procesarAvisos(avisos: AvisoCuenta[], deps: Deps): Promise<void> {
+  for (const aviso of avisos) {
+    if (aviso.evento !== "PARTNER_REMOVED") {
+      console.info("[whatsapp] aviso de cuenta", aviso.evento, aviso.wabaId);
+      continue;
+    }
+    const marca = aviso.wabaId ? await deps.marcaPorWaba(aviso.wabaId) : null;
+    if (!marca) {
+      console.info("[whatsapp] PARTNER_REMOVED de una WABA sin marca, se ignora", aviso.wabaId);
+      continue;
+    }
+    await deps.marcarDesconectada(marca.id, aviso.motivo);
+  }
+}
+
+type MarcaPropiaDe = (numeroId: string | null) => Promise<Marca | null>;
+
+/** Vacío o solo espacios cuenta como «sin nombre» (el lead se crea con `""`). */
+function sinNombre(valor: string | null | undefined): boolean {
+  return !valor?.trim();
+}
+
+/**
+ * Contactos de la agenda de la app de WhatsApp Business. `add` guarda el
+ * nombre y lo pone en la conversación y en el lead si todavía no tenían uno
+ * (el que ya hay, quizá corregido a mano, no se pisa). `remove` no hace nada:
+ * quitar a alguien de la agenda no borra su conversación ni su lead.
+ */
+async function procesarContactos(contactos: ContactoSync[], marcaPropiaDe: MarcaPropiaDe, deps: Deps): Promise<void> {
+  for (const c of contactos) {
+    if (c.accion !== "add" || !c.nombre?.trim()) continue;
+    const marca = await marcaPropiaDe(c.numeroId);
+    if (!marca) {
+      console.info("[whatsapp] contacto de un número sin marca propia, se ignora", c.numeroId);
+      continue;
+    }
+    const nombre = c.nombre.trim();
+    await deps.guardarContactos(marca.id, [{ waId: c.waId, nombre }]);
+
+    const conversacion = await deps.getConversacion(marca.id, c.waId);
+    if (conversacion && sinNombre(conversacion.nombre_contacto)) {
+      await deps.actualizarConversacion(conversacion.id, { nombreContacto: nombre });
+    }
+    const telefono = telefonoDeWaId(c.waId);
+    const lead = telefono ? await deps.buscarLeadPorTelefono(marca.id, telefono) : null;
+    if (lead && sinNombre(lead.contacto)) await deps.rellenarContactoLead(lead.id, nombre);
+  }
+}
+
+/**
+ * Historial que la empresa compartió al conectar el número. Importarlo es SOLO
+ * guardar: la conversación nueva nace en `humana` (la lleva una persona, nunca
+ * el bot) y sin ventana, porque esos mensajes son viejos y no abren nada; no
+ * se mira ninguna secuencia, no se envía nada y no se apunta actividad en la
+ * ficha. Una conversación que ya existía conserva su estado y su ventana.
+ *
+ * El lead se crea como en un mensaje directo a un número propio (origen
+ * `"whatsapp"`), con el nombre de la agenda si se sincronizó. Solo hay
+ * historial en un número propio: lo que llegue por el de entorno (Dinkbit) o
+ * por uno desconocido se registra y se salta.
+ */
+async function procesarHistorial(lotes: LoteHistorial[], marcaPropiaDe: MarcaPropiaDe, deps: Deps): Promise<void> {
+  for (const lote of lotes) {
+    const marca = await marcaPropiaDe(lote.numeroId);
+    if (!marca) {
+      console.info("[whatsapp] historial de un número sin marca propia, se ignora", lote.numeroId);
+      continue;
+    }
+    if (lote.error) {
+      if (lote.error.codigo === CODIGO_HISTORIAL_RECHAZADO) await deps.setHistorialMarca(marca.id, "rechazado");
+      else console.error("[whatsapp] fallo en la sincronización del historial", marca.id, lote.error.codigo, lote.error.mensaje);
+    }
+    for (const hilo of lote.hilos) {
+      if (hilo.mensajes.length > 0) await importarHilo(marca, hilo, deps);
+    }
+    // Después de importar: si el lote falla a medias, el reintento lo repite
+    // y el historial no queda como completo antes de tiempo.
+    if (lote.progreso === 100) await deps.setHistorialMarca(marca.id, "completo");
+  }
+}
+
+/** La empresa desactivó en la app compartir el historial. */
+const CODIGO_HISTORIAL_RECHAZADO = 2593109;
+
+async function importarHilo(marca: Marca, hilo: LoteHistorial["hilos"][number], deps: Deps): Promise<void> {
+  const marcaId = marca.id;
+  const telefono = telefonoDeWaId(hilo.waId);
+  const nombre = await deps.nombreDeContacto(marcaId, hilo.waId);
+  const masAntiguo = hilo.mensajes.reduce((a, m) => (m.enviadoEn < a ? m.enviadoEn : a), hilo.mensajes[0].enviadoEn);
+
+  let conversacion =
+    (await deps.getConversacion(marcaId, hilo.waId)) ??
+    (await crearConversacionOReleer(deps, {
+      marcaId,
+      waId: hilo.waId,
+      estado: "humana",
+      ventanaHasta: null,
+      nombreContacto: nombre ?? undefined,
+      ultimoMensajeAt: masAntiguo,
+    }));
+
+  if (!conversacion.lead_id) {
+    const lead =
+      (telefono ? await deps.buscarLeadPorTelefono(marcaId, telefono) : null) ??
+      (await deps.crearLeadDeWhatsApp({ marcaId, waId: hilo.waId, telefono, nombre, origen: "whatsapp", anuncio: null }));
+    await deps.actualizarConversacion(conversacion.id, { leadId: lead.id });
+    conversacion = { ...conversacion, lead_id: lead.id };
+  }
+
+  await deps.guardarHistorial({
+    conversacionId: conversacion.id,
+    mensajes: hilo.mensajes.map((m) => ({
+      wamid: m.wamid,
+      deNegocio: m.deNegocio,
+      texto: m.texto,
+      enviadoEn: m.enviadoEn,
+      crudo: m.crudo,
+    })),
+  });
+}
+
+/**
  * Resuelve la marca de cada mensaje por el número que lo recibió
  * (`elegirMarca`), con una caché por webhook: un lote trae casi siempre varios
  * mensajes del mismo número, y no hace falta preguntar a la base por cada uno.
@@ -1518,6 +1677,14 @@ async function procesarEco(marca: Marca, eco: EcoSaliente, deps: Deps): Promise<
  */
 function resolutorDeMarcas(deps: Deps) {
   const porNumero = new Map<string, Promise<Marca | null>>();
+  const asignadaA = (numeroId: string): Promise<Marca | null> => {
+    let pendiente = porNumero.get(numeroId);
+    if (!pendiente) {
+      pendiente = deps.marcaDeNumero(numeroId);
+      porNumero.set(numeroId, pendiente);
+    }
+    return pendiente;
+  };
   let dinkbit: Promise<Marca> | null = null;
 
   const marcaDinkbit = (): Promise<Marca> => {
@@ -1535,16 +1702,8 @@ function resolutorDeMarcas(deps: Deps) {
     return dinkbit;
   };
 
-  return async (numeroId: string | null): Promise<Marca | null> => {
-    let asignada: Marca | null = null;
-    if (numeroId) {
-      let pendiente = porNumero.get(numeroId);
-      if (!pendiente) {
-        pendiente = deps.marcaDeNumero(numeroId);
-        porNumero.set(numeroId, pendiente);
-      }
-      asignada = await pendiente;
-    }
+  const marcaDe = async (numeroId: string | null): Promise<Marca | null> => {
+    const asignada = numeroId ? await asignadaA(numeroId) : null;
     switch (elegirMarca({ numeroId, numeroEntorno: deps.numeroEntorno, asignada })) {
       case "asignada":
         return asignada;
@@ -1554,6 +1713,16 @@ function resolutorDeMarcas(deps: Deps) {
         return null;
     }
   };
+
+  /** Solo la marca con número propio conectado a `numeroId`; nunca Dinkbit por
+   *  el número de entorno. Para el historial y los contactos de coexistencia,
+   *  que solo existen en un número propio. */
+  const marcaPropiaDe = async (numeroId: string | null): Promise<Marca | null> => {
+    const asignada = numeroId ? await asignadaA(numeroId) : null;
+    return asignada && tieneNumeroPropio(asignada) ? asignada : null;
+  };
+
+  return { marcaDe, marcaPropiaDe };
 }
 
 export async function procesarWebhook(input: {
@@ -1566,7 +1735,18 @@ export async function procesarWebhook(input: {
   // La marca de cada mensaje se resuelve ANTES de tocar nada (ni estados ni
   // mensajes), igual que antes se buscaba Dinkbit lo primero: si algo de esto
   // falla, el 500 llega sin haber escrito nada.
-  const marcaDe = resolutorDeMarcas(deps);
+  const { marcaDe, marcaPropiaDe } = resolutorDeMarcas(deps);
+
+  // Avisos de cuenta, contactos e historial ANTES que los mensajes: un número
+  // recién desvinculado no debería seguir contando como conectado, y el
+  // historial necesita los nombres de la agenda para crear sus leads. Todo es
+  // idempotente (por marca, por `(marca, wa_id)` o por `wamid`), así que un
+  // fallo se deja propagar: la ruta responde 500 y el reintento lo repite sin
+  // duplicar nada. Nada de esto envía, arranca secuencias ni apunta actividad.
+  await procesarAvisos(extraerAvisosCuenta(input.cuerpo), deps);
+  await procesarContactos(extraerContactos(input.cuerpo), marcaPropiaDe, deps);
+  await procesarHistorial(extraerHistorial(input.cuerpo), marcaPropiaDe, deps);
+
   const mensajes: Array<{ mensaje: MensajeEntrante; marca: Marca }> = [];
   for (const mensaje of extraerMensajes(input.cuerpo)) {
     const marca = await marcaDe(mensaje.numeroId);

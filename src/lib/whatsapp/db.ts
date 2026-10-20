@@ -119,9 +119,14 @@ export async function crearConversacion(input: {
   waId: string;
   leadId: string | null;
   estado: Conversacion["estado"];
-  ventanaHasta: Date;
+  /** `null`: sin ventana abierta (una conversación importada del historial). */
+  ventanaHasta: Date | null;
   /** Nombre del perfil de WhatsApp, si Meta lo mandó. */
   nombreContacto?: string | null;
+  /** Por defecto, ahora. El historial la crea con la hora de su mensaje más
+   *  antiguo: así guardarHistorial puede subirla al último sin que la
+   *  conversación aparezca arriba de la bandeja como si fuera de hoy. */
+  ultimoMensajeAt?: Date;
 }): Promise<Conversacion> {
   const r = await conColumnasNuevas(
     "crearConversacion",
@@ -130,7 +135,8 @@ export async function crearConversacion(input: {
       wa_id: input.waId,
       lead_id: input.leadId,
       estado: input.estado,
-      ventana_hasta: input.ventanaHasta.toISOString(),
+      ventana_hasta: input.ventanaHasta ? input.ventanaHasta.toISOString() : null,
+      ...(input.ultimoMensajeAt ? { ultimo_mensaje_at: input.ultimoMensajeAt.toISOString() } : {}),
     },
     { nombre_contacto: input.nombreContacto ?? undefined },
     (fila) => db().from("ventas_conversaciones").insert(fila).select("*").single(),
@@ -352,6 +358,113 @@ export async function guardarEco(input: {
     if (conv.error) console.error(`[whatsapp/db] guardarEco (conversación): ${conv.error.message}`);
   }
   return { nuevo };
+}
+
+/**
+ * Importa un hilo del historial que la empresa compartió al conectar el
+ * número. Un solo upsert por lote, idempotente por `wamid` como los entrantes
+ * y los ecos: Meta reintenta, y un mensaje escrito desde el móvil puede llegar
+ * antes como eco y después otra vez en el historial. `created_at` es la hora
+ * real del mensaje para que el hilo quede en orden. Devuelve cuántos eran
+ * nuevos.
+ */
+export async function guardarHistorial(input: {
+  conversacionId: string;
+  mensajes: Array<{ wamid: string; deNegocio: boolean; texto: string | null; enviadoEn: Date; crudo: unknown }>;
+}): Promise<number> {
+  if (input.mensajes.length === 0) return 0;
+  const filas = input.mensajes.map((m) => ({
+    conversacion_id: input.conversacionId,
+    direccion: m.deNegocio ? "saliente" : "entrante",
+    wamid: m.wamid,
+    texto: m.texto,
+    payload: m.crudo ?? {},
+    estado: m.deNegocio ? "enviado" : "entregado",
+    created_at: m.enviadoEn.toISOString(),
+  }));
+  const escribir = (conOrigen: boolean) =>
+    db()
+      .from("ventas_mensajes")
+      .upsert(conOrigen ? filas.map((f) => ({ ...f, origen: "historial" })) : filas, {
+        onConflict: "wamid",
+        ignoreDuplicates: true,
+      })
+      .select("wamid");
+
+  // Mismo criterio que conColumnasNuevas, para un lote: sin la columna
+  // `origen` (migración pendiente) se guarda igual, sin ella.
+  let r = await escribir(true);
+  if (r.error?.code && FALTA_EN_LA_BASE.has(r.error.code)) {
+    console.error(
+      `[whatsapp/db] guardarHistorial: falta ejecutar la migración de WhatsApp por marca (${r.error.code}); se guarda sin origen.`,
+      r.error.message,
+    );
+    r = await escribir(false);
+  }
+  if (r.error) throw new Error(`[whatsapp/db] guardarHistorial: ${r.error.message}`);
+
+  const insertados = new Set(((r.data ?? []) as Array<{ wamid: string }>).map((f) => f.wamid));
+  let ultimo: (typeof input.mensajes)[number] | null = null;
+  for (const m of input.mensajes) {
+    if (insertados.has(m.wamid) && (!ultimo || m.enviadoEn > ultimo.enviadoEn)) ultimo = m;
+  }
+
+  // Best-effort, como en guardarEco, y solo si lo importado no es más viejo
+  // que lo que ya tenía la conversación: el historial llega por lotes y
+  // después de los mensajes en vivo. `lte` y no `lt`: una conversación creada
+  // para el historial nace con la hora de su mensaje más antiguo, que en un
+  // hilo de un solo mensaje es justo la del último.
+  if (ultimo) {
+    const enviadoEn = ultimo.enviadoEn.toISOString();
+    const conv = await db()
+      .from("ventas_conversaciones")
+      .update({ ultimo_texto: ultimo.texto, ultimo_mensaje_at: enviadoEn })
+      .eq("id", input.conversacionId)
+      .lte("ultimo_mensaje_at", enviadoEn);
+    if (conv.error) console.error(`[whatsapp/db] guardarHistorial (conversación): ${conv.error.message}`);
+  }
+  return insertados.size;
+}
+
+/* Contactos --------------------------------------------------------------- */
+
+/**
+ * Nombres de la agenda de la app de WhatsApp Business, que llegan por la
+ * sincronización de coexistencia. La tabla `ventas_whatsapp_contactos` es de
+ * la migración MANUAL docs/sql/2026-10-20-whatsapp-por-marca.sql: hasta que
+ * se ejecute, los nombres simplemente no se guardan (un nombre de menos, no
+ * un webhook caído).
+ */
+export async function guardarContactos(marcaId: string, contactos: Array<{ waId: string; nombre: string }>): Promise<void> {
+  if (contactos.length === 0) return;
+  const actualizadoEn = new Date().toISOString();
+  const r = await db()
+    .from("ventas_whatsapp_contactos")
+    .upsert(
+      contactos.map((c) => ({ marca_id: marcaId, wa_id: c.waId, nombre: c.nombre, actualizado_en: actualizadoEn })),
+      { onConflict: "marca_id,wa_id" },
+    );
+  if (!r.error) return;
+  if (r.error.code && FALTA_EN_LA_BASE.has(r.error.code)) {
+    console.error(`[whatsapp/db] guardarContactos: falta ejecutar la migración de WhatsApp por marca (${r.error.code}); no se guardan.`);
+    return;
+  }
+  throw new Error(`[whatsapp/db] guardarContactos: ${r.error.message}`);
+}
+
+export async function nombreDeContacto(marcaId: string, waId: string): Promise<string | null> {
+  const r = await db()
+    .from("ventas_whatsapp_contactos")
+    .select("nombre")
+    .eq("marca_id", marcaId)
+    .eq("wa_id", waId)
+    .maybeSingle();
+  if (!r.error) return (r.data as { nombre: string } | null)?.nombre ?? null;
+  if (r.error.code && FALTA_EN_LA_BASE.has(r.error.code)) {
+    console.error(`[whatsapp/db] nombreDeContacto: falta ejecutar la migración de WhatsApp por marca (${r.error.code}).`);
+    return null;
+  }
+  throw new Error(`[whatsapp/db] nombreDeContacto: ${r.error.message}`);
 }
 
 export async function guardarSaliente(input: {

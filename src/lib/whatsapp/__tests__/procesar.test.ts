@@ -433,6 +433,13 @@ function depsFalsas(
   });
   const marcasConNumero = new Map<string, Marca>([[HYDRUP.whatsapp_phone_number_id as string, HYDRUP]]);
   const leadsCreados: Array<Parameters<Deps["crearLeadDeWhatsApp"]>[0]> = [];
+  /** Tarea 7 del plan por marca: historial, contactos y avisos de cuenta. */
+  const marcasPorWaba = new Map<string, Marca>([["WABA-HYDRUP", HYDRUP]]);
+  const historial: Array<{ conversacionId: string; wamid: string; deNegocio: boolean; texto: string | null }> = [];
+  const contactos = new Map<string, string>();
+  const contactosDeLead: Array<{ leadId: string; nombre: string }> = [];
+  const desconexiones: Array<{ marcaId: string; motivo: string | null }> = [];
+  const estadosHistorial: Array<{ marcaId: string; estado: string }> = [];
 
   const deps: Deps = {
     numeroEntorno: NUMERO_ENTORNO,
@@ -458,7 +465,7 @@ function depsFalsas(
         lead_id: leadId,
         wa_id: waId,
         estado,
-        ventana_hasta: ventanaHasta.toISOString(),
+        ventana_hasta: ventanaHasta ? ventanaHasta.toISOString() : null,
         ultimo_mensaje_at: new Date().toISOString(),
         // Campos de la secuencia (tarea 5): sin uso en este test, se dejan en
         // su estado "todavía no ha empezado".
@@ -549,6 +556,37 @@ function depsFalsas(
     async listSecuencias(marcaId) {
       return secuencias.filter((s) => s.marca_id === marcaId);
     },
+    async marcaPorWaba(wabaId) {
+      return marcasPorWaba.get(wabaId) ?? null;
+    },
+    async marcarDesconectada(marcaId, motivo) {
+      desconexiones.push({ marcaId, motivo });
+    },
+    async setHistorialMarca(marcaId, estado) {
+      estadosHistorial.push({ marcaId, estado });
+    },
+    // Comparte `wamidsGuardados` con entrantes y ecos: en la base es el mismo
+    // índice único de `wamid`, así que un eco ya guardado no se duplica.
+    async guardarHistorial({ conversacionId, mensajes }) {
+      let nuevos = 0;
+      for (const m of mensajes) {
+        if (wamidsGuardados.has(m.wamid)) continue;
+        wamidsGuardados.add(m.wamid);
+        historial.push({ conversacionId, wamid: m.wamid, deNegocio: m.deNegocio, texto: m.texto });
+        nuevos += 1;
+      }
+      return nuevos;
+    },
+    async guardarContactos(marcaId, lista) {
+      for (const c of lista) contactos.set(clave(marcaId, c.waId), c.nombre);
+    },
+    async nombreDeContacto(marcaId, waId) {
+      return contactos.get(clave(marcaId, waId)) ?? null;
+    },
+    async rellenarContactoLead(leadId, nombre) {
+      contactosDeLead.push({ leadId, nombre });
+      for (const lead of leadsPorTelefono.values()) if (lead.id === leadId) lead.contacto = nombre;
+    },
   };
 
   return {
@@ -564,6 +602,11 @@ function depsFalsas(
     secuencias,
     actividades,
     fases,
+    historial,
+    contactos,
+    contactosDeLead,
+    desconexiones,
+    estadosHistorial,
   };
 }
 
@@ -765,7 +808,7 @@ describe("procesarWebhook", () => {
           lead_id: null,
           wa_id: input.waId,
           estado: input.estado,
-          ventana_hasta: input.ventanaHasta.toISOString(),
+          ventana_hasta: input.ventanaHasta?.toISOString() ?? null,
           ultimo_mensaje_at: new Date().toISOString(),
           // Campos de la secuencia (tarea 5): sin uso en este test, se dejan en
           // su estado "todavía no ha empezado".
@@ -2102,6 +2145,237 @@ describe("ecos del móvil", () => {
     expect(ecos).toHaveLength(1);
     expect(conversaciones.get(`${HYDRUP.id}:34611222333`)?.estado).toBe("humana");
     expect(conversaciones.get(`${HYDRUP.id}:34611222333`)?.paso_actual).toBeNull();
+  });
+});
+
+/* Historial, contactos y avisos de cuenta (tarea 7 del plan por marca) ------ */
+
+function sobreCampo(field: string, value: Record<string, unknown>, numeroId = "PN-HYDRUP") {
+  return {
+    object: "whatsapp_business_account",
+    entry: [
+      {
+        id: "waba-x",
+        changes: [{ field, value: { messaging_product: "whatsapp", metadata: { phone_number_id: numeroId }, ...value } }],
+      },
+    ],
+  };
+}
+
+/** Un lote de historial con un hilo de dos mensajes, uno de cada lado. */
+const sobreHistorial = (opts: { numeroId?: string; progreso?: number; mensajes?: Record<string, unknown>[] } = {}) =>
+  sobreCampo(
+    "history",
+    {
+      history: [
+        {
+          metadata: { phase: 0, chunk_order: 1, progress: opts.progreso ?? 50 },
+          threads: [
+            {
+              id: "34611222333",
+              messages: opts.mensajes ?? [
+                { from: "34611222333", id: "wamid.H1", timestamp: "1790000000", type: "text", text: { body: "hola" } },
+                { from: "34900000000", id: "wamid.H2", timestamp: "1790000100", type: "text", text: { body: "qué tal" } },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    opts.numeroId,
+  );
+
+const sobreContacto = (nombre: string, accion: "add" | "remove" = "add", numeroId = "PN-HYDRUP") =>
+  sobreCampo(
+    "smb_app_state_sync",
+    {
+      state_sync: [
+        { type: "contact", contact: { full_name: nombre, phone_number: "+34 611 222 333" }, action: accion, metadata: { timestamp: "1790000000" } },
+      ],
+    },
+    numeroId,
+  );
+
+describe("historial de WhatsApp", () => {
+  // Review Focus 5: importar el historial es solo guardar. Ni ventana abierta,
+  // ni secuencia, ni envíos, ni notas en la ficha del lead.
+  it("un lote crea la conversación en humana con sus dos mensajes y un lead, sin abrir ventana ni arrancar nada", async () => {
+    const { deps, conversaciones, historial, leadsCreados, enviosMensajero, salientes, actividades, contactos } = depsFalsas({
+      secuencias: [{ id: "s-hydrup", marca_id: HYDRUP.id, estado: "activa", anuncios: [], pasos: SECUENCIA_MINIMA }],
+    });
+    contactos.set(`${HYDRUP.id}:34611222333`, "Marta");
+    const secuenciasSpy = vi.spyOn(deps, "listSecuencias");
+    const mensajeroSpy = vi.spyOn(deps, "mensajeroDeMarca");
+
+    await expect(procesarWebhook({ cuerpo: sobreHistorial(), deps })).resolves.toEqual({ procesados: 0 });
+
+    const conv = conversaciones.get(`${HYDRUP.id}:34611222333`);
+    expect(conv?.estado).toBe("humana");
+    expect(conv?.ventana_hasta).toBeNull();
+    expect(conv?.paso_actual).toBeNull();
+    expect(conv?.nombre_contacto).toBe("Marta");
+    expect(conv?.lead_id).toBe("lead-1");
+    expect(leadsCreados).toEqual([
+      { marcaId: HYDRUP.id, waId: "34611222333", telefono: "611222333", nombre: "Marta", origen: "whatsapp", anuncio: null },
+    ]);
+    expect(historial).toEqual([
+      { conversacionId: conv?.id, wamid: "wamid.H1", deNegocio: false, texto: "hola" },
+      { conversacionId: conv?.id, wamid: "wamid.H2", deNegocio: true, texto: "qué tal" },
+    ]);
+    expect(secuenciasSpy).not.toHaveBeenCalled();
+    expect(mensajeroSpy).not.toHaveBeenCalled();
+    expect(enviosMensajero).toHaveLength(0);
+    expect(salientes).toHaveLength(0);
+    expect(actividades).toHaveLength(0);
+    expect(registrarActividadMock).not.toHaveBeenCalled();
+  });
+
+  // Review Focus 4: el mismo mensaje puede llegar como eco y luego en el historial.
+  it("un wamid ya guardado como eco no se duplica al llegar en el historial", async () => {
+    const { deps, conversaciones, ecos, historial, leadsCreados } = depsFalsas();
+    await procesarWebhook({ cuerpo: sobreConEcos("PN-HYDRUP", [{ id: "wamid.H2", texto: "qué tal" }]), deps });
+
+    await procesarWebhook({ cuerpo: sobreHistorial(), deps });
+
+    expect(ecos.map((e) => e.wamid)).toEqual(["wamid.H2"]);
+    expect(historial.map((h) => h.wamid)).toEqual(["wamid.H1"]);
+    // Va a la conversación que ya creó el eco, sin otro lead.
+    expect(conversaciones.size).toBe(1);
+    expect(historial[0].conversacionId).toBe(conversaciones.get(`${HYDRUP.id}:34611222333`)?.id);
+    expect(leadsCreados).toHaveLength(1);
+  });
+
+  it("en una conversación viva no toca su estado ni su ventana", async () => {
+    const { deps, conversaciones, historial } = depsFalsas();
+    conversaciones.set(`${HYDRUP.id}:34611222333`, conversacionEnBot());
+
+    await procesarWebhook({ cuerpo: sobreHistorial(), deps });
+
+    const conv = conversaciones.get(`${HYDRUP.id}:34611222333`);
+    expect(conv?.estado).toBe("bot");
+    expect(conv?.paso_actual).toBe("inicio");
+    expect(conv?.ventana_hasta).toBe("2026-09-22T10:00:00.000Z");
+    expect(conv?.lead_id).toBe("lead-previo");
+    expect(historial).toHaveLength(2);
+  });
+
+  it("el error 2593109 marca el historial como rechazado", async () => {
+    const { deps, estadosHistorial, conversaciones } = depsFalsas();
+    const cuerpo = sobreCampo("history", {
+      history: [{ errors: [{ code: 2593109, title: "History sync is turned off by the business from the WhatsApp Business App" }] }],
+    });
+
+    await procesarWebhook({ cuerpo, deps });
+
+    expect(estadosHistorial).toEqual([{ marcaId: HYDRUP.id, estado: "rechazado" }]);
+    expect(conversaciones.size).toBe(0);
+  });
+
+  it("progreso 100 marca el historial como completo, después de importar el lote", async () => {
+    const { deps, estadosHistorial, historial } = depsFalsas();
+
+    await procesarWebhook({ cuerpo: sobreHistorial({ progreso: 100 }), deps });
+
+    expect(historial).toHaveLength(2);
+    expect(estadosHistorial).toEqual([{ marcaId: HYDRUP.id, estado: "completo" }]);
+  });
+
+  it("un hilo sin mensajes no crea nada", async () => {
+    const { deps, conversaciones, leadsCreados } = depsFalsas();
+
+    await procesarWebhook({ cuerpo: sobreHistorial({ mensajes: [] }), deps });
+
+    expect(conversaciones.size).toBe(0);
+    expect(leadsCreados).toHaveLength(0);
+  });
+
+  // El historial solo tiene sentido en un número propio: el de entorno es Dinkbit.
+  it("el historial del número de entorno (Dinkbit) o de uno desconocido se ignora", async () => {
+    const { deps, conversaciones, historial } = depsFalsas();
+    const dinkbitSpy = vi.spyOn(deps, "marcaDinkbit");
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+
+    await procesarWebhook({ cuerpo: sobreHistorial({ numeroId: NUMERO_ENTORNO }), deps });
+    await procesarWebhook({ cuerpo: sobreHistorial({ numeroId: "PN-AJENO" }), deps });
+
+    expect(conversaciones.size).toBe(0);
+    expect(historial).toHaveLength(0);
+    expect(dinkbitSpy).not.toHaveBeenCalled();
+    infoSpy.mockRestore();
+  });
+});
+
+describe("contactos de WhatsApp", () => {
+  it("un contacto add guarda el nombre y lo rellena en la conversación y el lead si estaban vacíos", async () => {
+    const { deps, conversaciones, contactos, leadsPorTelefono, contactosDeLead } = depsFalsas();
+    conversaciones.set(`${HYDRUP.id}:34611222333`, conversacionEnBot());
+    leadsPorTelefono.set("611222333", { id: "lead-previo", contacto: null });
+
+    await procesarWebhook({ cuerpo: sobreContacto("Marta López"), deps });
+
+    expect(contactos.get(`${HYDRUP.id}:34611222333`)).toBe("Marta López");
+    expect(conversaciones.get(`${HYDRUP.id}:34611222333`)?.nombre_contacto).toBe("Marta López");
+    expect(contactosDeLead).toEqual([{ leadId: "lead-previo", nombre: "Marta López" }]);
+  });
+
+  it("no pisa un nombre que ya tenían la conversación o el lead", async () => {
+    const { deps, conversaciones, leadsPorTelefono, contactosDeLead } = depsFalsas();
+    conversaciones.set(`${HYDRUP.id}:34611222333`, conversacionEnBot({ nombre_contacto: "Marta" }));
+    leadsPorTelefono.set("611222333", { id: "lead-previo", contacto: "Marta" });
+
+    await procesarWebhook({ cuerpo: sobreContacto("Marta López"), deps });
+
+    expect(conversaciones.get(`${HYDRUP.id}:34611222333`)?.nombre_contacto).toBe("Marta");
+    expect(contactosDeLead).toHaveLength(0);
+  });
+
+  it("un contacto remove no hace nada", async () => {
+    const { deps, contactos, conversaciones } = depsFalsas();
+    conversaciones.set(`${HYDRUP.id}:34611222333`, conversacionEnBot());
+
+    await procesarWebhook({ cuerpo: sobreContacto("Marta López", "remove"), deps });
+
+    expect(contactos.size).toBe(0);
+    expect(conversaciones.get(`${HYDRUP.id}:34611222333`)?.nombre_contacto).toBeNull();
+  });
+
+  it("los contactos van antes que el historial del mismo lote: el lead nace con su nombre", async () => {
+    const { deps, leadsCreados } = depsFalsas();
+    const historialSobre = sobreHistorial();
+    const cuerpo = { ...historialSobre, entry: [...historialSobre.entry, ...sobreContacto("Marta López").entry] };
+
+    await procesarWebhook({ cuerpo, deps });
+
+    expect(leadsCreados.map((l) => l.nombre)).toEqual(["Marta López"]);
+  });
+});
+
+describe("avisos de la cuenta", () => {
+  it("PARTNER_REMOVED de la WABA de Hydrup la marca como desconectada con su motivo", async () => {
+    const { deps, desconexiones } = depsFalsas();
+    const cuerpo = sobreCampo("account_update", {
+      event: "PARTNER_REMOVED",
+      waba_info: { waba_id: "WABA-HYDRUP", owner_business_id: "B1" },
+      disconnection_info: { reason: "PRIMARY_INACTIVITY" },
+    });
+
+    await procesarWebhook({ cuerpo, deps });
+
+    expect(desconexiones).toEqual([{ marcaId: HYDRUP.id, motivo: "PRIMARY_INACTIVITY" }]);
+  });
+
+  it("otros avisos solo se registran", async () => {
+    const { deps, desconexiones } = depsFalsas();
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+
+    await procesarWebhook({
+      cuerpo: sobreCampo("account_update", { event: "PARTNER_ADDED", waba_info: { waba_id: "WABA-HYDRUP" } }),
+      deps,
+    });
+
+    expect(desconexiones).toHaveLength(0);
+    expect(infoSpy).toHaveBeenCalled();
+    infoSpy.mockRestore();
   });
 });
 
