@@ -21,6 +21,11 @@ export interface MensajeEntrante {
   botonId: string | null;
   tipo: string;
   recibidoEn: Date;
+  // Id del número de la empresa que recibió el mensaje (`metadata.phone_number_id`).
+  // Con varios números por marca es lo que decide a qué marca pertenece.
+  numeroId: string | null;
+  // Nombre de perfil de WhatsApp del lead, de `contacts[]` (el que casa con `from`).
+  nombrePerfil: string | null;
   referral: { campana: string | null; anuncio: string | null; titular: string | null } | null;
   // El objeto tal cual lo mandó Meta para ESTE mensaje, sin normalizar. La
   // columna `payload` (jsonb) se creó para poder recuperar más adelante lo
@@ -47,21 +52,48 @@ function esObjeto(valor: unknown): valor is Record<string, unknown> {
 }
 
 /**
- * Recorre `entry[].changes[].value` del sobre de Meta buscando el campo que
- * corresponda (`messages` o `statuses`). Cualquier forma que no encaje
- * (campo ausente, `entry` que no es array, `value` que no es objeto...) se
- * trata como "no hay nada que sacar de aquí", nunca como error.
+ * Recorre `entry[].changes[]` del sobre de Meta devolviendo cada `value` con el
+ * `field` del cambio (`messages`, `smb_message_echoes`, `history`...). Cualquier
+ * forma que no encaje (campo ausente, `entry` que no es array, `value` que no
+ * es objeto...) se trata como "no hay nada que sacar de aquí", nunca como error.
  */
-function valoresDeCambios(cuerpo: unknown): Record<string, unknown>[] {
+function valoresDeCambios(cuerpo: unknown): Array<{ campo: string | null; valor: Record<string, unknown> }> {
   if (!esObjeto(cuerpo) || !Array.isArray(cuerpo.entry)) return [];
-  const valores: Record<string, unknown>[] = [];
+  const valores: Array<{ campo: string | null; valor: Record<string, unknown> }> = [];
   for (const entrada of cuerpo.entry) {
     if (!esObjeto(entrada) || !Array.isArray(entrada.changes)) continue;
     for (const cambio of entrada.changes) {
-      if (esObjeto(cambio) && esObjeto(cambio.value)) valores.push(cambio.value);
+      if (esObjeto(cambio) && esObjeto(cambio.value)) {
+        valores.push({ campo: typeof cambio.field === "string" ? cambio.field : null, valor: cambio.value });
+      }
     }
   }
   return valores;
+}
+
+/** Valores de los cambios cuyo `field` es uno de `campos` (o, si `sinCampo`, no trae ninguno). */
+function valoresDeCampo(cuerpo: unknown, campos: string[], sinCampo = false): Record<string, unknown>[] {
+  return valoresDeCambios(cuerpo)
+    .filter(({ campo }) => (campo === null ? sinCampo : campos.includes(campo)))
+    .map(({ valor }) => valor);
+}
+
+/** `value.metadata.phone_number_id`, o null. */
+function numeroIdDe(valor: Record<string, unknown>): string | null {
+  return esObjeto(valor.metadata) && typeof valor.metadata.phone_number_id === "string"
+    ? valor.metadata.phone_number_id
+    : null;
+}
+
+/** Nombre de perfil del `contacts[]` cuyo `wa_id` es `waId`, o null. */
+function nombrePerfilDe(valor: Record<string, unknown>, waId: string): string | null {
+  if (!Array.isArray(valor.contacts)) return null;
+  for (const c of valor.contacts) {
+    if (esObjeto(c) && c.wa_id === waId && esObjeto(c.profile) && typeof c.profile.name === "string") {
+      return c.profile.name;
+    }
+  }
+  return null;
 }
 
 /**
@@ -100,6 +132,23 @@ const TIMESTAMP_MINIMO_SEGUNDOS = 946684800;
 // ahora es un margen de sobra para cualquier reloj real, y descarta de
 // sobra cualquier timestamp en milisegundos.
 const DIEZ_ANIOS_EN_SEGUNDOS = 10 * 365 * 24 * 60 * 60;
+
+/** Techo de timestamp calculado al llamar, no al arrancar el proceso. */
+function techoDeSegundos(): number {
+  return Math.floor(Date.now() / 1000) + DIEZ_ANIOS_EN_SEGUNDOS;
+}
+
+/**
+ * Fecha de un timestamp de Meta (segundos, como cadena) o `null` si es basura:
+ * no es cadena, no es finito, anterior al suelo o posterior al techo. Lo usan
+ * ecos e historial; `extraerMensajes` aplica las mismas reglas en línea.
+ */
+function fechaDeMeta(timestamp: unknown, techoSegundos: number): Date | null {
+  if (typeof timestamp !== "string") return null;
+  const segundos = Number(timestamp);
+  if (!Number.isFinite(segundos) || segundos <= TIMESTAMP_MINIMO_SEGUNDOS || segundos > techoSegundos) return null;
+  return new Date(segundos * 1000);
+}
 
 /**
  * Texto e id de botón del mensaje entrante, extraídos JUNTOS en una sola
@@ -141,8 +190,8 @@ export function extraerMensajes(cuerpo: unknown): MensajeEntrante[] {
   const mensajes: MensajeEntrante[] = [];
   // Techo calculado una vez por llamada, no como constante de módulo: así no
   // queda congelado al momento en que arrancó el proceso.
-  const techoSegundos = Math.floor(Date.now() / 1000) + DIEZ_ANIOS_EN_SEGUNDOS;
-  for (const valor of valoresDeCambios(cuerpo)) {
+  const techoSegundos = techoDeSegundos();
+  for (const valor of valoresDeCampo(cuerpo, ["messages"], true)) {
     if (!Array.isArray(valor.messages)) continue;
     for (const m of valor.messages) {
       if (!esObjeto(m)) {
@@ -185,6 +234,8 @@ export function extraerMensajes(cuerpo: unknown): MensajeEntrante[] {
         botonId,
         tipo,
         recibidoEn,
+        numeroId: numeroIdDe(valor),
+        nombrePerfil: nombrePerfilDe(valor, m.from),
         referral: referralDeMensaje(m.referral),
         crudo: m,
       });
@@ -201,7 +252,7 @@ const ESTADOS_META: Record<string, "entregado" | "leido" | "fallido"> = {
 
 export function extraerEstados(cuerpo: unknown): Array<{ wamid: string; estado: "entregado" | "leido" | "fallido" }> {
   const estados: Array<{ wamid: string; estado: "entregado" | "leido" | "fallido" }> = [];
-  for (const valor of valoresDeCambios(cuerpo)) {
+  for (const valor of valoresDeCampo(cuerpo, ["messages"], true)) {
     if (!Array.isArray(valor.statuses)) continue;
     for (const s of valor.statuses) {
       if (!esObjeto(s) || typeof s.id !== "string" || typeof s.status !== "string") continue;
@@ -211,6 +262,186 @@ export function extraerEstados(cuerpo: unknown): Array<{ wamid: string; estado: 
     }
   }
   return estados;
+}
+
+/** Texto de un mensaje/eco de tipo `text`; el resto de tipos no tiene texto guardable. */
+function textoPlano(tipo: string, m: Record<string, unknown>): string | null {
+  return tipo === "text" && esObjeto(m.text) && typeof m.text.body === "string" ? m.text.body : null;
+}
+
+// Mensaje que la empresa escribió desde la app de WhatsApp Business (coexistencia).
+export interface EcoSaliente {
+  wamid: string;
+  // Destinatario: el número del lead (`to`).
+  waId: string;
+  numeroId: string | null;
+  texto: string | null;
+  tipo: string;
+  enviadoEn: Date;
+  crudo: unknown;
+}
+
+export function extraerEcos(cuerpo: unknown): EcoSaliente[] {
+  const ecos: EcoSaliente[] = [];
+  const techoSegundos = techoDeSegundos();
+  for (const valor of valoresDeCampo(cuerpo, ["smb_message_echoes"])) {
+    if (!Array.isArray(valor.message_echoes)) continue;
+    for (const e of valor.message_echoes) {
+      if (!esObjeto(e) || typeof e.id !== "string" || typeof e.to !== "string") {
+        console.warn("[whatsapp] eco descartado: falta id/to");
+        continue;
+      }
+      const enviadoEn = fechaDeMeta(e.timestamp, techoSegundos);
+      if (!enviadoEn) {
+        console.warn("[whatsapp] eco descartado: timestamp fuera de rango", e.id, e.timestamp);
+        continue;
+      }
+      const tipo = typeof e.type === "string" ? e.type : "desconocido";
+      ecos.push({
+        wamid: e.id,
+        waId: e.to,
+        numeroId: numeroIdDe(valor),
+        texto: textoPlano(tipo, e),
+        tipo,
+        enviadoEn,
+        crudo: e,
+      });
+    }
+  }
+  return ecos;
+}
+
+// Un lote del historial que la empresa decidió compartir al conectar el número.
+export interface LoteHistorial {
+  numeroId: string | null;
+  fase: number | null;
+  progreso: number | null;
+  // Presente si la empresa rechazó compartir el historial (código 2593109) u
+  // otro fallo de la sincronización; entonces no hay hilos.
+  error: { codigo: number; mensaje: string } | null;
+  hilos: Array<{
+    waId: string;
+    mensajes: Array<{
+      wamid: string;
+      deNegocio: boolean;
+      texto: string | null;
+      tipo: string;
+      enviadoEn: Date;
+      crudo: unknown;
+    }>;
+  }>;
+}
+
+function numeroODefecto(v: unknown): number | null {
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
+}
+
+export function extraerHistorial(cuerpo: unknown): LoteHistorial[] {
+  const lotes: LoteHistorial[] = [];
+  const techoSegundos = techoDeSegundos();
+  for (const valor of valoresDeCampo(cuerpo, ["history"])) {
+    if (!Array.isArray(valor.history)) continue;
+    for (const lote of valor.history) {
+      if (!esObjeto(lote)) continue;
+      const meta = esObjeto(lote.metadata) ? lote.metadata : {};
+      let error: LoteHistorial["error"] = null;
+      if (Array.isArray(lote.errors) && esObjeto(lote.errors[0])) {
+        const e = lote.errors[0];
+        const mensaje = typeof e.title === "string" ? e.title : typeof e.message === "string" ? e.message : "";
+        error = { codigo: numeroODefecto(e.code) ?? 0, mensaje };
+      }
+      const hilos: LoteHistorial["hilos"] = [];
+      if (Array.isArray(lote.threads)) {
+        for (const hilo of lote.threads) {
+          if (!esObjeto(hilo) || typeof hilo.id !== "string") continue;
+          const mensajes: LoteHistorial["hilos"][number]["mensajes"] = [];
+          if (Array.isArray(hilo.messages)) {
+            for (const m of hilo.messages) {
+              if (!esObjeto(m) || typeof m.id !== "string" || typeof m.from !== "string") {
+                console.warn("[whatsapp] mensaje de historial descartado: falta id/from");
+                continue;
+              }
+              const enviadoEn = fechaDeMeta(m.timestamp, techoSegundos);
+              if (!enviadoEn) {
+                console.warn("[whatsapp] mensaje de historial descartado: timestamp fuera de rango", m.id, m.timestamp);
+                continue;
+              }
+              const tipo = typeof m.type === "string" ? m.type : "desconocido";
+              mensajes.push({
+                wamid: m.id,
+                deNegocio: m.from !== hilo.id,
+                texto: textoPlano(tipo, m),
+                tipo,
+                enviadoEn,
+                crudo: m,
+              });
+            }
+          }
+          hilos.push({ waId: hilo.id, mensajes });
+        }
+      }
+      lotes.push({
+        numeroId: numeroIdDe(valor),
+        fase: numeroODefecto(meta.phase),
+        progreso: numeroODefecto(meta.progress),
+        error,
+        hilos,
+      });
+    }
+  }
+  return lotes;
+}
+
+// Contacto que la empresa añadió o quitó en la app de WhatsApp Business.
+export interface ContactoSync {
+  numeroId: string | null;
+  waId: string;
+  nombre: string | null;
+  accion: "add" | "remove";
+}
+
+export function extraerContactos(cuerpo: unknown): ContactoSync[] {
+  const contactos: ContactoSync[] = [];
+  for (const valor of valoresDeCampo(cuerpo, ["smb_app_state_sync"])) {
+    if (!Array.isArray(valor.state_sync)) continue;
+    for (const s of valor.state_sync) {
+      if (!esObjeto(s) || s.type !== "contact" || (s.action !== "add" && s.action !== "remove")) continue;
+      if (!esObjeto(s.contact) || typeof s.contact.phone_number !== "string") continue;
+      const waId = s.contact.phone_number.replace(/\D/g, "");
+      if (!waId) continue;
+      const nombre =
+        typeof s.contact.full_name === "string"
+          ? s.contact.full_name
+          : typeof s.contact.first_name === "string"
+            ? s.contact.first_name
+            : null;
+      contactos.push({ numeroId: numeroIdDe(valor), waId, nombre, accion: s.action });
+    }
+  }
+  return contactos;
+}
+
+// Cambio en la cuenta de WhatsApp Business (p. ej. la empresa desvincula el número).
+export interface AvisoCuenta {
+  evento: string;
+  wabaId: string | null;
+  motivo: string | null;
+}
+
+export function extraerAvisosCuenta(cuerpo: unknown): AvisoCuenta[] {
+  const avisos: AvisoCuenta[] = [];
+  for (const valor of valoresDeCampo(cuerpo, ["account_update"])) {
+    if (typeof valor.event !== "string") continue;
+    avisos.push({
+      evento: valor.event,
+      wabaId: esObjeto(valor.waba_info) && typeof valor.waba_info.waba_id === "string" ? valor.waba_info.waba_id : null,
+      motivo:
+        esObjeto(valor.disconnection_info) && typeof valor.disconnection_info.reason === "string"
+          ? valor.disconnection_info.reason
+          : null,
+    });
+  }
+  return avisos;
 }
 
 /**

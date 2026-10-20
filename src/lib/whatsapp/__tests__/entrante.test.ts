@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { decidir, extraerEstados, extraerMensajes } from "../entrante";
+import {
+  decidir,
+  extraerAvisosCuenta,
+  extraerContactos,
+  extraerEcos,
+  extraerEstados,
+  extraerHistorial,
+  extraerMensajes,
+} from "../entrante";
 
 const sobre = (value: unknown) => ({
   object: "whatsapp_business_account",
@@ -75,6 +83,8 @@ describe("decidir", () => {
     // No se usa en `decidir`; se rellena solo para que el fixture cumpla la
     // interfaz `MensajeEntrante` tras añadir los campos `crudo` y `botonId`.
     botonId: null,
+    numeroId: null,
+    nombrePerfil: null,
     tipo: "text",
     recibidoEn: new Date(),
     crudo: null,
@@ -351,5 +361,189 @@ describe("extraerMensajes — botones", () => {
     );
     expect(m.texto).toBeNull();
     expect(m.botonId).toBeNull();
+  });
+});
+
+const sobreCampo = (field: string, value: unknown) => ({
+  object: "whatsapp_business_account",
+  entry: [{ id: "1058918150452294", changes: [{ field, value }] }],
+});
+
+describe("extraerMensajes — número y perfil", () => {
+  it("saca numeroId del metadata y nombrePerfil de contacts", () => {
+    const [m] = extraerMensajes(
+      sobre({
+        metadata: { phone_number_id: "PN1" },
+        contacts: [
+          { wa_id: "111", profile: { name: "Otro" } },
+          { wa_id: "34660415514", profile: { name: "Ana" } },
+        ],
+        messages: [{ id: "wamid.P", from: "34660415514", timestamp: "1790000000", type: "text", text: { body: "hola" } }],
+      }),
+    );
+    expect(m.numeroId).toBe("PN1");
+    expect(m.nombrePerfil).toBe("Ana");
+  });
+
+  it("deja numeroId y nombrePerfil a null si no vienen", () => {
+    const [m] = extraerMensajes(
+      sobre({ messages: [{ id: "wamid.Q", from: "1", timestamp: "1790000000", type: "text", text: { body: "x" } }] }),
+    );
+    expect(m.numeroId).toBeNull();
+    expect(m.nombrePerfil).toBeNull();
+  });
+});
+
+describe("extraerEcos", () => {
+  it("extrae un eco de texto de smb_message_echoes", () => {
+    const [e] = extraerEcos(
+      sobreCampo("smb_message_echoes", {
+        metadata: { phone_number_id: "PN1" },
+        message_echoes: [
+          { from: "34900000000", to: "34660415514", id: "wamid.E", timestamp: "1790000000", type: "text", text: { body: "hola" } },
+        ],
+      }),
+    );
+    expect(e.wamid).toBe("wamid.E");
+    expect(e.waId).toBe("34660415514");
+    expect(e.numeroId).toBe("PN1");
+    expect(e.texto).toBe("hola");
+    expect(e.tipo).toBe("text");
+    expect(e.enviadoEn).toEqual(new Date(1790000000 * 1000));
+  });
+
+  it("ignora un eco dentro de un cambio messages", () => {
+    expect(
+      extraerEcos(
+        sobreCampo("messages", {
+          message_echoes: [{ from: "a", to: "b", id: "w", timestamp: "1790000000", type: "text" }],
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("descarta ecos con timestamp inválido y no lanza con basura", () => {
+    const base = { from: "a", to: "b", id: "w", type: "text" };
+    expect(
+      extraerEcos(
+        sobreCampo("smb_message_echoes", {
+          message_echoes: [{ ...base, timestamp: "" }, { ...base, timestamp: "1790000000000" }, 5, null],
+        }),
+      ),
+    ).toEqual([]);
+    expect(extraerEcos(null)).toEqual([]);
+  });
+
+  it("extraerMensajes y extraerEstados ignoran otros campos", () => {
+    const cuerpo = sobreCampo("smb_message_echoes", {
+      messages: [{ id: "w", from: "a", timestamp: "1790000000", type: "text" }],
+      statuses: [{ id: "w", status: "read" }],
+    });
+    expect(extraerMensajes(cuerpo)).toEqual([]);
+    expect(extraerEstados(cuerpo)).toEqual([]);
+  });
+});
+
+describe("extraerHistorial", () => {
+  it("extrae un hilo con un mensaje de cada lado", () => {
+    const [lote] = extraerHistorial(
+      sobreCampo("history", {
+        metadata: { phone_number_id: "PN1" },
+        history: [
+          {
+            metadata: { phase: 0, chunk_order: 1, progress: 100 },
+            threads: [
+              {
+                id: "34660415514",
+                messages: [
+                  { from: "34660415514", id: "wamid.H1", timestamp: "1790000000", type: "text", text: { body: "hola" } },
+                  { from: "34900000000", id: "wamid.H2", timestamp: "1790000100", type: "text", text: { body: "qué tal" } },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    expect(lote.numeroId).toBe("PN1");
+    expect(lote.fase).toBe(0);
+    expect(lote.progreso).toBe(100);
+    expect(lote.error).toBeNull();
+    expect(lote.hilos).toHaveLength(1);
+    expect(lote.hilos[0].waId).toBe("34660415514");
+    expect(lote.hilos[0].mensajes.map((m) => [m.wamid, m.deNegocio, m.texto])).toEqual([
+      ["wamid.H1", false, "hola"],
+      ["wamid.H2", true, "qué tal"],
+    ]);
+  });
+
+  it("reporta el error 2593109 sin hilos", () => {
+    const [lote] = extraerHistorial(
+      sobreCampo("history", {
+        metadata: { phone_number_id: "PN1" },
+        history: [
+          {
+            errors: [
+              {
+                code: 2593109,
+                title: "History sync is turned off by the business from the WhatsApp Business App",
+                error_data: { details: "x" },
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    expect(lote.error?.codigo).toBe(2593109);
+    expect(lote.error?.mensaje).toContain("History sync is turned off");
+    expect(lote.hilos).toEqual([]);
+  });
+
+  it("descarta mensajes con timestamp inválido y no lanza con basura", () => {
+    const [lote] = extraerHistorial(
+      sobreCampo("history", {
+        history: [{ threads: [{ id: "1", messages: [{ from: "1", id: "w", timestamp: "0", type: "text" }, 7] }, "x"] }],
+      }),
+    );
+    expect(lote.hilos[0].mensajes).toEqual([]);
+    expect(extraerHistorial({ entry: 3 })).toEqual([]);
+  });
+});
+
+describe("extraerContactos", () => {
+  it("normaliza el teléfono a dígitos", () => {
+    const [c] = extraerContactos(
+      sobreCampo("smb_app_state_sync", {
+        metadata: { phone_number_id: "PN1" },
+        state_sync: [
+          {
+            type: "contact",
+            contact: { full_name: "Ana Pérez", first_name: "Ana", phone_number: "+34 600 11 22 33" },
+            action: "add",
+            metadata: { timestamp: "1790000000" },
+          },
+          { type: "otro", contact: { phone_number: "1" }, action: "add" },
+        ],
+      }),
+    );
+    expect(c).toEqual({ numeroId: "PN1", waId: "34600112233", nombre: "Ana Pérez", accion: "add" });
+  });
+});
+
+describe("extraerAvisosCuenta", () => {
+  it("extrae PARTNER_REMOVED con motivo", () => {
+    const [a] = extraerAvisosCuenta(
+      sobreCampo("account_update", {
+        event: "PARTNER_REMOVED",
+        waba_info: { waba_id: "W1", owner_business_id: "B1" },
+        disconnection_info: { reason: "PRIMARY_INACTIVITY" },
+      }),
+    );
+    expect(a).toEqual({ evento: "PARTNER_REMOVED", wabaId: "W1", motivo: "PRIMARY_INACTIVITY" });
+  });
+
+  it("motivo y wabaId a null si faltan", () => {
+    const [a] = extraerAvisosCuenta(sobreCampo("account_update", { event: "PARTNER_ADDED" }));
+    expect(a).toEqual({ evento: "PARTNER_ADDED", wabaId: null, motivo: null });
   });
 });
