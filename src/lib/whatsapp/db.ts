@@ -339,12 +339,16 @@ export async function guardarEco(input: {
   if (!r || r.error) throw new Error(`[whatsapp/db] guardarEco: ${r?.error?.message ?? "sin respuesta"}`);
   const nuevo = (r.data ?? []).length > 0;
 
-  // Mismo criterio que guardarEntrante: solo si era nuevo, y best-effort.
+  // Mismo criterio que guardarEntrante: solo si era nuevo, y best-effort. Y
+  // solo si es más reciente que lo último de la conversación: un eco que se
+  // procesa después de un entrante posterior (otro lote, un reintento) no
+  // puede devolver el resumen de la bandeja a un mensaje más viejo.
   if (nuevo) {
     const conv = await db()
       .from("ventas_conversaciones")
       .update({ ultimo_texto: input.texto, ultimo_mensaje_at: enviadoEn })
-      .eq("id", input.conversacionId);
+      .eq("id", input.conversacionId)
+      .lt("ultimo_mensaje_at", enviadoEn);
     if (conv.error) console.error(`[whatsapp/db] guardarEco (conversación): ${conv.error.message}`);
   }
   return { nuevo };

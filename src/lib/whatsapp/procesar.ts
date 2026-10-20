@@ -1440,11 +1440,17 @@ async function procesarMensaje(
  * propio, uno nuevo de origen `"whatsapp"` (sin nombre: el eco no trae el
  * perfil del destinatario). En Dinkbit no se crea lead, como siempre.
  *
- * FASE B: si alguien escribe desde el móvil, esa conversación ya la lleva una
- * persona: pasa a `humana` y se limpia el paso, igual que cuando el guion la
- * entrega (así el siguiente mensaje del lead no reactiva el bot). La ventana
- * NO se toca: un mensaje de la empresa no la abre. Best-effort: el eco ya está
- * guardado y un reintento de Meta no repararía nada (lo cortaría el wamid).
+ * Parar la secuencia también es FASE A, ANTES de guardar el eco: si alguien
+ * escribe desde el móvil, esa conversación ya la lleva una persona, y un lead
+ * no puede tener nunca al bot y a una persona en paralelo. Pasa a `humana` y
+ * se limpia el paso, igual que cuando el guion la entrega (así el siguiente
+ * mensaje del lead no reactiva el bot). Si se hiciera después del guardado y
+ * fallara, el reintento de Meta chocaría con el wamid y el bot seguiría
+ * suelto para siempre; antes, un fallo da 500 y el reintento lo vuelve a
+ * intentar (reaplicarlo es idempotente). La ventana NO se toca: un mensaje de
+ * la empresa no la abre.
+ *
+ * No queda FASE B: tras guardar el eco no hay nada más que hacer.
  */
 async function procesarEco(marca: Marca, eco: EcoSaliente, deps: Deps): Promise<boolean> {
   const marcaId = marca.id;
@@ -1486,6 +1492,10 @@ async function procesarEco(marca: Marca, eco: EcoSaliente, deps: Deps): Promise<
     conversacion = { ...conversacion, lead_id: creado.id };
   }
 
+  if (conversacion.estado !== "humana" || conversacion.paso_actual) {
+    await deps.actualizarConversacion(conversacion.id, { estado: "humana", pasoActual: null });
+  }
+
   const { nuevo } = await deps.guardarEco({
     conversacionId: conversacion.id,
     wamid: eco.wamid,
@@ -1493,17 +1503,7 @@ async function procesarEco(marca: Marca, eco: EcoSaliente, deps: Deps): Promise<
     enviadoEn: eco.enviadoEn,
     payload: eco.crudo,
   });
-  if (!nuevo) return false;
-
-  // ---- FASE B: best-effort ------------------------------------------------
-  if (conversacion.estado !== "humana" || conversacion.paso_actual) {
-    try {
-      await deps.actualizarConversacion(conversacion.id, { estado: "humana", pasoActual: null });
-    } catch (e) {
-      console.error("[whatsapp] fallo parando la secuencia tras un eco del móvil", eco.wamid, e);
-    }
-  }
-  return true;
+  return nuevo;
 }
 
 /**

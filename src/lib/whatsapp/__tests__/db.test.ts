@@ -8,6 +8,9 @@ const insertMock = vi.fn();
 // El doble de `ventas_conversaciones.update(...).eq(...)`, para comprobar que
 // guardarEntrante/guardarSaliente actualizan (o no) el resumen desnormalizado.
 const actualizarConversacionMock = vi.fn();
+// El `.lt(...)` encadenado tras ese `.eq(...)` (lo usa guardarEco): recibe la
+// columna, el valor y el resultado del update al que filtra.
+const ltMock = vi.fn((_col: string, _valor: string, r: unknown) => r);
 // `ventas_conversaciones.insert(...).select("*").single()`, para crearConversacion.
 const insertConversacionMock = vi.fn();
 
@@ -18,7 +21,12 @@ vi.mock("../../supabase-admin", () => ({
       if (tabla === "ventas_mensajes") return { upsert: upsertMock, insert: insertMock };
       if (tabla === "ventas_conversaciones") {
         return {
-          update: (patch: unknown) => ({ eq: (_col: string, id: string) => actualizarConversacionMock(patch, id) }),
+          update: (patch: unknown) => ({
+            eq: (_col: string, id: string) => {
+              const r = actualizarConversacionMock(patch, id);
+              return { ...r, lt: (col: string, valor: string) => ltMock(col, valor, r) };
+            },
+          }),
           insert: (fila: unknown) => ({ select: () => ({ single: () => insertConversacionMock(fila) }) }),
         };
       }
@@ -33,6 +41,7 @@ beforeEach(() => {
   upsertMock.mockReset();
   insertMock.mockReset().mockReturnValue({ error: null });
   actualizarConversacionMock.mockReset().mockReturnValue({ error: null });
+  ltMock.mockClear();
   insertConversacionMock.mockReset().mockImplementation((fila: Record<string, unknown>) => ({ data: { id: "c1", ...fila }, error: null }));
 });
 
@@ -105,6 +114,16 @@ describe("guardarEco", () => {
     const [patch, id] = actualizarConversacionMock.mock.calls[0];
     expect(id).toBe("c1");
     expect(patch).toEqual({ ultimo_texto: "Te llamo ahora", ultimo_mensaje_at: "2026-09-21T14:13:20.000Z" });
+  });
+
+  // Un eco viejo procesado después de un entrante más nuevo no puede devolver
+  // el resumen de la bandeja hacia atrás: el update solo toca la fila si lo que
+  // tiene es anterior al eco.
+  it("solo actualiza el resumen si el eco es más reciente que el último mensaje", async () => {
+    upsertMock.mockReturnValue({ select: () => ({ data: [{ id: "m1" }], error: null }) });
+    await guardarEco(eco);
+    expect(ltMock).toHaveBeenCalledTimes(1);
+    expect(ltMock.mock.calls[0].slice(0, 2)).toEqual(["ultimo_mensaje_at", "2026-09-21T14:13:20.000Z"]);
   });
 
   it("un eco repetido dice que no es nuevo y no toca la conversación", async () => {

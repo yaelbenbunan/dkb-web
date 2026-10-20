@@ -2008,22 +2008,20 @@ describe("ecos del móvil", () => {
   });
 
   it("un eco repetido (mismo wamid) no vuelve a escribir nada", async () => {
-    const { deps, conversaciones, ecos } = depsFalsas();
+    const { deps, conversaciones, ecos, leadsCreados } = depsFalsas();
     conversaciones.set(`${HYDRUP.id}:34611222333`, conversacionEnBot());
     const cuerpo = sobreConEcos("PN-HYDRUP", [{ id: "wamid.ECO1" }]);
     await procesarWebhook({ cuerpo, deps });
 
-    // Entre medias el bot volvió a arrancar (p.ej. el lead pulsó otro anuncio):
-    // el reintento de Meta del eco viejo no puede pararlo otra vez.
-    conversaciones.set(`${HYDRUP.id}:34611222333`, conversacionEnBot());
     const actualizarSpy = vi.spyOn(deps, "actualizarConversacion");
     const crearSpy = vi.spyOn(deps, "crearConversacion");
     await procesarWebhook({ cuerpo, deps });
 
     expect(ecos).toHaveLength(1);
+    expect(leadsCreados).toHaveLength(0);
+    // La conversación ya quedó en humana y sin paso: no hay nada que reaplicar.
     expect(actualizarSpy).not.toHaveBeenCalled();
     expect(crearSpy).not.toHaveBeenCalled();
-    expect(conversaciones.get(`${HYDRUP.id}:34611222333`)?.estado).toBe("bot");
   });
 
   it("en Dinkbit un eco sin conversación la crea en humana pero sin lead", async () => {
@@ -2084,18 +2082,26 @@ describe("ecos del móvil", () => {
     );
   });
 
-  it("si falla parar la secuencia tras guardar el eco, se registra y no lanza", async () => {
+  // Bot y persona nunca en paralelo: si no se puede parar la secuencia, el eco
+  // no se guarda y el 500 deja que el reintento de Meta lo vuelva a intentar.
+  it("si falla parar la secuencia, lanza sin guardar el eco y el reintento la para", async () => {
     const { deps, conversaciones, ecos } = depsFalsas();
     conversaciones.set(`${HYDRUP.id}:34611222333`, conversacionEnBot());
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const actualizar = deps.actualizarConversacion;
     deps.actualizarConversacion = async () => {
       throw new Error("boom");
     };
+    const cuerpo = sobreConEcos("PN-HYDRUP", [{ id: "wamid.ECO1" }]);
 
-    await expect(procesarWebhook({ cuerpo: sobreConEcos("PN-HYDRUP", [{ id: "wamid.ECO1" }]), deps })).resolves.toBeDefined();
+    await expect(procesarWebhook({ cuerpo, deps })).rejects.toThrow("boom");
+    expect(ecos).toHaveLength(0);
+    expect(conversaciones.get(`${HYDRUP.id}:34611222333`)?.estado).toBe("bot");
+
+    deps.actualizarConversacion = actualizar;
+    await procesarWebhook({ cuerpo, deps });
     expect(ecos).toHaveLength(1);
-    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("eco"), "wamid.ECO1", expect.any(Error));
-    errorSpy.mockRestore();
+    expect(conversaciones.get(`${HYDRUP.id}:34611222333`)?.estado).toBe("humana");
+    expect(conversaciones.get(`${HYDRUP.id}:34611222333`)?.paso_actual).toBeNull();
   });
 });
 
