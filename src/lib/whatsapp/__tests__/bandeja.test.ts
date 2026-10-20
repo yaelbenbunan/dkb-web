@@ -76,8 +76,8 @@ describe("etiquetaOrigen", () => {
 
 describe("nombreConversacion", () => {
   const nombres = new Map([["l1", "Hydrup SL"]]);
-  it("prefiere el nombre del lead", () => {
-    expect(nombreConversacion("34600111222", "l1", nombres, "Ana")).toBe("Hydrup SL");
+  it("prefiere el nombre del lead, también con el teléfono al lado", () => {
+    expect(nombreConversacion("34600111222", "l1", nombres, "Ana")).toBe("Hydrup SL (600111222)");
   });
   it("sin lead usa el nombre de contacto", () => {
     expect(nombreConversacion("34600111222", null, nombres, "Ana")).toBe("Ana (600111222)");
