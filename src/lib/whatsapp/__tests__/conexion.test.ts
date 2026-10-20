@@ -47,6 +47,7 @@ beforeEach(() => {
   m.setHistorialMarca.mockReset().mockResolvedValue(undefined);
   vi.stubEnv("WHATSAPP_CLAVE_TOKENS", CLAVE);
   vi.stubEnv("WHATSAPP_APP_SECRET", SECRETO);
+  vi.stubEnv("WHATSAPP_PHONE_NUMBER_ID", "1385086741345422");
 });
 
 afterEach(() => {
@@ -185,8 +186,47 @@ describe("conectarNumero", () => {
     }) as typeof fetch;
     const r = await conectarNumero({ ...base, fetchImpl: impl });
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.error).toMatch(/historial/i);
+    if (!r.ok) {
+      expect(r.error).toBe(
+        "El número quedó conectado, pero Meta no aceptó la petición de historial: solo se puede pedir una vez, en las 24 h siguientes a la conexión.",
+      );
+      expect(r.error).not.toMatch(/reconectar/i);
+    }
     expect(m.setHistorialMarca).not.toHaveBeenCalled();
+  });
+
+  it.each(["pedido", "completo"] as const)("al reconectar con historial %s no se vuelve a pedir ni se toca su estado", async (estado) => {
+    const f = fetchFalso();
+    const r = await conectarNumero({ ...base, historialActual: estado, fetchImpl: f.impl });
+    expect(r.ok).toBe(true);
+    const syncs = f.llamadas.filter((l) => l.ruta === "/222/smb_app_data").map((l) => (l.cuerpo as { sync_type: string }).sync_type);
+    expect(syncs).toEqual(["smb_app_state_sync"]);
+    expect(m.guardarConexion).toHaveBeenCalledTimes(1);
+    expect(m.setHistorialMarca).not.toHaveBeenCalled();
+  });
+
+  it("con historial rechazado antes sí se vuelve a pedir", async () => {
+    const f = fetchFalso();
+    await conectarNumero({ ...base, historialActual: "rechazado", fetchImpl: f.impl });
+    expect(f.llamadas.filter((l) => l.ruta === "/222/smb_app_data")).toHaveLength(2);
+    expect(m.setHistorialMarca).toHaveBeenCalledWith("m1", "pedido");
+  });
+
+  it("el número de entorno (Dinkbit) se rechaza sin guardar, suscribir ni sincronizar", async () => {
+    vi.stubEnv("WHATSAPP_PHONE_NUMBER_ID", "222");
+    const f = fetchFalso();
+    const r = await conectarNumero({ ...base, fetchImpl: f.impl });
+    expect(r).toEqual({ ok: false, error: "Ese número ya está conectado a otra marca." });
+    expect(m.guardarConexion).not.toHaveBeenCalled();
+    expect(f.llamadas.map((l) => l.ruta)).toEqual(["/oauth/access_token", "/111/phone_numbers"]);
+  });
+
+  it("también cuando el número de entorno llega como único de la WABA", async () => {
+    vi.stubEnv("WHATSAPP_PHONE_NUMBER_ID", "222");
+    const f = fetchFalso();
+    const r = await conectarNumero({ ...base, numeroId: null, fetchImpl: f.impl });
+    expect(r).toEqual({ ok: false, error: "Ese número ya está conectado a otra marca." });
+    expect(m.guardarConexion).not.toHaveBeenCalled();
   });
 
   it("un fallo de red en el canje es un error, no una excepción", async () => {

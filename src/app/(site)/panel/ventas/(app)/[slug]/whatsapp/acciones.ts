@@ -3,10 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { accesoMarcaAccion } from "@/lib/ventas/auth";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
+import { MARCA_DINKBIT_SLUG } from "@/lib/ventas/dominio";
 import { puedeConectarWhatsApp } from "@/lib/ventas/rutas";
 import { conectarNumero } from "@/lib/whatsapp/conexion";
 
-const soloDigitos = (v: unknown): v is string => typeof v === "string" && /^\d+$/.test(v);
+const LARGO_MAXIMO_CODE = 2048;
+const soloDigitos = (v: unknown): v is string => typeof v === "string" && /^\d{1,32}$/.test(v);
 
 /**
  * Conecta el número que el negocio eligió en la ventana de Meta a la marca de
@@ -22,12 +24,22 @@ export async function conectarWhatsAppAction(
   // La comercial ve la sección pero no conecta: el permiso de sección no basta.
   if (!puedeConectarWhatsApp(acceso.usuaria, acceso.marca.id)) return { ok: false, error: "No tienes permiso para esto." };
 
+  // Dinkbit va por el número del canal (variables de entorno): conectarle otro cambiaría su enrutado.
+  if (acceso.marca.slug === MARCA_DINKBIT_SLUG) return { ok: false, error: "Dinkbit usa el número del canal; no se conecta desde aquí." };
+
   const { code, wabaId, numeroId } = datos ?? {};
   if (typeof code !== "string" || !code.trim()) return { ok: false, error: "Falta el código de Meta: vuelve a intentarlo." };
+  if (code.length > LARGO_MAXIMO_CODE) return { ok: false, error: "El código de Meta no es válido." };
   if (!soloDigitos(wabaId)) return { ok: false, error: "La cuenta de WhatsApp que devolvió Meta no es válida." };
   if (numeroId !== null && !soloDigitos(numeroId)) return { ok: false, error: "El número que devolvió Meta no es válido." };
 
-  const resultado = await conectarNumero({ marcaId: acceso.marca.id, code: code.trim(), wabaId, numeroId });
+  const resultado = await conectarNumero({
+    marcaId: acceso.marca.id,
+    code: code.trim(),
+    wabaId,
+    numeroId,
+    historialActual: acceso.marca.whatsapp_historial ?? null,
+  });
   revalidatePath(`/panel/ventas/${slug}/whatsapp`);
   return resultado;
 }

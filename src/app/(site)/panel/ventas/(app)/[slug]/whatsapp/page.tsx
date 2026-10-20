@@ -1,5 +1,6 @@
 import { requireAccesoMarca } from "@/lib/ventas/auth";
 import type { Marca } from "@/lib/ventas/db";
+import { MARCA_DINKBIT_SLUG } from "@/lib/ventas/dominio";
 import { puedeConectarWhatsApp } from "@/lib/ventas/rutas";
 import { MarcaCabecera } from "../../../_componentes/MarcaCabecera";
 import { tarjeta, titulo } from "../../../_componentes/estilos";
@@ -17,6 +18,14 @@ const fila = { display: "flex", gap: 12, fontSize: 14, color: "#1e293b", margin:
 const clave = { minWidth: 110, color: "#64748b", fontWeight: 600 } as const;
 
 function Estado({ marca }: { marca: Marca }) {
+  if (marca.slug === MARCA_DINKBIT_SLUG) {
+    return (
+      <p style={fila}>
+        <span style={clave}>Estado</span>
+        <span style={{ color: "#16a34a", fontWeight: 700 }}>Conectado al número del canal de Dinkbit</span>
+      </p>
+    );
+  }
   const conectada = marca.whatsapp_estado === "conectado" && marca.whatsapp_phone_number_id;
   if (conectada) {
     return (
@@ -64,6 +73,8 @@ export default async function WhatsAppPage({ params }: { params: Promise<{ slug:
   const { slug } = await params;
   // La agente no tiene la sección: requireAccesoMarca la redirige.
   const { usuaria, marca } = await requireAccesoMarca(slug, "whatsapp");
+  // Dinkbit usa el número del canal (entorno): ni historial ni botón aquí.
+  const esDinkbit = marca.slug === MARCA_DINKBIT_SLUG;
   const puedeConectar = puedeConectarWhatsApp(usuaria, marca.id);
   const conNumero = Boolean(marca.whatsapp_phone_number_id);
 
@@ -73,13 +84,13 @@ export default async function WhatsAppPage({ params }: { params: Promise<{ slug:
       <section style={{ ...tarjeta, maxWidth: 640 }}>
         <h2 style={titulo}>Número de WhatsApp</h2>
         <Estado marca={marca} />
-        {conNumero && (
+        {conNumero && !esDinkbit && (
           <p style={fila}>
             <span style={clave}>Historial</span>
             <span>{(marca.whatsapp_historial && HISTORIAL[marca.whatsapp_historial]) || "Sin pedir."}</span>
           </p>
         )}
-        {puedeConectar ? (
+        {esDinkbit ? null : puedeConectar ? (
           <div style={{ marginTop: 16 }}>
             <p style={{ margin: "0 0 12px", fontSize: 13, color: "#475569" }}>
               Se abre una ventana de Meta para elegir el número de la app de WhatsApp Business. El número sigue funcionando en el móvil.

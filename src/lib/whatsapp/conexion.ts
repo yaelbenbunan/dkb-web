@@ -60,6 +60,8 @@ export async function conectarNumero(i: {
   code: string;
   wabaId: string;
   numeroId: string | null;
+  /** Estado del historial antes de conectar: solo se pide una vez por conexión. */
+  historialActual?: "pedido" | "completo" | "rechazado" | null;
   fetchImpl?: typeof fetch;
 }): Promise<ResultadoAccion> {
   // Todo lo que se puede comprobar sin Meta va antes del canje: el code es de un solo uso.
@@ -95,6 +97,8 @@ export async function conectarNumero(i: {
     .filter((id): id is string => typeof id === "string");
   const numeroId = i.numeroId ? (ids.includes(i.numeroId) ? i.numeroId : null) : ids.length === 1 ? ids[0] : null;
   if (!numeroId) return { ok: false, error: "Meta no ha devuelto el número conectado." };
+  // El número de entorno es de Dinkbit aunque no figure en ventas_marcas.
+  if (numeroId === process.env.WHATSAPP_PHONE_NUMBER_ID) return { ok: false, error: "Ese número ya está conectado a otra marca." };
 
   // Cifrado con la misma marca que se guarda: el AAD lo ata a ella.
   const guardado = await guardarConexion(i.marcaId, { wabaId: i.wabaId, numeroId, tokenCifrado: cifrarToken(token, clave, i.marcaId) });
@@ -112,8 +116,20 @@ export async function conectarNumero(i: {
     );
   const contactos = await sincronizar("smb_app_state_sync");
   if (!contactos.ok) return falloTrasGuardar("pedir los contactos del móvil", contactos.error, i.marcaId);
+
+  // Al reconectar no se vuelve a pedir: Meta solo lo acepta una vez, en las 24 h
+  // siguientes a la conexión, y el estado que ya hay sigue valiendo.
+  if (i.historialActual === "pedido" || i.historialActual === "completo") {
+    return { ok: true, mensaje: "WhatsApp conectado. Los contactos irán llegando en los próximos minutos." };
+  }
   const historial = await sincronizar("history");
-  if (!historial.ok) return falloTrasGuardar("pedir el historial de conversaciones", historial.error, i.marcaId);
+  if (!historial.ok) {
+    console.error(`[whatsapp/conexion] pedir el historial (marca ${i.marcaId}):`, historial.error);
+    return {
+      ok: false,
+      error: "El número quedó conectado, pero Meta no aceptó la petición de historial: solo se puede pedir una vez, en las 24 h siguientes a la conexión.",
+    };
+  }
 
   await setHistorialMarca(i.marcaId, "pedido");
   return { ok: true, mensaje: "WhatsApp conectado. Los contactos y el historial irán llegando en los próximos minutos." };
