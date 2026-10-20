@@ -40,10 +40,20 @@ export function esAsignableEnMarca(usuaria: { rol: string; activa: boolean; marc
   return usuaria.rol === "cliente" && usuaria.marca_id === marcaId;
 }
 
-export type SeccionMarca = "resumen" | "tablero" | "leads" | "tareas" | "secuencias" | "conversaciones" | "condiciones" | "campanas" | "prospeccion";
+export type SeccionMarca =
+  | "resumen"
+  | "tablero"
+  | "leads"
+  | "tareas"
+  | "secuencias"
+  | "conversaciones"
+  | "condiciones"
+  | "campanas"
+  | "prospeccion"
+  | "whatsapp";
 
 /** Lo único que ve una usuaria con rol «cliente», y solo en su marca. */
-export const SECCIONES_CLIENTE: readonly SeccionMarca[] = ["resumen", "tablero", "leads", "tareas"];
+export const SECCIONES_CLIENTE: readonly SeccionMarca[] = ["resumen", "tablero", "leads", "tareas", "conversaciones", "whatsapp"];
 
 /** Roles ligados a una sola marca, con las únicas secciones que pueden abrir en ella. */
 const SECCIONES_POR_ROL: Readonly<Record<string, readonly SeccionMarca[]>> = {
@@ -78,6 +88,17 @@ export function evaluarAccesoMarca(
   const secciones = seccionesDeRol(usuaria.rol);
   if (!secciones) return "permiso";
   return usuaria.marca_id === marcaId && secciones.includes(seccion) ? "ok" : "permiso";
+}
+
+/**
+ * Quién puede conectar (o reconectar) el número de WhatsApp de una marca: admin
+ * en cualquiera y la clienta en la suya, que es la dueña del número. La
+ * comercial ve el estado en la sección pero no lo cambia; la agente ni entra.
+ */
+export function puedeConectarWhatsApp(usuaria: { rol: string; activa: boolean; marca_id: string | null }, marcaId: string): boolean {
+  if (!usuaria.activa) return false;
+  if (usuaria.rol === "admin") return true;
+  return usuaria.rol === "cliente" && usuaria.marca_id === marcaId;
 }
 
 /**

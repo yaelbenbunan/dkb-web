@@ -12,6 +12,7 @@ const PESTANAS = [
   { clave: "tareas", texto: "Tareas", ruta: "/tareas" },
   { clave: "secuencias", texto: "Secuencias", ruta: "/secuencias" },
   { clave: "conversaciones", texto: "Conversaciones", ruta: "/conversaciones" },
+  { clave: "whatsapp", texto: "WhatsApp", ruta: "/whatsapp" },
   { clave: "campanas", texto: "Mailing", ruta: "/campanas" },
   { clave: "prospeccion", texto: "Prospección", ruta: "/prospeccion" },
   { clave: "condiciones", texto: "Condiciones", ruta: "/condiciones" },

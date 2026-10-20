@@ -1,6 +1,8 @@
 import "server-only";
+import { GRAPH_VERSION } from "./version";
 
-export const GRAPH_VERSION = "v21.0";
+// Reexportada: vive en un módulo puro para que la use también el navegador (SDK de Facebook).
+export { GRAPH_VERSION };
 
 export type ResultadoEnvio = { ok: true; wamid: string | null } | { ok: false; error: string };
 

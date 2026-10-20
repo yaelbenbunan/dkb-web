@@ -1,5 +1,16 @@
 import { describe, expect, test } from "vitest";
-import { clasificarRutaPanel, destinoTrasLogin, esAsignableEnMarca, evaluarAcceso, evaluarAccesoMarca, inicioDeMarca, rolConMarca, seccionesDeRol, tieneProspeccion } from "../ventas/rutas";
+import {
+  clasificarRutaPanel,
+  destinoTrasLogin,
+  esAsignableEnMarca,
+  evaluarAcceso,
+  evaluarAccesoMarca,
+  inicioDeMarca,
+  puedeConectarWhatsApp,
+  rolConMarca,
+  seccionesDeRol,
+  tieneProspeccion,
+} from "../ventas/rutas";
 
 describe("clasificarRutaPanel", () => {
   test("separa ventas del panel de leads", () => {
@@ -51,11 +62,11 @@ describe("evaluarAccesoMarca", () => {
     }
   });
 
-  test("la clienta solo entra en las cuatro secciones de su marca", () => {
-    for (const s of ["resumen", "tablero", "leads", "tareas"] as const) {
+  test("la clienta solo entra en sus secciones de su marca", () => {
+    for (const s of ["resumen", "tablero", "leads", "tareas", "conversaciones", "whatsapp"] as const) {
       expect(evaluarAccesoMarca(cliente, "m1", s)).toBe("ok");
     }
-    for (const s of ["secuencias", "conversaciones", "condiciones", "campanas", "prospeccion"] as const) {
+    for (const s of ["secuencias", "condiciones", "campanas", "prospeccion"] as const) {
       expect(evaluarAccesoMarca(cliente, "m1", s)).toBe("permiso");
     }
   });
@@ -143,7 +154,7 @@ describe("rol «agente» (solo conversaciones)", () => {
 
   test("sus pestañas y su página de inicio", () => {
     expect(seccionesDeRol("agente")).toEqual(["conversaciones"]);
-    expect(seccionesDeRol("cliente")).toEqual(["resumen", "tablero", "leads", "tareas"]);
+    expect(seccionesDeRol("cliente")).toEqual(["resumen", "tablero", "leads", "tareas", "conversaciones", "whatsapp"]);
     expect(seccionesDeRol("admin")).toBeNull();
     expect(inicioDeMarca("agente", "dinkbit")).toBe("/panel/ventas/dinkbit/conversaciones");
     expect(inicioDeMarca("cliente", "hydrup")).toBe("/panel/ventas/hydrup");
@@ -154,5 +165,38 @@ describe("rol «agente» (solo conversaciones)", () => {
     expect(rolConMarca("agente")).toBe(true);
     expect(rolConMarca("admin")).toBe(false);
     expect(rolConMarca("comercial")).toBe(false);
+  });
+});
+
+describe("puedeConectarWhatsApp", () => {
+  const admin = { rol: "admin", activa: true, marca_id: null };
+  const comercial = { rol: "comercial", activa: true, marca_id: null };
+  const cliente = { rol: "cliente", activa: true, marca_id: "m1" };
+  const agente = { rol: "agente", activa: true, marca_id: "m1" };
+
+  test("admin conecta cualquier marca", () => {
+    expect(puedeConectarWhatsApp(admin, "m1")).toBe(true);
+    expect(puedeConectarWhatsApp(admin, "m2")).toBe(true);
+  });
+
+  test("la clienta solo su marca", () => {
+    expect(puedeConectarWhatsApp(cliente, "m1")).toBe(true);
+    expect(puedeConectarWhatsApp(cliente, "m2")).toBe(false);
+    expect(puedeConectarWhatsApp({ ...cliente, marca_id: null }, "m1")).toBe(false);
+  });
+
+  test("comercial y agente no conectan, aunque vean la sección", () => {
+    expect(evaluarAccesoMarca(comercial, "m1", "whatsapp")).toBe("ok");
+    expect(puedeConectarWhatsApp(comercial, "m1")).toBe(false);
+    expect(puedeConectarWhatsApp(agente, "m1")).toBe(false);
+  });
+
+  test("la agente no entra en la sección", () => {
+    expect(evaluarAccesoMarca(agente, "m1", "whatsapp")).toBe("permiso");
+  });
+
+  test("una usuaria desactivada no conecta", () => {
+    expect(puedeConectarWhatsApp({ ...admin, activa: false }, "m1")).toBe(false);
+    expect(puedeConectarWhatsApp({ ...cliente, activa: false }, "m1")).toBe(false);
   });
 });
