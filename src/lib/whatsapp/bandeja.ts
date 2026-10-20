@@ -62,7 +62,9 @@ export function etiquetaOrigen(origen: Mensaje["origen"] | undefined): string | 
 }
 
 /** «Nombre» que se enseña de una conversación: el del lead vinculado, luego el
- *  nombre de contacto que dio WhatsApp, y por último el teléfono. */
+ *  nombre de contacto que dio WhatsApp —siempre con el teléfono al lado, porque
+ *  el nombre lo controla quien escribe y el número no se puede falsear— y por
+ *  último el teléfono. */
 export function nombreConversacion(
   waId: string,
   leadId: string | null,
@@ -73,5 +75,7 @@ export function nombreConversacion(
     const nombre = nombres.get(leadId);
     if (nombre) return nombre;
   }
-  return nombreContacto?.trim() || (telefonoDeWaId(waId) ?? waId);
+  const telefono = telefonoDeWaId(waId) ?? waId;
+  const contacto = nombreContacto?.trim();
+  return contacto ? `${contacto} (${telefono})` : telefono;
 }

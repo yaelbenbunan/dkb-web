@@ -7,6 +7,7 @@ import {
   extraerEstados,
   extraerHistorial,
   extraerMensajes,
+  limpiarNombre,
 } from "../entrante";
 
 const sobre = (value: unknown) => ({
@@ -545,5 +546,34 @@ describe("extraerAvisosCuenta", () => {
   it("motivo y wabaId a null si faltan", () => {
     const [a] = extraerAvisosCuenta(sobreCampo("account_update", { event: "PARTNER_ADDED" }));
     expect(a).toEqual({ evento: "PARTNER_ADDED", wabaId: null, motivo: null });
+  });
+});
+
+describe("limpiarNombre", () => {
+  it("quita bidi, ancho cero y control, y colapsa espacios", () => {
+    expect(limpiarNombre("\u202Eabc\u200B\u0007  d\uFEFFe\u2066")).toBe("abc de");
+  });
+  it("recorta a 40 caracteres", () => {
+    expect(limpiarNombre("a".repeat(60))).toBe("a".repeat(40));
+  });
+  it("devuelve null si queda vacío o no hay nombre", () => {
+    expect(limpiarNombre("\u200B \u202E")).toBeNull();
+    expect(limpiarNombre(null)).toBeNull();
+    expect(limpiarNombre(undefined)).toBeNull();
+  });
+  it("se aplica a nombrePerfil y a los contactos", () => {
+    const [m] = extraerMensajes(
+      sobre({
+        contacts: [{ wa_id: "34660415514", profile: { name: "\u202EAna\u200B" } }],
+        messages: [{ id: "wamid.L", from: "34660415514", timestamp: "1790000000", type: "text", text: { body: "hola" } }],
+      }),
+    );
+    expect(m.nombrePerfil).toBe("Ana");
+    const [c] = extraerContactos(
+      sobreCampo("smb_app_state_sync", {
+        state_sync: [{ type: "contact", action: "add", contact: { phone_number: "34660415514", full_name: "\u202EBea\u200B" } }],
+      }),
+    );
+    expect(c.nombre).toBe("Bea");
   });
 });

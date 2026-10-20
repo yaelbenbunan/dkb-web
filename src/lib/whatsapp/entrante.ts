@@ -85,12 +85,30 @@ function numeroIdDe(valor: Record<string, unknown>): string | null {
     : null;
 }
 
+/**
+ * Los nombres de perfil/contacto los controla quien escribe: se quitan los
+ * caracteres de control, los de ancho cero y los de dirección (bidi) que sirven
+ * para suplantar a otra persona en la bandeja, se colapsan los espacios y se
+ * recorta a 40. `null` si no queda nada.
+ */
+export function limpiarNombre(nombre: string | null | undefined): string | null {
+  if (typeof nombre !== "string") return null;
+  const limpio = nombre
+    .replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g, "")
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 40)
+    .trim();
+  return limpio || null;
+}
+
 /** Nombre de perfil del `contacts[]` cuyo `wa_id` es `waId`, o null. */
 function nombrePerfilDe(valor: Record<string, unknown>, waId: string): string | null {
   if (!Array.isArray(valor.contacts)) return null;
   for (const c of valor.contacts) {
     if (esObjeto(c) && c.wa_id === waId && esObjeto(c.profile) && typeof c.profile.name === "string") {
-      return c.profile.name;
+      return limpiarNombre(c.profile.name);
     }
   }
   return null;
@@ -415,7 +433,7 @@ export function extraerContactos(cuerpo: unknown): ContactoSync[] {
           : typeof s.contact.first_name === "string"
             ? s.contact.first_name
             : null;
-      contactos.push({ numeroId: numeroIdDe(valor), waId, nombre, accion: s.action });
+      contactos.push({ numeroId: numeroIdDe(valor), waId, nombre: limpiarNombre(nombre), accion: s.action });
     }
   }
   return contactos;
