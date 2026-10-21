@@ -61,6 +61,11 @@ function db() {
 
 type ErrorBase = { message: string; code?: string } | null;
 
+/** Mientras falte la migración, CADA escritura con columnas nuevas cae aquí:
+ *  con un aviso por proceso basta (igual que `listMensajes`), el resto sería
+ *  ruido que tapa los errores de verdad en los logs de Vercel. */
+let avisadoSinColumnasNuevas = false;
+
 /**
  * Escribe `fila` con las columnas de la coexistencia (`nuevas`: `origen`,
  * `nombre_contacto`) y, si la base aún no las tiene (la migración
@@ -84,10 +89,13 @@ async function conColumnasNuevas<R extends { error: ErrorBase }>(
 
   const r = await escribir({ ...fila, ...presentes });
   if (!r.error?.code || !FALTA_EN_LA_BASE.has(r.error.code)) return r;
-  console.error(
-    `[whatsapp/db] ${contexto}: falta ejecutar la migración de WhatsApp por marca (${r.error.code}); se guarda sin ${claves.join(", ")}.`,
-    r.error.message,
-  );
+  if (!avisadoSinColumnasNuevas) {
+    avisadoSinColumnasNuevas = true;
+    console.error(
+      `[whatsapp/db] ${contexto}: falta ejecutar la migración de WhatsApp por marca (${r.error.code}); se guarda sin ${claves.join(", ")}.`,
+      r.error.message,
+    );
+  }
   if (Object.keys(fila).length === 0) return null;
   return escribir(fila);
 }

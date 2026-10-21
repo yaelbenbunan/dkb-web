@@ -277,6 +277,8 @@ describe("actualizarConversacion", () => {
 // hasta que alguien la ejecute, la escritura se repite sin ellas en vez de
 // tumbar el webhook de Dinkbit.
 describe("columnas nuevas sin la migración", () => {
+  // El aviso en consola sale una vez por proceso: lo comprueba
+  // «aviso de migración pendiente en escrituras». Aquí solo se silencia.
   const faltaColumna = { message: "Could not find the 'origen' column", code: "PGRST204" };
 
   it("guardarEntrante escribe el origen cuando la columna existe", async () => {
@@ -297,7 +299,6 @@ describe("columnas nuevas sin la migración", () => {
     ).resolves.toEqual({ nuevo: true });
     expect(upsertMock).toHaveBeenCalledTimes(2);
     expect(upsertMock.mock.calls[1][0]).not.toHaveProperty("origen");
-    expect(errorSpy).toHaveBeenCalledTimes(1);
     errorSpy.mockRestore();
   });
 
@@ -318,7 +319,6 @@ describe("columnas nuevas sin la migración", () => {
     expect(insertMock.mock.calls[0][0]).toMatchObject({ origen: "bot" });
     expect(insertMock.mock.calls[1][0]).not.toHaveProperty("origen");
     expect(insertMock.mock.calls[1][0]).toMatchObject({ texto: "hola", direccion: "saliente" });
-    expect(errorSpy).toHaveBeenCalledTimes(1);
     errorSpy.mockRestore();
   });
 
@@ -347,7 +347,6 @@ describe("columnas nuevas sin la migración", () => {
     });
     expect(conv.id).toBe("c2");
     expect(insertConversacionMock.mock.calls[1][0]).not.toHaveProperty("nombre_contacto");
-    expect(errorSpy).toHaveBeenCalledTimes(1);
     errorSpy.mockRestore();
   });
 
@@ -361,7 +360,6 @@ describe("columnas nuevas sin la migración", () => {
     actualizarConversacionMock.mockReset().mockReturnValueOnce({ error: faltaColumna });
     await expect(actualizarConversacion("c1", { nombreContacto: "Ana" })).resolves.toBeUndefined();
     expect(actualizarConversacionMock).toHaveBeenCalledTimes(1);
-    expect(errorSpy).toHaveBeenCalledTimes(2);
     errorSpy.mockRestore();
   });
 });
@@ -485,6 +483,31 @@ describe("contactos", () => {
     leerContactoMock.mockReturnValueOnce({ data: null, error: { message: "no existe", code: "42P01" } });
     expect(await nombreDeContacto("m1", "1")).toBeNull();
     errorSpy.mockRestore();
+  });
+});
+
+describe("aviso de migración pendiente en escrituras", () => {
+  it("se registra una sola vez por proceso aunque haya muchas escrituras degradadas", async () => {
+    // Módulo recién cargado: el aviso de otros tests de este archivo no cuenta.
+    vi.resetModules();
+    const fresco = await import("../db");
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const faltaColumna = { message: "Could not find the 'origen' column", code: "PGRST204" };
+    insertMock.mockReturnValue({ error: null });
+    insertMock.mockReturnValueOnce({ error: faltaColumna });
+    await fresco.guardarSaliente({ conversacionId: "c1", wamid: "w1", texto: "hola", origen: "bot" });
+    insertMock.mockReturnValueOnce({ error: faltaColumna });
+    await fresco.guardarSaliente({ conversacionId: "c1", wamid: "w2", texto: "otra", origen: "panel" });
+    actualizarConversacionMock.mockReturnValueOnce({ error: faltaColumna });
+    await fresco.actualizarConversacion("c1", { estado: "humana", nombreContacto: "Ana" });
+
+    const avisos = errorSpy.mock.calls.filter((c) => String(c[0]).includes("falta ejecutar la migración"));
+    errorSpy.mockRestore();
+    expect(avisos).toHaveLength(1);
+    // Y las escrituras se repitieron igualmente sin las columnas nuevas.
+    expect(insertMock.mock.calls[1][0]).not.toHaveProperty("origen");
+    expect(insertMock.mock.calls[3][0]).not.toHaveProperty("origen");
+    expect(actualizarConversacionMock.mock.calls.at(-1)?.[0]).toEqual({ estado: "humana" });
   });
 });
 
