@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { accesoMarcaAccion } from "@/lib/ventas/auth";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
-import { getConversacionPorId, guardarSaliente } from "@/lib/whatsapp/db";
+import { actualizarConversacion, getConversacionPorId, guardarSaliente } from "@/lib/whatsapp/db";
 import { mensajeroDeMarca } from "@/lib/whatsapp/numeros";
 import { ventanaAbierta } from "@/lib/whatsapp/ventana";
 
@@ -47,6 +47,20 @@ export async function responder(slug: string, conversacionId: string, texto: str
     console.error("[conversaciones] no se pudo obtener el mensajero de la marca", marca.id, e);
     return { ok: false, error: "No se pudo enviar. Vuelve a intentarlo." };
   }
+
+  // Si contesta una persona, el bot se calla: si no, el siguiente mensaje del
+  // cliente lo seguiría atendiendo el guion por encima de la comercial. Se
+  // para ANTES de enviar; si no se puede, no se envía (mejor un reintento que
+  // un cliente con dos interlocutores).
+  if (conversacion.estado === "bot" || conversacion.paso_actual) {
+    try {
+      await actualizarConversacion(conversacion.id, { estado: "humana", pasoActual: null });
+    } catch (e) {
+      console.error("[conversaciones] no se pudo pasar la conversación a humana", conversacionId, e);
+      return { ok: false, error: "No se pudo enviar. Vuelve a intentarlo." };
+    }
+  }
+
   const resultado = await mensajero.enviarTexto(conversacion.wa_id, limpio);
   revalidatePath(`/panel/ventas/${slug}/conversaciones`);
 

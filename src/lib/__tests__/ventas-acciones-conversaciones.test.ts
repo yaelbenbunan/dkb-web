@@ -4,13 +4,18 @@ const m = vi.hoisted(() => ({
   accesoMarcaAccion: vi.fn(),
   getConversacionPorId: vi.fn(),
   guardarSaliente: vi.fn(),
+  actualizarConversacion: vi.fn(),
   crearMensajero: vi.fn(),
   mensajeroDeMarca: vi.fn(),
   enviarTexto: vi.fn(),
   revalidatePath: vi.fn(),
 }));
 vi.mock("@/lib/ventas/auth", () => ({ accesoMarcaAccion: m.accesoMarcaAccion }));
-vi.mock("@/lib/whatsapp/db", () => ({ getConversacionPorId: m.getConversacionPorId, guardarSaliente: m.guardarSaliente }));
+vi.mock("@/lib/whatsapp/db", () => ({
+  getConversacionPorId: m.getConversacionPorId,
+  guardarSaliente: m.guardarSaliente,
+  actualizarConversacion: m.actualizarConversacion,
+}));
 vi.mock("@/lib/whatsapp/mensajero", () => ({ crearMensajero: m.crearMensajero }));
 vi.mock("@/lib/whatsapp/numeros", () => ({ mensajeroDeMarca: m.mensajeroDeMarca }));
 vi.mock("next/cache", () => ({ revalidatePath: m.revalidatePath }));
@@ -19,7 +24,7 @@ import { responder } from "@/app/(site)/panel/ventas/(app)/[slug]/conversaciones
 
 const MARCA = { id: "m1", slug: "hydrup" };
 const ABIERTA = new Date(Date.now() + 3_600_000).toISOString();
-const CONVERSACION = { id: "c1", marca_id: "m1", wa_id: "34600111222", ventana_hasta: ABIERTA };
+const CONVERSACION = { id: "c1", marca_id: "m1", wa_id: "34600111222", ventana_hasta: ABIERTA, estado: "humana", paso_actual: null };
 
 beforeEach(() => {
   Object.values(m).forEach((f) => f.mockReset());
@@ -83,5 +88,44 @@ describe("responder", () => {
     expect(m.enviarTexto).not.toHaveBeenCalled();
     expect(log).toHaveBeenCalled();
     log.mockRestore();
+  });
+
+  test("si la lleva el bot, primero la pasa a humana y quita el paso, y después envía", async () => {
+    const orden: string[] = [];
+    m.getConversacionPorId.mockResolvedValue({ ...CONVERSACION, estado: "bot", paso_actual: "p2" });
+    m.actualizarConversacion.mockImplementation(async () => void orden.push("actualizar"));
+    m.enviarTexto.mockImplementation(async () => (orden.push("enviar"), { ok: true, wamid: "w1" }));
+    expect(await responder("hydrup", "c1", "Hola")).toEqual({ ok: true });
+    expect(m.actualizarConversacion).toHaveBeenCalledWith("c1", { estado: "humana", pasoActual: null });
+    expect(orden).toEqual(["actualizar", "enviar"]);
+  });
+
+  test("una humana con un paso pendiente también se para", async () => {
+    m.getConversacionPorId.mockResolvedValue({ ...CONVERSACION, estado: "humana", paso_actual: "p1" });
+    await responder("hydrup", "c1", "Hola");
+    expect(m.actualizarConversacion).toHaveBeenCalledWith("c1", { estado: "humana", pasoActual: null });
+  });
+
+  test("una conversación ya humana y sin paso no se toca", async () => {
+    await responder("hydrup", "c1", "Hola");
+    expect(m.actualizarConversacion).not.toHaveBeenCalled();
+    expect(m.enviarTexto).toHaveBeenCalledTimes(1);
+  });
+
+  test("si no se puede parar el bot no envía", async () => {
+    m.getConversacionPorId.mockResolvedValue({ ...CONVERSACION, estado: "bot", paso_actual: "p2" });
+    m.actualizarConversacion.mockRejectedValue(new Error("db"));
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await responder("hydrup", "c1", "Hola")).toEqual({ ok: false, error: "No se pudo enviar. Vuelve a intentarlo." });
+    expect(m.enviarTexto).not.toHaveBeenCalled();
+    expect(m.guardarSaliente).not.toHaveBeenCalled();
+    log.mockRestore();
+  });
+
+  test("sin permiso no para el bot", async () => {
+    m.accesoMarcaAccion.mockResolvedValue({ ok: false, error: "No tienes permiso para esto." });
+    m.getConversacionPorId.mockResolvedValue({ ...CONVERSACION, estado: "bot", paso_actual: "p2" });
+    await responder("hydrup", "c1", "Hola");
+    expect(m.actualizarConversacion).not.toHaveBeenCalled();
   });
 });
