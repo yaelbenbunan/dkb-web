@@ -7,7 +7,7 @@ Para Yael. Sigue los pasos en orden. No despliegues hasta terminar el paso 6.
 1. **Vercel → dkb-web → Settings → Environment Variables.** Comprueba que en *Production* existen:
    - `WHATSAPP_PHONE_NUMBER_ID` (el número de Dinkbit, hoy `1385086741345422`). Si faltara, los mensajes de Dinkbit se ignorarían.
    - `WHATSAPP_APP_SECRET`.
-2. **Crea la clave de cifrado.** En el terminal: `openssl rand -base64 32`. Copia el resultado y añádelo en Vercel como `WHATSAPP_CLAVE_TOKENS`, entorno *Production*, tipo *Secret*. Guárdala también en un sitio seguro: sin ella no se pueden leer los números ya conectados.
+2. **Crea la clave de cifrado.** En el terminal: `openssl rand -base64 32`. Copia el resultado y añádelo en Vercel como `WHATSAPP_CLAVE_TOKENS`, entorno *Production*, marcando la opción *Sensitive*. Guárdala también en un sitio seguro: sin ella no se pueden leer los números ya conectados.
 3. **Ejecuta el SQL.** En Supabase (proyecto `wnboyesnlrbtwfmhcxmc`) → SQL Editor, pega y ejecuta `docs/sql/2026-10-20-whatsapp-por-marca.sql`.
 4. **Mándame el resultado de la consulta de comprobación** (las dos últimas consultas del archivo). Debe salir la lista de columnas nuevas (15 filas) y la restricción `ventas_leads_origen_check` con `'whatsapp'` dentro. No despliegues hasta que lo haya revisado.
 5. **En Meta for Developers → tu app → WhatsApp → Configuración → Webhooks**, suscribe estos campos: `account_update`, `history`, `smb_app_state_sync`, `smb_message_echoes`. Los que ya tenías (`messages`) se quedan.
@@ -15,7 +15,7 @@ Para Yael. Sigue los pasos en orden. No despliegues hasta terminar el paso 6.
 
 ## Desplegar
 
-7. Despliega la rama (tras mi visto bueno del paso 4).
+7. Fusiona la rama `feat/whatsapp-coexistencia` en `main` (tras mi visto bueno del paso 4) y deja que Vercel despliegue producción automáticamente. Espera a que el despliegue de producción salga en verde antes de seguir.
 
 ## Conectar a Hydrup
 
