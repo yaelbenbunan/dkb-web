@@ -529,6 +529,7 @@ function depsFalsas(
         // `is null`: aquí sale gratis porque la comparación con `null` ya hace
         // lo mismo, pero conviene tenerlo dicho.
         if (conv.paso_actual !== cambios.pasoEsperado) return false;
+        if (cambios.estadoEsperado !== undefined && conv.estado !== cambios.estadoEsperado) return false;
         conv.paso_actual = cambios.pasoActual;
         conv.datos = cambios.datos;
         if (cambios.secuenciaId !== undefined) conv.secuencia_id = cambios.secuenciaId;
@@ -2235,6 +2236,84 @@ describe("primer contacto sin anuncio", () => {
     const conv = conversaciones.get(`${HYDRUP.id}:34611222333`);
     expect(conv?.lead_id).toBe("lead-conocido");
     expect(conv?.estado).toBe("bot");
+  });
+
+  /* Fix round 2 ------------------------------------------------------------ */
+
+  it("ráfaga: si se adopta el lead de la ganadora y está excluido, la perdedora no manda nada", async () => {
+    const { deps, conversaciones, enviosMensajero } = depsFalsas({ secuencias: [GENERAL_HYDRUP] });
+    await deps.crearConversacion({ marcaId: HYDRUP.id, waId: "34611222333", leadId: null, estado: "bot", ventanaHasta: null });
+    const ganador = { id: "lead-ganador", negocio: "x", contacto: null, ciudad: null, excluido: true, fase: "nuevo" as const };
+    let ganadoraTermino = false;
+    // Las dos primeras lecturas no lo ven; la que se hace al adoptar, sí.
+    deps.buscarLeadPorTelefono = async () => (ganadoraTermino ? ganador : null);
+    const original = deps.crearLeadDeWhatsApp;
+    deps.crearLeadDeWhatsApp = async (input) => {
+      const creado = await original(input);
+      // La ganadora vincula su lead excluido y ya pasó la conversación a humana.
+      const conv = conversaciones.get(`${HYDRUP.id}:34611222333`);
+      if (conv) {
+        conv.lead_id = "lead-ganador";
+        conv.estado = "humana";
+      }
+      ganadoraTermino = true;
+      return creado;
+    };
+    const cuerpo = sobrePorNumeros([{ numeroId: "PN-HYDRUP", mensajes: [textoLibre("wamid.Z1")] }]);
+
+    await procesarWebhook({ cuerpo, deps });
+
+    const conv = conversaciones.get(`${HYDRUP.id}:34611222333`);
+    expect(conv?.lead_id).toBe("lead-ganador");
+    expect(conv?.estado).toBe("humana");
+    expect(conv?.paso_actual).toBeNull();
+    expect(enviosMensajero).toHaveLength(0);
+  });
+
+  it("el arranque de la secuencia no se reclama sobre una conversación que ya pasó a humana", async () => {
+    const { deps, conversaciones, enviosMensajero } = depsFalsas({ secuencias: [GENERAL_HYDRUP] });
+    const original = deps.listSecuencias;
+    deps.listSecuencias = async (marcaId) => {
+      // Otra entrega la entrega a una persona entre la fase A y el reclamo.
+      const conv = conversaciones.get(`${HYDRUP.id}:34611222333`);
+      if (conv) conv.estado = "humana";
+      return original(marcaId);
+    };
+    const cuerpo = sobrePorNumeros([{ numeroId: "PN-HYDRUP", mensajes: [textoLibre("wamid.Z2")] }]);
+
+    await procesarWebhook({ cuerpo, deps });
+
+    const conv = conversaciones.get(`${HYDRUP.id}:34611222333`);
+    expect(conv?.estado).toBe("humana");
+    expect(conv?.paso_actual).toBeNull();
+    expect(enviosMensajero).toHaveLength(0);
+  });
+
+  it("si el lead vinculado no es el que da el teléfono, el primer contacto sin anuncio pasa a humana sin enviar", async () => {
+    const { deps, conversaciones, enviosMensajero, leadsPorTelefono } = depsFalsas({ secuencias: [GENERAL_HYDRUP] });
+    await deps.crearConversacion({ marcaId: HYDRUP.id, waId: "34611222333", leadId: "lead-A", estado: "bot", ventanaHasta: null });
+    leadsPorTelefono.set("611222333", { id: "lead-B" });
+    const cuerpo = sobrePorNumeros([{ numeroId: "PN-HYDRUP", mensajes: [textoLibre("wamid.Z3")] }]);
+
+    await procesarWebhook({ cuerpo, deps });
+
+    const conv = conversaciones.get(`${HYDRUP.id}:34611222333`);
+    expect(conv?.lead_id).toBe("lead-A");
+    expect(conv?.estado).toBe("humana");
+    expect(enviosMensajero).toHaveLength(0);
+  });
+
+  it("sin teléfono con el que comprobar el lead vinculado, el primer contacto sin anuncio pasa a humana sin enviar", async () => {
+    const { deps, conversaciones, enviosMensajero } = depsFalsas({ secuencias: [GENERAL_HYDRUP] });
+    // Un wa_id tan corto que `telefonoDeWaId` no saca teléfono de él.
+    await deps.crearConversacion({ marcaId: HYDRUP.id, waId: "12345", leadId: "lead-A", estado: "bot", ventanaHasta: null });
+    const cuerpo = sobrePorNumeros([{ numeroId: "PN-HYDRUP", mensajes: [textoLibre("wamid.Z4", "12345")] }]);
+
+    await procesarWebhook({ cuerpo, deps });
+
+    const conv = conversaciones.get(`${HYDRUP.id}:12345`);
+    expect(conv?.estado).toBe("humana");
+    expect(enviosMensajero).toHaveLength(0);
   });
 
   it("una conversación humana que ya existía no arranca la secuencia sin anuncio", async () => {

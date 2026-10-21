@@ -869,13 +869,20 @@ async function procesarMensaje(
     if (encontrado && (leadId === null || encontrado.id === leadId)) resolverLead(encontrado);
   }
   // Tras vincular, la conversación puede traer el lead de otra entrega
-  // concurrente: ese gana, y lo que se sabía del nuestro ya no vale.
-  const adoptarLeadDe = (c: Conversacion) => {
-    if (c.lead_id !== null && c.lead_id !== leadId) {
-      leadId = c.lead_id;
-      leadExiste = true;
-      leadDatos = null;
-      leadEstado = null;
+  // concurrente: ese gana, y lo que se sabía del nuestro ya no vale. En un
+  // primer contacto sin anuncio se vuelve a leer por teléfono para saber si
+  // ese lead está excluido o ya trabajado; si no se puede confirmar que es
+  // él, `leadEstado` queda en `null` y la fase B lo entrega a una persona
+  // (ver `sinBot`), en vez de arrancarle el bot a ciegas.
+  const adoptarLeadDe = async (c: Conversacion) => {
+    if (c.lead_id === null || c.lead_id === leadId) return;
+    leadId = c.lead_id;
+    leadExiste = true;
+    leadDatos = null;
+    leadEstado = null;
+    if (primerContacto && !mensaje.referral && telefono) {
+      const releido = await deps.buscarLeadPorTelefono(marcaId, telefono);
+      if (releido && releido.id === c.lead_id) resolverLead(releido);
     }
   };
 
@@ -921,7 +928,7 @@ async function procesarMensaje(
     if (conversacion.lead_id) {
       // Ya tenía lead: lo creó la otra entrega concurrente que ganó la
       // carrera, o ya lo tenía de una conversación previa sin referral.
-      adoptarLeadDe(conversacion);
+      await adoptarLeadDe(conversacion);
     } else {
       // Se vuelve a buscar JUSTO antes de crear: en una ráfaga, la otra
       // entrega puede haberlo creado entre la lectura de arriba y ahora.
@@ -940,7 +947,7 @@ async function procesarMensaje(
       // Vínculo condicional (`lead_id is null`): si otra entrega vinculó el
       // suyo mientras tanto, se sigue con ese en vez de pisarlo.
       conversacion = await vincularOReleer(deps, conversacion, nuevoId);
-      adoptarLeadDe(conversacion);
+      await adoptarLeadDe(conversacion);
     }
   } else {
     let estado: Conversacion["estado"];
@@ -1000,7 +1007,7 @@ async function procesarMensaje(
     if (leadId !== null && conversacion.lead_id === null) {
       conversacion = await vincularOReleer(deps, conversacion, leadId);
     }
-    adoptarLeadDe(conversacion);
+    await adoptarLeadDe(conversacion);
 
     if (tieneNumeroPropio(marca) && leadId === null) {
       const nuevoId = resolverLead(
@@ -1014,7 +1021,7 @@ async function procesarMensaje(
         }),
       );
       conversacion = await vincularOReleer(deps, conversacion, nuevoId);
-      adoptarLeadDe(conversacion);
+      await adoptarLeadDe(conversacion);
     }
   }
 
@@ -1039,22 +1046,37 @@ async function procesarMensaje(
   // su ficha. Con anuncio no cambia nada: el clic pagado sigue su secuencia.
   // El `as`: `leadEstado` solo se asigna dentro de `resolverLead`/`adoptarLeadDe`
   // y TypeScript, que no lo ve, lo estrecharía a `null`.
+  //
+  // Si NO se sabe cómo está el lead vinculado (el teléfono da otro lead, no
+  // hay teléfono con el que comprobarlo, o se adoptó el de otra entrega y no
+  // se pudo releer), se hace lo mismo: ante la duda, una persona. Ahí no hay
+  // motivo que contar, así que se deja la nota genérica de siempre.
   const estadoConocido = leadEstado as { excluido: boolean; fase: Fase } | null;
+  const primerContactoSinAnuncio =
+    (decision.accion === "crear_lead_y_responder" || decision.accion === "responder") && !mensaje.referral;
   const sinBot =
-    (decision.accion === "crear_lead_y_responder" || decision.accion === "responder") &&
-    !mensaje.referral &&
-    estadoConocido !== null &&
-    (estadoConocido.excluido || estadoConocido.fase !== "nuevo");
-  if (sinBot && estadoConocido) {
+    primerContactoSinAnuncio &&
+    (estadoConocido === null || estadoConocido.excluido || estadoConocido.fase !== "nuevo");
+  if (sinBot) {
     try {
-      await deps.actualizarConversacion(conversacion.id, { estado: "humana" });
-      conversacion = { ...conversacion, estado: "humana" };
+      // CONDICIONADO al puntero leído, como en las recuperaciones del
+      // arranque: si otra entrega concurrente ya arrancó la secuencia
+      // mientras tanto, un `humana` ciego la congelaría con botones vivos.
+      const pasado = await deps.reclamarPaso(conversacion.id, {
+        pasoEsperado: conversacion.paso_actual,
+        pasoActual: conversacion.paso_actual,
+        datos: conversacion.datos,
+        estado: "humana",
+      });
+      if (pasado) conversacion = { ...conversacion, estado: "humana" };
+      else console.warn("[whatsapp] otra entrega ya arrancó esta conversación: no se fuerza a humana", mensaje.waId, conversacion.id);
     } catch (e) {
       console.error("[whatsapp] fallo pasando a humana el primer contacto de un lead que no lleva bot", mensaje.waId, e);
     }
-    // Esta nota sustituye a la genérica: lleva el texto Y el motivo.
-    notaGenerica = false;
-    if (leadId) {
+    // Con motivo conocido, esta nota sustituye a la genérica: lleva el texto
+    // Y el motivo.
+    if (estadoConocido && leadId) {
+      notaGenerica = false;
       try {
         const resultado = await registrarActividad({
           leadId,
@@ -1134,6 +1156,10 @@ async function procesarMensaje(
               secuenciaId: arrancada.secuenciaId,
               pasoActual: arrancada.estado.pasoActual,
               datos: arrancada.estado.datos,
+              // Solo sobre una conversación que sigue en `bot`: si otra entrega
+              // ya la pasó a una persona (p.ej. su lead estaba excluido), el
+              // primer paso no sale.
+              estadoEsperado: "bot",
               // Un re-arranque borra la espera de la secuencia anterior: si no,
               // `reanudar_en` seguiría marcando como «parada esperando» una
               // conversación que acaba de volver a arrancar.
@@ -1189,7 +1215,7 @@ async function procesarMensaje(
         if (!reclamado) {
           if (!falloAlReclamar) {
             console.warn(
-              "[whatsapp] otra entrega ya arrancó esta conversación, no se reenvía el primer paso",
+              "[whatsapp] otra entrega ya arrancó esta conversación o ya no está en bot, no se reenvía el primer paso",
               mensaje.waId,
               conversacion.id,
             );

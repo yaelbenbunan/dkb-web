@@ -240,6 +240,11 @@ export async function reclamarPaso(
     secuenciaId?: string | null;
     estado?: Conversacion["estado"];
     reanudarEn?: Date | null;
+    /** Si viene, el reclamo exige además que la conversación siga en ese
+     *  estado. El ARRANQUE de una secuencia pasa `"bot"`: una conversación
+     *  que otra entrega ya entregó a una persona no puede recibir el primer
+     *  paso. El avance no lo pasa (mantiene su semántica de siempre). */
+    estadoEsperado?: Conversacion["estado"];
   },
 ): Promise<boolean> {
   const patch: Record<string, unknown> = {
@@ -252,7 +257,8 @@ export async function reclamarPaso(
     patch.reanudar_en = cambios.reanudarEn ? cambios.reanudarEn.toISOString() : null;
   }
 
-  const base = db().from("ventas_conversaciones").update(patch).eq("id", id);
+  const sinEstado = db().from("ventas_conversaciones").update(patch).eq("id", id);
+  const base = cambios.estadoEsperado !== undefined ? sinEstado.eq("estado", cambios.estadoEsperado) : sinEstado;
   const filtrado =
     cambios.pasoEsperado === null
       ? base.is("paso_actual", null)
