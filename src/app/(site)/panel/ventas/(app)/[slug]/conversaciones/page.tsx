@@ -1,7 +1,7 @@
 import { requireAccesoMarca } from "@/lib/ventas/auth";
 import { evaluarAccesoMarca } from "@/lib/ventas/rutas";
 import { listLeads } from "@/lib/ventas/db";
-import { botonesDePayload, etiquetaOrigen, etiquetaVentana, extracto, nombreConversacion } from "@/lib/whatsapp/bandeja";
+import { botonesDePayload, etiquetaOrigen, etiquetaVentana, extracto, nombreConversacion, ordenarBandeja } from "@/lib/whatsapp/bandeja";
 import { getConversacionPorId, listConversaciones, listMensajes } from "@/lib/whatsapp/db";
 import { ventanaAbierta } from "@/lib/whatsapp/ventana";
 import { MarcaCabecera } from "../../../_componentes/MarcaCabecera";
@@ -21,7 +21,7 @@ export default async function ConversacionesPage({
   const nombres = new Map(leads.map((l) => [l.id, l.contacto || l.negocio]));
   const ahora = new Date();
 
-  const lista: TarjetaConversacion[] = conversaciones.map((c) => ({
+  const lista: TarjetaConversacion[] = ordenarBandeja(conversaciones, ahora).map((c) => ({
     id: c.id,
     nombre: nombreConversacion(c.wa_id, c.lead_id, nombres, c.nombre_contacto),
     extracto: extracto(c.ultimo_texto),

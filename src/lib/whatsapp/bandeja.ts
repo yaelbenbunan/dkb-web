@@ -82,3 +82,15 @@ export function nombreConversacion(
   if (dt && (dn.includes(dt) || dn.includes(digitos(waId)))) return nombre;
   return `${nombre} (${telefono})`;
 }
+
+/**
+ * Conversaciones con la ventana de 24 h abierta primero (se les puede
+ * contestar), luego las cerradas. Dentro de cada grupo se conserva el orden
+ * recibido (la lista ya llega con la más reciente primero). No muta la entrada.
+ */
+export function ordenarBandeja<T extends { ventana_hasta: string | null }>(conversaciones: T[], ahora: Date): T[] {
+  const abiertas: T[] = [];
+  const cerradas: T[] = [];
+  for (const c of conversaciones) (ventanaAbierta(c.ventana_hasta, ahora) ? abiertas : cerradas).push(c);
+  return [...abiertas, ...cerradas];
+}

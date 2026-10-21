@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { botonesDePayload, etiquetaOrigen, etiquetaVentana, extracto, nombreConversacion } from "../bandeja";
+import { botonesDePayload, etiquetaOrigen, etiquetaVentana, extracto, nombreConversacion, ordenarBandeja } from "../bandeja";
 
 describe("extracto", () => {
   it("deja pasar los textos cortos", () => {
@@ -90,5 +90,20 @@ describe("nombreConversacion", () => {
   it("sin lead ni nombre usa el teléfono", () => {
     expect(nombreConversacion("34600111222", null, nombres, null)).toBe("600111222");
     expect(nombreConversacion("34600111222", "otro", nombres)).toBe("600111222");
+  });
+});
+
+describe("ordenarBandeja", () => {
+  const ahora = new Date("2026-10-21T12:00:00Z");
+  const c = (id: string, ventana_hasta: string | null) => ({ id, ventana_hasta });
+  it("pone primero las de ventana abierta y conserva el orden dentro de cada grupo", () => {
+    const entrada = [
+      c("a", "2026-10-20T12:00:00Z"),
+      c("b", "2026-10-22T12:00:00Z"),
+      c("c", null),
+      c("d", "2026-10-21T13:00:00Z"),
+    ];
+    expect(ordenarBandeja(entrada, ahora).map((x) => x.id)).toEqual(["b", "d", "a", "c"]);
+    expect(entrada.map((x) => x.id)).toEqual(["a", "b", "c", "d"]);
   });
 });
