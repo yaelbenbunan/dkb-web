@@ -192,6 +192,24 @@ export async function actualizarConversacion(
 }
 
 /**
+ * Vincula un lead a la conversación SOLO si todavía no tiene ninguno
+ * (`lead_id is null`). Devuelve `false` si otra entrega concurrente ya
+ * vinculó el suyo: el llamador relee la conversación y sigue con ese, en vez
+ * de pisarlo. Es la segunda mitad del mutex del primer contacto (la primera
+ * es el índice único de `(marca_id, wa_id)`, ver `crearConversacionOReleer`).
+ */
+export async function vincularLead(id: string, leadId: string): Promise<boolean> {
+  const { data, error } = await db()
+    .from("ventas_conversaciones")
+    .update({ lead_id: leadId })
+    .eq("id", id)
+    .is("lead_id", null)
+    .select("id");
+  if (error) throw new Error(`[whatsapp/db] vincularLead: ${error.message}`);
+  return (data ?? []).length > 0;
+}
+
+/**
  * Update CONDICIONAL del puntero del guion: escribe `paso_actual` (y lo que
  * venga con él) SOLO si en la base sigue estando `pasoEsperado`, es decir el
  * paso que el llamador leyó antes de decidir el avance. Devuelve `true` si

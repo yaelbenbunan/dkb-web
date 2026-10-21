@@ -11,6 +11,7 @@ import {
   nombreDeContacto,
   reclamarPaso,
   setEstadoMensaje,
+  vincularLead,
   type Conversacion,
 } from "./db";
 import { opcionesAutorespuesta, REMITENTE, textoAutorespuesta } from "./autorespuesta";
@@ -34,7 +35,7 @@ import { aEstadoGuardado, desdeEstadoGuardado, indiceDeBoton, mensajesAEnviar, t
 import type { MensajeroWhatsApp } from "./mensajero";
 import { getMarcaPorNumero, getMarcasPorWaba, marcarDesconectada, mensajeroDeMarca, setHistorialMarca } from "./numeros";
 import { calcularVentana, telefonoDeWaId } from "./ventana";
-import { esFaseDescarte, MARCA_DINKBIT_SLUG, type Fase } from "../ventas/dominio";
+import { esFaseDescarte, FASE_LABELS, MARCA_DINKBIT_SLUG, type Fase } from "../ventas/dominio";
 import {
   actualizarLeadWeb,
   buscarLeadPorContacto,
@@ -99,6 +100,10 @@ export interface Deps {
    *  si esta entrega puede enviar, así que los tests tienen que poder
    *  sustituirla para reproducir la carrera. */
   reclamarPaso: typeof reclamarPaso;
+  /** Vincula el lead SOLO si la conversación aún no tiene uno (update
+   *  condicional): dos entregas del primer contacto no pueden vincular las
+   *  dos. En `Deps` para poder reproducir la carrera en los tests. */
+  vincularLead: typeof vincularLead;
   guardarEntrante: typeof guardarEntrante;
   /** Los mensajes escritos desde el móvil (ecos de coexistencia). */
   guardarEco: typeof guardarEco;
@@ -107,11 +112,10 @@ export interface Deps {
   /** `negocio`/`contacto`/`ciudad` van aquí (ronda de arreglos 1, tarea 7)
    *  para poder rellenar `ContextoSimulacion.valores` con los datos reales
    *  del lead cuando existen: sin esto, `{{contacto}}` saldría en blanco
-   *  para siempre incluso para un lead que ya tiene su nombre en la base. */
-  buscarLeadPorTelefono: (
-    marcaId: string,
-    telefono: string,
-  ) => Promise<{ id: string; negocio: string; contacto: string | null; ciudad: string | null } | null>;
+   *  para siempre incluso para un lead que ya tiene su nombre en la base.
+   *  `excluido`/`fase` deciden si un primer contacto sin anuncio puede
+   *  arrancar la secuencia (ver `procesarMensaje`). */
+  buscarLeadPorTelefono: (marcaId: string, telefono: string) => Promise<LeadEncontrado | null>;
   /** Crea el lead de una conversación de WhatsApp: `"anuncio"` si llegó por
    *  un clic de anuncio, `"whatsapp"` si escribió sin más a una marca con
    *  número propio. `nombre` es el del perfil de WhatsApp, si Meta lo mandó. */
@@ -125,7 +129,7 @@ export interface Deps {
     /** Las exclusiones de la marca ya leídas (una vez por webhook, ver
      *  `procesarWebhook`). Sin ellas, se leen aquí. */
     exclusiones?: Exclusion[];
-  }) => Promise<{ id: string; negocio: string; contacto: string | null; ciudad: string | null }>;
+  }) => Promise<LeadEncontrado>;
   /** Las exclusiones de la marca. En `Deps` para que `procesarWebhook` las lea
    *  una sola vez por marca y webhook, no una por lead creado. */
   listExclusiones: (marcaId: string) => Promise<Exclusion[]>;
@@ -145,6 +149,17 @@ export interface Deps {
   rellenarContactoLead: (leadId: string, nombre: string) => Promise<void>;
 }
 
+/** Lo que el canal necesita saber de un lead al resolverlo por teléfono o al
+ *  crearlo. */
+export type LeadEncontrado = {
+  id: string;
+  negocio: string;
+  contacto: string | null;
+  ciudad: string | null;
+  excluido: boolean;
+  fase: Fase;
+};
+
 /** Si la marca tiene su propio número de WhatsApp conectado (coexistencia). */
 export function tieneNumeroPropio(marca: Marca): boolean {
   return !!marca.whatsapp_phone_number_id;
@@ -163,12 +178,7 @@ export function tieneNumeroPropio(marca: Marca): boolean {
  * pero marcado `excluido`: la conversación existe y la comercial tiene que
  * verla, pero no debe entrar en la prospección como si fuera nuevo.
  */
-export async function crearLeadDeWhatsApp(input: Parameters<Deps["crearLeadDeWhatsApp"]>[0]): Promise<{
-  id: string;
-  negocio: string;
-  contacto: string | null;
-  ciudad: string | null;
-}> {
+export async function crearLeadDeWhatsApp(input: Parameters<Deps["crearLeadDeWhatsApp"]>[0]): Promise<LeadEncontrado> {
   const { marcaId, waId, telefono, nombre, origen, anuncio } = input;
   const telefonoLead = telefono ?? waId;
   const exclusiones = input.exclusiones ?? (await listExclusiones(marcaId));
@@ -197,7 +207,27 @@ export async function crearLeadDeWhatsApp(input: Parameters<Deps["crearLeadDeWha
   // buscando por el mismo teléfono con el que se acaba de crear.
   const creado = await buscarLeadPorContacto(marcaId, { telefono: telefonoLead });
   if (!creado) throw new Error("[whatsapp] crearLeadDeWhatsApp: no se encontró el lead recién creado");
-  return { id: creado.id, negocio: creado.negocio, contacto: creado.contacto, ciudad: creado.ciudad };
+  // Puede ser un lead que ya existía con ese teléfono (la RPC hace `on
+  // conflict do nothing`), así que `excluido`/`fase` son los de la base.
+  return leadEncontrado(creado);
+}
+
+function leadEncontrado(lead: {
+  id: string;
+  negocio: string;
+  contacto: string | null;
+  ciudad: string | null;
+  excluido: boolean;
+  fase: Fase;
+}): LeadEncontrado {
+  return {
+    id: lead.id,
+    negocio: lead.negocio,
+    contacto: lead.contacto,
+    ciudad: lead.ciudad,
+    excluido: lead.excluido,
+    fase: lead.fase,
+  };
 }
 
 /**
@@ -218,13 +248,14 @@ function depsReales(): Deps {
     crearConversacion,
     actualizarConversacion,
     reclamarPaso,
+    vincularLead,
     guardarEntrante,
     guardarEco,
     guardarSaliente,
     setEstadoMensaje,
     async buscarLeadPorTelefono(marcaId, telefono) {
       const lead = await buscarLeadPorContacto(marcaId, { telefono });
-      return lead ? { id: lead.id, negocio: lead.negocio, contacto: lead.contacto, ciudad: lead.ciudad } : null;
+      return lead ? leadEncontrado(lead) : null;
     },
     crearLeadDeWhatsApp,
     listExclusiones,
@@ -658,6 +689,55 @@ function nombreNuevo(existente: Conversacion | null, nombrePerfil: string | null
 }
 
 /**
+ * Primer contacto que no llegó a terminar: conversación en `bot` que nunca
+ * arrancó secuencia (sin `secuencia_id` ni `paso_actual`). Se trata igual que
+ * si no hubiera conversación (ver `procesarMensaje`). Sale en tres casos:
+ * - Reintento de Meta tras un fallo de fase A entre crear la conversación y
+ *   crear o vincular el lead: sin esto, el reintento caía en
+ *   `guardar_respuesta` sin secuencia y pasaba a `humana` sin haber mandado
+ *   nunca el primer paso.
+ * - Ráfaga: el segundo mensaje del contacto llega mientras la entrega del
+ *   primero todavía no ha reclamado el arranque. Como primer contacto, como
+ *   mucho una de las dos manda el primer paso (`reclamarPaso` con el puntero
+ *   leído y `yaEnEstePaso`), ninguna crea un segundo lead (búsqueda justo
+ *   antes de crear y `vincularOReleer`) y ninguna la entrega a una persona
+ *   por error.
+ * - La respuesta al respaldo de `autorespuesta.ts` (Dinkbit, anuncio sin
+ *   secuencia: el respaldo limpia el puntero). El respaldo solo sale cuando
+ *   no hay secuencia que sirva —ni siquiera la general—, así que esa
+ *   respuesta sigue acabando en `humana` con su nota, como antes.
+ * Una secuencia terminada o entregada deja `secuencia_id`, así que no entra.
+ */
+export function primerContactoPendiente(c: Conversacion | null): boolean {
+  return c !== null && c.estado === "bot" && c.secuencia_id === null && c.paso_actual === null;
+}
+
+/**
+ * Vincula `leadId` a la conversación solo si todavía no tiene lead. Si otra
+ * entrega concurrente ya vinculó el suyo, relee la conversación y la devuelve
+ * con ese (el llamador lo adopta). Un fallo aquí es de fase A: se propaga.
+ */
+async function vincularOReleer(
+  deps: Pick<Deps, "vincularLead" | "getConversacion">,
+  conversacion: Conversacion,
+  leadId: string,
+): Promise<Conversacion> {
+  if (await deps.vincularLead(conversacion.id, leadId)) return { ...conversacion, lead_id: leadId };
+  const actual = await deps.getConversacion(conversacion.marca_id, conversacion.wa_id);
+  if (!actual?.lead_id) throw new Error("[whatsapp] no se pudo vincular el lead a la conversación");
+  return actual;
+}
+
+/** La nota del primer contacto sin anuncio que no arranca la secuencia. */
+function notaPrimerContactoSinBot(texto: string | null, estado: { excluido: boolean; fase: Fase }): string {
+  const motivo = estado.excluido
+    ? "el contacto está en las exclusiones de la marca"
+    : `el lead ya está en fase «${FASE_LABELS[estado.fase]}»`;
+  const dijo = texto ? `Escribió por WhatsApp: «${texto}». ` : "Escribió por WhatsApp. ";
+  return `${dijo}No se arranca la secuencia porque ${motivo}: lo atiende una persona.`;
+}
+
+/**
  * Crea la conversación SIN lead todavía. El índice único `(marca_id, wa_id)`
  * de `ventas_conversaciones` es el único mutex real contra dos ENTREGAS
  * CONCURRENTES del mismo webhook (no un reintento secuencial, que ya cubre
@@ -751,9 +831,16 @@ async function procesarMensaje(
   // a medio camino.
   const recibidoEn = Number.isFinite(mensaje.recibidoEn.getTime()) ? mensaje.recibidoEn : ahora;
 
+  // Un primer contacto que no llegó a terminar (ver `primerContactoPendiente`)
+  // se vuelve a tratar como primer contacto: es la única forma de que un
+  // reintento de Meta o el segundo mensaje de una ráfaga no lo entreguen a
+  // una persona sin que la secuencia haya llegado a arrancar.
+  const pendiente = primerContactoPendiente(conversacionExistente);
+  const primerContacto = conversacionExistente === null || pendiente;
+
   // El lead "actual" prioriza el ya vinculado a la conversación: así un
   // reintento de Meta (o un segundo mensaje de la misma persona) nunca vuelve
-  // a buscar —ni, sobre todo, a CREAR— el lead.
+  // a CREAR el lead.
   let leadId: string | null = conversacionExistente?.lead_id ?? null;
   let leadExiste = leadId !== null;
   // Solo se rellena cuando este mensaje resuelve el lead de verdad (lo
@@ -762,18 +849,39 @@ async function procesarMensaje(
   // leer aquí y se deja en `null` — el hueco de `{{contacto}}` queda visible
   // en vez de inventar un valor o forzar una lectura extra de Supabase.
   let leadDatos: LeadDatos = null;
-  if (!leadExiste && telefono) {
+  // `excluido`/`fase` del lead, cuando se conocen: un primer contacto SIN
+  // anuncio no arranca la secuencia a un contacto excluido ni a un lead que
+  // ya se está trabajando (fase distinta de «nuevo»). Por eso, en ese caso,
+  // se lee el lead aunque ya viniera vinculado a la conversación.
+  let leadEstado: { excluido: boolean; fase: Fase } | null = null;
+  // Devuelve el id porque TypeScript no ve las asignaciones hechas dentro de
+  // un cierre y seguiría creyendo `leadId` nulo tras llamarlo.
+  const resolverLead = (lead: LeadEncontrado): string => {
+    leadId = lead.id;
+    leadExiste = true;
+    leadDatos = { negocio: lead.negocio, contacto: lead.contacto, ciudad: lead.ciudad };
+    leadEstado = { excluido: lead.excluido, fase: lead.fase };
+    return lead.id;
+  };
+  if ((!leadExiste || (primerContacto && !mensaje.referral)) && telefono) {
     const encontrado = await deps.buscarLeadPorTelefono(marcaId, telefono);
-    if (encontrado) {
-      leadId = encontrado.id;
-      leadExiste = true;
-      leadDatos = { negocio: encontrado.negocio, contacto: encontrado.contacto, ciudad: encontrado.ciudad };
-    }
+    // Si la conversación ya tenía OTRO lead, manda el de la conversación.
+    if (encontrado && (leadId === null || encontrado.id === leadId)) resolverLead(encontrado);
   }
+  // Tras vincular, la conversación puede traer el lead de otra entrega
+  // concurrente: ese gana, y lo que se sabía del nuestro ya no vale.
+  const adoptarLeadDe = (c: Conversacion) => {
+    if (c.lead_id !== null && c.lead_id !== leadId) {
+      leadId = c.lead_id;
+      leadExiste = true;
+      leadDatos = null;
+      leadEstado = null;
+    }
+  };
 
   const decision = decidir({
     mensaje,
-    conversacion: conversacionExistente ? { estado: conversacionExistente.estado } : null,
+    conversacion: conversacionExistente && !pendiente ? { estado: conversacionExistente.estado } : null,
     leadExiste,
   });
 
@@ -813,19 +921,26 @@ async function procesarMensaje(
     if (conversacion.lead_id) {
       // Ya tenía lead: lo creó la otra entrega concurrente que ganó la
       // carrera, o ya lo tenía de una conversación previa sin referral.
-      leadId = conversacion.lead_id;
+      adoptarLeadDe(conversacion);
     } else {
-      const creado = await deps.crearLeadDeWhatsApp({
-        marcaId,
-        waId: mensaje.waId,
-        telefono,
-        nombre: mensaje.nombrePerfil,
-        origen: referral ? "anuncio" : "whatsapp",
-        anuncio: referral?.anuncio ?? null,
-      });
-      leadId = creado.id;
-      leadDatos = { negocio: creado.negocio, contacto: creado.contacto, ciudad: creado.ciudad };
-      conversacion = await actualizarYDevolver(deps, conversacion, { estado: "bot", leadId, ventanaHasta });
+      // Se vuelve a buscar JUSTO antes de crear: en una ráfaga, la otra
+      // entrega puede haberlo creado entre la lectura de arriba y ahora.
+      const yaCreado = telefono ? await deps.buscarLeadPorTelefono(marcaId, telefono) : null;
+      const nuevoId = resolverLead(
+        yaCreado ??
+          (await deps.crearLeadDeWhatsApp({
+            marcaId,
+            waId: mensaje.waId,
+            telefono,
+            nombre: mensaje.nombrePerfil,
+            origen: referral ? "anuncio" : "whatsapp",
+            anuncio: referral?.anuncio ?? null,
+          })),
+      );
+      // Vínculo condicional (`lead_id is null`): si otra entrega vinculó el
+      // suyo mientras tanto, se sigue con ese en vez de pisarlo.
+      conversacion = await vincularOReleer(deps, conversacion, nuevoId);
+      adoptarLeadDe(conversacion);
     }
   } else {
     let estado: Conversacion["estado"];
@@ -849,10 +964,12 @@ async function procesarMensaje(
         deAnuncio = false;
         break;
       case "solo_guardar":
-        // Solo llega con conversación previa (el primer contacto, con o sin
-        // anuncio, es `crear_lead_y_responder`/`responder`): conserva su
-        // estado (una conversación `humana` sigue `humana`). El `?? "humana"`
-        // es defensa por si la tabla de `decidir` cambiara.
+        // Solo llega con una conversación previa que YA no es primer
+        // contacto: el primer contacto (sin conversación, o con una en `bot`
+        // que no llegó a arrancar, ver `primerContactoPendiente`) va siempre
+        // por `crear_lead_y_responder`/`responder`, con o sin anuncio.
+        // Conserva su estado (una conversación `humana` sigue `humana`). El
+        // `?? "humana"` es defensa por si la tabla de `decidir` cambiara.
         estado = conversacionExistente?.estado ?? "humana";
         deAnuncio = false;
         break;
@@ -868,33 +985,36 @@ async function procesarMensaje(
     // `crear_lead_y_responder`). `!leadExiste` cubre también el reintento de
     // Meta tras un fallo entre crear la conversación y crear el lead: la
     // conversación ya existe, sin lead.
-    const leadDeWhatsApp = tieneNumeroPropio(marca) && !leadExiste;
-    if (conversacionExistente) {
-      conversacion = await actualizarYDevolver(deps, conversacionExistente, { estado, leadId, ventanaHasta, ...nombre });
-    } else if (leadDeWhatsApp) {
-      // Mismo orden y mismo mutex que el camino del anuncio: conversación
-      // primero, lead después, para que dos entregas a la vez no creen dos.
-      conversacion = await crearConversacionOReleer(deps, { marcaId, waId: mensaje.waId, estado, ventanaHasta, ...nombre });
-    } else {
-      conversacion = await deps.crearConversacion({ marcaId, waId: mensaje.waId, leadId, estado, ventanaHasta, ...nombre });
+    // Mismo orden y mismo mutex que el camino del anuncio: conversación
+    // primero (índice único, `crearConversacionOReleer`), lead después y con
+    // vínculo condicional (`vincularOReleer`), para que dos entregas a la vez
+    // ni creen dos conversaciones ni vinculen dos leads.
+    conversacion = conversacionExistente
+      ? await actualizarYDevolver(deps, conversacionExistente, {
+          estado,
+          leadId: conversacionExistente.lead_id,
+          ventanaHasta,
+          ...nombre,
+        })
+      : await crearConversacionOReleer(deps, { marcaId, waId: mensaje.waId, estado, ventanaHasta, ...nombre });
+    if (leadId !== null && conversacion.lead_id === null) {
+      conversacion = await vincularOReleer(deps, conversacion, leadId);
     }
+    adoptarLeadDe(conversacion);
 
-    if (leadDeWhatsApp) {
-      if (conversacion.lead_id) {
-        leadId = conversacion.lead_id;
-      } else {
-        const creado = await deps.crearLeadDeWhatsApp({
+    if (tieneNumeroPropio(marca) && leadId === null) {
+      const nuevoId = resolverLead(
+        await deps.crearLeadDeWhatsApp({
           marcaId,
           waId: mensaje.waId,
           telefono,
           nombre: mensaje.nombrePerfil,
           origen: "whatsapp",
           anuncio: null,
-        });
-        leadId = creado.id;
-        leadDatos = { negocio: creado.negocio, contacto: creado.contacto, ciudad: creado.ciudad };
-        conversacion = await actualizarYDevolver(deps, conversacion, { estado: conversacion.estado, leadId, ventanaHasta });
-      }
+        }),
+      );
+      conversacion = await vincularOReleer(deps, conversacion, nuevoId);
+      adoptarLeadDe(conversacion);
     }
   }
 
@@ -913,7 +1033,41 @@ async function procesarMensaje(
   if (!nuevo) return false;
 
   // ---- FASE B: best-effort ------------------------------------------------
-  if (decision.accion === "crear_lead_y_responder" || decision.accion === "responder") {
+  // Primer contacto SIN anuncio de un contacto excluido o de un lead que ya se
+  // está trabajando: no se le arranca el guion de captación (le hablaría como
+  // a un desconocido). Pasa a una persona sin mandar nada y queda una nota en
+  // su ficha. Con anuncio no cambia nada: el clic pagado sigue su secuencia.
+  // El `as`: `leadEstado` solo se asigna dentro de `resolverLead`/`adoptarLeadDe`
+  // y TypeScript, que no lo ve, lo estrecharía a `null`.
+  const estadoConocido = leadEstado as { excluido: boolean; fase: Fase } | null;
+  const sinBot =
+    (decision.accion === "crear_lead_y_responder" || decision.accion === "responder") &&
+    !mensaje.referral &&
+    estadoConocido !== null &&
+    (estadoConocido.excluido || estadoConocido.fase !== "nuevo");
+  if (sinBot && estadoConocido) {
+    try {
+      await deps.actualizarConversacion(conversacion.id, { estado: "humana" });
+      conversacion = { ...conversacion, estado: "humana" };
+    } catch (e) {
+      console.error("[whatsapp] fallo pasando a humana el primer contacto de un lead que no lleva bot", mensaje.waId, e);
+    }
+    // Esta nota sustituye a la genérica: lleva el texto Y el motivo.
+    notaGenerica = false;
+    if (leadId) {
+      try {
+        const resultado = await registrarActividad({
+          leadId,
+          usuariaId: null,
+          tipo: "nota",
+          nota: notaPrimerContactoSinBot(mensaje.texto, estadoConocido),
+        });
+        if (!resultado.ok) console.error("[whatsapp] fallo dejando la nota del primer contacto sin bot", leadId, resultado.error);
+      } catch (e) {
+        console.error("[whatsapp] fallo dejando la nota del primer contacto sin bot", leadId, e);
+      }
+    }
+  } else if (decision.accion === "crear_lead_y_responder" || decision.accion === "responder") {
     const anuncio = mensaje.referral?.anuncio ?? null;
 
     // Cargar, elegir Y arrancar la secuencia van en su propio try: un fallo
