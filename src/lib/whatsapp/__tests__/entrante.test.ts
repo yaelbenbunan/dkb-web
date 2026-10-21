@@ -103,8 +103,25 @@ describe("decidir", () => {
       .toEqual({ accion: "responder" });
   });
 
-  it("no responde a quien llega sin anuncio", () => {
+  it("el primer contacto sin anuncio crea lead y responde (arranca la secuencia)", () => {
     expect(decidir({ mensaje: sinRef, conversacion: null, leadExiste: false }))
+      .toEqual({ accion: "crear_lead_y_responder" });
+  });
+
+  it("el primer contacto sin anuncio de un lead ya conocido solo responde", () => {
+    expect(decidir({ mensaje: sinRef, conversacion: null, leadExiste: true }))
+      .toEqual({ accion: "responder" });
+  });
+
+  it("el primer contacto sin anuncio y sin texto también arranca", () => {
+    expect(decidir({ mensaje: { ...sinRef, texto: null, tipo: "image" }, conversacion: null, leadExiste: false }))
+      .toEqual({ accion: "crear_lead_y_responder" });
+  });
+
+  it("sin anuncio no arranca nada en una conversación que ya existía, aunque no tenga lead", () => {
+    expect(decidir({ mensaje: sinRef, conversacion: { estado: "humana" }, leadExiste: false }))
+      .toEqual({ accion: "solo_guardar" });
+    expect(decidir({ mensaje: sinRef, conversacion: { estado: "cerrada" }, leadExiste: false }))
       .toEqual({ accion: "solo_guardar" });
   });
 

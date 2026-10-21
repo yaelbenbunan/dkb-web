@@ -737,7 +737,7 @@ describe("procesarWebhook", () => {
     expect(salientes).toHaveLength(0);
   });
 
-  it("solo_guardar con lead conocido por teléfono y sin conversación previa registra actividad", async () => {
+  it("primer contacto sin anuncio de un lead conocido por teléfono registra actividad", async () => {
     const { deps, leadsPorTelefono } = depsFalsas();
     leadsPorTelefono.set("660415514", { id: "lead-conocido" });
     const cuerpo = sobreConMensajes([
@@ -1915,17 +1915,21 @@ describe("procesarWebhook por marca", () => {
     expect(leadsCreados).toEqual([expect.objectContaining({ origen: "anuncio", anuncio: "AD-H" })]);
   });
 
-  it("Dinkbit sin referral sigue sin crear lead", async () => {
-    const { deps, conversaciones, leadsCreados } = depsFalsas();
+  // Antes «Dinkbit sin referral sigue sin crear lead». Desde la regla del
+  // primer contacto, quien escribe por primera vez a Dinkbit sin anuncio
+  // también es un lead (origen whatsapp), como en cualquier otra marca.
+  it("Dinkbit sin referral de un teléfono nuevo crea lead de WhatsApp aunque no tenga secuencia", async () => {
+    const { deps, conversaciones, leadsCreados, enviosMensajero } = depsFalsas();
     const cuerpo = sobrePorNumeros([{ numeroId: NUMERO_ENTORNO, nombre: "Ana", mensajes: [textoLibre("wamid.D1")] }]);
 
     await expect(procesarWebhook({ cuerpo, deps })).resolves.toEqual({ procesados: 1 });
 
-    expect(leadsCreados).toHaveLength(0);
+    expect(leadsCreados).toEqual([expect.objectContaining({ marcaId: MARCA.id, origen: "whatsapp", anuncio: null })]);
     const conv = conversaciones.get(`${MARCA.id}:34611222333`);
     expect(conv?.estado).toBe("humana");
-    expect(conv?.lead_id).toBeNull();
+    expect(conv?.lead_id).toBe("lead-1");
     expect(conv?.nombre_contacto).toBe("Ana");
+    expect(enviosMensajero).toHaveLength(0);
   });
 
   it("guarda el nombre del perfil en una conversación que todavía no lo tenía", async () => {
@@ -1957,6 +1961,142 @@ describe("procesarWebhook por marca", () => {
     await expect(procesarWebhook({ cuerpo, deps })).rejects.toThrow('no existe la marca "dinkbit"');
     // Se lanza antes de guardar nada: el reintento de Meta no duplica.
     expect(entrantes).toHaveLength(0);
+  });
+});
+
+/* Primer contacto sin anuncio: también arranca la secuencia ---------------- */
+
+describe("primer contacto sin anuncio", () => {
+  it("en una marca con secuencia general crea lead whatsapp, deja la conversación en bot y manda el primer paso", async () => {
+    const { deps, conversaciones, leadsCreados, enviosMensajero, salientes } = depsFalsas({
+      secuencias: [{ id: "s-hydrup", marca_id: HYDRUP.id, estado: "activa", anuncios: [], pasos: SECUENCIA_MINIMA }],
+    });
+    const cuerpo = sobrePorNumeros([{ numeroId: "PN-HYDRUP", nombre: "Marta", mensajes: [textoLibre("wamid.P1")] }]);
+
+    await expect(procesarWebhook({ cuerpo, deps })).resolves.toEqual({ procesados: 1 });
+
+    expect(leadsCreados).toEqual([
+      expect.objectContaining({ marcaId: HYDRUP.id, origen: "whatsapp", anuncio: null, nombre: "Marta" }),
+    ]);
+    const conv = conversaciones.get(`${HYDRUP.id}:34611222333`);
+    expect(conv?.estado).toBe("bot");
+    expect(conv?.lead_id).toBe("lead-1");
+    expect(conv?.secuencia_id).toBe("s-hydrup");
+    expect(conv?.paso_actual).toBe("problemas");
+    expect(enviosMensajero.map((e) => [e.marcaId, e.metodo])).toEqual([[HYDRUP.id, "botones"]]);
+    expect(salientes[0].texto).toContain("¿Qué te pasa?");
+    expect(salientes[0].origen).toBe("bot");
+  });
+
+  it("en Dinkbit (número de entorno) también arranca su secuencia general", async () => {
+    const { deps, conversaciones, leadsCreados, enviosMensajero } = depsFalsas({
+      secuencias: [{ id: "s-dinkbit", estado: "activa", anuncios: [], pasos: SECUENCIA_MINIMA }],
+    });
+    const cuerpo = sobrePorNumeros([{ numeroId: NUMERO_ENTORNO, mensajes: [textoLibre("wamid.P2")] }]);
+
+    await expect(procesarWebhook({ cuerpo, deps })).resolves.toEqual({ procesados: 1 });
+
+    expect(leadsCreados).toEqual([expect.objectContaining({ marcaId: MARCA.id, origen: "whatsapp", anuncio: null })]);
+    const conv = conversaciones.get(`${MARCA.id}:34611222333`);
+    expect(conv?.estado).toBe("bot");
+    expect(conv?.secuencia_id).toBe("s-dinkbit");
+    expect(enviosMensajero.map((e) => e.marcaId)).toEqual([MARCA.id]);
+  });
+
+  it("solo sirve la secuencia general: una que declara anuncios no arranca sin anuncio", async () => {
+    const { deps, conversaciones, enviosMensajero } = depsFalsas({
+      secuencias: [{ id: "s-ad", estado: "activa", anuncios: ["AD1"], pasos: SECUENCIA_MINIMA }],
+    });
+    const cuerpo = sobrePorNumeros([{ numeroId: NUMERO_ENTORNO, mensajes: [textoLibre("wamid.P3")] }]);
+
+    await procesarWebhook({ cuerpo, deps });
+
+    expect(conversaciones.get(`${MARCA.id}:34611222333`)?.estado).toBe("humana");
+    expect(enviosMensajero).toHaveLength(0);
+  });
+
+  it("sin secuencia general pasa a humana y no manda nada, tampoco la autorespuesta de Dinkbit", async () => {
+    const { deps, conversaciones, enviosMensajero, salientes } = depsFalsas({ secuencias: [] });
+    const cuerpo = sobrePorNumeros([{ numeroId: NUMERO_ENTORNO, mensajes: [textoLibre("wamid.P4")] }]);
+
+    await expect(procesarWebhook({ cuerpo, deps })).resolves.toEqual({ procesados: 1 });
+
+    const conv = conversaciones.get(`${MARCA.id}:34611222333`);
+    expect(conv?.estado).toBe("humana");
+    expect(conv?.secuencia_id ?? null).toBeNull();
+    expect(enviosMensajero).toHaveLength(0);
+    expect(salientes).toHaveLength(0);
+  });
+
+  it("un teléfono que ya era lead se vincula en vez de crear otro y arranca la secuencia", async () => {
+    const { deps, conversaciones, leadsCreados, leadsPorTelefono, enviosMensajero } = depsFalsas({
+      secuencias: [{ id: "s-hydrup", marca_id: HYDRUP.id, estado: "activa", anuncios: [], pasos: SECUENCIA_MINIMA }],
+    });
+    leadsPorTelefono.set("611222333", { id: "lead-conocido" });
+    const cuerpo = sobrePorNumeros([{ numeroId: "PN-HYDRUP", mensajes: [textoLibre("wamid.P5")] }]);
+
+    await procesarWebhook({ cuerpo, deps });
+
+    expect(leadsCreados).toHaveLength(0);
+    const conv = conversaciones.get(`${HYDRUP.id}:34611222333`);
+    expect(conv?.lead_id).toBe("lead-conocido");
+    expect(conv?.estado).toBe("bot");
+    expect(enviosMensajero).toHaveLength(1);
+  });
+
+  it("la ventana del primer contacto sin anuncio es la normal de 24h, no la de 72h del anuncio", async () => {
+    const { deps, conversaciones } = depsFalsas({
+      secuencias: [{ id: "s-dinkbit", estado: "activa", anuncios: [], pasos: SECUENCIA_MINIMA }],
+    });
+    const cuerpo = sobrePorNumeros([{ numeroId: NUMERO_ENTORNO, mensajes: [textoLibre("wamid.P6")] }]);
+
+    await procesarWebhook({ cuerpo, deps });
+
+    const conv = conversaciones.get(`${MARCA.id}:34611222333`);
+    expect(conv?.ventana_hasta).toBe(new Date((1790000000 + 24 * 3600) * 1000).toISOString());
+  });
+
+  it("una conversación humana que ya existía no arranca la secuencia sin anuncio", async () => {
+    const { deps, conversaciones, enviosMensajero } = depsFalsas({
+      secuencias: [{ id: "s-hydrup", marca_id: HYDRUP.id, estado: "activa", anuncios: [], pasos: SECUENCIA_MINIMA }],
+    });
+    await deps.crearConversacion({
+      marcaId: HYDRUP.id,
+      waId: "34611222333",
+      leadId: "lead-previo",
+      estado: "humana",
+      ventanaHasta: null,
+    });
+    const cuerpo = sobrePorNumeros([{ numeroId: "PN-HYDRUP", mensajes: [textoLibre("wamid.P7")] }]);
+
+    await procesarWebhook({ cuerpo, deps });
+
+    const conv = conversaciones.get(`${HYDRUP.id}:34611222333`);
+    expect(conv?.estado).toBe("humana");
+    expect(conv?.secuencia_id ?? null).toBeNull();
+    expect(enviosMensajero).toHaveLength(0);
+  });
+
+  it("una conversación que ya existía sin lead no arranca la secuencia al recibir un mensaje", async () => {
+    const { deps, conversaciones, enviosMensajero } = depsFalsas({
+      secuencias: [
+        { id: "s-dinkbit", estado: "activa", anuncios: [], pasos: SECUENCIA_MINIMA },
+        { id: "s-hydrup", marca_id: HYDRUP.id, estado: "activa", anuncios: [], pasos: SECUENCIA_MINIMA },
+      ],
+    });
+    // Las crea, p.ej., un envío desde el panel antes de que el lead escriba.
+    await deps.crearConversacion({ marcaId: MARCA.id, waId: "34611222333", leadId: null, estado: "humana", ventanaHasta: null });
+    await deps.crearConversacion({ marcaId: HYDRUP.id, waId: "34611222333", leadId: null, estado: "humana", ventanaHasta: null });
+    const cuerpo = sobrePorNumeros([
+      { numeroId: NUMERO_ENTORNO, mensajes: [textoLibre("wamid.P8")] },
+      { numeroId: "PN-HYDRUP", mensajes: [textoLibre("wamid.P9")] },
+    ]);
+
+    await procesarWebhook({ cuerpo, deps });
+
+    expect(conversaciones.get(`${MARCA.id}:34611222333`)?.estado).toBe("humana");
+    expect(conversaciones.get(`${HYDRUP.id}:34611222333`)?.estado).toBe("humana");
+    expect(enviosMensajero).toHaveLength(0);
   });
 });
 

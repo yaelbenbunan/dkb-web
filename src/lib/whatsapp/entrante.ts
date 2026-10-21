@@ -468,9 +468,17 @@ export function extraerAvisosCuenta(cuerpo: unknown): AvisoCuenta[] {
 /**
  * Tabla de decisión (spec `2026-09-23-whatsapp-canal-design.md`):
  * - Con `referral` (viene de un anuncio): crea lead si no existe, si no solo
- *   responde. El bot solo se dispara desde un anuncio, nunca a quien ya
- *   estaba conversando.
- * - Sin `referral`: si la conversación estaba en `bot` y el mensaje trae
+ *   responde. Un clic de anuncio rearranca el bot aunque ya hubiera
+ *   conversación.
+ * - Primer contacto (no hay conversación de esta marca con este `wa_id`), con
+ *   o sin `referral`: lo mismo — crea lead si no existe, si no solo responde.
+ *   Sin anuncio, la secuencia que arranca es la general de la marca (la que no
+ *   declara anuncios, ver `elegirSecuencia`); si no hay ninguna, la
+ *   conversación pasa a una persona sin mandar nada (la autorespuesta de
+ *   Dinkbit es solo para tráfico de anuncio).
+ * - Sin `referral` en una conversación que YA existía (también las del
+ *   historial importado o las que abrimos nosotros escribiendo primero):
+ *   nunca arranca un bot nuevo. Si la conversación estaba en `bot` y el mensaje trae
  *   texto, cuenta como la respuesta a la pregunta de cualificación. Un
  *   mensaje sin texto (imagen, audio...) no se puede guardar como respuesta,
  *   así que no cuenta aunque la conversación esté en `bot`.
@@ -482,7 +490,7 @@ export function decidir(input: {
 }): Decision {
   const { mensaje, conversacion, leadExiste } = input;
 
-  if (mensaje.referral) {
+  if (mensaje.referral || conversacion === null) {
     return leadExiste ? { accion: "responder" } : { accion: "crear_lead_y_responder" };
   }
 

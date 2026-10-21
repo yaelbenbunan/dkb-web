@@ -786,11 +786,12 @@ async function procesarMensaje(
   let notaGenerica = true;
 
   if (decision.accion === "crear_lead_y_responder") {
-    // decidir() solo devuelve esta acción cuando mensaje.referral no es
-    // null (así está construida la tabla de decisión de entrante.ts).
+    // decidir() devuelve esta acción con un clic de anuncio (`referral`) o en
+    // el PRIMER CONTACTO aunque no lo traiga (no hay conversación previa). Sin
+    // anuncio, el lead nace con origen "whatsapp" y la ventana es la normal
+    // de 24 h: Meta solo abre 72 h a quien llega desde un anuncio CTWA.
     const referral = mensaje.referral;
-    if (!referral) throw new Error("[whatsapp] crear_lead_y_responder sin referral: no debería pasar");
-    const ventanaHasta = ventanaExtendida(conversacionExistente, calcularVentana(recibidoEn, true));
+    const ventanaHasta = ventanaExtendida(conversacionExistente, calcularVentana(recibidoEn, referral !== null));
 
     // Orden a propósito (ver crearConversacionOReleer): primero la
     // conversación —que es el mutex real—, el lead después.
@@ -819,8 +820,8 @@ async function procesarMensaje(
         waId: mensaje.waId,
         telefono,
         nombre: mensaje.nombrePerfil,
-        origen: "anuncio",
-        anuncio: referral.anuncio,
+        origen: referral ? "anuncio" : "whatsapp",
+        anuncio: referral?.anuncio ?? null,
       });
       leadId = creado.id;
       leadDatos = { negocio: creado.negocio, contacto: creado.contacto, ciudad: creado.ciudad };
@@ -832,8 +833,10 @@ async function procesarMensaje(
 
     switch (decision.accion) {
       case "responder":
+        // Con anuncio, o primer contacto sin él de un lead que ya existía
+        // (ver `decidir`): la ventana de 72 h solo la abre el anuncio.
         estado = "bot";
-        deAnuncio = true;
+        deAnuncio = mensaje.referral !== null;
         break;
       case "guardar_respuesta":
         // Si hay una secuencia en marcha (secuencia_id Y paso_actual), la
@@ -846,9 +849,10 @@ async function procesarMensaje(
         deAnuncio = false;
         break;
       case "solo_guardar":
-        // Sin conversación previa (primer contacto sin anuncio) arranca ya
-        // en `humana`: no hay bot que la esté esperando. Si ya existía,
-        // conserva su estado (una conversación `humana` sigue `humana`).
+        // Solo llega con conversación previa (el primer contacto, con o sin
+        // anuncio, es `crear_lead_y_responder`/`responder`): conserva su
+        // estado (una conversación `humana` sigue `humana`). El `?? "humana"`
+        // es defensa por si la tabla de `decidir` cambiara.
         estado = conversacionExistente?.estado ?? "humana";
         deAnuncio = false;
         break;
@@ -858,10 +862,12 @@ async function procesarMensaje(
     const nombre = nombreNuevo(conversacionExistente, mensaje.nombrePerfil);
     // Una marca con número propio recibe en él TODAS sus conversaciones, no
     // solo las de anuncios: cada una tiene que acabar en su CRM como lead,
-    // aunque `decidir` diga `solo_guardar` (con Dinkbit, quien escribe sin
-    // anuncio no es un lead de la campaña, y eso no cambia). `!leadExiste`
-    // cubre también el reintento de Meta tras un fallo entre crear la
-    // conversación y crear el lead: la conversación ya existe, sin lead.
+    // aunque `decidir` diga `solo_guardar` (aquí solo llega una conversación
+    // que ya existía sin lead; en Dinkbit esa sigue sin lead — el primer
+    // contacto, que sí lo crea en todas las marcas, va por
+    // `crear_lead_y_responder`). `!leadExiste` cubre también el reintento de
+    // Meta tras un fallo entre crear la conversación y crear el lead: la
+    // conversación ya existe, sin lead.
     const leadDeWhatsApp = tieneNumeroPropio(marca) && !leadExiste;
     if (conversacionExistente) {
       conversacion = await actualizarYDevolver(deps, conversacionExistente, { estado, leadId, ventanaHasta, ...nombre });
@@ -1075,13 +1081,19 @@ async function procesarMensaje(
             }
           }
         }
-      } else if (marca.slug !== MARCA_DINKBIT_SLUG) {
+      } else if (!mensaje.referral || marca.slug !== MARCA_DINKBIT_SLUG) {
         // El respaldo de `autorespuesta.ts` habla de clínicas y firma Paula:
         // es el guion de Dinkbit, no sirve para otra marca. Sin secuencia
         // propia que conteste, la conversación pasa a una persona en vez de
         // mandarle al cliente de otra marca un texto que no es el suyo.
+        // Y tampoco sirve sin anuncio, ni en Dinkbit: el respaldo es la
+        // garantía de que un clic PAGADO no quede sin respuesta; a quien
+        // escribe por primera vez sin anuncio y sin secuencia general que lo
+        // atienda le contesta una persona (ver `decidir`).
         console.warn(
-          "[whatsapp] la marca no tiene secuencia para este anuncio, se pasa a humana sin autorespuesta",
+          mensaje.referral
+            ? "[whatsapp] la marca no tiene secuencia para este anuncio, se pasa a humana sin autorespuesta"
+            : "[whatsapp] primer contacto sin anuncio y sin secuencia general, se pasa a humana sin autorespuesta",
           marca.slug,
           mensaje.waId,
         );
@@ -1428,12 +1440,13 @@ async function procesarMensaje(
   }
 
   // Actividad en la ficha del lead: cuando se reutiliza uno ya existente
-  // ("responder"), cuando responde a la pregunta del bot
-  // ("guardar_respuesta"), o cuando escribe por primera vez sin conversación
-  // previa y ya era un lead conocido por teléfono —o se le acaba de crear
-  // por escribir al número propio de su marca— ("solo_guardar" de primer
-  // contacto). Si la conversación YA estaba en marcha (`humana`), no
-  // se anota cada mensaje suelto — eso ensuciaría la ficha sin aportar nada.
+  // ("responder", con anuncio o en el primer contacto sin él), cuando
+  // responde a la pregunta del bot ("guardar_respuesta"), o cuando se le
+  // acaba de crear por escribir por primera vez sin anuncio
+  // ("crear_lead_y_responder" sin `referral`: lo que escribe sí es suyo, no
+  // el texto prerrellenado de un anuncio). Si la conversación YA estaba en
+  // marcha (`humana`), no se anota cada mensaje suelto — eso ensuciaría la
+  // ficha sin aportar nada.
   //
   // `notaGenerica` (tarea 9): cuando el motor de la secuencia llegó a
   // decidir algo sobre este mensaje, ya deja su propia nota vía
@@ -1446,6 +1459,7 @@ async function procesarMensaje(
     notaGenerica &&
     (decision.accion === "responder" ||
       decision.accion === "guardar_respuesta" ||
+      (decision.accion === "crear_lead_y_responder" && !mensaje.referral) ||
       (decision.accion === "solo_guardar" && !teniaConversacionPrevia));
   if (registrarNota) {
     try {
