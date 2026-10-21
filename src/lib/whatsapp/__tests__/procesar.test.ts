@@ -2620,7 +2620,8 @@ describe("historial de WhatsApp", () => {
 
     const conv = conversaciones.get(`${HYDRUP.id}:34611222333`);
     expect(conv?.estado).toBe("humana");
-    expect(conv?.ventana_hasta).toBeNull();
+    // Abre con el último mensaje del cliente (H1), no con el del negocio (H2).
+    expect(conv?.ventana_hasta).toBe(new Date(1790000000 * 1000 + 24 * 3600 * 1000).toISOString());
     expect(conv?.paso_actual).toBeNull();
     expect(conv?.nombre_contacto).toBe("Marta");
     expect(conv?.lead_id).toBe("lead-1");
@@ -2654,16 +2655,51 @@ describe("historial de WhatsApp", () => {
     expect(leadsCreados).toHaveLength(1);
   });
 
-  it("en una conversación viva no toca su estado ni su ventana", async () => {
+  it("un hilo con un mensaje del cliente de hace 2 h abre la ventana a ese mensaje + 24 h", async () => {
+    const { deps, conversaciones } = depsFalsas();
+    const hace2h = Date.now() - 2 * 3600 * 1000;
+    const ts = String(Math.floor(hace2h / 1000));
+    await procesarWebhook({
+      cuerpo: sobreHistorial({
+        mensajes: [{ from: "34611222333", id: "wamid.R1", timestamp: ts, type: "text", text: { body: "hola" } }],
+      }),
+      deps,
+    });
+    const conv = conversaciones.get(`${HYDRUP.id}:34611222333`);
+    expect(conv?.ventana_hasta).toBe(new Date(Number(ts) * 1000 + 24 * 3600 * 1000).toISOString());
+  });
+
+  it("un hilo solo con mensajes del negocio no abre la ventana", async () => {
+    const { deps, conversaciones } = depsFalsas();
+    await procesarWebhook({
+      cuerpo: sobreHistorial({
+        mensajes: [{ from: "34900000000", id: "wamid.N1", timestamp: "1790000100", type: "text", text: { body: "qué tal" } }],
+      }),
+      deps,
+    });
+    expect(conversaciones.get(`${HYDRUP.id}:34611222333`)?.ventana_hasta).toBeNull();
+  });
+
+  it("en una conversación existente la ventana se extiende con el historial", async () => {
+    const { deps, conversaciones } = depsFalsas();
+    conversaciones.set(`${HYDRUP.id}:34611222333`, { ...conversacionEnBot(), ventana_hasta: "2026-09-20T10:00:00.000Z" });
+    await procesarWebhook({ cuerpo: sobreHistorial(), deps });
+    expect(conversaciones.get(`${HYDRUP.id}:34611222333`)?.ventana_hasta).toBe(
+      new Date(1790000000 * 1000 + 24 * 3600 * 1000).toISOString(),
+    );
+  });
+
+  it("en una conversación viva no toca su estado y nunca encoge su ventana", async () => {
     const { deps, conversaciones, historial } = depsFalsas();
     conversaciones.set(`${HYDRUP.id}:34611222333`, conversacionEnBot());
+    conversaciones.get(`${HYDRUP.id}:34611222333`)!.ventana_hasta = "2026-12-01T10:00:00.000Z";
 
     await procesarWebhook({ cuerpo: sobreHistorial(), deps });
 
     const conv = conversaciones.get(`${HYDRUP.id}:34611222333`);
     expect(conv?.estado).toBe("bot");
     expect(conv?.paso_actual).toBe("inicio");
-    expect(conv?.ventana_hasta).toBe("2026-09-22T10:00:00.000Z");
+    expect(conv?.ventana_hasta).toBe("2026-12-01T10:00:00.000Z");
     expect(conv?.lead_id).toBe("lead-previo");
     expect(historial).toHaveLength(2);
   });

@@ -74,5 +74,11 @@ export function nombreConversacion(
 ): string {
   const telefono = telefonoDeWaId(waId) ?? waId;
   const nombre = (leadId ? nombres.get(leadId)?.trim() : undefined) || nombreContacto?.trim();
-  return nombre ? `${nombre} (${telefono})` : telefono;
+  if (!nombre) return telefono;
+  // Si el nombre ya lleva el teléfono (p. ej. «Lead de WhatsApp (447710173736)»), no se repite.
+  const digitos = (t: string) => t.replace(/\D/g, "");
+  const dn = digitos(nombre);
+  const dt = digitos(telefono);
+  if (dt && (dn.includes(dt) || dn.includes(digitos(waId)))) return nombre;
+  return `${nombre} (${telefono})`;
 }

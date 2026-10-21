@@ -82,6 +82,11 @@ describe("nombreConversacion", () => {
   it("sin lead usa el nombre de contacto", () => {
     expect(nombreConversacion("34600111222", null, nombres, "Ana")).toBe("Ana (600111222)");
   });
+  it("no repite el teléfono si el nombre ya lo lleva", () => {
+    expect(nombreConversacion("447710173736", null, nombres, "Lead de WhatsApp (447710173736)")).toBe(
+      "Lead de WhatsApp (447710173736)",
+    );
+  });
   it("sin lead ni nombre usa el teléfono", () => {
     expect(nombreConversacion("34600111222", null, nombres, null)).toBe("600111222");
     expect(nombreConversacion("34600111222", "otro", nombres)).toBe("600111222");

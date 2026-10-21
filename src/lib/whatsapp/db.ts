@@ -127,7 +127,7 @@ export async function crearConversacion(input: {
   waId: string;
   leadId: string | null;
   estado: Conversacion["estado"];
-  /** `null`: sin ventana abierta (una conversación importada del historial). */
+  /** `null`: sin ventana abierta (p. ej. un historial sin mensajes del cliente). */
   ventanaHasta: Date | null;
   /** Nombre del perfil de WhatsApp, si Meta lo mandó. */
   nombreContacto?: string | null;

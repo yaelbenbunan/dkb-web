@@ -1800,9 +1800,10 @@ async function procesarContactos(contactos: ContactoSync[], marcaPropiaDe: Marca
 /**
  * Historial que la empresa compartió al conectar el número. Importarlo es SOLO
  * guardar: la conversación nueva nace en `humana` (la lleva una persona, nunca
- * el bot) y sin ventana, porque esos mensajes son viejos y no abren nada; no
+ * el bot). La ventana de 24 h se abre con el último mensaje ENTRANTE del
+ * cliente (nunca con los del negocio) y solo se extiende, jamás se encoge; no
  * se mira ninguna secuencia, no se envía nada y no se apunta actividad en la
- * ficha. Una conversación que ya existía conserva su estado y su ventana.
+ * ficha. Una conversación que ya existía conserva su estado.
  *
  * El lead se crea como en un mensaje directo a un número propio (origen
  * `"whatsapp"`), con el nombre de la agenda si se sincronizó. Solo hay
@@ -1868,16 +1869,34 @@ async function importarHilo(marca: Marca, hilo: LoteHistorial["hilos"][number], 
   const nombre = await deps.nombreDeContacto(marcaId, hilo.waId);
   const masAntiguo = hilo.mensajes.reduce((a, m) => (m.enviadoEn < a ? m.enviadoEn : a), hilo.mensajes[0].enviadoEn);
 
+  // La ventana de 24 h se abre con el último mensaje REAL del cliente; los del
+  // negocio (eco/historial saliente) nunca la abren. Sin entrantes, no hay ventana.
+  const ultimoEntrante = hilo.mensajes.reduce<Date | null>(
+    (a, m) => (m.deNegocio || (a && m.enviadoEn <= a) ? a : m.enviadoEn),
+    null,
+  );
+  const ventanaDelHilo = ultimoEntrante ? calcularVentana(ultimoEntrante, false) : null;
+
+  const existente = await deps.getConversacion(marcaId, hilo.waId);
   let conversacion =
-    (await deps.getConversacion(marcaId, hilo.waId)) ??
+    existente ??
     (await crearConversacionOReleer(deps, {
       marcaId,
       waId: hilo.waId,
       estado: "humana",
-      ventanaHasta: null,
+      ventanaHasta: ventanaDelHilo,
       nombreContacto: nombre ?? undefined,
       ultimoMensajeAt: masAntiguo,
     }));
+
+  // Conversación que ya existía: la ventana solo se extiende, nunca se encoge.
+  if (existente && ventanaDelHilo) {
+    const ventana = ventanaExtendida(existente, ventanaDelHilo);
+    if (ventana.getTime() !== new Date(existente.ventana_hasta ?? 0).getTime()) {
+      await deps.actualizarConversacion(existente.id, { ventanaHasta: ventana });
+      conversacion = { ...conversacion, ventana_hasta: ventana.toISOString() };
+    }
+  }
 
   if (!conversacion.lead_id) {
     const lead =
