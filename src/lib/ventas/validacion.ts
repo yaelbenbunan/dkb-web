@@ -121,7 +121,7 @@ export interface NuevaMarca {
 }
 
 /** Rutas fijas de /panel/ventas: una marca con ese slug quedaría tapada. */
-const SLUGS_RESERVADOS = ["hoy", "usuarias", "login"];
+const SLUGS_RESERVADOS = ["hoy", "usuarias", "login", "altas"];
 
 export function leerNuevaMarca(fd: FormData): Leido<NuevaMarca> {
   const nombre = campo(fd, "nombre");

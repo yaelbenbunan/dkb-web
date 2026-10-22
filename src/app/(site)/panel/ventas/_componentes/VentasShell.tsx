@@ -43,7 +43,12 @@ export function VentasShell({ usuaria, children }: { usuaria: Usuaria; children:
               <Link href="/panel/ventas/hoy" style={enlace}>Mi día</Link>
             </>
           )}
-          {usuaria.rol === "admin" && <Link href="/panel/ventas/usuarias" style={enlace}>Usuarios</Link>}
+          {usuaria.rol === "admin" && (
+            <>
+              <Link href="/panel/ventas/usuarias" style={enlace}>Usuarios</Link>
+              <Link href="/panel/ventas/altas" style={enlace}>Altas</Link>
+            </>
+          )}
         </nav>
         <form action={ventasLogout} style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 13, color: "#cbd5e1" }}>
