@@ -220,7 +220,6 @@ export const SECCIONES_ALTA: readonly SeccionAlta[] = [
         opciones: [
           { valor: "tarjeta", etiqueta: "Tarjeta en la cuenta publicitaria, a vuestro nombre" },
           { valor: "paypal", etiqueta: "PayPal" },
-          { valor: "dinkbit", etiqueta: "Lo adelanta Dinkbit y os lo factura" },
         ],
       },
     ],
