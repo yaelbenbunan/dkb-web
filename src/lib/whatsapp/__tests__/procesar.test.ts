@@ -584,6 +584,8 @@ function depsFalsas(
         contacto: input.nombre,
         ...(input.negocio ? { negocio: input.negocio } : {}),
         tipo_negocio: input.tipoNegocio ?? null,
+        // Como la RPC: un teléfono de las exclusiones nace excluido.
+        excluido: !!exclusiones?.some((x) => x.telefono === (input.telefono ?? input.waId)),
       };
       leadsPorTelefono.set(input.telefono ?? input.waId, lead);
       // `exclusiones` se registra aparte: los tests de siempre comparan la
@@ -2630,7 +2632,6 @@ describe("historial de WhatsApp", () => {
       secuencias: [{ id: "s-hydrup", marca_id: HYDRUP.id, estado: "activa", anuncios: [], pasos: SECUENCIA_MINIMA }],
     });
     contactos.set(`${HYDRUP.id}:34611222333`, "Marta");
-    const secuenciasSpy = vi.spyOn(deps, "listSecuencias");
     const mensajeroSpy = vi.spyOn(deps, "mensajeroDeMarca");
 
     await expect(procesarWebhook({ cuerpo: sobreHistorial(), deps })).resolves.toEqual({ procesados: 0 });
@@ -2649,7 +2650,9 @@ describe("historial de WhatsApp", () => {
       { conversacionId: conv?.id, wamid: "wamid.H1", deNegocio: false, texto: "hola" },
       { conversacionId: conv?.id, wamid: "wamid.H2", deNegocio: true, texto: "qué tal" },
     ]);
-    expect(secuenciasSpy).not.toHaveBeenCalled();
+    // Las secuencias se pueden LEER (para saber si la marca crea el lead tras
+    // el filtro), pero no se arranca ninguna: ni puntero ni envíos.
+    expect(conv?.secuencia_id ?? null).toBeNull();
     expect(mensajeroSpy).not.toHaveBeenCalled();
     expect(enviosMensajero).toHaveLength(0);
     expect(salientes).toHaveLength(0);
@@ -3277,5 +3280,191 @@ describe("crearLeadDeWhatsApp con los datos del filtro", () => {
     });
 
     expect(crearLeadsMock.mock.calls[0][0].leads[0]).toMatchObject({ negocio: "Clínica Sonrisas", tipo_negocio: "clinica_dental" });
+  });
+});
+
+describe("lead tras el filtro: fallos, exclusiones y reinicios (fix round 1)", () => {
+  const SEC: Secuencia = {
+    version: 1,
+    inicio: "tipo",
+    pasos: {
+      tipo: {
+        tipo: "mensaje",
+        texto: "¿Qué negocio tienes?",
+        botones: [
+          { texto: "Clínica dental", guardar_en_lead: { campo: "tipo_negocio", valor: "clinica_dental" }, ruta: { ir_a: "nombre" } },
+          { texto: "Soy particular", ruta: { fase: "fuera_de_perfil", terminar: true } },
+        ],
+      },
+      nombre: {
+        tipo: "mensaje",
+        texto: "¿Cómo se llama tu negocio?",
+        botones: [],
+        campo_lead: "negocio",
+        ruta: { crear_lead: true, ir_a: "mas" },
+      },
+      mas: {
+        tipo: "mensaje",
+        texto: "¿Te llamamos?",
+        botones: [{ texto: "Sí", ruta: { avisar: true, terminar: true } }],
+      },
+    },
+  };
+  const FILTRO: SecuenciaFalsa & { marca_id: string } = { id: "s-filtro", marca_id: HYDRUP.id, estado: "activa", anuncios: [], pasos: SEC };
+  const WA = "34611222333";
+  const CONV = `${HYDRUP.id}:${WA}`;
+  const pulsar = (wamid: string, indice: number, titulo: string) => ({
+    id: wamid,
+    from: WA,
+    timestamp: "1790000100",
+    type: "interactive",
+    interactive: { type: "button_reply", button_reply: { id: `opcion_${indice}`, title: titulo } },
+  });
+  const enHydrup = (mensaje: Record<string, unknown>) =>
+    sobrePorNumeros([{ numeroId: "PN-HYDRUP", nombre: "Marta", mensajes: [mensaje] }]);
+  const EXCLUSION = { id: "x1", marca_id: HYDRUP.id, nombre: null, email: null, telefono: "611222333", cif: null, created_at: "2026-01-01T00:00:00Z" };
+
+  async function hastaElNombre(deps: Deps) {
+    await procesarWebhook({ cuerpo: enHydrup(textoLibre("wamid.R1")), deps });
+    await procesarWebhook({ cuerpo: enHydrup(pulsar("wamid.R2", 1, "Clínica dental")), deps });
+  }
+
+  it("I1: si crear el lead falla tras el reclamo, el guion sigue y el siguiente mensaje crea UN lead", async () => {
+    const { deps, conversaciones, leadsCreados, enviosMensajero } = depsFalsas({ secuencias: [FILTRO] });
+    await hastaElNombre(deps);
+    const original = deps.crearLeadDeWhatsApp;
+    let fallos = 0;
+    deps.crearLeadDeWhatsApp = async (input) => {
+      if (fallos === 0) {
+        fallos += 1;
+        throw new Error("hipo de Supabase");
+      }
+      return original(input);
+    };
+
+    await procesarWebhook({ cuerpo: enHydrup(textoLibre("wamid.R3", WA, "Clínica Sonrisas")), deps });
+
+    expect(leadsCreados).toHaveLength(0);
+    let conv = conversaciones.get(CONV);
+    // No se fuerza a humana: el guion sigue y manda su paso.
+    expect(conv?.estado).toBe("bot");
+    expect(conv?.paso_actual).toBe("mas");
+    expect(conv?.datos["lead.crear_pendiente"]).toBe("1");
+    expect(enviosMensajero.at(-1)?.texto).toBe("¿Te llamamos?");
+
+    await procesarWebhook({ cuerpo: enHydrup(pulsar("wamid.R4", 1, "Sí")), deps });
+
+    expect(leadsCreados).toEqual([expect.objectContaining({ negocio: "Clínica Sonrisas", tipoNegocio: "clinica_dental" })]);
+    conv = conversaciones.get(CONV);
+    expect(conv?.lead_id).toBe("lead-1");
+    expect(conv?.datos["lead.crear_pendiente"]).toBeUndefined();
+  });
+
+  it("I1: si crear el lead pendiente vuelve a fallar en la fase A, el webhook da error (Meta reintenta) y el reintento lo crea", async () => {
+    const { deps, leadsCreados } = depsFalsas({ secuencias: [FILTRO] });
+    await hastaElNombre(deps);
+    const original = deps.crearLeadDeWhatsApp;
+    let fallos = 0;
+    deps.crearLeadDeWhatsApp = async (input) => {
+      if (fallos < 2) {
+        fallos += 1;
+        throw new Error("hipo de Supabase");
+      }
+      return original(input);
+    };
+    await procesarWebhook({ cuerpo: enHydrup(textoLibre("wamid.R3", WA, "Clínica Sonrisas")), deps });
+
+    await expect(procesarWebhook({ cuerpo: enHydrup(pulsar("wamid.R4", 1, "Sí")), deps })).rejects.toThrow();
+    await procesarWebhook({ cuerpo: enHydrup(pulsar("wamid.R4", 1, "Sí")), deps });
+
+    expect(leadsCreados).toHaveLength(1);
+  });
+
+  it("I2: un contacto excluido no espera al filtro: se crea su lead excluido y no lleva bot", async () => {
+    const { deps, conversaciones, leadsCreados, enviosMensajero, actividades } = depsFalsas({ secuencias: [FILTRO] });
+    deps.listExclusiones = async () => [EXCLUSION];
+
+    await procesarWebhook({ cuerpo: enHydrup(textoLibre("wamid.R1")), deps });
+
+    expect(leadsCreados).toHaveLength(1);
+    const conv = conversaciones.get(CONV);
+    expect(conv?.estado).toBe("humana");
+    expect(enviosMensajero).toHaveLength(0);
+    expect(actividades.map((a) => a.nota).join(" ")).toContain("exclusiones");
+  });
+
+  it("I2/I3: si el lead creado tras el filtro resulta excluido, pasa a humana y no se manda nada más ese turno", async () => {
+    const { deps, conversaciones, leadsCreados, enviosMensajero } = depsFalsas({ secuencias: [FILTRO] });
+    await hastaElNombre(deps);
+    const enviadosAntes = enviosMensajero.length;
+    deps.listExclusiones = async () => [EXCLUSION];
+
+    await procesarWebhook({ cuerpo: enHydrup(textoLibre("wamid.R3", WA, "Clínica Sonrisas")), deps });
+
+    expect(leadsCreados).toHaveLength(1);
+    const conv = conversaciones.get(CONV);
+    expect(conv?.estado).toBe("humana");
+    expect(conv?.paso_actual).toBeNull();
+    expect(enviosMensajero).toHaveLength(enviadosAntes);
+  });
+
+  it("I4: una secuencia que difiere el lead pero no puede arrancar crea el lead igualmente", async () => {
+    const rota: SecuenciaFalsa & { marca_id: string } = { ...FILTRO, pasos: { ...SEC, inicio: "no_existe" } };
+    const { deps, conversaciones, leadsCreados } = depsFalsas({ secuencias: [rota] });
+
+    await procesarWebhook({ cuerpo: enHydrup(textoLibre("wamid.R1")), deps });
+
+    expect(leadsCreados).toHaveLength(1);
+    expect(conversaciones.get(CONV)?.lead_id).toBe("lead-1");
+    expect(conversaciones.get(CONV)?.estado).toBe("humana");
+  });
+
+  it("ecos: en una marca cuya secuencia general difiere el lead, un eco no crea lead", async () => {
+    const { deps, conversaciones, leadsCreados } = depsFalsas({ secuencias: [FILTRO] });
+
+    await procesarWebhook({ cuerpo: sobreConEcos("PN-HYDRUP", [{ id: "wamid.ECO-F" }]), deps });
+
+    expect(leadsCreados).toHaveLength(0);
+    expect(conversaciones.get(CONV)?.lead_id).toBeNull();
+    expect(conversaciones.get(CONV)?.estado).toBe("humana");
+  });
+
+  it("ecos: en esa marca, un eco a un teléfono que ya es lead sí lo vincula", async () => {
+    const { deps, conversaciones, leadsCreados, leadsPorTelefono } = depsFalsas({ secuencias: [FILTRO] });
+    leadsPorTelefono.set("611222333", { id: "lead-conocido" });
+
+    await procesarWebhook({ cuerpo: sobreConEcos("PN-HYDRUP", [{ id: "wamid.ECO-F" }]), deps });
+
+    expect(leadsCreados).toHaveLength(0);
+    expect(conversaciones.get(CONV)?.lead_id).toBe("lead-conocido");
+  });
+
+  it("historial: en una marca cuya secuencia general difiere el lead, el historial no crea lead", async () => {
+    const { deps, conversaciones, leadsCreados, historial } = depsFalsas({ secuencias: [FILTRO] });
+
+    await procesarWebhook({ cuerpo: sobreHistorial(), deps });
+
+    expect(leadsCreados).toHaveLength(0);
+    expect(conversaciones.get(CONV)?.lead_id).toBeNull();
+    expect(historial).toHaveLength(2);
+  });
+
+  it("historial: en esa marca, un teléfono que ya es lead se vincula", async () => {
+    const { deps, conversaciones, leadsCreados, leadsPorTelefono } = depsFalsas({ secuencias: [FILTRO] });
+    leadsPorTelefono.set("611222333", { id: "lead-conocido" });
+
+    await procesarWebhook({ cuerpo: sobreHistorial(), deps });
+
+    expect(leadsCreados).toHaveLength(0);
+    expect(conversaciones.get(CONV)?.lead_id).toBe("lead-conocido");
+  });
+
+  it("M2: el negocio escrito se corta a 150 caracteres", async () => {
+    const { deps, leadsCreados } = depsFalsas({ secuencias: [FILTRO] });
+    await hastaElNombre(deps);
+
+    await procesarWebhook({ cuerpo: enHydrup(textoLibre("wamid.R3", WA, "x".repeat(400))), deps });
+
+    expect(leadsCreados[0]?.negocio).toHaveLength(150);
   });
 });

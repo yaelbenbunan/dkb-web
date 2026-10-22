@@ -59,6 +59,21 @@ function ordenPasos(s: Secuencia): string[] {
   return orden;
 }
 
+/** Lo que se manda al guardar: un «guardar en el lead» con el valor vacío (el
+ *  cargo a medio escribir) se quita en vez de tumbar el guardado. */
+function paraGuardar(s: Secuencia): Secuencia {
+  const pasos: Record<string, Paso> = {};
+  for (const [id, paso] of Object.entries(s.pasos)) {
+    pasos[id] = {
+      ...paso,
+      botones: paso.botones.map((b) =>
+        b.guardar_en_lead && !b.guardar_en_lead.valor.trim() ? { ...b, guardar_en_lead: undefined } : b,
+      ),
+    };
+  }
+  return { ...s, pasos };
+}
+
 function idPasoNuevo(pasos: Record<string, Paso>): string {
   let n = 1;
   while (pasos[`p${n}`]) n += 1;
@@ -353,7 +368,7 @@ export function EditorSecuencia({
           style={{ ...campo, fontSize: 16, fontWeight: 700, minWidth: 220, flex: "1 1 220px" }}
         />
         <EstadoEtiqueta estado={estadoInicial} />
-        <input type="hidden" name="pasos" value={JSON.stringify(secuencia)} readOnly />
+        <input type="hidden" name="pasos" value={JSON.stringify(paraGuardar(secuencia))} readOnly />
 
         {editable && (
           <>

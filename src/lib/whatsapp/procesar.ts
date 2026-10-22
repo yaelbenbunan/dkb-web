@@ -59,7 +59,7 @@ import {
   type SecuenciaRow,
 } from "../ventas/db";
 import { clasificarLeads } from "../ventas/leads-csv";
-import { claveDatoLead, difiereLead, parsearSecuencia } from "../ventas/secuencias";
+import { claveDatoLead, difiereLead, MAX_DATO_LEAD, parsearSecuencia } from "../ventas/secuencias";
 import {
   iniciarSimulacion,
   responderBoton,
@@ -345,6 +345,20 @@ function ventanaExtendida(existente: Conversacion | null, nueva: Date): Date {
   return actual.getTime() > nueva.getTime() ? actual : nueva;
 }
 
+/**
+ * Decisión de producto (pendiente de que Yael la confirme; por eso es una
+ * constante fácil de cambiar): en una marca cuya secuencia GENERAL activa crea
+ * el lead tras el filtro, los ecos del móvil y el historial importado NO crean
+ * lead — solo vinculan el que ya exista por teléfono. Lo mismo para una
+ * conversación concreta que va por una secuencia así (marca `diferido`). En
+ * las demás marcas, todo como siempre. Con `false`, ecos e historial vuelven a
+ * crear el lead en todos los casos.
+ */
+export const ECOS_E_HISTORIAL_RESPETAN_FILTRO = true;
+
+/** Si en esta marca los ecos y el historial deben dejar el lead al filtro. */
+type MarcaDifiere = (marcaId: string) => Promise<boolean>;
+
 /** Lo que hace falta para mandar el primer paso de una secuencia arrancada. */
 interface SecuenciaArrancada {
   secuenciaId: string;
@@ -455,7 +469,8 @@ function datosPendientesLead(datos: Record<string, string>): {
   fase?: Fase;
   anuncio?: string;
 } {
-  const leer = (campo: Parameters<typeof claveDatoLead>[0]) => datos[claveDatoLead(campo)]?.trim() || undefined;
+  const leer = (campo: Parameters<typeof claveDatoLead>[0]) =>
+    datos[claveDatoLead(campo)]?.trim().slice(0, MAX_DATO_LEAD).trimEnd() || undefined;
   const tipo = leer("tipo_negocio");
   const fase = leer("fase");
   return {
@@ -527,7 +542,7 @@ async function crearLeadTrasFiltro(
     nombrePerfil: string | null;
     datos: Record<string, string>;
   },
-): Promise<{ conversacion: Conversacion; leadId: string | null }> {
+): Promise<{ conversacion: Conversacion; leadId: string | null; excluido: boolean }> {
   const pendientes = datosPendientesLead(input.datos);
   const nombre = nombreLimpio(input.nombrePerfil) ?? nombreLimpio(input.conversacion.nombre_contacto);
   let conversacion = input.conversacion;
@@ -563,7 +578,56 @@ async function crearLeadTrasFiltro(
     });
     if (Object.keys(cambios).length > 0) await deps.completarLead(lead.id, cambios);
   }
-  return { conversacion, leadId };
+  return { conversacion, leadId, excluido: lead?.excluido ?? false };
+}
+
+/** `datos` sin la clave `campo` de los datos pendientes del lead. */
+function sinDatoLead(datos: Record<string, string>, campo: Parameters<typeof claveDatoLead>[0]): Record<string, string> {
+  const copia = { ...datos };
+  delete copia[claveDatoLead(campo)];
+  return copia;
+}
+
+/**
+ * Lead tras el filtro que quedó PENDIENTE: la conversación pasó la ruta con
+ * `crear_lead` (la marca `crear_pendiente` se escribió en el mismo
+ * `reclamarPaso` que el avance, así que no se pierde aunque el proceso muera),
+ * pero crear el lead falló. Se reintenta en la FASE A del siguiente mensaje:
+ * un fallo aquí se propaga (500, Meta reintenta), y repetirlo es seguro
+ * porque `crearLeadTrasFiltro` vuelve a buscar por teléfono y vincula de forma
+ * condicional. Orden: crear y vincular, nota, y por último quitar la marca;
+ * si algo de después falla, el reintento ve `lead_id` puesto y no repite nada.
+ */
+async function crearLeadPendiente(
+  deps: Deps,
+  conversacion: Conversacion,
+  telefono: string | null,
+  mensaje: MensajeEntrante,
+): Promise<Conversacion> {
+  const r = await crearLeadTrasFiltro(deps, {
+    marcaId: conversacion.marca_id,
+    conversacion,
+    leadId: null,
+    telefono,
+    waId: mensaje.waId,
+    nombrePerfil: mensaje.nombrePerfil,
+    datos: conversacion.datos,
+  });
+  if (r.leadId) {
+    await avisarComercial(r.leadId, {
+      filtro: notaDelFiltro(conversacion.datos),
+      faseNueva: datosPendientesLead(conversacion.datos).fase,
+    });
+  }
+  const datos = sinDatoLead(r.conversacion.datos, "crear_pendiente");
+  // Un lead excluido no sigue con el bot (igual que en la fase B).
+  const cambios = r.excluido ? { datos, estado: "humana" as const, pasoActual: null } : { datos };
+  await deps.actualizarConversacion(conversacion.id, cambios);
+  return {
+    ...r.conversacion,
+    datos,
+    ...(r.excluido ? { estado: "humana" as const, paso_actual: null } : {}),
+  };
 }
 
 /**
@@ -1022,8 +1086,17 @@ async function procesarMensaje(
   const marcaId = marca.id;
   const marcaNombre = marca.nombre;
   // ---- FASE A: reintentable ----------------------------------------------
-  const conversacionExistente = await deps.getConversacion(marcaId, mensaje.waId);
+  let conversacionExistente = await deps.getConversacion(marcaId, mensaje.waId);
   const telefono = telefonoDeWaId(mensaje.waId);
+  // Lead tras el filtro que no se pudo crear en su turno: se crea ahora, en
+  // fase A (ver `crearLeadPendiente`).
+  if (
+    conversacionExistente &&
+    conversacionExistente.lead_id === null &&
+    conversacionExistente.datos?.[claveDatoLead("crear_pendiente")]
+  ) {
+    conversacionExistente = await crearLeadPendiente(deps, conversacionExistente, telefono, mensaje);
+  }
   // `recibidoEn` sale de parsear el timestamp de Meta (segundos como texto).
   //
   // Política unificada de timestamps fuera de rango (Minor 4, ronda de
@@ -1154,7 +1227,16 @@ async function procesarMensaje(
       if (!yaCreado) {
         try {
           secuenciasCargadas = await deps.listSecuencias(marcaId);
-          leadDiferido = secuenciaDiferida(secuenciasCargadas, referral?.anuncio ?? null);
+          let difiere = secuenciaDiferida(secuenciasCargadas, referral?.anuncio ?? null);
+          // Un contacto de las exclusiones no espera al filtro: se crea ya su
+          // lead (marcado excluido), y entonces el primer contacto sin anuncio
+          // no lleva bot (`sinBot`), como siempre.
+          if (difiere) {
+            const exclusiones = await deps.listExclusiones(marcaId);
+            const { excluidos } = clasificarLeads([{ telefono: telefono ?? mensaje.waId }], [], exclusiones);
+            if (excluidos.length > 0) difiere = false;
+          }
+          leadDiferido = difiere;
         } catch (e) {
           console.error("[whatsapp] fallo leyendo las secuencias para saber si el lead espera al filtro; se crea ya", mensaje.waId, e);
         }
@@ -1339,6 +1421,27 @@ async function procesarMensaje(
       arrancada = arrancarSecuencia(secuencias, anuncio, marcaNombre, leadDatos);
     } catch (e) {
       console.error("[whatsapp] fallo cargando o arrancando la secuencia de la marca, se usa el respaldo", mensaje.waId, e);
+    }
+
+    // Lead tras el filtro que no llega a arrancar (secuencia rota, o el motor
+    // falló): sin guion no hay filtro que pasar, así que el lead se crea ya.
+    // Si no, el contacto quedaría fuera del CRM para siempre. Best-effort.
+    if ((!arrancada || arrancada.mensajes.length === 0) && leadDiferido && leadId === null) {
+      try {
+        const r = await crearLeadTrasFiltro(deps, {
+          marcaId,
+          conversacion,
+          leadId: null,
+          telefono,
+          waId: mensaje.waId,
+          nombrePerfil: mensaje.nombrePerfil,
+          datos: anuncio ? { [claveDatoLead("anuncio")]: anuncio } : {},
+        });
+        conversacion = r.conversacion;
+        leadId = r.leadId;
+      } catch (e) {
+        console.error("[whatsapp] fallo creando el lead de una secuencia que no arrancó", mensaje.waId, e);
+      }
     }
 
     try {
@@ -1679,10 +1782,15 @@ async function procesarMensaje(
           // Lead tras el filtro: sin lead todavía, la fase que asigne una ruta
           // no tiene a quién aplicarse. Se recuerda en `datos` y se aplica al
           // crear el lead (`crearLeadTrasFiltro`).
-          const datosAGuardar =
-            leadId === null && faseNueva
-              ? { ...avanzada.estado.datos, [claveDatoLead("fase")]: faseNueva }
-              : avanzada.estado.datos;
+          //
+          // Y si la ruta crea el lead, la marca `crear_pendiente` va en ESTE
+          // mismo reclamo: si crear el lead falla (o el proceso muere) después,
+          // el siguiente mensaje lo crea en su fase A (`crearLeadPendiente`).
+          const datosAGuardar: Record<string, string> = {
+            ...avanzada.estado.datos,
+            ...(leadId === null && faseNueva ? { [claveDatoLead("fase")]: faseNueva } : {}),
+            ...(leadId === null && avanzada.crearLead ? { [claveDatoLead("crear_pendiente")]: "1" } : {}),
+          };
 
           // RECLAMAR el paso ANTES de enviar (ronda B1, arreglo 1). El orden
           // importa y es contraintuitivo, así que: el gate por `wamid` de
@@ -1700,6 +1808,7 @@ async function procesarMensaje(
           // nota con las respuestas y la fase que se le aplica.
           let filtroPasado: string | null = null;
           let faseAlCrear: Fase | null = null;
+          let entregadaEnEsteTurno = false;
           try {
             reclamado = await deps.reclamarPaso(conversacion.id, {
               pasoEsperado: pasoGuardado,
@@ -1796,58 +1905,77 @@ async function procesarMensaje(
                 filtroPasado = notaDelFiltro(datosAGuardar);
                 // Sin lead hasta ahora, la fase recordada es la del lead.
                 faseAlCrear = faseNueva ?? datosPendientesLead(datosAGuardar).fase ?? null;
+                // Un lead excluido no sigue con el bot: a una persona, y no se
+                // manda nada más en este turno.
+                const datosSinPendiente = sinDatoLead(datosAGuardar, "crear_pendiente");
+                if (resultado.excluido) {
+                  await deps.actualizarConversacion(conversacion.id, {
+                    estado: "humana",
+                    pasoActual: null,
+                    datos: datosSinPendiente,
+                  });
+                  conversacion = { ...conversacion, estado: "humana", paso_actual: null, datos: datosSinPendiente };
+                  entregadaEnEsteTurno = true;
+                } else if (claveDatoLead("crear_pendiente") in datosAGuardar) {
+                  // Best-effort: si no se quita, el siguiente mensaje ve el lead
+                  // ya vinculado y no repite nada.
+                  try {
+                    await deps.actualizarConversacion(conversacion.id, { datos: datosSinPendiente });
+                    conversacion = { ...conversacion, datos: datosSinPendiente };
+                  } catch (e) {
+                    console.error("[whatsapp] fallo quitando la marca de lead pendiente", mensaje.waId, e);
+                  }
+                }
               } catch (e) {
-                // El paso ya está reclamado y el lead no se pudo crear: que lo
-                // vea una persona en la bandeja en vez de perder a quien pasó
-                // el filtro sin que nadie se entere.
-                console.error("[whatsapp] fallo creando el lead tras el filtro, se pasa a humana", mensaje.waId, e);
+                // El paso ya está reclamado y la marca `crear_pendiente` quedó
+                // escrita con él: el siguiente mensaje crea el lead en su fase A.
+                // El guion sigue su curso; no hace falta parar la conversación.
+                console.error("[whatsapp] fallo creando el lead tras el filtro, se reintenta con el siguiente mensaje", mensaje.waId, e);
+              }
+            }
+
+            // Si la conversación ya pasó a una persona en este turno (lead
+            // excluido), no se manda nada más.
+            if (!entregadaEnEsteTurno) {
+              try {
+                // Igual que al arrancar: un paso con botones se manda con
+                // `enviarBotones`, uno sin botones con `enviarTexto` (decisión 5).
+                for (const entrada of avanzada.mensajes) {
+                  const resultado =
+                    entrada.botones && entrada.botones.length > 0
+                      ? await mensajero.enviarBotones(mensaje.waId, entrada.texto, entrada.botones)
+                      : await mensajero.enviarTexto(mensaje.waId, entrada.texto);
+                  await deps.guardarSaliente({
+                    conversacionId: conversacion.id,
+                    wamid: resultado.ok ? resultado.wamid : null,
+                    texto: entrada.texto,
+                    error: resultado.ok ? undefined : resultado.error,
+                    botones: entrada.botones,
+                    origen: "bot",
+                  });
+                }
+              } catch (e) {
+                // El paso YA está reclamado: la conversación avanzó en la base
+                // pero el lead puede no haber recibido nada. Nadie va a
+                // reintentarlo (la idempotencia por wamid lo impide), así que se
+                // entrega a una persona — la misma postura que el resto del
+                // módulo toma cuando algo se queda a medias después de un punto
+                // sin retorno.
+                console.error(
+                  "[whatsapp] fallo enviando el paso ya reclamado, se pasa a humana",
+                  mensaje.waId,
+                  e,
+                );
                 try {
                   await deps.actualizarConversacion(conversacion.id, { estado: "humana", pasoActual: null });
                   conversacion = { ...conversacion, estado: "humana" };
                 } catch (e2) {
-                  console.error("[whatsapp] fallo también pasando la conversación a humana tras el error anterior", mensaje.waId, e2);
+                  console.error(
+                    "[whatsapp] fallo también pasando la conversación a humana tras el error anterior",
+                    mensaje.waId,
+                    e2,
+                  );
                 }
-              }
-            }
-
-            try {
-              // Igual que al arrancar: un paso con botones se manda con
-              // `enviarBotones`, uno sin botones con `enviarTexto` (decisión 5).
-              for (const entrada of avanzada.mensajes) {
-                const resultado =
-                  entrada.botones && entrada.botones.length > 0
-                    ? await mensajero.enviarBotones(mensaje.waId, entrada.texto, entrada.botones)
-                    : await mensajero.enviarTexto(mensaje.waId, entrada.texto);
-                await deps.guardarSaliente({
-                  conversacionId: conversacion.id,
-                  wamid: resultado.ok ? resultado.wamid : null,
-                  texto: entrada.texto,
-                  error: resultado.ok ? undefined : resultado.error,
-                  botones: entrada.botones,
-                  origen: "bot",
-                });
-              }
-            } catch (e) {
-              // El paso YA está reclamado: la conversación avanzó en la base
-              // pero el lead puede no haber recibido nada. Nadie va a
-              // reintentarlo (la idempotencia por wamid lo impide), así que se
-              // entrega a una persona — la misma postura que el resto del
-              // módulo toma cuando algo se queda a medias después de un punto
-              // sin retorno.
-              console.error(
-                "[whatsapp] fallo enviando el paso ya reclamado, se pasa a humana",
-                mensaje.waId,
-                e,
-              );
-              try {
-                await deps.actualizarConversacion(conversacion.id, { estado: "humana", pasoActual: null });
-                conversacion = { ...conversacion, estado: "humana" };
-              } catch (e2) {
-                console.error(
-                  "[whatsapp] fallo también pasando la conversación a humana tras el error anterior",
-                  mensaje.waId,
-                  e2,
-                );
               }
             }
           }
@@ -1970,7 +2098,7 @@ async function procesarMensaje(
  *
  * No queda FASE B: tras guardar el eco no hay nada más que hacer.
  */
-async function procesarEco(marca: Marca, eco: EcoSaliente, deps: Deps): Promise<boolean> {
+async function procesarEco(marca: Marca, eco: EcoSaliente, deps: Deps, marcaDifiere: MarcaDifiere): Promise<boolean> {
   const marcaId = marca.id;
   // ---- FASE A: reintentable ----------------------------------------------
   const existente = await deps.getConversacion(marcaId, eco.waId);
@@ -1978,7 +2106,10 @@ async function procesarEco(marca: Marca, eco: EcoSaliente, deps: Deps): Promise<
 
   let leadId: string | null = existente?.lead_id ?? null;
   if (!leadId && telefono) leadId = (await deps.buscarLeadPorTelefono(marcaId, telefono))?.id ?? null;
-  const leadDeWhatsApp = tieneNumeroPropio(marca) && !leadId;
+  // Lead tras el filtro (ver `ECOS_E_HISTORIAL_RESPETAN_FILTRO`): el que ya
+  // existe por teléfono se vincula igual; lo que no se hace es crearlo.
+  const leadDeWhatsApp =
+    tieneNumeroPropio(marca) && !leadId && !(await respetaFiltro(existente, marcaId, marcaDifiere));
 
   let conversacion: Conversacion;
   if (existente) {
@@ -2092,7 +2223,21 @@ async function procesarContactos(contactos: ContactoSync[], marcaPropiaDe: Marca
  * historial en un número propio: lo que llegue por el de entorno (Dinkbit) o
  * por uno desconocido se registra y se salta.
  */
-async function procesarHistorial(lotes: LoteHistorial[], marcaPropiaDe: MarcaPropiaDe, deps: Deps): Promise<void> {
+/** Si un eco o el historial de esta conversación NO debe crear el lead
+ *  (`ECOS_E_HISTORIAL_RESPETAN_FILTRO`). Un fallo leyendo las secuencias se
+ *  propaga: es fase A, reintentable. */
+async function respetaFiltro(conversacion: Conversacion | null, marcaId: string, marcaDifiere: MarcaDifiere): Promise<boolean> {
+  if (!ECOS_E_HISTORIAL_RESPETAN_FILTRO) return false;
+  if (conversacion?.datos?.[claveDatoLead("diferido")]) return true;
+  return marcaDifiere(marcaId);
+}
+
+async function procesarHistorial(
+  lotes: LoteHistorial[],
+  marcaPropiaDe: MarcaPropiaDe,
+  deps: Deps,
+  marcaDifiere: MarcaDifiere,
+): Promise<void> {
   for (const lote of lotes) {
     const marca = await marcaPropiaDe(lote.numeroId);
     if (!marca) {
@@ -2109,7 +2254,7 @@ async function procesarHistorial(lotes: LoteHistorial[], marcaPropiaDe: MarcaPro
     await enParalelo(
       lote.hilos.filter((h) => h.mensajes.length > 0),
       HILOS_A_LA_VEZ,
-      (hilo) => importarHilo(marca, hilo, deps),
+      (hilo) => importarHilo(marca, hilo, deps, marcaDifiere),
     );
     // Después de importar: si el lote falla a medias, el reintento lo repite
     // y el historial no queda como completo antes de tiempo.
@@ -2145,7 +2290,12 @@ async function enParalelo<T>(elementos: T[], limite: number, tarea: (elemento: T
 /** La empresa desactivó en la app compartir el historial. */
 const CODIGO_HISTORIAL_RECHAZADO = 2593109;
 
-async function importarHilo(marca: Marca, hilo: LoteHistorial["hilos"][number], deps: Deps): Promise<void> {
+async function importarHilo(
+  marca: Marca,
+  hilo: LoteHistorial["hilos"][number],
+  deps: Deps,
+  marcaDifiere: MarcaDifiere,
+): Promise<void> {
   const marcaId = marca.id;
   const telefono = telefonoDeWaId(hilo.waId);
   const nombre = await deps.nombreDeContacto(marcaId, hilo.waId);
@@ -2181,11 +2331,18 @@ async function importarHilo(marca: Marca, hilo: LoteHistorial["hilos"][number], 
   }
 
   if (!conversacion.lead_id) {
+    const existente = telefono ? await deps.buscarLeadPorTelefono(marcaId, telefono) : null;
+    // Lead tras el filtro: el que ya existe se vincula, pero no se crea uno
+    // nuevo (ver `ECOS_E_HISTORIAL_RESPETAN_FILTRO`).
     const lead =
-      (telefono ? await deps.buscarLeadPorTelefono(marcaId, telefono) : null) ??
-      (await deps.crearLeadDeWhatsApp({ marcaId, waId: hilo.waId, telefono, nombre, origen: "whatsapp", anuncio: null }));
-    await deps.actualizarConversacion(conversacion.id, { leadId: lead.id });
-    conversacion = { ...conversacion, lead_id: lead.id };
+      existente ??
+      ((await respetaFiltro(conversacion, marcaId, marcaDifiere))
+        ? null
+        : await deps.crearLeadDeWhatsApp({ marcaId, waId: hilo.waId, telefono, nombre, origen: "whatsapp", anuncio: null }));
+    if (lead) {
+      await deps.actualizarConversacion(conversacion.id, { leadId: lead.id });
+      conversacion = { ...conversacion, lead_id: lead.id };
+    }
   }
 
   await deps.guardarHistorial({
@@ -2282,8 +2439,23 @@ export async function procesarWebhook(input: {
   };
   const deps: Deps = {
     ...depsBase,
+    // Las mismas exclusiones en caché para quien las lea directamente (el
+    // primer contacto de una secuencia con lead tras el filtro).
+    listExclusiones: exclusionesDe,
     crearLeadDeWhatsApp: async (lead) =>
       depsBase.crearLeadDeWhatsApp({ ...lead, exclusiones: lead.exclusiones ?? (await exclusionesDe(lead.marcaId)) }),
+  };
+  // Si la secuencia general activa de cada marca difiere el lead, leído una vez
+  // por marca y webhook: un lote de historial puede traer cientos de hilos.
+  const difierePorMarca = new Map<string, Promise<boolean>>();
+  const marcaDifiere: MarcaDifiere = (marcaId) => {
+    let pendiente = difierePorMarca.get(marcaId);
+    if (!pendiente) {
+      pendiente = depsBase.listSecuencias(marcaId).then((secuencias) => secuenciaDiferida(secuencias, null));
+      pendiente.catch(() => difierePorMarca.delete(marcaId));
+      difierePorMarca.set(marcaId, pendiente);
+    }
+    return pendiente;
   };
 
   // La marca de cada mensaje se resuelve ANTES de tocar nada (ni estados ni
@@ -2299,7 +2471,7 @@ export async function procesarWebhook(input: {
   // duplicar nada. Nada de esto envía, arranca secuencias ni apunta actividad.
   await procesarAvisos(extraerAvisosCuenta(input.cuerpo), deps);
   await procesarContactos(extraerContactos(input.cuerpo), marcaPropiaDe, deps);
-  await procesarHistorial(extraerHistorial(input.cuerpo), marcaPropiaDe, deps);
+  await procesarHistorial(extraerHistorial(input.cuerpo), marcaPropiaDe, deps, marcaDifiere);
 
   const mensajes: Array<{ mensaje: MensajeEntrante; marca: Marca }> = [];
   for (const mensaje of extraerMensajes(input.cuerpo)) {
@@ -2360,7 +2532,7 @@ export async function procesarWebhook(input: {
   // atrapan aquí: lo que escapa es fase A, reintentable igual que arriba.
   // `procesados` sigue contando solo los mensajes del lead.
   for (const { eco, marca } of ecos) {
-    await procesarEco(marca, eco, deps);
+    await procesarEco(marca, eco, deps, marcaDifiere);
   }
 
   return { procesados };

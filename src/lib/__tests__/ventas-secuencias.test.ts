@@ -413,3 +413,11 @@ describe("lead tras el filtro (crear_lead, guardar_en_lead, campo_lead)", () => 
     expect(avisos.length).toBeGreaterThan(0);
   });
 });
+
+describe("M1: claves reservadas", () => {
+  test("guardar_respuesta_en no puede empezar por «lead.»", () => {
+    const s = base();
+    s.pasos.p2.guardar_respuesta_en = "lead.negocio";
+    expect(parsearSecuencia(s).ok).toBe(false);
+  });
+});

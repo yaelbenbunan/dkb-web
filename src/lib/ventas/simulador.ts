@@ -9,7 +9,7 @@
  */
 
 import type { Fase } from "./dominio";
-import { claveDatoLead, renderizarTexto, type Ruta, type Secuencia } from "./secuencias";
+import { claveDatoLead, MAX_DATO_LEAD, renderizarTexto, type Ruta, type Secuencia } from "./secuencias";
 
 const AVISO_AVISAR = "Avisar a la comercial";
 const AVISO_RESPUESTA_LIBRE = "Respuesta libre: la secuencia se para y se avisa a la comercial";
@@ -151,7 +151,7 @@ export function responderTexto(s: Secuencia, estado: EstadoSimulacion, texto: st
     const datos = { ...conRespuesta.datos };
     if (paso.guardar_respuesta_en) datos[paso.guardar_respuesta_en] = texto;
     // Al lead va limpio: es lo que se verá en su ficha.
-    const limpio = texto.trim().replace(/\s+/g, " ");
+    const limpio = texto.trim().replace(/\s+/g, " ").slice(0, MAX_DATO_LEAD).trimEnd();
     if (paso.campo_lead && limpio) datos[claveDatoLead(paso.campo_lead)] = limpio;
     const conDatos: EstadoSimulacion = { ...conRespuesta, datos };
     return paso.ruta ? aplicarRuta(s, conDatos, paso.ruta, ctx) : conDatos;

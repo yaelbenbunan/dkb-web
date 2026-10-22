@@ -51,9 +51,17 @@ export type CampoLeadRespuesta = (typeof CAMPOS_LEAD_RESPUESTA)[number];
  * separa de las claves que elige quien escribe la secuencia
  * (`guardar_respuesta_en`), que podrían llamarse igual.
  */
-export function claveDatoLead(campo: CampoLeadBoton | CampoLeadRespuesta | "fase" | "anuncio" | "diferido"): string {
-  return `lead.${campo}`;
+export function claveDatoLead(
+  campo: CampoLeadBoton | CampoLeadRespuesta | "fase" | "anuncio" | "diferido" | "crear_pendiente",
+): string {
+  return `${PREFIJO_DATO_LEAD}${campo}`;
 }
+
+/** Prefijo reservado de las claves de `claveDatoLead`. */
+export const PREFIJO_DATO_LEAD = "lead.";
+
+/** Largo máximo de un dato escrito que va al lead (negocio, cargo). */
+export const MAX_DATO_LEAD = 150;
 
 export interface Boton {
   texto: string;
@@ -114,7 +122,13 @@ const pasoSchema: z.ZodType<Paso> = z.object({
     .max(1024, "El texto del paso no puede pasar de 1024 caracteres."),
   plantilla: z.boolean().optional(),
   botones: z.array(botonSchema).max(3, "Un paso admite como mucho 3 botones."),
-  guardar_respuesta_en: z.string().min(1).optional(),
+  guardar_respuesta_en: z
+    .string()
+    .min(1)
+    .refine((clave) => !clave.startsWith(PREFIJO_DATO_LEAD), {
+      message: `El nombre donde se guarda la respuesta no puede empezar por «${PREFIJO_DATO_LEAD}»: está reservado para los datos del lead.`,
+    })
+    .optional(),
   campo_lead: z.enum(CAMPOS_LEAD_RESPUESTA, { message: "Campo del lead no válido." }).optional(),
   ruta: rutaSchema.optional(),
 });
