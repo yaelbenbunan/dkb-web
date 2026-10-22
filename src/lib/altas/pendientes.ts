@@ -64,8 +64,7 @@ export function reservarFirma(lista: FirmaPendiente[], uso: UsoBucket, ruta: str
   if (uso.archivos + pendientes > MAX_ARCHIVOS_ALTA || uso.bytes + pendientes * MAX_BYTES_ARCHIVO > MAX_BYTES_ALTA) {
     return { ok: false, error: ERROR_CUPO };
   }
-  // Se guarda lo que aún cuenta para algo: lo no subido hasta que caduque y,
-  // de lo ya subido, lo que sigue dentro de la ventana de ritmo.
-  const guardar = vigentes.filter((p) => !enBucket.has(p.ruta) || enLaVentana(p));
-  return { ok: true, pendientes: [...guardar, { ruta, firmada: fecha.toISOString(), expira: new Date(ahora + TTL_FIRMA_MS).toISOString() }] };
+  // Todas se guardan hasta que caducan: una ya subida que el cliente borra del
+  // bucket vuelve a contar a 50 MB, porque su URL firmada sigue valiendo.
+  return { ok: true, pendientes: [...vigentes, { ruta, firmada: fecha.toISOString(), expira: new Date(ahora + TTL_FIRMA_MS).toISOString() }] };
 }

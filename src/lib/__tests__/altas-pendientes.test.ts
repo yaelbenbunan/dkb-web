@@ -55,11 +55,35 @@ describe("reservas de subida", () => {
     expect(reservarFirma(antiguas, uso(15, 15 * MB, todas), "n", AHORA).ok).toBe(true);
   });
 
-  test("limpia las ya subidas fuera de la ventana, y conserva las que no están en el bucket", () => {
+  test("guarda todas las reservas hasta que caducan, aunque su archivo ya esté en el bucket", () => {
     const subidaVieja = pendiente("subida", HACE_20_MIN);
     const sinSubir = pendiente("sin-subir", HACE_20_MIN);
     const r = reservarFirma([subidaVieja, sinSubir], uso(1, MB, ["subida"]), "n", AHORA);
-    expect(r.ok && r.pendientes.map((p) => p.ruta)).toEqual(["sin-subir", "n"]);
+    expect(r.ok && r.pendientes.map((p) => p.ruta)).toEqual(["subida", "sin-subir", "n"]);
+  });
+
+  test("15 firmadas y subidas, pasan más de 10 min y se borran del bucket: siguen contando en el cupo", () => {
+    const T0 = new Date(AHORA.getTime() - 11 * 60 * 1000);
+    let lista: ReturnType<typeof pendiente>[] = [];
+    const rutas: string[] = [];
+    for (let i = 0; i < 15; i++) {
+      const r = reservarFirma(lista, uso(rutas.length, rutas.length * MB, rutas), `f${i}`, T0);
+      expect(r.ok).toBe(true);
+      if (r.ok) lista = r.pendientes;
+      rutas.push(`f${i}`); // subida: ya en el bucket
+    }
+    // Dentro de la ventana, el ritmo frena la 16.ª aunque estén subidas.
+    expect(reservarFirma(lista, uso(15, 15 * MB, rutas), "otra", T0)).toEqual({ ok: false, error: expect.stringMatching(/Demasiados/) });
+    // 11 minutos después: siguen guardadas aunque estén en el bucket...
+    const tras = reservarFirma(lista, uso(15, 15 * MB, rutas), "x", AHORA);
+    expect(tras.ok && tras.pendientes.length).toBe(16);
+    if (tras.ok) lista = tras.pendientes;
+    // ...y si el cliente las borra del bucket, vuelven a contar a 50 MB hasta caducar:
+    // 24 en el bucket + 16 reservas + la nueva = 41 > 40.
+    expect(reservarFirma(lista, uso(24, 24 * MB, []), "y", AHORA)).toEqual({ ok: false, error: expect.stringMatching(/40 archivos o 1 GB/) });
+    // Con las reservas ya caducadas, cabe.
+    const caducadas = new Date(AHORA.getTime() + TTL_FIRMA_MS + 1);
+    expect(reservarFirma(lista, uso(24, 24 * MB, []), "y", caducadas).ok).toBe(true);
   });
 
   test("leerPendientes: descarta lo que no tiene forma de entrada", () => {
