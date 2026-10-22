@@ -230,12 +230,16 @@ export const SECCIONES_ALTA: readonly SeccionAlta[] = [
     campos: [
       {
         id: "objetivos_branding",
-        etiqueta: "Qué buscáis con el branding los primeros 3 meses",
+        etiqueta: "Qué buscáis con las campañas",
         tipo: "casillas",
         opciones: [
           { valor: "conocer", etiqueta: "Que nos conozcan" },
           { valor: "trafico", etiqueta: "Tráfico a la web" },
-          { valor: "seguidores", etiqueta: "Seguidores" },
+          { valor: "seguidores", etiqueta: "Seguidores en redes" },
+          { valor: "leads", etiqueta: "Clientes potenciales (formularios de contacto)" },
+          { valor: "whatsapp", etiqueta: "Conversaciones por WhatsApp" },
+          { valor: "llamadas", etiqueta: "Llamadas" },
+          { valor: "ventas", etiqueta: "Ventas online" },
           { valor: "otro", etiqueta: "Otro" },
         ],
       },
