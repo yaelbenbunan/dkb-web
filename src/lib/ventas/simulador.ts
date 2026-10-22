@@ -9,7 +9,7 @@
  */
 
 import type { Fase } from "./dominio";
-import { renderizarTexto, type Ruta, type Secuencia } from "./secuencias";
+import { claveDatoLead, renderizarTexto, type Ruta, type Secuencia } from "./secuencias";
 
 const AVISO_AVISAR = "Avisar a la comercial";
 const AVISO_RESPUESTA_LIBRE = "Respuesta libre: la secuencia se para y se avisa a la comercial";
@@ -36,6 +36,11 @@ export interface EstadoSimulacion {
   esperaDias: number | null;
   terminada: boolean;
   faltanVariables: string[];
+  /** Una ruta con `crear_lead` se aplicó: aquí se crea el lead (lead tras el
+   *  filtro). Un estado reconstruido lo trae a `false`, así que tras una
+   *  transición dice si ESA transición lo pidió. No es un aviso: no pasa la
+   *  conversación a una persona por sí solo. */
+  crearLead: boolean;
 }
 
 /** Añade un mensaje de la marca con el paso `id`, o termina con un aviso si no existe. */
@@ -72,7 +77,8 @@ function entrarEnPaso(s: Secuencia, id: string, estado: EstadoSimulacion, ctx: C
 /** Aplica lo que dice una ruta (de un botón o de un paso): fase, aviso, espera, destino o fin. */
 function aplicarRuta(s: Secuencia, estado: EstadoSimulacion, ruta: Ruta, ctx: ContextoSimulacion): EstadoSimulacion {
   const conFase = ruta.fase ? { ...estado, fase: ruta.fase } : estado;
-  const conAviso = ruta.avisar ? { ...conFase, avisos: [...conFase.avisos, AVISO_AVISAR] } : conFase;
+  const conLead = ruta.crear_lead ? { ...conFase, crearLead: true } : conFase;
+  const conAviso = ruta.avisar ? { ...conLead, avisos: [...conLead.avisos, AVISO_AVISAR] } : conLead;
 
   if (ruta.terminar) {
     return { ...conAviso, terminada: true, pasoActual: null };
@@ -99,6 +105,7 @@ export function iniciarSimulacion(s: Secuencia, ctx: ContextoSimulacion): Estado
     esperaDias: null,
     terminada: false,
     faltanVariables: [],
+    crearLead: false,
   };
   return entrarEnPaso(s, s.inicio, inicial, ctx);
 }
@@ -111,10 +118,13 @@ export function responderBoton(s: Secuencia, estado: EstadoSimulacion, indiceBot
   const boton = paso.botones[indiceBoton];
   if (!boton) return estado;
 
+  const datos = { ...estado.datos };
+  if (paso.guardar_respuesta_en) datos[paso.guardar_respuesta_en] = boton.texto;
+  if (boton.guardar_en_lead) datos[claveDatoLead(boton.guardar_en_lead.campo)] = boton.guardar_en_lead.valor;
   const conRespuesta: EstadoSimulacion = {
     ...estado,
     conversacion: [...estado.conversacion, { de: "negocio", texto: boton.texto }],
-    datos: paso.guardar_respuesta_en ? { ...estado.datos, [paso.guardar_respuesta_en]: boton.texto } : estado.datos,
+    datos,
   };
   return aplicarRuta(s, conRespuesta, boton.ruta, ctx);
 }
@@ -138,9 +148,12 @@ export function responderTexto(s: Secuencia, estado: EstadoSimulacion, texto: st
   };
 
   if (paso && paso.botones.length === 0) {
-    const conDatos: EstadoSimulacion = paso.guardar_respuesta_en
-      ? { ...conRespuesta, datos: { ...conRespuesta.datos, [paso.guardar_respuesta_en]: texto } }
-      : conRespuesta;
+    const datos = { ...conRespuesta.datos };
+    if (paso.guardar_respuesta_en) datos[paso.guardar_respuesta_en] = texto;
+    // Al lead va limpio: es lo que se verá en su ficha.
+    const limpio = texto.trim().replace(/\s+/g, " ");
+    if (paso.campo_lead && limpio) datos[claveDatoLead(paso.campo_lead)] = limpio;
+    const conDatos: EstadoSimulacion = { ...conRespuesta, datos };
     return paso.ruta ? aplicarRuta(s, conDatos, paso.ruta, ctx) : conDatos;
   }
 

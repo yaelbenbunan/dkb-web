@@ -35,8 +35,18 @@ import { aEstadoGuardado, desdeEstadoGuardado, indiceDeBoton, mensajesAEnviar, t
 import type { MensajeroWhatsApp } from "./mensajero";
 import { getMarcaPorNumero, getMarcasPorWaba, marcarDesconectada, mensajeroDeMarca, setHistorialMarca } from "./numeros";
 import { calcularVentana, telefonoDeWaId } from "./ventana";
-import { esFaseDescarte, FASE_LABELS, MARCA_DINKBIT_SLUG, type Fase } from "../ventas/dominio";
 import {
+  esFase,
+  esFaseDescarte,
+  FASE_LABELS,
+  MARCA_DINKBIT_SLUG,
+  TIPO_NEGOCIO_LABELS,
+  TIPOS_NEGOCIO,
+  type Fase,
+  type TipoNegocio,
+} from "../ventas/dominio";
+import {
+  actualizarExtrasLead,
   actualizarLeadWeb,
   buscarLeadPorContacto,
   crearLeads,
@@ -49,7 +59,7 @@ import {
   type SecuenciaRow,
 } from "../ventas/db";
 import { clasificarLeads } from "../ventas/leads-csv";
-import { parsearSecuencia } from "../ventas/secuencias";
+import { claveDatoLead, difiereLead, parsearSecuencia } from "../ventas/secuencias";
 import {
   iniciarSimulacion,
   responderBoton,
@@ -126,6 +136,10 @@ export interface Deps {
     nombre: string | null;
     origen: "anuncio" | "whatsapp";
     anuncio: string | null;
+    /** Lead tras el filtro: el nombre del negocio y el tipo que contestó el
+     *  contacto. Sin ellos, el rótulo de siempre y sin tipo. */
+    negocio?: string | null;
+    tipoNegocio?: TipoNegocio | null;
     /** Las exclusiones de la marca ya leídas (una vez por webhook, ver
      *  `procesarWebhook`). Sin ellas, se leen aquí. */
     exclusiones?: Exclusion[];
@@ -147,7 +161,20 @@ export interface Deps {
   nombreDeContacto: typeof nombreDeContacto;
   /** Pone el nombre de la agenda en `contacto` de un lead que no lo tenía. */
   rellenarContactoLead: (leadId: string, nombre: string) => Promise<void>;
+  /** Lead tras el filtro: escribe en el lead los campos que trae `cambios`.
+   *  Quien llama ya ha dejado solo los que estaban vacíos (`camposVacios`):
+   *  esto no decide nada, solo escribe. El cargo va por su propia escritura
+   *  (`actualizarExtrasLead`), tolerante a que falte su migración. */
+  completarLead: (leadId: string, cambios: CamposLead) => Promise<void>;
 }
+
+/** Los campos del lead que puede rellenar el filtro de WhatsApp. */
+export type CamposLead = {
+  negocio?: string;
+  tipo_negocio?: TipoNegocio;
+  contacto?: string;
+  cargo?: string;
+};
 
 /** Lo que el canal necesita saber de un lead al resolverlo por teléfono o al
  *  crearlo. */
@@ -158,7 +185,15 @@ export type LeadEncontrado = {
   ciudad: string | null;
   excluido: boolean;
   fase: Fase;
+  /** Para completar solo lo vacío al pasar el filtro. `undefined` cuando no
+   *  se sabe (p.ej. falta la migración del cargo): se trata como vacío. */
+  tipo_negocio?: TipoNegocio | null;
+  cargo?: string | null;
 };
+
+/** El rótulo con el que nace un lead de WhatsApp sin nombre de negocio: Meta
+ *  no lo manda. Al pasar el filtro cuenta como vacío. */
+const ROTULO_LEAD_WHATSAPP = "Lead de WhatsApp (";
 
 /** Si la marca tiene su propio número de WhatsApp conectado (coexistencia). */
 export function tieneNumeroPropio(marca: Marca): boolean {
@@ -179,7 +214,7 @@ export function tieneNumeroPropio(marca: Marca): boolean {
  * verla, pero no debe entrar en la prospección como si fuera nuevo.
  */
 export async function crearLeadDeWhatsApp(input: Parameters<Deps["crearLeadDeWhatsApp"]>[0]): Promise<LeadEncontrado> {
-  const { marcaId, waId, telefono, nombre, origen, anuncio } = input;
+  const { marcaId, waId, telefono, nombre, origen, anuncio, negocio, tipoNegocio } = input;
   const telefonoLead = telefono ?? waId;
   const exclusiones = input.exclusiones ?? (await listExclusiones(marcaId));
   const { excluidos } = clasificarLeads([{ telefono: telefonoLead }], [], exclusiones);
@@ -190,8 +225,8 @@ export async function crearLeadDeWhatsApp(input: Parameters<Deps["crearLeadDeWha
     origenDetalle: anuncio,
     leads: [
       {
-        negocio: `Lead de WhatsApp (${telefonoLead})`,
-        tipo_negocio: null,
+        negocio: negocio?.trim() || `${ROTULO_LEAD_WHATSAPP}${telefonoLead})`,
+        tipo_negocio: tipoNegocio ?? null,
         contacto: nombre ?? "",
         telefono: telefonoLead,
         email: "",
@@ -219,6 +254,8 @@ function leadEncontrado(lead: {
   ciudad: string | null;
   excluido: boolean;
   fase: Fase;
+  tipo_negocio?: TipoNegocio | null;
+  cargo?: string | null;
 }): LeadEncontrado {
   return {
     id: lead.id,
@@ -227,6 +264,8 @@ function leadEncontrado(lead: {
     ciudad: lead.ciudad,
     excluido: lead.excluido,
     fase: lead.fase,
+    ...(lead.tipo_negocio !== undefined ? { tipo_negocio: lead.tipo_negocio } : {}),
+    ...(lead.cargo !== undefined ? { cargo: lead.cargo } : {}),
   };
 }
 
@@ -270,6 +309,19 @@ function depsReales(): Deps {
       // Un nombre de menos no merece tumbar el webhook: actualizarLeadWeb ya
       // deja el fallo en el log.
       await actualizarLeadWeb(leadId, { contacto: nombre });
+    },
+    async completarLead(leadId, cambios) {
+      const { cargo, ...resto } = cambios;
+      if (Object.keys(resto).length > 0) {
+        const r = await actualizarLeadWeb(leadId, resto);
+        if (!r.ok) console.error("[whatsapp] fallo completando el lead tras el filtro", leadId, r.error);
+      }
+      if (cargo) {
+        // Tolerante: sin la migración de socios y cargo devuelve `ok: false`
+        // y el resto del lead ya está guardado.
+        const r = await actualizarExtrasLead(leadId, { cargo });
+        if (!r.ok) console.error("[whatsapp] fallo guardando el cargo del lead tras el filtro", leadId, r.error);
+      }
     },
   };
 }
@@ -363,11 +415,155 @@ function arrancarSecuencia(
   // Al arrancar no hay estado previo: es justo la precondición que documenta
   // el JSDoc de `mensajesAEnviar` (ver guion.ts) para su parámetro `anterior`.
   const estadoSimulacion = iniciarSimulacion(parseada.secuencia, ctx);
+  const estado = aEstadoGuardado(estadoSimulacion);
+  // Lead tras el filtro: la conversación queda marcada para que ningún
+  // mensaje posterior cree el lead por su cuenta (ver `procesarMensaje`), y
+  // se recuerda el anuncio para el origen del lead cuando nazca.
+  if (difiereLead(parseada.secuencia)) {
+    estado.datos = {
+      ...estado.datos,
+      [claveDatoLead("diferido")]: "1",
+      ...(anuncio ? { [claveDatoLead("anuncio")]: anuncio } : {}),
+    };
+  }
   return {
     secuenciaId: elegida.id,
-    estado: aEstadoGuardado(estadoSimulacion),
+    estado,
     mensajes: mensajesAEnviar(null, estadoSimulacion),
   };
+}
+
+/**
+ * Si la secuencia que arrancaría este primer contacto crea el lead al pasar el
+ * filtro (`difiereLead`). Mismo criterio de elección que `arrancarSecuencia`;
+ * una secuencia que no parsea no difiere nada (cae al respaldo, y ahí el lead
+ * se crea como siempre).
+ */
+function secuenciaDiferida(secuencias: SecuenciaRow[], anuncio: string | null): boolean {
+  const elegida = elegirSecuencia(secuencias, anuncio);
+  if (!elegida) return false;
+  const parseada = parsearSecuencia(elegida.pasos);
+  return parseada.ok && difiereLead(parseada.secuencia);
+}
+
+/** Los datos pendientes del lead guardados en `datos` (ver `claveDatoLead`),
+ *  ya validados: un valor raro se ignora en vez de llegar a la base. */
+function datosPendientesLead(datos: Record<string, string>): {
+  negocio?: string;
+  tipo_negocio?: TipoNegocio;
+  cargo?: string;
+  fase?: Fase;
+  anuncio?: string;
+} {
+  const leer = (campo: Parameters<typeof claveDatoLead>[0]) => datos[claveDatoLead(campo)]?.trim() || undefined;
+  const tipo = leer("tipo_negocio");
+  const fase = leer("fase");
+  return {
+    negocio: leer("negocio"),
+    tipo_negocio: tipo && (TIPOS_NEGOCIO as readonly string[]).includes(tipo) ? (tipo as TipoNegocio) : undefined,
+    cargo: leer("cargo"),
+    fase: esFase(fase) ? fase : undefined,
+    anuncio: leer("anuncio"),
+  };
+}
+
+/** El nombre del perfil de WhatsApp sin espacios de más; `null` si no queda nada. */
+function nombreLimpio(nombre: string | null | undefined): string | null {
+  const limpio = nombre?.replace(/\s+/g, " ").trim();
+  return limpio ? limpio : null;
+}
+
+/** De lo que trae el filtro, solo lo que el lead tiene vacío: lo que ya
+ *  hubiera (quizá corregido a mano) no se pisa. */
+function camposVacios(lead: LeadEncontrado, nuevos: CamposLead): CamposLead {
+  const cambios: CamposLead = {};
+  if (nuevos.negocio && (!lead.negocio.trim() || lead.negocio.startsWith(ROTULO_LEAD_WHATSAPP))) {
+    cambios.negocio = nuevos.negocio;
+  }
+  if (nuevos.tipo_negocio && !lead.tipo_negocio) cambios.tipo_negocio = nuevos.tipo_negocio;
+  if (nuevos.contacto && sinNombre(lead.contacto)) cambios.contacto = nuevos.contacto;
+  if (nuevos.cargo && sinNombre(lead.cargo)) cambios.cargo = nuevos.cargo;
+  return cambios;
+}
+
+/** La nota que deja el lead al pasar el filtro: lo que contestó. */
+function notaDelFiltro(datos: Record<string, string>): string {
+  const p = datosPendientesLead(datos);
+  const partes: string[] = [];
+  if (p.negocio) partes.push(`Negocio: «${p.negocio}»`);
+  if (p.tipo_negocio) partes.push(`Tipo de negocio: ${TIPO_NEGOCIO_LABELS[p.tipo_negocio]}`);
+  if (p.cargo) partes.push(`Cargo: «${p.cargo}»`);
+  const yaDichas = new Set([p.negocio, p.cargo].filter(Boolean));
+  const otras = Object.entries(datos)
+    .filter(([clave, valor]) => !clave.startsWith("lead.") && !yaDichas.has(valor.trim()))
+    .map(([clave, valor]) => `${clave}: «${valor}»`);
+  if (otras.length > 0) partes.push(`Otras respuestas: ${otras.join(", ")}`);
+  return partes.length > 0 ? `Ha pasado el filtro de WhatsApp. ${partes.join(". ")}.` : "Ha pasado el filtro de WhatsApp.";
+}
+
+/**
+ * Lead tras el filtro: la conversación llegó a la ruta con `crear_lead`.
+ *
+ * - Sin lead vinculado: se busca por teléfono justo antes (otra entrega o una
+ *   persona pudo crearlo mientras tanto) y, si no está, se crea con lo que
+ *   contestó el contacto. El vínculo es condicional (`vincularOReleer`), así
+ *   que dos entregas no dejan dos leads vinculados; y quien llama solo llega
+ *   aquí tras ganar `reclamarPaso`, así que como mucho una entrega por paso
+ *   lo intenta. El reintento de Meta del mismo mensaje no llega (wamid).
+ * - Con lead vinculado (ya existía por teléfono): no se crea nada, solo se
+ *   COMPLETAN sus campos vacíos. Si el teléfono no confirma que sea ese lead,
+ *   no se toca nada.
+ *
+ * Lanza si falla crear o vincular: quien llama lo trata (fase B).
+ */
+async function crearLeadTrasFiltro(
+  deps: Deps,
+  input: {
+    marcaId: string;
+    conversacion: Conversacion;
+    leadId: string | null;
+    telefono: string | null;
+    waId: string;
+    nombrePerfil: string | null;
+    datos: Record<string, string>;
+  },
+): Promise<{ conversacion: Conversacion; leadId: string | null }> {
+  const pendientes = datosPendientesLead(input.datos);
+  const nombre = nombreLimpio(input.nombrePerfil) ?? nombreLimpio(input.conversacion.nombre_contacto);
+  let conversacion = input.conversacion;
+  let lead = input.telefono ? await deps.buscarLeadPorTelefono(input.marcaId, input.telefono) : null;
+  let leadId = input.leadId;
+
+  if (leadId !== null) {
+    if (lead?.id !== leadId) lead = null;
+  } else {
+    lead ??= await deps.crearLeadDeWhatsApp({
+      marcaId: input.marcaId,
+      waId: input.waId,
+      telefono: input.telefono,
+      nombre,
+      origen: pendientes.anuncio ? "anuncio" : "whatsapp",
+      anuncio: pendientes.anuncio ?? null,
+      negocio: pendientes.negocio ?? null,
+      tipoNegocio: pendientes.tipo_negocio ?? null,
+    });
+    conversacion = await vincularOReleer(deps, conversacion, lead.id);
+    leadId = conversacion.lead_id;
+    // Otra entrega vinculó otro lead mientras tanto: ese manda, y del nuestro
+    // no se sabe nada más que completar.
+    if (leadId !== lead.id) lead = null;
+  }
+
+  if (lead) {
+    const cambios = camposVacios(lead, {
+      negocio: pendientes.negocio,
+      tipo_negocio: pendientes.tipo_negocio,
+      contacto: nombre ?? undefined,
+      cargo: pendientes.cargo,
+    });
+    if (Object.keys(cambios).length > 0) await deps.completarLead(lead.id, cambios);
+  }
+  return { conversacion, leadId };
 }
 
 /**
@@ -392,6 +588,9 @@ type ResultadoAvance =
        *  hecho de ESTA transición — el llamador lo convierte en `reanudar_en`
        *  y entrega la conversación a una persona. */
       esperaDias: number | null;
+      /** La ruta aplicada pide crear el lead (lead tras el filtro). Como
+       *  `esperaDias`, es un hecho de ESTA transición. */
+      crearLead: boolean;
     }
   | { ok: false; motivo: string };
 
@@ -493,6 +692,7 @@ function avanzarSecuencia(
     avisos: nuevo.avisos,
     fase: nuevo.fase,
     esperaDias: nuevo.esperaDias,
+    crearLead: nuevo.crearLead,
   };
 }
 
@@ -583,10 +783,15 @@ function fraseDeEspera(dias: number): string {
  * SOLO cambia de fase) se deja solo la respuesta, sin inventar un "avisar"
  * que no aplica.
  */
-function notaAvisoComercial(frase: string | null, respuestaLead: string | null | undefined): string | null {
-  const dijoElLead = respuestaLead ? `El lead respondió: «${respuestaLead}».` : null;
-  if (!frase) return dijoElLead;
-  return dijoElLead ? `${dijoElLead} ${frase}` : frase;
+function notaAvisoComercial(
+  frase: string | null,
+  respuestaLead: string | null | undefined,
+  filtro?: string | null,
+): string | null {
+  const partes = [filtro, respuestaLead ? `El lead respondió: «${respuestaLead}».` : null, frase].filter(
+    (p): p is string => !!p,
+  );
+  return partes.length > 0 ? partes.join(" ") : null;
 }
 
 /**
@@ -629,6 +834,8 @@ async function avisarComercial(
     pulsoBoton?: boolean;
     faseNueva?: Fase;
     respuestaLead?: string | null;
+    /** Lead tras el filtro: las respuestas del filtro (`notaDelFiltro`). */
+    filtro?: string | null;
   },
 ): Promise<void> {
   try {
@@ -653,8 +860,11 @@ async function avisarComercial(
       // Así que `cambio_fase` solo se usa cuando no hay frase que perder, y
       // sirve para lo que se añadió en la tarea 9: evitar la fila de nota EN
       // BLANCO que `tipo: "nota"` con `nota: null` insertaría.
-      tipo: frase ? "nota" : "cambio_fase",
-      nota: notaAvisoComercial(frase, cambios.respuestaLead),
+      //
+      // La nota del filtro es lo mismo: es texto que no se puede perder, así
+      // que con ella también va como `nota`.
+      tipo: frase || cambios.filtro ? "nota" : "cambio_fase",
+      nota: notaAvisoComercial(frase, cambios.respuestaLead, cambios.filtro),
       faseNueva: cambios.faseNueva ?? null,
     });
     if (!resultado.ok) {
@@ -899,6 +1109,14 @@ async function procesarMensaje(
   // vía `avisarComercial`. Se queda en `true` para el resto de casos y para
   // cuando el motor ni siquiera llega a decidir (p.ej. `listSecuencias` lanza).
   let notaGenerica = true;
+  // Lead tras el filtro. `leadDiferido`: la secuencia que arranca este primer
+  // contacto crea el lead al pasar el filtro, así que aquí NO se crea (si ya
+  // existía uno con ese teléfono se vincula igual: es un lead real previo).
+  // `secuenciasCargadas`: las que se leyeron para saberlo, para no volver a
+  // leerlas en la fase B. Leerlas aquí NO es fase A estricta: si fallan, se
+  // sigue como siempre (se crea el lead) en vez de forzar un 500.
+  let leadDiferido = false;
+  let secuenciasCargadas: SecuenciaRow[] | null = null;
 
   if (decision.accion === "crear_lead_y_responder") {
     // decidir() devuelve esta acción con un clic de anuncio (`referral`) o en
@@ -933,21 +1151,31 @@ async function procesarMensaje(
       // Se vuelve a buscar JUSTO antes de crear: en una ráfaga, la otra
       // entrega puede haberlo creado entre la lectura de arriba y ahora.
       const yaCreado = telefono ? await deps.buscarLeadPorTelefono(marcaId, telefono) : null;
-      const nuevoId = resolverLead(
-        yaCreado ??
-          (await deps.crearLeadDeWhatsApp({
-            marcaId,
-            waId: mensaje.waId,
-            telefono,
-            nombre: mensaje.nombrePerfil,
-            origen: referral ? "anuncio" : "whatsapp",
-            anuncio: referral?.anuncio ?? null,
-          })),
-      );
-      // Vínculo condicional (`lead_id is null`): si otra entrega vinculó el
-      // suyo mientras tanto, se sigue con ese en vez de pisarlo.
-      conversacion = await vincularOReleer(deps, conversacion, nuevoId);
-      await adoptarLeadDe(conversacion);
+      if (!yaCreado) {
+        try {
+          secuenciasCargadas = await deps.listSecuencias(marcaId);
+          leadDiferido = secuenciaDiferida(secuenciasCargadas, referral?.anuncio ?? null);
+        } catch (e) {
+          console.error("[whatsapp] fallo leyendo las secuencias para saber si el lead espera al filtro; se crea ya", mensaje.waId, e);
+        }
+      }
+      if (yaCreado || !leadDiferido) {
+        const nuevoId = resolverLead(
+          yaCreado ??
+            (await deps.crearLeadDeWhatsApp({
+              marcaId,
+              waId: mensaje.waId,
+              telefono,
+              nombre: mensaje.nombrePerfil,
+              origen: referral ? "anuncio" : "whatsapp",
+              anuncio: referral?.anuncio ?? null,
+            })),
+        );
+        // Vínculo condicional (`lead_id is null`): si otra entrega vinculó el
+        // suyo mientras tanto, se sigue con ese en vez de pisarlo.
+        conversacion = await vincularOReleer(deps, conversacion, nuevoId);
+        await adoptarLeadDe(conversacion);
+      }
     }
   } else {
     let estado: Conversacion["estado"];
@@ -1009,7 +1237,11 @@ async function procesarMensaje(
     }
     await adoptarLeadDe(conversacion);
 
-    if (tieneNumeroPropio(marca) && leadId === null) {
+    // Una conversación de una secuencia con lead tras el filtro (marcada al
+    // arrancar, ver `arrancarSecuencia`) no crea el lead por escribir: lo crea
+    // la ruta con `crear_lead`, y quien no llega a ella no entra en el CRM.
+    const esperaAlFiltro = !!conversacion.datos?.[claveDatoLead("diferido")];
+    if (tieneNumeroPropio(marca) && leadId === null && !esperaAlFiltro) {
       const nuevoId = resolverLead(
         await deps.crearLeadDeWhatsApp({
           marcaId,
@@ -1054,8 +1286,12 @@ async function procesarMensaje(
   const estadoConocido = leadEstado as { excluido: boolean; fase: Fase } | null;
   const primerContactoSinAnuncio =
     (decision.accion === "crear_lead_y_responder" || decision.accion === "responder") && !mensaje.referral;
+  // Un primer contacto sin lead porque la secuencia lo crea tras el filtro no
+  // es un lead «desconocido»: no hay lead que proteger, así que sí lleva bot.
+  const sinLeadPorFiltro = leadDiferido && leadId === null;
   const sinBot =
     primerContactoSinAnuncio &&
+    !sinLeadPorFiltro &&
     (estadoConocido === null || estadoConocido.excluido || estadoConocido.fase !== "nuevo");
   if (sinBot) {
     try {
@@ -1099,7 +1335,7 @@ async function procesarMensaje(
     // en código, igual que si ninguna secuencia sirviera al anuncio.
     let arrancada: SecuenciaArrancada | null = null;
     try {
-      const secuencias = await deps.listSecuencias(marcaId);
+      const secuencias = secuenciasCargadas ?? (await deps.listSecuencias(marcaId));
       arrancada = arrancarSecuencia(secuencias, anuncio, marcaNombre, leadDatos);
     } catch (e) {
       console.error("[whatsapp] fallo cargando o arrancando la secuencia de la marca, se usa el respaldo", mensaje.waId, e);
@@ -1440,6 +1676,13 @@ async function procesarMensaje(
             esperaDias == null &&
             !esFaseDescarte(avanzada.fase);
           const entregaAPersona = pasaAHumana || esperaDias != null || sinRespuesta;
+          // Lead tras el filtro: sin lead todavía, la fase que asigne una ruta
+          // no tiene a quién aplicarse. Se recuerda en `datos` y se aplica al
+          // crear el lead (`crearLeadTrasFiltro`).
+          const datosAGuardar =
+            leadId === null && faseNueva
+              ? { ...avanzada.estado.datos, [claveDatoLead("fase")]: faseNueva }
+              : avanzada.estado.datos;
 
           // RECLAMAR el paso ANTES de enviar (ronda B1, arreglo 1). El orden
           // importa y es contraintuitivo, así que: el gate por `wamid` de
@@ -1453,6 +1696,10 @@ async function procesarMensaje(
           // Reclamando primero, la entrega que pierde la carrera se enterra
           // antes de gastar un envío. NO lo reordenes a enviar-y-luego-guardar.
           let reclamado = false;
+          // Lead tras el filtro, si esta transición lo creó (o completó): la
+          // nota con las respuestas y la fase que se le aplica.
+          let filtroPasado: string | null = null;
+          let faseAlCrear: Fase | null = null;
           try {
             reclamado = await deps.reclamarPaso(conversacion.id, {
               pasoEsperado: pasoGuardado,
@@ -1468,7 +1715,7 @@ async function procesarMensaje(
               // reactivaría el camino del bot sobre una conversación que ya
               // se entregó a una persona.
               pasoActual: entregaAPersona ? null : avanzada.estado.pasoActual,
-              datos: avanzada.estado.datos,
+              datos: datosAGuardar,
               ...(entregaAPersona ? { estado: "humana" as const } : {}),
               ...(esperaDias != null
                 ? { reanudarEn: new Date(ahora.getTime() + esperaDias * 24 * 60 * 60 * 1000) }
@@ -1530,6 +1777,39 @@ async function procesarMensaje(
           } else {
             if (entregaAPersona) conversacion = { ...conversacion, estado: "humana" };
 
+            // Lead tras el filtro: SOLO la entrega que ganó el reclamo llega
+            // aquí, así que como mucho una crea el lead por este paso. Antes de
+            // enviar, para que el aviso de abajo ya tenga a qué lead ir.
+            if (avanzada.crearLead) {
+              try {
+                const resultado = await crearLeadTrasFiltro(deps, {
+                  marcaId,
+                  conversacion,
+                  leadId,
+                  telefono,
+                  waId: mensaje.waId,
+                  nombrePerfil: mensaje.nombrePerfil,
+                  datos: datosAGuardar,
+                });
+                conversacion = resultado.conversacion;
+                leadId = resultado.leadId;
+                filtroPasado = notaDelFiltro(datosAGuardar);
+                // Sin lead hasta ahora, la fase recordada es la del lead.
+                faseAlCrear = faseNueva ?? datosPendientesLead(datosAGuardar).fase ?? null;
+              } catch (e) {
+                // El paso ya está reclamado y el lead no se pudo crear: que lo
+                // vea una persona en la bandeja en vez de perder a quien pasó
+                // el filtro sin que nadie se entere.
+                console.error("[whatsapp] fallo creando el lead tras el filtro, se pasa a humana", mensaje.waId, e);
+                try {
+                  await deps.actualizarConversacion(conversacion.id, { estado: "humana", pasoActual: null });
+                  conversacion = { ...conversacion, estado: "humana" };
+                } catch (e2) {
+                  console.error("[whatsapp] fallo también pasando la conversación a humana tras el error anterior", mensaje.waId, e2);
+                }
+              }
+            }
+
             try {
               // Igual que al arrancar: un paso con botones se manda con
               // `enviarBotones`, uno sin botones con `enviarTexto` (decisión 5).
@@ -1572,7 +1852,8 @@ async function procesarMensaje(
             }
           }
 
-          if (reclamado && (entregaAPersona || faseNueva) && leadId) {
+          const faseDelAviso = faseAlCrear ?? faseNueva;
+          if (reclamado && (entregaAPersona || faseDelAviso || filtroPasado) && leadId) {
             // `mensaje.texto` (Hallazgo 2, ronda de arreglos 1 de la tarea 9):
             // para un botón ya trae el rótulo que pulsó el lead, no solo el
             // texto libre — ver `respuestaDelMensaje` en entrante.ts.
@@ -1590,8 +1871,9 @@ async function procesarMensaje(
               esperaDias: esperaDias ?? undefined,
               cerradaSinRespuesta: sinRespuesta || undefined,
               pulsoBoton: mensaje.botonId != null,
-              faseNueva: faseNueva ?? undefined,
+              faseNueva: faseDelAviso ?? undefined,
               respuestaLead: mensaje.texto,
+              filtro: filtroPasado,
             });
           }
         } else {

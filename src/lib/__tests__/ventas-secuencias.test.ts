@@ -5,6 +5,7 @@ import {
   secuenciaVacia,
   siguientesPasos,
   validarSecuencia,
+  difiereLead,
   variablesEnTexto,
   type Secuencia,
 } from "../ventas/secuencias";
@@ -340,5 +341,75 @@ describe("siguientesPasos", () => {
 
   test("un paso que no existe no tiene destinos", () => {
     expect(siguientesPasos(base(), "no-existe")).toEqual([]);
+  });
+});
+
+describe("lead tras el filtro (crear_lead, guardar_en_lead, campo_lead)", () => {
+  /** Filtro de dos preguntas: tipo de negocio por botón, nombre escrito, y el
+   *  lead solo se crea en el último paso. «No soy clínica» sale sin lead. */
+  function filtro(): Secuencia {
+    return {
+      version: 1,
+      inicio: "tipo",
+      pasos: {
+        tipo: {
+          tipo: "mensaje",
+          plantilla: true,
+          texto: "¿Qué tipo de negocio tienes?",
+          botones: [
+            { texto: "Clínica dental", guardar_en_lead: { campo: "tipo_negocio", valor: "clinica_dental" }, ruta: { ir_a: "nombre" } },
+            { texto: "Soy el dueño", guardar_en_lead: { campo: "cargo", valor: "Dueño" }, ruta: { ir_a: "nombre" } },
+            { texto: "Otra cosa", ruta: { fase: "no_interesa", terminar: true } },
+          ],
+        },
+        nombre: {
+          tipo: "mensaje",
+          texto: "¿Cómo se llama tu negocio?",
+          botones: [],
+          guardar_respuesta_en: "nombre_negocio",
+          campo_lead: "negocio",
+          ruta: { crear_lead: true, avisar: true, ir_a: "cierre" },
+        },
+        cierre: { tipo: "mensaje", texto: "¡Gracias! Te llamamos.", botones: [], ruta: { terminar: true } },
+      },
+    };
+  }
+
+  test("parsearSecuencia conserva los campos nuevos (el editor no los pierde al guardar)", () => {
+    const r = parsearSecuencia(JSON.parse(JSON.stringify(filtro())));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.secuencia.pasos.tipo.botones[0].guardar_en_lead).toEqual({ campo: "tipo_negocio", valor: "clinica_dental" });
+    expect(r.secuencia.pasos.nombre.campo_lead).toBe("negocio");
+    expect(r.secuencia.pasos.nombre.ruta?.crear_lead).toBe(true);
+  });
+
+  test("parsearSecuencia rechaza un campo de lead que no existe", () => {
+    const s = filtro() as unknown as { pasos: { nombre: Record<string, unknown> } };
+    s.pasos.nombre.campo_lead = "email";
+    expect(parsearSecuencia(s).ok).toBe(false);
+  });
+
+  test("difiereLead: solo las secuencias con alguna ruta crear_lead", () => {
+    expect(difiereLead(filtro())).toBe(true);
+    expect(difiereLead(base())).toBe(false);
+  });
+
+  test("una secuencia de filtro bien hecha no da avisos graves", () => {
+    expect(validarSecuencia(filtro()).filter((a) => a.grave)).toEqual([]);
+  });
+
+  test("un tipo de negocio que no existe es un aviso grave", () => {
+    const s = filtro();
+    s.pasos.tipo.botones[0].guardar_en_lead = { campo: "tipo_negocio", valor: "nave_espacial" };
+    const avisos = validarSecuencia(s);
+    expect(avisos).toContainEqual(expect.objectContaining({ paso: "tipo", grave: true }));
+  });
+
+  test("crear_lead en un paso al que no se llega es un aviso grave", () => {
+    const s = filtro();
+    s.pasos.suelto = { tipo: "mensaje", texto: "Suelto", botones: [], ruta: { crear_lead: true, avisar: true, terminar: true } };
+    const avisos = validarSecuencia(s).filter((a) => a.paso === "suelto" && a.grave);
+    expect(avisos.length).toBeGreaterThan(0);
   });
 });

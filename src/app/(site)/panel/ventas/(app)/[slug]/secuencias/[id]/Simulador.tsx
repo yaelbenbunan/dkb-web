@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { FASES, FASE_LABELS, type Fase } from "@/lib/ventas/dominio";
-import { VARIABLES_BASE, validarSecuencia, type Secuencia } from "@/lib/ventas/secuencias";
+import { VARIABLES_BASE, difiereLead, validarSecuencia, type Secuencia } from "@/lib/ventas/secuencias";
 import {
   iniciarSimulacion,
   responderBoton,
@@ -162,6 +162,17 @@ export function Simulador({ secuencia, marcaNombre, usuariaNombre }: { secuencia
           <div>
             <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>Fase</span>
             <div style={{ marginTop: 4 }}><FaseEtiqueta fase={estado.fase} /></div>
+          </div>
+
+          <div>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>Lead en el CRM</span>
+            <p style={{ margin: "4px 0 0", fontSize: 13, color: estado.crearLead ? "#166534" : "#475569" }}>
+              {!difiereLead(secuencia)
+                ? "Se crea con el primer mensaje."
+                : estado.crearLead
+                  ? "Se crea el lead: ha pasado el filtro, con los datos recogidos."
+                  : "Todavía no se crea: espera a que pase el filtro."}
+            </p>
           </div>
 
           <div>

@@ -10,6 +10,7 @@ const estado = (parcial: Partial<EstadoSimulacion> = {}): EstadoSimulacion => ({
   avisos: [],
   esperaDias: null,
   terminada: false,
+  crearLead: false,
   faltanVariables: [],
   ...parcial,
 });

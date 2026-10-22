@@ -196,3 +196,68 @@ describe("variables sin valor", () => {
     expect(estado.conversacion[0].texto).toContain("{{ciudad}}");
   });
 });
+
+describe("lead tras el filtro", () => {
+  const filtro: Secuencia = {
+    version: 1,
+    inicio: "tipo",
+    pasos: {
+      tipo: {
+        tipo: "mensaje",
+        texto: "¿Qué tipo de negocio tienes?",
+        botones: [
+          { texto: "Clínica dental", guardar_en_lead: { campo: "tipo_negocio", valor: "clinica_dental" }, ruta: { ir_a: "cargo", fase: "contactado" } },
+          { texto: "Otra cosa", ruta: { fase: "no_interesa", terminar: true } },
+        ],
+      },
+      cargo: {
+        tipo: "mensaje",
+        texto: "¿Cuál es tu cargo?",
+        botones: [],
+        campo_lead: "cargo",
+        ruta: { ir_a: "nombre" },
+      },
+      nombre: {
+        tipo: "mensaje",
+        texto: "¿Cómo se llama tu negocio?",
+        botones: [],
+        guardar_respuesta_en: "nombre_negocio",
+        campo_lead: "negocio",
+        ruta: { crear_lead: true, avisar: true, terminar: true },
+      },
+    },
+  };
+
+  test("arrancar no crea el lead", () => {
+    expect(iniciarSimulacion(filtro, ctx).crearLead).toBe(false);
+  });
+
+  test("un botón con guardar_en_lead guarda el dato pendiente del lead", () => {
+    const estado = responderBoton(filtro, iniciarSimulacion(filtro, ctx), 0, ctx);
+    expect(estado.datos["lead.tipo_negocio"]).toBe("clinica_dental");
+    expect(estado.crearLead).toBe(false);
+  });
+
+  test("una respuesta escrita con campo_lead va al dato del lead (y a guardar_respuesta_en)", () => {
+    let estado = responderBoton(filtro, iniciarSimulacion(filtro, ctx), 0, ctx);
+    estado = responderTexto(filtro, estado, "  Gerente ", ctx);
+    expect(estado.datos["lead.cargo"]).toBe("Gerente");
+    estado = responderTexto(filtro, estado, "Clínica Sonrisas", ctx);
+    expect(estado.datos["lead.negocio"]).toBe("Clínica Sonrisas");
+    expect(estado.datos.nombre_negocio).toBe("Clínica Sonrisas");
+  });
+
+  test("llegar a la ruta con crear_lead marca que se crea el lead", () => {
+    let estado = responderBoton(filtro, iniciarSimulacion(filtro, ctx), 0, ctx);
+    estado = responderTexto(filtro, estado, "Gerente", ctx);
+    estado = responderTexto(filtro, estado, "Clínica Sonrisas", ctx);
+    expect(estado.crearLead).toBe(true);
+    expect(estado.terminada).toBe(true);
+  });
+
+  test("salir del filtro no crea el lead", () => {
+    const estado = responderBoton(filtro, iniciarSimulacion(filtro, ctx), 1, ctx);
+    expect(estado.crearLead).toBe(false);
+    expect(estado.terminada).toBe(true);
+  });
+});

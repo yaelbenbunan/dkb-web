@@ -82,5 +82,6 @@ export function desdeEstadoGuardado(guardado: EstadoGuardado, fase: Fase): Estad
     esperaDias: null,
     terminada: guardado.pasoActual === null,
     faltanVariables: [],
+    crearLead: false,
   };
 }

@@ -2,12 +2,14 @@
 
 import { useActionState, useMemo, useRef, useState, useTransition, type CSSProperties } from "react";
 import { activarSecuenciaAction, guardarSecuenciaAction } from "../../../../acciones-secuencias";
-import { FASES, FASE_LABELS, type Fase } from "@/lib/ventas/dominio";
+import { FASES, FASE_LABELS, TIPOS_NEGOCIO, TIPO_NEGOCIO_LABELS, type Fase } from "@/lib/ventas/dominio";
 import type { SecuenciaRow } from "@/lib/ventas/db";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
 import {
   VARIABLES_BASE,
   siguientesPasos,
+  type CampoLeadBoton,
+  type CampoLeadRespuesta,
   validarSecuencia,
   type Boton,
   type Paso,
@@ -156,6 +158,64 @@ function RutaEditor({
         />
         Terminar la conversación
       </label>
+      <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
+        <input
+          type="checkbox"
+          disabled={disabled}
+          checked={!!ruta.crear_lead}
+          onChange={(e) => cambiar({ crear_lead: e.target.checked || undefined })}
+        />
+        Crear el lead aquí (ha pasado el filtro)
+      </label>
+    </div>
+  );
+}
+
+/** Qué guarda un botón en el lead al pulsarlo (lead tras el filtro). */
+function GuardarEnLeadEditor({
+  boton,
+  onChange,
+  disabled,
+}: {
+  boton: Boton;
+  onChange: (g: Boton["guardar_en_lead"]) => void;
+  disabled: boolean;
+}) {
+  const g = boton.guardar_en_lead;
+  return (
+    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <label style={{ ...etiqueta, flex: "1 1 160px" }}>
+        Guardar en el lead
+        <select
+          value={g?.campo ?? ""}
+          disabled={disabled}
+          onChange={(e) => {
+            const campo = e.target.value as CampoLeadBoton | "";
+            onChange(campo ? { campo, valor: campo === "tipo_negocio" ? "otro" : boton.texto } : undefined);
+          }}
+          style={campo}
+        >
+          <option value="">— Nada —</option>
+          <option value="tipo_negocio">Tipo de negocio</option>
+          <option value="cargo">Cargo</option>
+        </select>
+      </label>
+      {g?.campo === "tipo_negocio" && (
+        <label style={{ ...etiqueta, flex: "1 1 160px" }}>
+          Tipo
+          <select value={g.valor} disabled={disabled} onChange={(e) => onChange({ campo: "tipo_negocio", valor: e.target.value })} style={campo}>
+            {TIPOS_NEGOCIO.map((t) => (
+              <option key={t} value={t}>{TIPO_NEGOCIO_LABELS[t]}</option>
+            ))}
+          </select>
+        </label>
+      )}
+      {g?.campo === "cargo" && (
+        <label style={{ ...etiqueta, flex: "1 1 160px" }}>
+          Cargo
+          <input value={g.valor} disabled={disabled} maxLength={120} onChange={(e) => onChange({ campo: "cargo", valor: e.target.value })} style={campo} />
+        </label>
+      )}
     </div>
   );
 }
@@ -455,6 +515,22 @@ export function EditorSecuencia({
                     </span>
                   </label>
 
+                  {pasoActual.botones.length === 0 && (
+                    <label style={etiqueta}>
+                      Llevar la respuesta escrita al lead (opcional)
+                      <select
+                        value={pasoActual.campo_lead ?? ""}
+                        disabled={!editable}
+                        onChange={(e) => actualizarPaso(seleccionado, { campo_lead: (e.target.value || undefined) as CampoLeadRespuesta | undefined })}
+                        style={campo}
+                      >
+                        <option value="">— No —</option>
+                        <option value="negocio">Nombre del negocio</option>
+                        <option value="cargo">Cargo</option>
+                      </select>
+                    </label>
+                  )}
+
                   <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: 12, display: "flex", flexDirection: "column", gap: 12 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <h3 style={{ margin: 0, fontSize: 14, color: "#0f172a" }}>Botones (hasta 3)</h3>
@@ -496,6 +572,11 @@ export function EditorSecuencia({
                                 </button>
                               )}
                             </div>
+                            <GuardarEnLeadEditor
+                              boton={boton}
+                              disabled={!editable}
+                              onChange={(guardar_en_lead) => actualizarBoton(seleccionado, indice, { guardar_en_lead })}
+                            />
                             <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "#475569" }}>Si pulsa este botón…</p>
                             <RutaEditor
                               ruta={boton.ruta}

@@ -15,7 +15,7 @@
  */
 
 import { z } from "zod";
-import { esFaseDescarte, FASES, type Fase } from "./dominio";
+import { esFaseDescarte, FASES, TIPOS_NEGOCIO, type Fase } from "./dominio";
 
 /** Variables siempre disponibles; cada marca puede añadir las suyas. */
 export const VARIABLES_BASE = ["negocio", "contacto", "ciudad", "marca", "remitente"] as const;
@@ -31,11 +31,36 @@ export interface Ruta {
   esperar_dias?: number;
   avisar?: boolean;
   terminar?: boolean;
+  /** Lead tras el filtro: al aplicar esta ruta se crea el lead (o se completa
+   *  el que ya hubiera) con los datos que el contacto ha ido contestando. Una
+   *  secuencia con alguna ruta así NO crea el lead con el primer mensaje
+   *  (`difiereLead`): quien no llega aquí no entra nunca en el CRM. */
+  crear_lead?: boolean;
+}
+
+/** Campos del lead que puede rellenar un botón. */
+export const CAMPOS_LEAD_BOTON = ["tipo_negocio", "cargo"] as const;
+/** Campos del lead que puede rellenar una respuesta escrita. */
+export const CAMPOS_LEAD_RESPUESTA = ["negocio", "cargo"] as const;
+export type CampoLeadBoton = (typeof CAMPOS_LEAD_BOTON)[number];
+export type CampoLeadRespuesta = (typeof CAMPOS_LEAD_RESPUESTA)[number];
+
+/**
+ * Clave en `datos` (de la conversación o de la simulación) donde se guarda un
+ * dato pendiente del lead mientras el lead todavía no existe. El prefijo las
+ * separa de las claves que elige quien escribe la secuencia
+ * (`guardar_respuesta_en`), que podrían llamarse igual.
+ */
+export function claveDatoLead(campo: CampoLeadBoton | CampoLeadRespuesta | "fase" | "anuncio" | "diferido"): string {
+  return `lead.${campo}`;
 }
 
 export interface Boton {
   texto: string;
   ruta: Ruta;
+  /** Al pulsarlo, `valor` se guarda como dato pendiente del lead. Para
+   *  `tipo_negocio`, `valor` es uno de `TIPOS_NEGOCIO`. */
+  guardar_en_lead?: { campo: CampoLeadBoton; valor: string };
 }
 
 export interface Paso {
@@ -45,6 +70,9 @@ export interface Paso {
   plantilla?: boolean;
   botones: Boton[];
   guardar_respuesta_en?: string;
+  /** La respuesta ESCRITA de este paso (sin botones) va además a este campo
+   *  del lead. */
+  campo_lead?: CampoLeadRespuesta;
   /** Ruta de un paso sin botones (si no, la conversación se queda parada). */
   ruta?: Ruta;
 }
@@ -61,6 +89,7 @@ const rutaSchema: z.ZodType<Ruta> = z.object({
   esperar_dias: z.number("Los días de espera no son un número válido.").optional(),
   avisar: z.boolean().optional(),
   terminar: z.boolean().optional(),
+  crear_lead: z.boolean().optional(),
 });
 
 const botonSchema: z.ZodType<Boton> = z.object({
@@ -69,6 +98,12 @@ const botonSchema: z.ZodType<Boton> = z.object({
     .min(1, "El texto del botón no puede estar vacío.")
     .max(20, "El texto del botón no puede pasar de 20 caracteres: es lo que admite WhatsApp."),
   ruta: rutaSchema,
+  guardar_en_lead: z
+    .object({
+      campo: z.enum(CAMPOS_LEAD_BOTON, { message: "Campo del lead no válido." }),
+      valor: z.string().min(1, "Falta el valor que se guarda en el lead.").max(120),
+    })
+    .optional(),
 });
 
 const pasoSchema: z.ZodType<Paso> = z.object({
@@ -80,6 +115,7 @@ const pasoSchema: z.ZodType<Paso> = z.object({
   plantilla: z.boolean().optional(),
   botones: z.array(botonSchema).max(3, "Un paso admite como mucho 3 botones."),
   guardar_respuesta_en: z.string().min(1).optional(),
+  campo_lead: z.enum(CAMPOS_LEAD_RESPUESTA, { message: "Campo del lead no válido." }).optional(),
   ruta: rutaSchema.optional(),
 });
 
@@ -154,6 +190,12 @@ export function siguientesPasos(s: Secuencia, id: string): string[] {
   return destinos;
 }
 
+/** Si la secuencia crea el lead al pasar el filtro (alguna ruta con
+ *  `crear_lead`) en vez de con el primer mensaje. */
+export function difiereLead(s: Secuencia): boolean {
+  return Object.values(s.pasos).some((paso) => rutasDelPaso(paso).some((ruta) => ruta.crear_lead === true));
+}
+
 export interface Aviso {
   paso: string;
   mensaje: string;
@@ -223,6 +265,27 @@ export function validarSecuencia(s: Secuencia, variablesExtra: string[] = []): A
       }
     }
 
+    // 11. Lo que un botón guarda en el lead tiene que ser un valor válido.
+    for (const boton of paso.botones) {
+      const g = boton.guardar_en_lead;
+      if (g?.campo === "tipo_negocio" && !(TIPOS_NEGOCIO as readonly string[]).includes(g.valor)) {
+        avisos.push({
+          paso: id,
+          mensaje: `El botón «${boton.texto}» guarda un tipo de negocio que no existe («${g.valor}»).`,
+          grave: true,
+        });
+      }
+    }
+
+    // 12. `campo_lead` solo se usa con una respuesta escrita (paso sin botones).
+    if (paso.campo_lead && paso.botones.length > 0) {
+      avisos.push({
+        paso: id,
+        mensaje: "Este paso tiene botones: lo que se guarda en el lead se elige en cada botón, no con la respuesta escrita.",
+        grave: false,
+      });
+    }
+
     // 7. Solo el paso de inicio puede ser plantilla.
     if (paso.plantilla && id !== s.inicio) {
       avisos.push({
@@ -249,6 +312,15 @@ export function validarSecuencia(s: Secuencia, variablesExtra: string[] = []): A
     for (const id of idsPasos) {
       if (!alcanzables.has(id)) {
         avisos.push({ paso: id, mensaje: "No hay ningún camino desde el inicio hasta este paso.", grave: false });
+        // 13. Un `crear_lead` al que no se llega hace que la secuencia no cree
+        // NUNCA el lead: ni con el primer mensaje (difiere) ni después.
+        if (rutasDelPaso(s.pasos[id]).some((ruta) => ruta.crear_lead)) {
+          avisos.push({
+            paso: id,
+            mensaje: "Este paso crea el lead, pero no se llega a él: la secuencia no crearía nunca ningún lead.",
+            grave: true,
+          });
+        }
       }
     }
   }

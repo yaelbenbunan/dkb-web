@@ -147,7 +147,7 @@ export interface LeadWebNuevo {
 export type CambiosLeadWeb = Partial<
   Pick<
     Lead,
-    | "negocio" | "contacto" | "telefono" | "email" | "web" | "canal" | "campana" | "etiquetas" | "consentimiento"
+    | "negocio" | "tipo_negocio" | "contacto" | "telefono" | "email" | "web" | "canal" | "campana" | "etiquetas" | "consentimiento"
     | "email_estado" | "email_mensaje_id" | "email_actualizado_at" | "archivado" | "extra" | "id_externo" | "ids_externos"
   >
 >;

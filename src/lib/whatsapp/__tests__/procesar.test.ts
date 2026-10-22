@@ -3,7 +3,7 @@ import type { Conversacion } from "../db";
 import type { MensajeroWhatsApp, ResultadoEnvio } from "../mensajero";
 import type { Marca, SecuenciaRow } from "../../ventas/db";
 import type { Secuencia } from "../../ventas/secuencias";
-import type { Fase } from "../../ventas/dominio";
+import type { Fase, TipoNegocio } from "../../ventas/dominio";
 import { SECUENCIA_DENTAL, SECUENCIA_PSICOLOGIA } from "../../ventas/secuencias-plantilla";
 
 // `procesar.ts` llama directamente (fuera de `Deps`) a `getMarcaPorSlug` y
@@ -319,6 +319,9 @@ type LeadFalso = {
   /** Por defecto `false` y `"nuevo"`: un lead recién llegado. */
   excluido?: boolean;
   fase?: Fase;
+  /** Lo que el filtro de WhatsApp puede completar (lead tras el filtro). */
+  tipo_negocio?: TipoNegocio | null;
+  cargo?: string | null;
 };
 
 function depsFalsas(
@@ -414,6 +417,8 @@ function depsFalsas(
     ciudad: lead.ciudad ?? null,
     excluido: lead.excluido ?? false,
     fase: lead.fase ?? ("nuevo" as const),
+    tipo_negocio: lead.tipo_negocio ?? null,
+    cargo: lead.cargo ?? null,
     id: lead.id,
   });
 
@@ -452,6 +457,8 @@ function depsFalsas(
   const contactosDeLead: Array<{ leadId: string; nombre: string }> = [];
   const desconexiones: Array<{ marcaId: string; motivo: string | null }> = [];
   const estadosHistorial: Array<{ marcaId: string; estado: string }> = [];
+  /** Lead tras el filtro: qué campos vacíos se completaron en cada lead. */
+  const leadsCompletados: Array<{ leadId: string; cambios: Parameters<Deps["completarLead"]>[1] }> = [];
 
   const deps: Deps = {
     numeroEntorno: NUMERO_ENTORNO,
@@ -572,7 +579,12 @@ function depsFalsas(
     },
     async crearLeadDeWhatsApp({ exclusiones, ...input }) {
       contadorLead += 1;
-      const lead = { id: `lead-${contadorLead}`, contacto: input.nombre };
+      const lead: LeadFalso = {
+        id: `lead-${contadorLead}`,
+        contacto: input.nombre,
+        ...(input.negocio ? { negocio: input.negocio } : {}),
+        tipo_negocio: input.tipoNegocio ?? null,
+      };
       leadsPorTelefono.set(input.telefono ?? input.waId, lead);
       // `exclusiones` se registra aparte: los tests de siempre comparan la
       // entrada del lead sin ellas.
@@ -613,6 +625,10 @@ function depsFalsas(
     async nombreDeContacto(marcaId, waId) {
       return contactos.get(clave(marcaId, waId)) ?? null;
     },
+    async completarLead(leadId, cambios) {
+      leadsCompletados.push({ leadId, cambios });
+      for (const lead of leadsPorTelefono.values()) if (lead.id === leadId) Object.assign(lead, cambios);
+    },
     async rellenarContactoLead(leadId, nombre) {
       contactosDeLead.push({ leadId, nombre });
       for (const lead of leadsPorTelefono.values()) if (lead.id === leadId) lead.contacto = nombre;
@@ -639,6 +655,7 @@ function depsFalsas(
     desconexiones,
     marcasPorWaba,
     estadosHistorial,
+    leadsCompletados,
   };
 }
 
@@ -3006,5 +3023,259 @@ describe("crearLeadDeWhatsApp", () => {
     await crearLeadDeWhatsApp({ marcaId: HYDRUP.id, waId: "34611222333", telefono: "611222333", nombre: "Marta", origen: "whatsapp", anuncio: null });
 
     expect(crearLeadsMock.mock.calls[0][0].leads[0].excluido).toBe(true);
+  });
+});
+
+/* Lead tras el filtro --------------------------------------------------------- */
+
+describe("lead tras el filtro", () => {
+  /** Filtro: tipo de negocio por botón → cargo por botón → nombre escrito, y
+   *  el lead solo nace en la ruta del nombre (`crear_lead`). «Soy particular»
+   *  sale del filtro sin lead. La fase del primer botón se recuerda hasta
+   *  que exista el lead. */
+  const SECUENCIA_FILTRO: Secuencia = {
+    version: 1,
+    inicio: "tipo",
+    pasos: {
+      tipo: {
+        tipo: "mensaje",
+        texto: "¿Qué negocio tienes?",
+        botones: [
+          {
+            texto: "Clínica dental",
+            guardar_en_lead: { campo: "tipo_negocio", valor: "clinica_dental" },
+            ruta: { ir_a: "cargo", fase: "contactado" },
+          },
+          { texto: "Soy particular", ruta: { fase: "fuera_de_perfil", terminar: true } },
+        ],
+      },
+      cargo: {
+        tipo: "mensaje",
+        texto: "¿Cuál es tu cargo?",
+        botones: [
+          { texto: "Dueño", guardar_en_lead: { campo: "cargo", valor: "Dueño" }, ruta: { ir_a: "nombre" } },
+          { texto: "Empleado", guardar_en_lead: { campo: "cargo", valor: "Empleado" }, ruta: { ir_a: "nombre" } },
+        ],
+      },
+      nombre: {
+        tipo: "mensaje",
+        texto: "¿Cómo se llama tu negocio?",
+        botones: [],
+        guardar_respuesta_en: "nombre_negocio",
+        campo_lead: "negocio",
+        ruta: { crear_lead: true, avisar: true, ir_a: "cierre" },
+      },
+      cierre: { tipo: "mensaje", texto: "¡Gracias! Te llamamos hoy.", botones: [], ruta: { terminar: true } },
+    },
+  };
+  const FILTRO_HYDRUP: SecuenciaFalsa & { marca_id: string } = {
+    id: "s-filtro",
+    marca_id: HYDRUP.id,
+    estado: "activa",
+    anuncios: [],
+    pasos: SECUENCIA_FILTRO,
+  };
+  const WA = "34611222333";
+  const CONV = `${HYDRUP.id}:${WA}`;
+
+  const pulsar = (wamid: string, indice: number, titulo: string) => ({
+    id: wamid,
+    from: WA,
+    timestamp: "1790000100",
+    type: "interactive",
+    interactive: { type: "button_reply", button_reply: { id: `opcion_${indice}`, title: titulo } },
+  });
+  const enHydrup = (mensaje: Record<string, unknown>) =>
+    sobrePorNumeros([{ numeroId: "PN-HYDRUP", nombre: "  Marta   López ", mensajes: [mensaje] }]);
+
+  /** Recorre el filtro entero hasta el paso del nombre (sin contestarlo). */
+  async function hastaElNombre(deps: Deps) {
+    await procesarWebhook({ cuerpo: enHydrup(textoLibre("wamid.F1")), deps });
+    await procesarWebhook({ cuerpo: enHydrup(pulsar("wamid.F2", 1, "Clínica dental")), deps });
+    await procesarWebhook({ cuerpo: enHydrup(pulsar("wamid.F3", 1, "Dueño")), deps });
+  }
+  const nombreDelNegocio = (wamid = "wamid.F4") => enHydrup(textoLibre(wamid, WA, "Clínica Sonrisas"));
+
+  it("el primer contacto de una secuencia con crear_lead no crea lead, pero arranca el guion", async () => {
+    const { deps, conversaciones, leadsCreados, enviosMensajero } = depsFalsas({ secuencias: [FILTRO_HYDRUP] });
+
+    await expect(procesarWebhook({ cuerpo: enHydrup(textoLibre("wamid.F1")), deps })).resolves.toEqual({ procesados: 1 });
+
+    expect(leadsCreados).toHaveLength(0);
+    const conv = conversaciones.get(CONV);
+    expect(conv?.lead_id).toBeNull();
+    expect(conv?.estado).toBe("bot");
+    expect(conv?.secuencia_id).toBe("s-filtro");
+    expect(conv?.paso_actual).toBe("tipo");
+    expect(enviosMensajero.map((e) => e.texto)).toEqual(["¿Qué negocio tienes?"]);
+    expect(registrarActividadMock).not.toHaveBeenCalled();
+  });
+
+  it("un botón con guardar_en_lead guarda el dato pendiente en la conversación, sin crear lead", async () => {
+    const { deps, conversaciones, leadsCreados } = depsFalsas({ secuencias: [FILTRO_HYDRUP] });
+    await procesarWebhook({ cuerpo: enHydrup(textoLibre("wamid.F1")), deps });
+
+    await procesarWebhook({ cuerpo: enHydrup(pulsar("wamid.F2", 1, "Clínica dental")), deps });
+
+    expect(leadsCreados).toHaveLength(0);
+    const conv = conversaciones.get(CONV);
+    expect(conv?.lead_id).toBeNull();
+    expect(conv?.estado).toBe("bot");
+    expect(conv?.paso_actual).toBe("cargo");
+    expect(conv?.datos["lead.tipo_negocio"]).toBe("clinica_dental");
+    // La fase de la ruta no se pierde: se recuerda hasta que haya lead.
+    expect(conv?.datos["lead.fase"]).toBe("contactado");
+  });
+
+  it("la respuesta escrita de un paso con campo_lead se guarda como negocio", async () => {
+    const secuencia: SecuenciaFalsa & { marca_id: string } = {
+      ...FILTRO_HYDRUP,
+      pasos: {
+        version: 1,
+        inicio: "nombre",
+        pasos: {
+          nombre: { ...SECUENCIA_FILTRO.pasos.nombre, ruta: { ir_a: "otra" } },
+          otra: { tipo: "mensaje", texto: "¿Algo más?", botones: [{ texto: "No", ruta: { crear_lead: true, avisar: true, terminar: true } }] },
+        },
+      },
+    };
+    const { deps, conversaciones, leadsCreados } = depsFalsas({ secuencias: [secuencia] });
+    await procesarWebhook({ cuerpo: enHydrup(textoLibre("wamid.F1")), deps });
+
+    await procesarWebhook({ cuerpo: nombreDelNegocio(), deps });
+
+    expect(leadsCreados).toHaveLength(0);
+    expect(conversaciones.get(CONV)?.datos["lead.negocio"]).toBe("Clínica Sonrisas");
+  });
+
+  it("al llegar a crear_lead se crea UN lead con sus datos, se vincula y queda una nota con el filtro", async () => {
+    const { deps, conversaciones, leadsCreados, leadsCompletados, fases, actividades } = depsFalsas({
+      secuencias: [FILTRO_HYDRUP],
+    });
+    await hastaElNombre(deps);
+    expect(leadsCreados).toHaveLength(0);
+
+    await procesarWebhook({ cuerpo: nombreDelNegocio(), deps });
+
+    expect(leadsCreados).toEqual([
+      expect.objectContaining({
+        marcaId: HYDRUP.id,
+        telefono: "611222333",
+        nombre: "Marta López",
+        negocio: "Clínica Sonrisas",
+        tipoNegocio: "clinica_dental",
+        origen: "whatsapp",
+        anuncio: null,
+      }),
+    ]);
+    const conv = conversaciones.get(CONV);
+    expect(conv?.lead_id).toBe("lead-1");
+    // Avisa (la ruta lo pide): pasa a una persona.
+    expect(conv?.estado).toBe("humana");
+    // El cargo va aparte (columna con su propia migración).
+    expect(leadsCompletados).toEqual([{ leadId: "lead-1", cambios: { cargo: "Dueño" } }]);
+    // La fase recordada del primer botón se aplica al lead.
+    expect(fases).toEqual([{ leadId: "lead-1", fase: "contactado" }]);
+    const notas = actividades.filter((a) => a.tipo === "nota");
+    expect(notas).toHaveLength(1);
+    expect(notas[0].leadId).toBe("lead-1");
+    expect(notas[0].nota).toContain("Clínica Sonrisas");
+    expect(notas[0].nota).toContain("Clínica dental");
+    expect(notas[0].nota).toContain("Dueño");
+  });
+
+  it("un reintento de Meta del mensaje que crea el lead no lo duplica", async () => {
+    const { deps, leadsCreados, actividades } = depsFalsas({ secuencias: [FILTRO_HYDRUP] });
+    await hastaElNombre(deps);
+
+    await procesarWebhook({ cuerpo: nombreDelNegocio(), deps });
+    await expect(procesarWebhook({ cuerpo: nombreDelNegocio(), deps })).resolves.toEqual({ procesados: 0 });
+
+    expect(leadsCreados).toHaveLength(1);
+    expect(actividades.filter((a) => a.tipo === "nota")).toHaveLength(1);
+  });
+
+  it("quien no pasa el filtro no aparece nunca en el CRM, ni aunque siga escribiendo", async () => {
+    const { deps, conversaciones, leadsCreados, fases } = depsFalsas({ secuencias: [FILTRO_HYDRUP] });
+    await procesarWebhook({ cuerpo: enHydrup(textoLibre("wamid.F1")), deps });
+
+    await procesarWebhook({ cuerpo: enHydrup(pulsar("wamid.F2", 2, "Soy particular")), deps });
+    await procesarWebhook({ cuerpo: enHydrup(textoLibre("wamid.F3", WA, "¿Hola?")), deps });
+    await procesarWebhook({ cuerpo: enHydrup(textoLibre("wamid.F4", WA, "¿Sigue ahí alguien?")), deps });
+
+    expect(leadsCreados).toHaveLength(0);
+    expect(fases).toHaveLength(0);
+    expect(conversaciones.get(CONV)?.lead_id).toBeNull();
+  });
+
+  it("un teléfono que ya era lead se vincula y al pasar el filtro solo se completan sus campos vacíos", async () => {
+    const { deps, conversaciones, leadsCreados, leadsCompletados, leadsPorTelefono } = depsFalsas({
+      secuencias: [FILTRO_HYDRUP],
+    });
+    leadsPorTelefono.set("611222333", { id: "lead-conocido", negocio: "Clínica Previa", contacto: null, cargo: "Gerente" });
+
+    await procesarWebhook({ cuerpo: enHydrup(textoLibre("wamid.F1")), deps });
+    expect(conversaciones.get(CONV)?.lead_id).toBe("lead-conocido");
+
+    await procesarWebhook({ cuerpo: enHydrup(pulsar("wamid.F2", 1, "Clínica dental")), deps });
+    await procesarWebhook({ cuerpo: enHydrup(pulsar("wamid.F3", 1, "Dueño")), deps });
+    await procesarWebhook({ cuerpo: nombreDelNegocio(), deps });
+
+    expect(leadsCreados).toHaveLength(0);
+    // Ni el negocio ni el cargo que ya tenía se pisan.
+    expect(leadsCompletados).toEqual([
+      { leadId: "lead-conocido", cambios: { tipo_negocio: "clinica_dental", contacto: "Marta López" } },
+    ]);
+    expect(conversaciones.get(CONV)?.lead_id).toBe("lead-conocido");
+  });
+
+  it("con anuncio, el lead nace al pasar el filtro con origen anuncio y su id", async () => {
+    const { deps, leadsCreados, conversaciones } = depsFalsas({
+      secuencias: [{ ...FILTRO_HYDRUP, anuncios: ["AD-F"] }],
+    });
+    const anuncio = mensajeDeAnuncio({ id: "wamid.A1", from: WA, referral: { source_id: "AD-F", headline: "Agua" } });
+
+    await procesarWebhook({ cuerpo: enHydrup(anuncio), deps });
+    expect(leadsCreados).toHaveLength(0);
+    expect(conversaciones.get(CONV)?.paso_actual).toBe("tipo");
+
+    await procesarWebhook({ cuerpo: enHydrup(pulsar("wamid.F2", 1, "Clínica dental")), deps });
+    await procesarWebhook({ cuerpo: enHydrup(pulsar("wamid.F3", 2, "Empleado")), deps });
+    await procesarWebhook({ cuerpo: nombreDelNegocio(), deps });
+
+    expect(leadsCreados).toEqual([expect.objectContaining({ origen: "anuncio", anuncio: "AD-F", negocio: "Clínica Sonrisas" })]);
+  });
+
+  it("una secuencia sin crear_lead sigue creando el lead con el primer mensaje", async () => {
+    const { deps, conversaciones, leadsCreados, leadsCompletados } = depsFalsas({
+      secuencias: [{ ...FILTRO_HYDRUP, pasos: SECUENCIA_MINIMA }],
+    });
+
+    await procesarWebhook({ cuerpo: enHydrup(textoLibre("wamid.F1")), deps });
+
+    expect(leadsCreados).toHaveLength(1);
+    expect(conversaciones.get(CONV)?.lead_id).toBe("lead-1");
+    expect(conversaciones.get(CONV)?.datos).toEqual({});
+    expect(leadsCompletados).toHaveLength(0);
+  });
+});
+
+describe("crearLeadDeWhatsApp con los datos del filtro", () => {
+  it("usa el negocio y el tipo de negocio que contestó el contacto", async () => {
+    crearLeadsMock.mockResolvedValue({ ok: true, creados: 1 });
+    buscarLeadPorContactoMock.mockResolvedValue({ id: "lead-9", negocio: "Clínica Sonrisas", contacto: "Marta", ciudad: "", excluido: false, fase: "nuevo" });
+
+    await crearLeadDeWhatsApp({
+      marcaId: HYDRUP.id,
+      waId: "34611222333",
+      telefono: "611222333",
+      nombre: "Marta",
+      origen: "whatsapp",
+      anuncio: null,
+      negocio: "Clínica Sonrisas",
+      tipoNegocio: "clinica_dental",
+    });
+
+    expect(crearLeadsMock.mock.calls[0][0].leads[0]).toMatchObject({ negocio: "Clínica Sonrisas", tipo_negocio: "clinica_dental" });
   });
 });
