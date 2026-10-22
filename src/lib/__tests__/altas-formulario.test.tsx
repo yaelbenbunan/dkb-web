@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-const m = vi.hoisted(() => ({ enviarAltaAction: vi.fn(), pedirSubidaAction: vi.fn(), quitarArchivoAction: vi.fn() }));
+const m = vi.hoisted(() => ({ enviarAltaAction: vi.fn(), pedirSubidaAction: vi.fn(), quitarArchivoAction: vi.fn(), confirmarSubidaAction: vi.fn() }));
 vi.mock("@/app/(alta)/alta/[token]/acciones", () => m);
 
 import { FormularioAlta } from "@/app/(alta)/alta/[token]/FormularioAlta";
@@ -65,7 +65,7 @@ describe("FormularioAlta: borrador local", () => {
     pintar();
     fireEvent.click(screen.getByRole("button", { name: "Enviar alta" }));
     await waitFor(() => expect(screen.getByRole("heading", { name: "¡Gracias, Nubosoft!" })).toBeInTheDocument());
-    expect(m.enviarAltaAction).toHaveBeenCalledWith(TOKEN, expect.objectContaining({ contacto_nombre: "Laura" }), [{ campo: "logo", ruta: RUTA_NUEVA, nombre: "logo.svg" }]);
+    expect(m.enviarAltaAction).toHaveBeenCalledWith(TOKEN, expect.objectContaining({ contacto_nombre: "Laura" }), [{ campo: "logo", ruta: RUTA_NUEVA, nombre: "logo.svg" }], []);
     expect(localStorage.getItem(claveBorrador(TOKEN))).toBeNull();
   });
 });

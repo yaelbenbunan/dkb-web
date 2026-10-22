@@ -11,6 +11,7 @@ const m = vi.hoisted(() => ({
   infoArchivo: vi.fn(),
   borrarArchivos: vi.fn(),
   usoAlta: vi.fn(),
+  modificarPendientes: vi.fn(),
   avisarAltaEnviada: vi.fn(),
   revalidatePath: vi.fn(),
 }));
@@ -25,11 +26,12 @@ vi.mock("@/lib/altas/db", () => ({
   infoArchivo: m.infoArchivo,
   borrarArchivos: m.borrarArchivos,
   usoAlta: m.usoAlta,
+  modificarPendientes: m.modificarPendientes,
 }));
 vi.mock("@/lib/altas/aviso", () => ({ avisarAltaEnviada: m.avisarAltaEnviada }));
 vi.mock("next/cache", () => ({ revalidatePath: m.revalidatePath }));
 
-import { enviarAltaAction, pedirSubidaAction, quitarArchivoAction } from "@/app/(alta)/alta/[token]/acciones";
+import { confirmarSubidaAction, enviarAltaAction, pedirSubidaAction, quitarArchivoAction } from "@/app/(alta)/alta/[token]/acciones";
 import { crearAltaAction, setAltaActivaAction } from "@/app/(site)/panel/ventas/acciones-altas";
 
 const TOKEN = "A".repeat(43);
@@ -63,11 +65,24 @@ function respuestas(): Record<string, unknown> {
 
 const LOGO = { campo: "logo", ruta: RUTA_LOGO, nombre: "Logo.svg" };
 
+/** Firmas pendientes del alta en memoria; `modificarPendientes` les aplica el cambio como la base. */
+const pend = { lista: [] as unknown[], columna: true };
+async function modificarEnMemoria(_id: string, cambio: (l: unknown[]) => { ok: boolean; pendientes?: unknown[]; error?: string }) {
+  if (!pend.columna) return { estado: "sin_columna" };
+  const r = cambio(pend.lista);
+  if (!r.ok) return { estado: "rechazo", error: r.error };
+  pend.lista = r.pendientes ?? [];
+  return { estado: "ok" };
+}
+
 beforeEach(() => {
   Object.values(m).forEach((f) => f.mockReset());
   m.getAltaPorToken.mockResolvedValue(alta());
   m.firmarSubida.mockResolvedValue({ ok: true, url: "https://x.supabase.co/storage/v1/object/upload/sign/altas-clientes/r?token=t" });
-  m.infoArchivo.mockResolvedValue({ tamano: 2048, tipo: "image/svg+xml" });
+  m.infoArchivo.mockResolvedValue({ estado: "ok", tamano: 2048, tipo: "image/svg+xml" });
+  pend.lista = [];
+  pend.columna = true;
+  m.modificarPendientes.mockImplementation(modificarEnMemoria);
   m.guardarEnvioAlta.mockResolvedValue({ ok: true });
   m.avisarAltaEnviada.mockResolvedValue(undefined);
   m.usoAlta.mockResolvedValue({ archivos: 0, bytes: 0 });
@@ -148,14 +163,14 @@ describe("enviarAltaAction", () => {
   });
 
   test("un archivo nuevo que no está en el bucket se rechaza", async () => {
-    m.infoArchivo.mockResolvedValueOnce(null);
+    m.infoArchivo.mockResolvedValueOnce({ estado: "no_existe" });
     const r = await enviarAltaAction(TOKEN, respuestas(), [LOGO]);
     expect(r).toEqual({ ok: false, error: expect.stringMatching(/Logo\.svg/) });
     expect(m.guardarEnvioAlta).not.toHaveBeenCalled();
   });
 
   test("un archivo que pesa más de lo permitido se rechaza y se borra", async () => {
-    m.infoArchivo.mockResolvedValueOnce({ tamano: 51 * 1024 * 1024, tipo: "image/svg+xml" });
+    m.infoArchivo.mockResolvedValueOnce({ estado: "ok", tamano: 51 * 1024 * 1024, tipo: "image/svg+xml" });
     expect((await enviarAltaAction(TOKEN, respuestas(), [LOGO])).ok).toBe(false);
     expect(m.borrarArchivos).toHaveBeenCalledWith([RUTA_LOGO]);
     expect(m.guardarEnvioAlta).not.toHaveBeenCalled();
@@ -243,10 +258,11 @@ describe("cupo por alta y quitar archivos", () => {
   const GB = 1024 * 1024 * 1024;
   const PEDIDO = { campo: "fotos", nombre: "v.mp4", tamano: 10 * 1024 * 1024, tipo: "video/mp4" };
 
-  test("firma mientras quepa: 39 archivos y casi 1 GB todavía entran", async () => {
-    m.usoAlta.mockResolvedValueOnce({ archivos: 39, bytes: GB - PEDIDO.tamano });
+  test("firma mientras quepa: 39 archivos y hueco para 50 MB", async () => {
+    m.usoAlta.mockResolvedValueOnce({ archivos: 39, bytes: GB - 50 * 1024 * 1024 });
     expect((await pedirSubidaAction(TOKEN, PEDIDO)).ok).toBe(true);
     expect(m.usoAlta).toHaveBeenCalledWith(expect.objectContaining({ id: ALTA_ID }));
+    expect(pend.lista).toEqual([expect.objectContaining({ ruta: m.firmarSubida.mock.calls[0][0] })]);
   });
 
   test("con 40 archivos no firma más", async () => {
@@ -255,8 +271,47 @@ describe("cupo por alta y quitar archivos", () => {
     expect(m.firmarSubida).not.toHaveBeenCalled();
   });
 
-  test("si con este archivo pasa de 1 GB, no firma", async () => {
-    m.usoAlta.mockResolvedValueOnce({ archivos: 3, bytes: GB - PEDIDO.tamano + 1 });
+  test("no se fía del tamaño declarado: cada firma cuenta 50 MB", async () => {
+    // Declara 10 MB, pero solo quedan 49 MB libres.
+    m.usoAlta.mockResolvedValueOnce({ archivos: 3, bytes: GB - 49 * 1024 * 1024 });
+    expect((await pedirSubidaAction(TOKEN, PEDIDO)).ok).toBe(false);
+    expect(m.firmarSubida).not.toHaveBeenCalled();
+  });
+
+  test("las firmas sin subir cuentan: no se puede pedir 1000 a la vez", async () => {
+    let firmadas = 0;
+    for (let i = 0; i < 30; i++) if ((await pedirSubidaAction(TOKEN, PEDIDO)).ok) firmadas++;
+    // 15 por ritmo (cada 10 min), y nunca más de 20 pendientes (20 × 50 MB = 1 GB).
+    expect(firmadas).toBe(15);
+    expect(m.firmarSubida).toHaveBeenCalledTimes(15);
+    expect(await pedirSubidaAction(TOKEN, PEDIDO)).toEqual({ ok: false, error: expect.stringMatching(/Demasiados archivos seguidos/) });
+  });
+
+  test("al confirmar la subida deja de contar como pendiente", async () => {
+    const r = await pedirSubidaAction(TOKEN, PEDIDO);
+    expect(r.ok).toBe(true);
+    const ruta = (r as { ruta: string }).ruta;
+    expect(await confirmarSubidaAction(TOKEN, ruta)).toEqual({ ok: true });
+    expect(pend.lista).toEqual([expect.objectContaining({ ruta, subida: true })]);
+  });
+
+  test("confirmar: solo con token activo y rutas de su alta", async () => {
+    m.getAltaPorToken.mockResolvedValueOnce(null);
+    expect((await confirmarSubidaAction(TOKEN, RUTA_LOGO)).ok).toBe(false);
+    expect((await confirmarSubidaAction(TOKEN, `99999999-2222-4333-8444-555555555555/diseno/${UUID}-logo.svg`)).ok).toBe(false);
+    expect(m.modificarPendientes).not.toHaveBeenCalled();
+  });
+
+  test("sin la columna de pendientes: se firma con el tope de antes (bucket y tamaño declarado)", async () => {
+    pend.columna = false;
+    m.usoAlta.mockResolvedValueOnce({ archivos: 39, bytes: GB - PEDIDO.tamano });
+    expect((await pedirSubidaAction(TOKEN, PEDIDO)).ok).toBe(true);
+    m.usoAlta.mockResolvedValueOnce({ archivos: 40, bytes: 0 });
+    expect((await pedirSubidaAction(TOKEN, PEDIDO)).ok).toBe(false);
+  });
+
+  test("si no se pueden apuntar las pendientes, no firma", async () => {
+    m.modificarPendientes.mockResolvedValueOnce({ estado: "error" });
     expect((await pedirSubidaAction(TOKEN, PEDIDO)).ok).toBe(false);
     expect(m.firmarSubida).not.toHaveBeenCalled();
   });
@@ -271,7 +326,7 @@ describe("cupo por alta y quitar archivos", () => {
     const muchos = Array.from({ length: 41 }, (_, i) => ({ campo: "fotos", ruta: `${ALTA_ID}/diseno/${UUID.slice(0, -2)}${String(i).padStart(2, "0")}-f.jpg`, nombre: "f.jpg" }));
     expect((await enviarAltaAction(TOKEN, respuestas(), [LOGO, ...muchos])).ok).toBe(false);
     const fotos = Array.from({ length: 3 }, (_, i) => ({ campo: "fotos", ruta: `${ALTA_ID}/diseno/${UUID.slice(0, -1)}${i}-f.mp4`, nombre: "f.mp4" }));
-    m.infoArchivo.mockResolvedValue({ tamano: 45 * 1024 * 1024, tipo: "video/mp4" });
+    m.infoArchivo.mockResolvedValue({ estado: "ok", tamano: 45 * 1024 * 1024, tipo: "video/mp4" });
     const veinticinco = Array.from({ length: 25 }, (_, i) => ({ campo: "fotos", ruta: `${ALTA_ID}/diseno/${UUID.slice(0, -2)}${String(i + 10).padStart(2, "0")}-f.mp4`, nombre: "f.mp4" }));
     expect(await enviarAltaAction(TOKEN, respuestas(), [LOGO, ...fotos, ...veinticinco])).toEqual({ ok: false, error: expect.stringMatching(/1 GB/) });
     expect(m.guardarEnvioAlta).not.toHaveBeenCalled();
@@ -303,6 +358,63 @@ describe("cupo por alta y quitar archivos", () => {
   test("quitar: un archivo de un envío ya guardado no se borra hasta reenviar", async () => {
     m.getAltaPorToken.mockResolvedValueOnce(alta({ archivos: [{ campo: "logo", ruta: RUTA_LOGO, nombre: "Logo.svg", tamano: 1, tipo: "" }] }));
     expect(await quitarArchivoAction(TOKEN, RUTA_LOGO)).toEqual({ ok: true });
+    expect(m.borrarArchivos).not.toHaveBeenCalled();
+  });
+
+  test("al enviar y al quitar, los archivos dejan de estar pendientes", async () => {
+    pend.lista = [{ ruta: RUTA_LOGO, firmada: new Date().toISOString(), expira: new Date(Date.now() + 3600e3).toISOString() }];
+    expect((await enviarAltaAction(TOKEN, respuestas(), [LOGO])).ok).toBe(true);
+    expect(pend.lista).toEqual([expect.objectContaining({ ruta: RUTA_LOGO, subida: true })]);
+    const otra = `${ALTA_ID}/diseno/${UUID}-foto.jpg`;
+    pend.lista = [{ ruta: otra, firmada: new Date().toISOString(), expira: new Date(Date.now() + 3600e3).toISOString() }];
+    await quitarArchivoAction(TOKEN, otra);
+    expect(pend.lista).toEqual([expect.objectContaining({ ruta: otra, subida: true })]);
+  });
+});
+
+describe("envíos a la vez y comprobación de archivos", () => {
+  const FOTO = `${ALTA_ID}/diseno/${UUID}-foto.jpg`;
+  const guardadoLogo = { campo: "logo", ruta: RUTA_LOGO, nombre: "Logo.svg", tamano: 100, tipo: "image/svg+xml" };
+  const guardadaFoto = { campo: "fotos", ruta: FOTO, nombre: "foto.jpg", tamano: 100, tipo: "image/jpeg" };
+
+  test("guarda condicionado al envío que se leyó", async () => {
+    m.getAltaPorToken.mockResolvedValue(alta({ enviada_en: "2026-10-22T10:00:00.123+00:00" }));
+    await enviarAltaAction(TOKEN, respuestas(), [LOGO]);
+    expect(m.guardarEnvioAlta.mock.calls[0][2]).toBe("2026-10-22T10:00:00.123+00:00");
+  });
+
+  test("si otra pestaña envió a la vez: vuelve a leer y no borra lo que la otra guardó", async () => {
+    m.getAltaPorToken
+      .mockResolvedValueOnce(alta({ archivos: [guardadoLogo], enviada_en: "T1" }))
+      // Tras el conflicto: la otra pestaña ha guardado además la foto.
+      .mockResolvedValueOnce(alta({ archivos: [guardadoLogo, guardadaFoto], enviada_en: "T2" }));
+    m.guardarEnvioAlta.mockResolvedValueOnce({ ok: false, error: "x", conflicto: true }).mockResolvedValueOnce({ ok: true });
+    const r = await enviarAltaAction(TOKEN, respuestas(), [LOGO], [RUTA_LOGO]);
+    expect(r.ok).toBe(true);
+    expect(m.guardarEnvioAlta).toHaveBeenCalledTimes(2);
+    expect(m.guardarEnvioAlta.mock.calls[1][2]).toBe("T2");
+    expect(m.guardarEnvioAlta.mock.calls[1][1].archivos).toEqual([guardadoLogo, guardadaFoto]);
+    expect(m.borrarArchivos).not.toHaveBeenCalled();
+  });
+
+  test("dos conflictos seguidos: error, sin borrar nada", async () => {
+    m.getAltaPorToken.mockResolvedValue(alta({ archivos: [guardadoLogo, guardadaFoto], enviada_en: "T1" }));
+    m.guardarEnvioAlta.mockResolvedValue({ ok: false, error: "Se ha enviado el formulario desde otra ventana a la vez. Vuelve a intentarlo.", conflicto: true });
+    expect(await enviarAltaAction(TOKEN, respuestas(), [LOGO], [RUTA_LOGO, FOTO])).toEqual({ ok: false, error: expect.stringMatching(/otra ventana/) });
+    expect(m.guardarEnvioAlta).toHaveBeenCalledTimes(2);
+    expect(m.borrarArchivos).not.toHaveBeenCalled();
+  });
+
+  test("solo borra lo guardado que esta pestaña conocía y ya no manda", async () => {
+    m.getAltaPorToken.mockResolvedValue(alta({ archivos: [guardadoLogo, guardadaFoto], enviada_en: "T1" }));
+    await enviarAltaAction(TOKEN, respuestas(), [LOGO], [RUTA_LOGO, FOTO]);
+    expect(m.borrarArchivos).toHaveBeenCalledWith([FOTO]);
+  });
+
+  test("un fallo de Storage que no es «no existe»: mensaje propio y sin guardar", async () => {
+    m.infoArchivo.mockResolvedValueOnce({ estado: "error" });
+    expect(await enviarAltaAction(TOKEN, respuestas(), [LOGO])).toEqual({ ok: false, error: "No hemos podido comprobar el archivo, vuelve a intentarlo." });
+    expect(m.guardarEnvioAlta).not.toHaveBeenCalled();
     expect(m.borrarArchivos).not.toHaveBeenCalled();
   });
 });

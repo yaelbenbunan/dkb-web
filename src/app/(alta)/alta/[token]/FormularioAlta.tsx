@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { aceptAttr, CAMPOS_ARCHIVO, validarArchivo, type NombreCampoArchivo } from "@/lib/altas/archivos";
-import { CAMPOS_ALTA, SECCIONES_ALTA, leerRespuestasAlta, type CampoAlta, type RespuestasAlta } from "@/lib/altas/preguntas";
+import { CAMPOS_ALTA, SECCIONES_ALTA, cumpleCondicion, leerRespuestasAlta, type CampoAlta, type RespuestasAlta } from "@/lib/altas/preguntas";
 import { borrarBorrador, guardarBorrador, interpretarBorrador, leerBorradorCrudo } from "@/lib/altas/borrador";
-import { enviarAltaAction, pedirSubidaAction, quitarArchivoAction } from "./acciones";
+import { confirmarSubidaAction, enviarAltaAction, pedirSubidaAction, quitarArchivoAction } from "./acciones";
 
 export interface ArchivoInicial {
   campo: NombreCampoArchivo;
@@ -40,11 +40,7 @@ function tamanoLegible(bytes: number): string {
   return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
-function esVisible(campo: CampoAlta, valores: Valores): boolean {
-  if (!campo.visibleSi) return true;
-  const actual = valores[campo.visibleSi.campo];
-  return Array.isArray(actual) ? actual.includes(campo.visibleSi.valor) : actual === campo.visibleSi.valor;
-}
+const esVisible = cumpleCondicion;
 
 /** Sube un archivo con la URL firmada, como lo hace supabase-js (multipart),
  *  pero con XHR para poder enseñar el progreso de archivos de hasta 50 MB. */
@@ -169,6 +165,8 @@ export function FormularioAlta({
         }
         await subir(firmada.url, archivo, (progreso) => actualizarArchivo(clave, { progreso }));
         actualizarArchivo(clave, { estado: "listo", progreso: 100, ruta: firmada.ruta });
+        // Deja de contar como firma pendiente en el cupo del alta.
+        void confirmarSubidaAction(token, firmada.ruta).catch(() => undefined);
       } catch {
         actualizarArchivo(clave, { estado: "error", error: "No se pudo subir. Comprueba la conexión y vuelve a intentarlo." });
       }
@@ -199,7 +197,9 @@ export function FormularioAlta({
     }
     empezar(async () => {
       try {
-        const r = await enviarAltaAction(token, visibles, listos);
+        // `guardados`: lo que había enviado al abrir esta pestaña; lo que haya
+        // enviado otra pestaña después no se borra.
+        const r = await enviarAltaAction(token, visibles, listos, [...guardados]);
         if (r.ok) {
           borrarBorrador(token);
           setEnviado(true);

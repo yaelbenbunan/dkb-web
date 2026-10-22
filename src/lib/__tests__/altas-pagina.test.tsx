@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const m = vi.hoisted(() => ({ getAltaPorToken: vi.fn() }));
 vi.mock("@/lib/altas/db", () => ({ getAltaPorToken: m.getAltaPorToken }));
-vi.mock("@/app/(alta)/alta/[token]/acciones", () => ({ enviarAltaAction: vi.fn(), pedirSubidaAction: vi.fn() }));
+vi.mock("@/app/(alta)/alta/[token]/acciones", () => ({ enviarAltaAction: vi.fn(), pedirSubidaAction: vi.fn(), quitarArchivoAction: vi.fn(), confirmarSubidaAction: vi.fn() }));
 
 import AltaClientePage, { metadata } from "@/app/(alta)/alta/[token]/page";
 

@@ -376,6 +376,13 @@ function errorDe(campo: CampoAlta, issue: z.core.$ZodIssue | undefined): string 
 }
 
 export type RespuestasAlta = Record<string, unknown>;
+
+/** ¿Se cumple el `visibleSi` del campo con estas respuestas? Sin condición, sí. */
+export function cumpleCondicion(campo: CampoAlta, valores: Record<string, unknown>): boolean {
+  if (!campo.visibleSi) return true;
+  const actual = valores[campo.visibleSi.campo];
+  return Array.isArray(actual) ? actual.includes(campo.visibleSi.valor) : actual === campo.visibleSi.valor;
+}
 /** `campo`: la pregunta con el error, para llevar al usuario hasta ella. */
 export type LeidoAlta = { ok: true; datos: RespuestasAlta } | { ok: false; error: string; campo?: string };
 
@@ -407,6 +414,11 @@ export function leerRespuestasAlta(entrada: unknown): LeidoAlta {
       continue;
     }
     datos[campo.id] = r.data;
+  }
+  // Lo que depende de otra respuesta solo se guarda si esa respuesta lo pide
+  // (p. ej. el enlace de Facebook con «¿Tenéis Facebook?» en «No» se descarta).
+  for (const campo of CAMPOS_ALTA) {
+    if (campo.visibleSi && campo.id in datos && !cumpleCondicion(campo, datos)) delete datos[campo.id];
   }
   return { ok: true, datos };
 }

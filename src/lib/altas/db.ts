@@ -2,6 +2,7 @@ import "server-only";
 import { getSupabaseAdmin } from "../supabase-admin";
 import { ErrorLectura, FALTA_EN_LA_BASE, tolerarMigracionPendiente } from "../ventas/db";
 import { BUCKET_ALTAS, CAMPOS_ARCHIVO, type ArchivoAlta } from "./archivos";
+import { leerPendientes, type FirmaPendiente } from "./pendientes";
 import type { RespuestasAlta } from "./preguntas";
 import { esFormatoTokenAlta } from "./token";
 
@@ -27,6 +28,8 @@ export interface AltaCliente {
   enviada_en: string | null;
   created_at: string;
   creada_por: string | null;
+  /** Firmas de subida sin confirmar (ver pendientes.ts). Sin la columna, no viene. */
+  subidas_pendientes?: unknown;
 }
 
 export type Escritura = { ok: true } | { ok: false; error: string };
@@ -101,17 +104,80 @@ export async function setAltaActiva(id: string, activa: boolean): Promise<Escrit
   return r.error ? falloEscritura(r.error, "setAltaActiva") : { ok: true };
 }
 
-export async function guardarEnvioAlta(id: string, envio: { respuestas: RespuestasAlta; archivos: ArchivoAlta[] }): Promise<Escritura> {
-  const r = await sb()
+export type GuardadoEnvio = { ok: true } | { ok: false; error: string; conflicto?: true };
+
+/**
+ * Guarda el envío SOLO si nadie ha enviado entretanto (`enviada_en` sigue
+ * siendo el que se leyó). Así, dos pestañas que envían a la vez no se pisan:
+ * la segunda recibe `conflicto` y vuelve a leer antes de decidir qué borrar.
+ */
+export async function guardarEnvioAlta(
+  id: string,
+  envio: { respuestas: RespuestasAlta; archivos: ArchivoAlta[] },
+  enviadaPrevia: string | null,
+): Promise<GuardadoEnvio> {
+  let consulta = sb()
     .from(TABLA)
     .update({ respuestas: envio.respuestas, archivos: envio.archivos, enviada_en: new Date().toISOString() })
     .eq("id", id)
     // Si entretanto se desactivó el enlace, no se guarda.
-    .eq("activa", true)
-    .select("id");
-  if (r.error) return falloEscritura(r.error, "guardarEnvioAlta");
-  if (!r.data?.length) return { ok: false, error: "Este enlace ya no está activo." };
+    .eq("activa", true);
+  consulta = enviadaPrevia === null ? consulta.is("enviada_en", null) : consulta.eq("enviada_en", enviadaPrevia);
+  const r = await consulta.select("id");
+  if (r.error) return falloEscritura(r.error, "guardarEnvioAlta") as { ok: false; error: string };
+  if (!r.data?.length) return { ok: false, error: "Se ha enviado el formulario desde otra ventana a la vez. Vuelve a intentarlo.", conflicto: true };
   return { ok: true };
+}
+
+/* Firmas pendientes ---------------------------------------------------------- */
+
+let avisadoSinColumna = false;
+function sinColumna(contexto: string, mensaje: string) {
+  if (avisadoSinColumna) return;
+  avisadoSinColumna = true;
+  console.error(`[altas/db] ${contexto}: falta la columna subidas_pendientes (${SQL_ALTAS}); el tope solo mira el bucket.`, mensaje);
+}
+
+export type CambioPendientes = { ok: true; pendientes: FirmaPendiente[] } | { ok: false; error: string };
+export type ResultadoPendientes = { estado: "ok" } | { estado: "rechazo"; error: string } | { estado: "sin_columna" } | { estado: "error" };
+
+/**
+ * Lee las firmas pendientes del alta, aplica `cambio` y lo escribe solo si la
+ * lista no ha cambiado entretanto (escritura condicional sobre el valor leído).
+ * Si otra petición se ha adelantado, vuelve a leer: hasta 3 intentos.
+ */
+export async function modificarPendientes(altaId: string, cambio: (lista: FirmaPendiente[]) => CambioPendientes): Promise<ResultadoPendientes> {
+  for (let intento = 0; intento < 3; intento++) {
+    const leida = await sb().from(TABLA).select("subidas_pendientes").eq("id", altaId).maybeSingle();
+    if (leida.error) {
+      if (leida.error.code && FALTA_EN_LA_BASE.has(leida.error.code)) {
+        sinColumna("modificarPendientes", leida.error.message);
+        return { estado: "sin_columna" };
+      }
+      console.error("[altas/db] modificarPendientes (lectura):", leida.error.message);
+      return { estado: "error" };
+    }
+    if (!leida.data) return { estado: "error" };
+    const bruto = (leida.data as { subidas_pendientes: unknown }).subidas_pendientes ?? [];
+    const r = cambio(leerPendientes(bruto) ?? []);
+    if (!r.ok) return { estado: "rechazo", error: r.error };
+    const escrita = await sb()
+      .from(TABLA)
+      .update({ subidas_pendientes: r.pendientes })
+      .eq("id", altaId)
+      .eq("subidas_pendientes", JSON.stringify(bruto))
+      .select("id");
+    if (escrita.error) {
+      if (escrita.error.code && FALTA_EN_LA_BASE.has(escrita.error.code)) {
+        sinColumna("modificarPendientes", escrita.error.message);
+        return { estado: "sin_columna" };
+      }
+      console.error("[altas/db] modificarPendientes (escritura):", escrita.error.message);
+      return { estado: "error" };
+    }
+    if (escrita.data?.length) return { estado: "ok" };
+  }
+  return { estado: "error" };
 }
 
 /* Storage ------------------------------------------------------------------- */
@@ -151,11 +217,17 @@ export async function usoAlta(alta: Pick<AltaCliente, "id" | "archivos">): Promi
   }
 }
 
-/** Tamaño y tipo reales del archivo ya subido; null si no está. */
-export async function infoArchivo(ruta: string): Promise<{ tamano: number; tipo: string } | null> {
+export type InfoArchivo = { estado: "ok"; tamano: number; tipo: string } | { estado: "no_existe" } | { estado: "error" };
+
+/** Tamaño y tipo reales del archivo ya subido. Solo un «no existe» de verdad
+ *  cuenta como que no se subió; cualquier otro fallo es «no se ha podido mirar». */
+export async function infoArchivo(ruta: string): Promise<InfoArchivo> {
   const r = await sb().storage.from(BUCKET_ALTAS).info(ruta);
-  if (r.error || !r.data) return null;
-  return { tamano: Number(r.data.size ?? 0), tipo: String(r.data.contentType ?? "") };
+  if (r.data) return { estado: "ok", tamano: Number(r.data.size ?? 0), tipo: String(r.data.contentType ?? "") };
+  const e = (r.error ?? {}) as { message?: string; status?: number; statusCode?: string | number };
+  if (e.status === 404 || String(e.statusCode) === "404" || /not.?found/i.test(e.message ?? "")) return { estado: "no_existe" };
+  console.error("[altas/db] infoArchivo:", e.message);
+  return { estado: "error" };
 }
 
 export async function borrarArchivos(rutas: string[]): Promise<void> {

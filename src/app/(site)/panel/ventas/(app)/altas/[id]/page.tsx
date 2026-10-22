@@ -14,6 +14,9 @@ function tamanoLegible(bytes: number): string {
   return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
+/** Solo se enlaza lo que es http(s): lo demás (datos viejos, a mano) va como texto. */
+const ES_HTTP = /^https?:\/\//i;
+
 const vacio = <span style={{ color: "#94a3b8" }}>—</span>;
 
 export default async function AltaPage({ params }: { params: Promise<{ id: string }> }) {
@@ -84,7 +87,7 @@ export default async function AltaPage({ params }: { params: Promise<{ id: strin
                   const texto = valorLegible(campo, alta.respuestas[campo.id]);
                   valor = !texto ? (
                     vacio
-                  ) : campo.tipo === "url" ? (
+                  ) : campo.tipo === "url" && ES_HTTP.test(texto) ? (
                     <a href={texto} target="_blank" rel="noopener noreferrer nofollow" style={{ color: "#187bef", wordBreak: "break-all" }}>
                       {texto}
                     </a>

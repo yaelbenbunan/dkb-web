@@ -26,6 +26,17 @@ create table if not exists public.alta_clientes (
   creada_por uuid references public.ventas_usuarias(id) on delete set null
 );
 
+-- Firmas de subida aún sin confirmar ([{ruta, firmada, expira, subida?}]):
+-- cuentan en el tope de 40 archivos / 1 GB (a 50 MB cada una) y para el límite
+-- de 15 firmas cada 10 minutos. Va con alter para que el SQL se pueda volver a
+-- ejecutar sobre una tabla creada con la versión anterior de este archivo.
+alter table public.alta_clientes
+  add column if not exists subidas_pendientes jsonb not null default '[]'::jsonb;
+
+alter table public.alta_clientes drop constraint if exists alta_clientes_subidas_pendientes_check;
+alter table public.alta_clientes
+  add constraint alta_clientes_subidas_pendientes_check check (jsonb_typeof(subidas_pendientes) = 'array');
+
 create index if not exists alta_clientes_created_at_idx on public.alta_clientes (created_at desc);
 
 alter table public.alta_clientes enable row level security;
@@ -47,7 +58,8 @@ on conflict (id) do update
 
 commit;
 
--- Comprobación: debe devolver 9 columnas de alta_clientes, rls = true y
+-- Comprobación: debe devolver 10 columnas de alta_clientes (la última,
+-- subidas_pendientes jsonb), rls = true y
 -- el bucket con public = false y file_size_limit = 52428800.
 select column_name, data_type
 from information_schema.columns

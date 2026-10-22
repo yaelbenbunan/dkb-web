@@ -128,4 +128,32 @@ describe("preguntas del alta", () => {
     expect(valorLegible(campos.facebook, undefined)).toBe("");
     expect(valorLegible(campos.competencia, [{ nombre: "Holded", web: "https://holded.com" }])).toBe("Holded (https://holded.com)");
   });
+
+  test("descarta lo condicional cuando su pregunta no lo pide", () => {
+    const r = leerRespuestasAlta({
+      ...minimas(),
+      facebook: false,
+      facebook_url: "https://facebook.com/nubosoft",
+      instagram: true,
+      instagram_url: "https://instagram.com/nubosoft",
+      cuenta_publicitaria: null,
+      experiencia_previa: "Algo",
+      objetivos_branding: ["trafico"],
+      objetivos_otro: "Ventas",
+      crm: "ninguno",
+      crm_otro: "HubSpot",
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.datos).not.toHaveProperty("facebook_url");
+    expect(r.datos).not.toHaveProperty("experiencia_previa");
+    expect(r.datos).not.toHaveProperty("objetivos_otro");
+    expect(r.datos).not.toHaveProperty("crm_otro");
+    expect(r.datos.instagram_url).toBe("https://instagram.com/nubosoft");
+  });
+
+  test("y lo conserva cuando sí lo pide", () => {
+    const r = leerRespuestasAlta({ ...minimas(), objetivos_branding: ["otro"], objetivos_otro: "Ventas", crm: "otro", crm_otro: "HubSpot", facebook: true, facebook_url: "facebook.com/n" });
+    expect(r.ok && [r.datos.objetivos_otro, r.datos.crm_otro, r.datos.facebook_url]).toEqual(["Ventas", "HubSpot", "https://facebook.com/n"]);
+  });
 });
