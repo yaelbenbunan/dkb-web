@@ -20,6 +20,9 @@ const upsertContactosMock = vi.fn();
 const leerContactoMock = vi.fn();
 // `ventas_mensajes.select(cols).eq(...).order(...)`, para listMensajes.
 const listarMensajesMock = vi.fn();
+// `ventas_conversaciones.select("*")...limit(500)` y `ventas_mensajes.select(...).in(...).gte(...)...limit(n)`, para listConversaciones.
+const listarConversacionesMock = vi.fn();
+const ultimosMock = vi.fn();
 
 vi.mock("../../supabase-admin", () => ({
   // `db()` exige un cliente no nulo; el doble simula Supabase ya configurado.
@@ -29,7 +32,12 @@ vi.mock("../../supabase-admin", () => ({
         return {
           upsert: upsertMock,
           insert: insertMock,
-          select: (cols: string) => ({ eq: () => ({ order: () => listarMensajesMock(cols) }) }),
+          select: (cols: string) => ({
+            eq: () => ({ order: () => listarMensajesMock(cols) }),
+            in: (_c: string, ids: string[]) => ({
+              gte: (_c2: string, desde: string) => ({ order: () => ({ limit: () => ultimosMock(ids, desde) }) }),
+            }),
+          }),
         };
       }
       if (tabla === "ventas_conversaciones") {
@@ -45,6 +53,7 @@ vi.mock("../../supabase-admin", () => ({
             },
           }),
           insert: (fila: unknown) => ({ select: () => ({ single: () => insertConversacionMock(fila) }) }),
+          select: () => ({ eq: () => ({ order: () => ({ limit: () => listarConversacionesMock() }) }) }),
         };
       }
       if (tabla === "ventas_whatsapp_contactos") {
@@ -70,6 +79,7 @@ import {
   guardarEntrante,
   guardarHistorial,
   guardarSaliente,
+  listConversaciones,
   listMensajes,
   nombreDeContacto,
 } from "../db";
@@ -535,5 +545,45 @@ describe("listMensajes", () => {
   it("otros errores se propagan", async () => {
     listarMensajesMock.mockReturnValueOnce({ data: null, error: { message: "caído", code: "XX000" } });
     await expect(listMensajes("c1")).rejects.toThrow("caído");
+  });
+});
+
+describe("listConversaciones: último mensaje", () => {
+  const hace = (dias: number) => new Date(Date.now() - dias * 86_400_000).toISOString();
+  const conv = (id: string, estado: string, ultimo: string) => ({ id, estado, ultimo_mensaje_at: ultimo, ultimo_texto: null });
+
+  beforeEach(() => {
+    listarConversacionesMock.mockReset();
+    ultimosMock.mockReset().mockReturnValue({ data: [], error: null });
+  });
+
+  it("consulta por tandas de 100, solo humanas de los últimos 30 días, acotando por fecha", async () => {
+    const ultimo = hace(1);
+    const humanas = Array.from({ length: 250 }, (_, i) => conv(`h${i}`, "humana", ultimo));
+    listarConversacionesMock.mockReturnValue({
+      data: [...humanas, conv("bot", "bot", ultimo), conv("vieja", "humana", hace(31))],
+      error: null,
+    });
+    ultimosMock.mockImplementation((ids: string[]) => ({
+      data: ids.includes("h0") ? [{ conversacion_id: "h0", direccion: "entrante" }] : [],
+      error: null,
+    }));
+    const r = await listConversaciones("m1");
+    expect(ultimosMock.mock.calls.map((c) => c[0].length)).toEqual([100, 100, 50]);
+    expect(ultimosMock.mock.calls.flatMap((c) => c[0])).not.toContain("vieja");
+    expect(ultimosMock.mock.calls.flatMap((c) => c[0])).not.toContain("bot");
+    expect(new Date(ultimosMock.mock.calls[0][1]).getTime()).toBe(new Date(ultimo).getTime() - 60_000);
+    expect(r.find((c) => c.id === "h0")?.ultima_direccion).toBe("entrante");
+    expect(r.find((c) => c.id === "h1")?.ultima_direccion).toBeNull();
+  });
+
+  it("si la consulta falla no hay marcador y la bandeja sigue", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    listarConversacionesMock.mockReturnValue({ data: [conv("h", "humana", hace(1))], error: null });
+    ultimosMock.mockReturnValue({ data: null, error: { message: "caído" } });
+    const r = await listConversaciones("m1");
+    expect(r[0].ultima_direccion).toBeNull();
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
   });
 });
