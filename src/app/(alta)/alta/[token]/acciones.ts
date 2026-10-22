@@ -3,15 +3,20 @@
 import { avisarAltaEnviada } from "@/lib/altas/aviso";
 import {
   CAMPOS_ARCHIVO,
+  ERROR_CUPO,
+  MAX_ARCHIVOS_ALTA,
+  MAX_BYTES_ALTA,
   MAX_BYTES_ARCHIVO,
+  cabeEnElCupo,
   construirRuta,
   esCampoArchivo,
+  rutaEsDelAlta,
   rutaEsDelCampo,
   validarArchivo,
   type ArchivoAlta,
   type NombreCampoArchivo,
 } from "@/lib/altas/archivos";
-import { borrarArchivos, firmarSubida, getAltaPorToken, guardarEnvioAlta, infoArchivo, type AltaCliente } from "@/lib/altas/db";
+import { borrarArchivos, firmarSubida, getAltaPorToken, guardarEnvioAlta, infoArchivo, usoAlta, type AltaCliente } from "@/lib/altas/db";
 import { CAMPOS_ALTA, leerRespuestasAlta } from "@/lib/altas/preguntas";
 import { esFormatoTokenAlta } from "@/lib/altas/token";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
@@ -24,7 +29,6 @@ import type { ResultadoAccion } from "@/lib/ventas/resultado";
  */
 
 const NO_VALIDO = { ok: false, error: "Este enlace no es válido." } as const;
-const MAX_ARCHIVOS_ENVIO = Object.values(CAMPOS_ARCHIVO).reduce((n, c) => n + c.maxArchivos, 0);
 
 async function altaActiva(token: unknown): Promise<AltaCliente | null> {
   if (!esFormatoTokenAlta(token)) return null;
@@ -48,6 +52,8 @@ export async function pedirSubidaAction(token: string, archivo: { campo: string;
   if (!alta) return NO_VALIDO;
   const v = validarArchivo(archivo.campo, archivo.nombre, archivo.tamano, archivo.tipo);
   if (!v.ok) return v;
+  // Cupo del alta (40 archivos, 1 GB), contando lo que ya hay en el bucket.
+  if (!cabeEnElCupo(await usoAlta(alta), archivo.tamano)) return { ok: false, error: ERROR_CUPO };
   const ruta = construirRuta(alta.id, archivo.campo as NombreCampoArchivo, archivo.nombre, crypto.randomUUID());
   const firmada = await firmarSubida(ruta);
   return firmada.ok ? { ok: true, ruta, url: firmada.url } : firmada;
@@ -58,7 +64,7 @@ type ArchivoEnviado = { campo: string; ruta: string; nombre: string };
 /** Comprueba la lista de archivos que manda el navegador. Los ya guardados se
  *  conservan tal cual; los nuevos tienen que estar de verdad en el bucket. */
 async function leerArchivos(alta: AltaCliente, lista: unknown): Promise<{ ok: true; archivos: ArchivoAlta[] } | { ok: false; error: string }> {
-  if (!Array.isArray(lista) || lista.length > MAX_ARCHIVOS_ENVIO) return { ok: false, error: "La lista de archivos no es válida." };
+  if (!Array.isArray(lista) || lista.length > MAX_ARCHIVOS_ALTA) return { ok: false, error: "La lista de archivos no es válida." };
   const guardados = new Map(alta.archivos.map((a) => [a.ruta, a]));
   const vistas = new Set<string>();
   const archivos: ArchivoAlta[] = [];
@@ -88,6 +94,7 @@ async function leerArchivos(alta: AltaCliente, lista: unknown): Promise<{ ok: tr
       return { ok: false, error: `${config.etiqueta}: como mucho ${config.maxArchivos} archivos.` };
     }
   }
+  if (archivos.length > MAX_ARCHIVOS_ALTA || archivos.reduce((n, a) => n + a.tamano, 0) > MAX_BYTES_ALTA) return { ok: false, error: ERROR_CUPO };
   for (const campo of CAMPOS_ALTA) {
     if (campo.tipo === "archivos" && campo.obligatorio && campo.archivo && !archivos.some((a) => a.campo === campo.archivo)) {
       return { ok: false, error: `Falta «${campo.etiqueta}»: sube al menos un archivo.` };
@@ -121,5 +128,20 @@ export async function enviarAltaAction(token: string, respuestas: unknown, archi
   } catch (error) {
     console.error("[altas] aviso por correo", error);
   }
+  return { ok: true };
+}
+
+/**
+ * El cliente quita un archivo que acaba de subir: se borra ya del bucket. Solo
+ * rutas de SU alta. Los que ya estaban guardados en un envío anterior no se
+ * tocan aquí: se borran al reenviar sin ellos, para que el panel no se quede
+ * con un enlace roto si el cliente no llega a reenviar.
+ */
+export async function quitarArchivoAction(token: string, ruta: string): Promise<ResultadoAccion> {
+  const alta = await altaActiva(token);
+  if (!alta) return NO_VALIDO;
+  if (!rutaEsDelAlta(ruta, alta.id)) return { ok: false, error: "Archivo no válido." };
+  if (alta.archivos.some((a) => a.ruta === ruta)) return { ok: true };
+  await borrarArchivos([ruta]);
   return { ok: true };
 }

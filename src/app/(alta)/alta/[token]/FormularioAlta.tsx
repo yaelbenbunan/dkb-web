@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { aceptAttr, CAMPOS_ARCHIVO, validarArchivo, type NombreCampoArchivo } from "@/lib/altas/archivos";
 import { CAMPOS_ALTA, SECCIONES_ALTA, leerRespuestasAlta, type CampoAlta, type RespuestasAlta } from "@/lib/altas/preguntas";
-import { enviarAltaAction, pedirSubidaAction } from "./acciones";
+import { borrarBorrador, guardarBorrador, interpretarBorrador, leerBorradorCrudo } from "@/lib/altas/borrador";
+import { enviarAltaAction, pedirSubidaAction, quitarArchivoAction } from "./acciones";
 
 export interface ArchivoInicial {
   campo: NombreCampoArchivo;
@@ -26,6 +27,10 @@ type ItemArchivo = {
 type Valores = Record<string, unknown>;
 
 const MAX_COMPETIDORES = 5;
+const ESPERA_BORRADOR_MS = 800;
+
+/** El borrador solo cambia porque lo escribe esta misma página: no hay nada a lo que suscribirse. */
+const sinSuscripcion = () => () => {};
 
 const claseCampo =
   "mt-1.5 block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:border-[#0b3ae7] focus:outline-none focus:ring-2 focus:ring-[#0b3ae7]/30";
@@ -103,16 +108,45 @@ export function FormularioAlta({
   archivos: ArchivoInicial[];
   enviadaEn: string | null;
 }) {
-  const [valores, setValores] = useState<Valores>(() => ({ ...respuestas }));
-  const [archivos, setArchivos] = useState<ItemArchivo[]>(() =>
-    archivosIniciales.map((a) => ({ ...a, clave: a.ruta, estado: "listo" as const, progreso: 100 })),
+  // Borrador local: se lee como almacén externo para que el HTML del servidor
+  // (sin borrador) y la hidratación coincidan; justo después se usa el borrador.
+  const crudo = useSyncExternalStore(sinSuscripcion, () => leerBorradorCrudo(token), () => null);
+  const borrador = useMemo(() => interpretarBorrador(crudo, enviadaEn), [crudo, enviadaEn]);
+  const baseValores = useMemo<Valores>(() => ({ ...respuestas, ...(borrador?.valores ?? {}) }), [respuestas, borrador]);
+  const baseArchivos = useMemo<ItemArchivo[]>(
+    () => (borrador?.archivos ?? archivosIniciales).map((a) => ({ ...a, clave: a.ruta, estado: "listo" as const, progreso: 100 })),
+    [borrador, archivosIniciales],
   );
+  // Hasta el primer cambio se pinta la base (lo enviado o el borrador).
+  const [valoresEditados, setValoresEditados] = useState<Valores | null>(null);
+  const [archivosEditados, setArchivosEditados] = useState<ItemArchivo[] | null>(null);
+  const valores = valoresEditados ?? baseValores;
+  const archivos = archivosEditados ?? baseArchivos;
+  const setArchivos = (cambio: (lista: ItemArchivo[]) => ItemArchivo[]) => setArchivosEditados((previa) => cambio(previa ?? baseArchivos));
+  const guardados = useMemo(() => new Set(archivosIniciales.map((a) => a.ruta)), [archivosIniciales]);
   const [error, setError] = useState<string | null>(null);
   const [enviado, setEnviado] = useState(false);
   const [pendiente, empezar] = useTransition();
   const contador = useRef(0);
 
-  const poner = (id: string, valor: unknown) => setValores((v) => ({ ...v, [id]: valor }));
+  const poner = (id: string, valor: unknown) => setValoresEditados((v) => ({ ...(v ?? baseValores), [id]: valor }));
+  const hayCambios = valoresEditados !== null || archivosEditados !== null;
+
+  // Guarda el borrador un momento después de dejar de escribir.
+  useEffect(() => {
+    if (!hayCambios || enviado) return;
+    const t = setTimeout(() => {
+      const listos = archivos.filter((a) => a.estado === "listo" && a.ruta).map((a) => ({ campo: a.campo, ruta: a.ruta as string, nombre: a.nombre, tamano: a.tamano }));
+      guardarBorrador(token, { valores, archivos: listos });
+    }, ESPERA_BORRADOR_MS);
+    return () => clearTimeout(t);
+  }, [token, valores, archivos, hayCambios, enviado]);
+
+  function quitar(a: ItemArchivo) {
+    setArchivos((l) => l.filter((x) => x.clave !== a.clave));
+    // Lo recién subido se borra ya del bucket; lo de un envío anterior, al reenviar.
+    if (a.ruta && !guardados.has(a.ruta)) void quitarArchivoAction(token, a.ruta).catch(() => undefined);
+  }
   const actualizarArchivo = (clave: string, cambios: Partial<ItemArchivo>) =>
     setArchivos((lista) => lista.map((a) => (a.clave === clave ? { ...a, ...cambios } : a)));
 
@@ -167,6 +201,7 @@ export function FormularioAlta({
       try {
         const r = await enviarAltaAction(token, visibles, listos);
         if (r.ok) {
+          borrarBorrador(token);
           setEnviado(true);
           window.scrollTo({ top: 0, behavior: "smooth" });
         } else setError(r.error);
@@ -401,7 +436,7 @@ export function FormularioAlta({
                     {a.estado !== "subiendo" && (
                       <button
                         type="button"
-                        onClick={() => setArchivos((l) => l.filter((x) => x.clave !== a.clave))}
+                        onClick={() => quitar(a)}
                         className="font-semibold text-slate-700 underline underline-offset-2 hover:text-red-700"
                       >
                         Quitar
@@ -427,6 +462,7 @@ export function FormularioAlta({
             Con este formulario preparamos vuestras campañas: datos de contacto y facturación, vuestra imagen, el negocio y los objetivos. Os llevará unos 15 minutos.
           </p>
           <p className="mt-2 text-base text-white/90">Los campos con * son obligatorios. El resto, si los tenéis a mano, nos ahorran preguntas después.</p>
+          <p className="mt-2 text-base text-white/90">Tus respuestas se guardan en este navegador hasta que las envíes.</p>
         </div>
       </section>
 

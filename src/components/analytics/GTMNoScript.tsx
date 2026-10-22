@@ -1,7 +1,14 @@
-import { GTM_ID } from "@/lib/gtm";
+"use client";
 
+import { usePathname } from "next/navigation";
+import { GTM_ID } from "@/lib/gtm";
+import { esRutaSinAnalitica } from "@/lib/rutas-sin-analitica";
+
+/** Cliente y no servidor a propósito: así decide él mismo por la ruta y, en
+ *  /alta, ni el iframe ni el id de GTM viajan en la respuesta. */
 export function GTMNoScript() {
-  if (!GTM_ID) return null;
+  const pathname = usePathname();
+  if (!GTM_ID || esRutaSinAnalitica(pathname)) return null;
   return (
     <noscript>
       <iframe

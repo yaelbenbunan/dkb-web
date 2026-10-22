@@ -2,6 +2,10 @@ import { describe, expect, test } from "vitest";
 import { esFormatoTokenAlta, generarTokenAlta } from "@/lib/altas/token";
 import {
   CAMPOS_ARCHIVO,
+  MAX_ARCHIVOS_ALTA,
+  MAX_BYTES_ALTA,
+  cabeEnElCupo,
+  rutaEsDelAlta,
   MAX_BYTES_ARCHIVO,
   construirRuta,
   rutaEsDelCampo,
@@ -107,5 +111,23 @@ describe("nombres y rutas", () => {
     expect(rutaEsDelCampo(`${alta}/diseno/../../otra/x.jpg`, alta, "fotos")).toBe(false);
     expect(rutaEsDelCampo(`${alta}/diseno/sin-uuid.jpg`, alta, "fotos")).toBe(false);
     expect(rutaEsDelCampo(`${alta}/diseno/aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee-x.exe`, alta, "fotos")).toBe(false);
+  });
+});
+
+describe("cupo por alta", () => {
+  test("40 archivos y 1 GB en total", () => {
+    expect(MAX_ARCHIVOS_ALTA).toBe(40);
+    expect(MAX_BYTES_ALTA).toBe(1024 ** 3);
+    expect(cabeEnElCupo({ archivos: 39, bytes: 0 }, 1)).toBe(true);
+    expect(cabeEnElCupo({ archivos: 40, bytes: 0 }, 1)).toBe(false);
+    expect(cabeEnElCupo({ archivos: 0, bytes: 1024 ** 3 - 10 }, 10)).toBe(true);
+    expect(cabeEnElCupo({ archivos: 0, bytes: 1024 ** 3 - 10 }, 11)).toBe(false);
+  });
+
+  test("rutaEsDelAlta acepta cualquier campo de ese alta y nada más", () => {
+    const alta = "11111111-2222-4333-8444-555555555555";
+    expect(rutaEsDelAlta(`${alta}/diseno/aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee-manual.pdf`, alta)).toBe(true);
+    expect(rutaEsDelAlta(`${alta}/diseno/aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee-x.exe`, alta)).toBe(false);
+    expect(rutaEsDelAlta(`99999999-2222-4333-8444-555555555555/diseno/aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee-a.pdf`, alta)).toBe(false);
   });
 });

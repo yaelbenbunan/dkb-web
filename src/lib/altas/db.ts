@@ -1,7 +1,7 @@
 import "server-only";
 import { getSupabaseAdmin } from "../supabase-admin";
 import { ErrorLectura, FALTA_EN_LA_BASE, tolerarMigracionPendiente } from "../ventas/db";
-import { BUCKET_ALTAS, type ArchivoAlta } from "./archivos";
+import { BUCKET_ALTAS, CAMPOS_ARCHIVO, type ArchivoAlta } from "./archivos";
 import type { RespuestasAlta } from "./preguntas";
 import { esFormatoTokenAlta } from "./token";
 
@@ -124,6 +124,31 @@ export async function firmarSubida(ruta: string): Promise<{ ok: true; url: strin
     return { ok: false, error: "No se pudo preparar la subida. Vuelve a intentarlo en un momento." };
   }
   return { ok: true, url: r.data.signedUrl };
+}
+
+/**
+ * Lo que ocupa de verdad el alta en el bucket: lo guardado más lo subido y aún
+ * no enviado. Si el listado falla, cuenta solo lo guardado (y lo deja en el log).
+ */
+export async function usoAlta(alta: Pick<AltaCliente, "id" | "archivos">): Promise<{ archivos: number; bytes: number }> {
+  const secciones = [...new Set(Object.values(CAMPOS_ARCHIVO).map((c) => c.seccion))];
+  try {
+    let archivos = 0;
+    let bytes = 0;
+    for (const seccion of secciones) {
+      const r = await sb().storage.from(BUCKET_ALTAS).list(`${alta.id}/${seccion}`, { limit: 1000 });
+      if (r.error) throw new Error(r.error.message);
+      for (const o of r.data ?? []) {
+        if (!o.id) continue; // carpetas
+        archivos += 1;
+        bytes += Number((o.metadata as { size?: number } | null)?.size ?? 0);
+      }
+    }
+    return { archivos, bytes };
+  } catch (error) {
+    console.error("[altas/db] usoAlta: se cuenta solo lo guardado.", error);
+    return { archivos: alta.archivos.length, bytes: alta.archivos.reduce((n, a) => n + (Number(a.tamano) || 0), 0) };
+  }
 }
 
 /** Tamaño y tipo reales del archivo ya subido; null si no está. */

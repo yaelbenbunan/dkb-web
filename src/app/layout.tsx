@@ -9,6 +9,7 @@ import { ChatGPTPixel } from "@/components/analytics/ChatGPTPixel";
 import { GTM } from "@/components/analytics/GTM";
 import { GTMNoScript } from "@/components/analytics/GTMNoScript";
 import { LinkTracker } from "@/components/analytics/LinkTracker";
+import { SoloConAnalitica } from "@/components/analytics/SoloConAnalitica";
 import { UtmCapture } from "@/components/analytics/UtmCapture";
 import { CONTACT_INFO } from "@/lib/contact-info";
 import { getAllServices } from "@/lib/content";
@@ -173,7 +174,10 @@ export default function RootLayout({
       <head>
         {/* Aplica el tema desde localStorage antes del paint para evitar flash */}
         <script src="/theme-bootstrap.js" />
-        <GTM />
+        {/* Sin analítica en /alta: el token del cliente va en la URL. */}
+        <SoloConAnalitica>
+          <GTM />
+        </SoloConAnalitica>
       </head>
       <body>
         <script
@@ -184,6 +188,7 @@ export default function RootLayout({
         id="ld-website" type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema).replace(/</g, "\\u003c") }}
       />
+        {/* Decide él mismo por la ruta (no se carga en /alta). */}
         <GTMNoScript />
         <a
           href="#main-content"
@@ -193,11 +198,13 @@ export default function RootLayout({
         </a>
         <ScrollProgress />
         {children}
-        <CookieBanner />
-        <Analytics />
-        <ChatGPTPixel />
-        <LinkTracker />
-        <UtmCapture />
+        <SoloConAnalitica>
+          <CookieBanner />
+          <Analytics />
+          <ChatGPTPixel />
+          <LinkTracker />
+          <UtmCapture />
+        </SoloConAnalitica>
       </body>
     </html>
   );

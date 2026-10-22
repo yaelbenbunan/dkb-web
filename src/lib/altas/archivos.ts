@@ -149,3 +149,20 @@ export function rutaEsDelCampo(ruta: unknown, altaId: string, campo: NombreCampo
   if (!m || m[1] !== altaId || m[2] !== seccion) return false;
   return (CAMPOS_ARCHIVO[campo].extensiones as readonly string[]).includes(extensionDe(ruta));
 }
+
+/** Tope por alta, sumando todos los campos: frena que un enlace válido se use
+ *  para llenar el bucket. Para más, un enlace de Drive o WeTransfer. */
+export const MAX_ARCHIVOS_ALTA = 40;
+export const MAX_BYTES_ALTA = 1024 * 1024 * 1024;
+
+export const ERROR_CUPO = "Has llegado al máximo de 40 archivos o 1 GB en total. Quita alguno o pega un enlace de Drive o WeTransfer.";
+
+/** ¿Cabe un archivo más de `tamano` bytes sobre lo que ya ocupa el alta? */
+export function cabeEnElCupo(uso: { archivos: number; bytes: number }, tamano: number): boolean {
+  return uso.archivos + 1 <= MAX_ARCHIVOS_ALTA && uso.bytes + tamano <= MAX_BYTES_ALTA;
+}
+
+/** ¿La ruta es de este alta, para alguno de los campos? */
+export function rutaEsDelAlta(ruta: unknown, altaId: string): boolean {
+  return (Object.keys(CAMPOS_ARCHIVO) as NombreCampoArchivo[]).some((c) => rutaEsDelCampo(ruta, altaId, c));
+}

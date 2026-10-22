@@ -10,6 +10,7 @@ const m = vi.hoisted(() => ({
   firmarSubida: vi.fn(),
   infoArchivo: vi.fn(),
   borrarArchivos: vi.fn(),
+  usoAlta: vi.fn(),
   avisarAltaEnviada: vi.fn(),
   revalidatePath: vi.fn(),
 }));
@@ -23,11 +24,12 @@ vi.mock("@/lib/altas/db", () => ({
   firmarSubida: m.firmarSubida,
   infoArchivo: m.infoArchivo,
   borrarArchivos: m.borrarArchivos,
+  usoAlta: m.usoAlta,
 }));
 vi.mock("@/lib/altas/aviso", () => ({ avisarAltaEnviada: m.avisarAltaEnviada }));
 vi.mock("next/cache", () => ({ revalidatePath: m.revalidatePath }));
 
-import { enviarAltaAction, pedirSubidaAction } from "@/app/(alta)/alta/[token]/acciones";
+import { enviarAltaAction, pedirSubidaAction, quitarArchivoAction } from "@/app/(alta)/alta/[token]/acciones";
 import { crearAltaAction, setAltaActivaAction } from "@/app/(site)/panel/ventas/acciones-altas";
 
 const TOKEN = "A".repeat(43);
@@ -68,6 +70,7 @@ beforeEach(() => {
   m.infoArchivo.mockResolvedValue({ tamano: 2048, tipo: "image/svg+xml" });
   m.guardarEnvioAlta.mockResolvedValue({ ok: true });
   m.avisarAltaEnviada.mockResolvedValue(undefined);
+  m.usoAlta.mockResolvedValue({ archivos: 0, bytes: 0 });
 });
 
 describe("pedirSubidaAction", () => {
@@ -233,5 +236,73 @@ describe("acciones del panel", () => {
     m.setAltaActiva.mockResolvedValueOnce({ ok: true });
     expect((await setAltaActivaAction(ALTA_ID, false)).ok).toBe(true);
     expect(m.setAltaActiva).toHaveBeenCalledWith(ALTA_ID, false);
+  });
+});
+
+describe("cupo por alta y quitar archivos", () => {
+  const GB = 1024 * 1024 * 1024;
+  const PEDIDO = { campo: "fotos", nombre: "v.mp4", tamano: 10 * 1024 * 1024, tipo: "video/mp4" };
+
+  test("firma mientras quepa: 39 archivos y casi 1 GB todavía entran", async () => {
+    m.usoAlta.mockResolvedValueOnce({ archivos: 39, bytes: GB - PEDIDO.tamano });
+    expect((await pedirSubidaAction(TOKEN, PEDIDO)).ok).toBe(true);
+    expect(m.usoAlta).toHaveBeenCalledWith(expect.objectContaining({ id: ALTA_ID }));
+  });
+
+  test("con 40 archivos no firma más", async () => {
+    m.usoAlta.mockResolvedValueOnce({ archivos: 40, bytes: 0 });
+    expect(await pedirSubidaAction(TOKEN, PEDIDO)).toEqual({ ok: false, error: expect.stringMatching(/40 archivos o 1 GB/) });
+    expect(m.firmarSubida).not.toHaveBeenCalled();
+  });
+
+  test("si con este archivo pasa de 1 GB, no firma", async () => {
+    m.usoAlta.mockResolvedValueOnce({ archivos: 3, bytes: GB - PEDIDO.tamano + 1 });
+    expect((await pedirSubidaAction(TOKEN, PEDIDO)).ok).toBe(false);
+    expect(m.firmarSubida).not.toHaveBeenCalled();
+  });
+
+  test("el cupo no se mira para un token no válido (ni se lista el bucket)", async () => {
+    m.getAltaPorToken.mockResolvedValueOnce(null);
+    expect((await pedirSubidaAction(TOKEN, PEDIDO)).ok).toBe(false);
+    expect(m.usoAlta).not.toHaveBeenCalled();
+  });
+
+  test("al enviar, más de 40 archivos o más de 1 GB en total: rechazado", async () => {
+    const muchos = Array.from({ length: 41 }, (_, i) => ({ campo: "fotos", ruta: `${ALTA_ID}/diseno/${UUID.slice(0, -2)}${String(i).padStart(2, "0")}-f.jpg`, nombre: "f.jpg" }));
+    expect((await enviarAltaAction(TOKEN, respuestas(), [LOGO, ...muchos])).ok).toBe(false);
+    const fotos = Array.from({ length: 3 }, (_, i) => ({ campo: "fotos", ruta: `${ALTA_ID}/diseno/${UUID.slice(0, -1)}${i}-f.mp4`, nombre: "f.mp4" }));
+    m.infoArchivo.mockResolvedValue({ tamano: 45 * 1024 * 1024, tipo: "video/mp4" });
+    const veinticinco = Array.from({ length: 25 }, (_, i) => ({ campo: "fotos", ruta: `${ALTA_ID}/diseno/${UUID.slice(0, -2)}${String(i + 10).padStart(2, "0")}-f.mp4`, nombre: "f.mp4" }));
+    expect(await enviarAltaAction(TOKEN, respuestas(), [LOGO, ...fotos, ...veinticinco])).toEqual({ ok: false, error: expect.stringMatching(/1 GB/) });
+    expect(m.guardarEnvioAlta).not.toHaveBeenCalled();
+  });
+
+  test("quitar: borra del bucket un archivo nuevo de esa alta", async () => {
+    const ruta = `${ALTA_ID}/diseno/${UUID}-foto.jpg`;
+    expect(await quitarArchivoAction(TOKEN, ruta)).toEqual({ ok: true });
+    expect(m.borrarArchivos).toHaveBeenCalledWith([ruta]);
+  });
+
+  test("quitar: token no válido o desactivado, nada", async () => {
+    const ruta = `${ALTA_ID}/diseno/${UUID}-foto.jpg`;
+    m.getAltaPorToken.mockResolvedValueOnce(null);
+    expect((await quitarArchivoAction(TOKEN, ruta)).ok).toBe(false);
+    m.getAltaPorToken.mockResolvedValueOnce(alta({ activa: false }));
+    expect((await quitarArchivoAction(TOKEN, ruta)).ok).toBe(false);
+    expect((await quitarArchivoAction("x", ruta)).ok).toBe(false);
+    expect(m.borrarArchivos).not.toHaveBeenCalled();
+  });
+
+  test("quitar: rutas de otra alta o fuera del formato, nada", async () => {
+    for (const ruta of [`99999999-2222-4333-8444-555555555555/diseno/${UUID}-foto.jpg`, `${ALTA_ID}/diseno/../../x`, `${ALTA_ID}`, "", 7]) {
+      expect((await quitarArchivoAction(TOKEN, ruta as string)).ok).toBe(false);
+    }
+    expect(m.borrarArchivos).not.toHaveBeenCalled();
+  });
+
+  test("quitar: un archivo de un envío ya guardado no se borra hasta reenviar", async () => {
+    m.getAltaPorToken.mockResolvedValueOnce(alta({ archivos: [{ campo: "logo", ruta: RUTA_LOGO, nombre: "Logo.svg", tamano: 1, tipo: "" }] }));
+    expect(await quitarArchivoAction(TOKEN, RUTA_LOGO)).toEqual({ ok: true });
+    expect(m.borrarArchivos).not.toHaveBeenCalled();
   });
 });
