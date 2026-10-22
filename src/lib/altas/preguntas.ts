@@ -63,10 +63,8 @@ export const SECCIONES_ALTA: readonly SeccionAlta[] = [
     descripcion: "Con quién hablamos y a quién facturamos.",
     campos: [
       { id: "contacto_nombre", etiqueta: "Nombre de la persona de contacto", tipo: "texto", obligatorio: true },
-      { id: "contacto_cargo", etiqueta: "Cargo", tipo: "texto" },
       { id: "contacto_email", etiqueta: "Email de contacto", tipo: "email", obligatorio: true },
       { id: "contacto_telefono", etiqueta: "Teléfono de contacto", tipo: "telefono", obligatorio: true },
-      { id: "aprobador", etiqueta: "Quién aprueba los anuncios", tipo: "texto", ayuda: "Si es otra persona, su nombre y cómo contactarla." },
       { id: "razon_social", etiqueta: "Razón social", tipo: "texto", obligatorio: true },
       { id: "cif", etiqueta: "CIF", tipo: "texto", obligatorio: true, max: 20 },
       { id: "direccion_facturacion", etiqueta: "Dirección de facturación", tipo: "texto", obligatorio: true, max: 300 },

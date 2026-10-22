@@ -456,11 +456,8 @@ export function FormularioAlta({
       <section className="bg-[#0b3ae7] px-4 pb-12 pt-8 text-white sm:px-6">
         <div className="mx-auto max-w-3xl">
           <h1 className="text-3xl font-bold leading-tight sm:text-4xl">Bienvenido a Dinkbit, {cliente}</h1>
-          <p className="mt-4 text-lg text-white/90">
-            Con este formulario preparamos vuestras campañas: datos de contacto y facturación, vuestra imagen, el negocio y los objetivos. Os llevará unos 15 minutos.
-          </p>
-          <p className="mt-2 text-base text-white/90">Los campos con * son obligatorios. El resto, si los tenéis a mano, nos ahorran preguntas después.</p>
-          <p className="mt-2 text-base text-white/90">Tus respuestas se guardan en este navegador hasta que las envíes.</p>
+          <p className="mt-4 text-lg text-white/90">Unos 15 minutos para preparar vuestras campañas. Los campos con * son obligatorios.</p>
+          <p className="mt-1 text-sm text-white/75">Tus respuestas se guardan en este navegador hasta que las envíes.</p>
         </div>
       </section>
 
