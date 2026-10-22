@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { botonesDePayload, etiquetaOrigen, etiquetaVentana, extracto, nombreConversacion, ordenarBandeja } from "../bandeja";
+import { botonesDePayload, etiquetaOrigen, etiquetaVentana, extracto, esperaRespuesta, nombreConversacion, ordenarBandeja } from "../bandeja";
 
 describe("extracto", () => {
   it("deja pasar los textos cortos", () => {
@@ -93,17 +93,35 @@ describe("nombreConversacion", () => {
   });
 });
 
+describe("esperaRespuesta", () => {
+  it("solo si la lleva una persona y lo último es del cliente", () => {
+    expect(esperaRespuesta({ estado: "humana", ultima_direccion: "entrante" })).toBe(true);
+    expect(esperaRespuesta({ estado: "humana", ultima_direccion: "saliente" })).toBe(false);
+    expect(esperaRespuesta({ estado: "humana", ultima_direccion: null })).toBe(false);
+    expect(esperaRespuesta({ estado: "bot", ultima_direccion: "entrante" })).toBe(false);
+    expect(esperaRespuesta({ estado: "cerrada", ultima_direccion: "entrante" })).toBe(false);
+  });
+});
+
 describe("ordenarBandeja", () => {
   const ahora = new Date("2026-10-21T12:00:00Z");
-  const c = (id: string, ventana_hasta: string | null) => ({ id, ventana_hasta });
-  it("pone primero las de ventana abierta y conserva el orden dentro de cada grupo", () => {
+  const c = (id: string, ventana_hasta: string | null, espera = false) => ({
+    id,
+    ventana_hasta,
+    estado: espera ? ("humana" as const) : ("bot" as const),
+    ultima_direccion: espera ? ("entrante" as const) : null,
+  });
+  it("pone primero las que esperan respuesta, luego las abiertas, luego las cerradas, sin alterar el orden dentro de cada grupo", () => {
     const entrada = [
       c("a", "2026-10-20T12:00:00Z"),
       c("b", "2026-10-22T12:00:00Z"),
       c("c", null),
       c("d", "2026-10-21T13:00:00Z"),
+      c("e", "2026-10-22T12:00:00Z", true),
+      c("f", "2026-10-20T12:00:00Z", true),
+      c("g", "2026-10-21T18:00:00Z", true),
     ];
-    expect(ordenarBandeja(entrada, ahora).map((x) => x.id)).toEqual(["b", "d", "a", "c"]);
-    expect(entrada.map((x) => x.id)).toEqual(["a", "b", "c", "d"]);
+    expect(ordenarBandeja(entrada, ahora).map((x) => x.id)).toEqual(["e", "f", "g", "b", "d", "a", "c"]);
+    expect(entrada.map((x) => x.id)).toEqual(["a", "b", "c", "d", "e", "f", "g"]);
   });
 });

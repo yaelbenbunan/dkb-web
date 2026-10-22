@@ -270,7 +270,7 @@ export async function reclamarPaso(
 
 export async function listConversaciones(
   marcaId: string,
-): Promise<Array<Conversacion & { ultimo_texto: string | null }>> {
+): Promise<Array<Conversacion & { ultimo_texto: string | null; ultima_direccion: Mensaje["direccion"] | null }>> {
   // `ultimo_texto` vive desnormalizado en la propia fila (lo mantienen
   // guardarEntrante/guardarSaliente en cada mensaje), así que listar la
   // bandeja es una sola query: sin esto, habría que leer el historial
@@ -285,7 +285,33 @@ export async function listConversaciones(
     .order("ultimo_mensaje_at", { ascending: false })
     .limit(500);
   if (r.error) throw new Error(`[whatsapp/db] listConversaciones: ${r.error.message}`);
-  return (r.data ?? []) as Array<Conversacion & { ultimo_texto: string | null }>;
+  const filas = (r.data ?? []) as Array<Conversacion & { ultimo_texto: string | null }>;
+
+  // Dirección del último mensaje, solo de las que lleva una persona (las únicas
+  // que pueden «esperar respuesta»): UNA query para todas, acotada a los
+  // mensajes posteriores a la conversación humana más antigua (con un día de
+  // margen, por los importados del historial), y nos quedamos con el primero de
+  // cada una. Si falla, la bandeja sigue funcionando sin el marcador.
+  const direcciones = new Map<string, Mensaje["direccion"]>();
+  const humanas = filas.filter((c) => c.estado === "humana");
+  if (humanas.length > 0) {
+    const desde = new Date(Math.min(...humanas.map((c) => new Date(c.ultimo_mensaje_at).getTime())) - 24 * 3600 * 1000);
+    const m = await db()
+      .from("ventas_mensajes")
+      .select("conversacion_id, direccion")
+      .in("conversacion_id", humanas.map((c) => c.id))
+      .gte("created_at", desde.toISOString())
+      .order("created_at", { ascending: false })
+      .limit(2000);
+    if (m.error) {
+      console.error(`[whatsapp/db] listConversaciones (último mensaje): ${m.error.message}`);
+    } else {
+      for (const f of (m.data ?? []) as unknown as Array<{ conversacion_id: string; direccion: Mensaje["direccion"] }>) {
+        if (!direcciones.has(f.conversacion_id)) direcciones.set(f.conversacion_id, f.direccion);
+      }
+    }
+  }
+  return filas.map((c) => ({ ...c, ultima_direccion: direcciones.get(c.id) ?? null }));
 }
 
 /* Mensajes ---------------------------------------------------------------- */

@@ -16,6 +16,8 @@ export interface TarjetaConversacion {
   extracto: string;
   etiquetaVentana: string;
   ultimoMensajeAt: string;
+  /** El cliente espera a una persona: se marca y va arriba. */
+  esperaRespuesta: boolean;
 }
 
 export interface MensajeHilo {
@@ -95,8 +97,14 @@ function ListaConversaciones({ slug, conversaciones, activaId }: { slug: string;
   if (conversaciones.length === 0) {
     return <p style={{ margin: 0, padding: 16, fontSize: 14, color: "#64748b" }}>Todavía no hay conversaciones.</p>;
   }
+  const esperando = conversaciones.filter((c) => c.esperaRespuesta).length;
   return (
     <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+      {esperando > 0 && (
+        <li style={{ padding: "8px 14px", fontSize: 12, fontWeight: 700, color: "#92400e", background: "#fffbeb", borderBottom: "1px solid #fde68a" }}>
+          {esperando === 1 ? "1 espera respuesta" : `${esperando} esperan respuesta`}
+        </li>
+      )}
       {conversaciones.map((c) => {
         const activa = c.id === activaId;
         return (
@@ -111,6 +119,11 @@ function ListaConversaciones({ slug, conversaciones, activaId }: { slug: string;
               }}
             >
               <div style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>{c.nombre}</div>
+              {c.esperaRespuesta && (
+                <span style={{ display: "inline-block", marginTop: 4, padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 700, color: "#92400e", background: "#fef3c7", border: "1px solid #f59e0b" }}>
+                  Espera respuesta
+                </span>
+              )}
               <div style={{ fontSize: 13, color: "#475569", marginTop: 2 }}>{c.extracto}</div>
               <div style={{ fontSize: 12, color: c.etiquetaVentana.startsWith("Abierta") ? "#16a34a" : "#b91c1c", marginTop: 4, fontWeight: 600 }}>
                 {c.etiquetaVentana}

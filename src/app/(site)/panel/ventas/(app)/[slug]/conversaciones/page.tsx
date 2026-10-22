@@ -1,7 +1,7 @@
 import { requireAccesoMarca } from "@/lib/ventas/auth";
 import { evaluarAccesoMarca } from "@/lib/ventas/rutas";
 import { listLeads } from "@/lib/ventas/db";
-import { botonesDePayload, etiquetaOrigen, etiquetaVentana, extracto, nombreConversacion, ordenarBandeja } from "@/lib/whatsapp/bandeja";
+import { botonesDePayload, etiquetaOrigen, etiquetaVentana, esperaRespuesta, extracto, nombreConversacion, ordenarBandeja } from "@/lib/whatsapp/bandeja";
 import { getConversacionPorId, listConversaciones, listMensajes } from "@/lib/whatsapp/db";
 import { ventanaAbierta } from "@/lib/whatsapp/ventana";
 import { MarcaCabecera } from "../../../_componentes/MarcaCabecera";
@@ -27,6 +27,7 @@ export default async function ConversacionesPage({
     extracto: extracto(c.ultimo_texto),
     etiquetaVentana: etiquetaVentana(c.ventana_hasta, ahora),
     ultimoMensajeAt: c.ultimo_mensaje_at,
+    esperaRespuesta: esperaRespuesta(c),
   }));
 
   // Búsqueda puntual (no un `.find()` sobre las hasta 500 conversaciones ya

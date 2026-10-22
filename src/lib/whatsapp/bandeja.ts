@@ -84,13 +84,28 @@ export function nombreConversacion(
 }
 
 /**
- * Conversaciones con la ventana de 24 h abierta primero (se les puede
- * contestar), luego las cerradas. Dentro de cada grupo se conserva el orden
- * recibido (la lista ya llega con la más reciente primero). No muta la entrada.
+ * El cliente espera a una persona: la lleva un humano y lo último que pasó en
+ * la conversación es un mensaje suyo. Se apaga sola en cuanto alguien contesta
+ * (panel, eco del móvil o bot), porque entonces el último mensaje es saliente.
  */
-export function ordenarBandeja<T extends { ventana_hasta: string | null }>(conversaciones: T[], ahora: Date): T[] {
+export function esperaRespuesta(c: { estado: string; ultima_direccion?: "entrante" | "saliente" | null }): boolean {
+  return c.estado === "humana" && c.ultima_direccion === "entrante";
+}
+
+/**
+ * Primero las que esperan respuesta, luego el resto con la ventana de 24 h
+ * abierta (se les puede contestar), luego las cerradas. Dentro de cada grupo
+ * se conserva el orden recibido (la lista ya llega con la más reciente
+ * primero). No muta la entrada.
+ */
+export function ordenarBandeja<
+  T extends { ventana_hasta: string | null; estado: string; ultima_direccion?: "entrante" | "saliente" | null },
+>(conversaciones: T[], ahora: Date): T[] {
+  const espera: T[] = [];
   const abiertas: T[] = [];
   const cerradas: T[] = [];
-  for (const c of conversaciones) (ventanaAbierta(c.ventana_hasta, ahora) ? abiertas : cerradas).push(c);
-  return [...abiertas, ...cerradas];
+  for (const c of conversaciones) {
+    (esperaRespuesta(c) ? espera : ventanaAbierta(c.ventana_hasta, ahora) ? abiertas : cerradas).push(c);
+  }
+  return [...espera, ...abiertas, ...cerradas];
 }
