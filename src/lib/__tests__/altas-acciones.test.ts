@@ -31,7 +31,7 @@ vi.mock("@/lib/altas/db", () => ({
 vi.mock("@/lib/altas/aviso", () => ({ avisarAltaEnviada: m.avisarAltaEnviada }));
 vi.mock("next/cache", () => ({ revalidatePath: m.revalidatePath }));
 
-import { confirmarSubidaAction, enviarAltaAction, pedirSubidaAction, quitarArchivoAction } from "@/app/(alta)/alta/[token]/acciones";
+import { enviarAltaAction, pedirSubidaAction, quitarArchivoAction } from "@/app/(alta)/alta/[token]/acciones";
 import { crearAltaAction, setAltaActivaAction } from "@/app/(site)/panel/ventas/acciones-altas";
 
 const TOKEN = "A".repeat(43);
@@ -85,7 +85,7 @@ beforeEach(() => {
   m.modificarPendientes.mockImplementation(modificarEnMemoria);
   m.guardarEnvioAlta.mockResolvedValue({ ok: true });
   m.avisarAltaEnviada.mockResolvedValue(undefined);
-  m.usoAlta.mockResolvedValue({ archivos: 0, bytes: 0 });
+  m.usoAlta.mockResolvedValue({ archivos: 0, bytes: 0, rutas: [] });
 });
 
 describe("pedirSubidaAction", () => {
@@ -259,21 +259,21 @@ describe("cupo por alta y quitar archivos", () => {
   const PEDIDO = { campo: "fotos", nombre: "v.mp4", tamano: 10 * 1024 * 1024, tipo: "video/mp4" };
 
   test("firma mientras quepa: 39 archivos y hueco para 50 MB", async () => {
-    m.usoAlta.mockResolvedValueOnce({ archivos: 39, bytes: GB - 50 * 1024 * 1024 });
+    m.usoAlta.mockResolvedValueOnce({ archivos: 39, bytes: GB - 50 * 1024 * 1024, rutas: [] });
     expect((await pedirSubidaAction(TOKEN, PEDIDO)).ok).toBe(true);
     expect(m.usoAlta).toHaveBeenCalledWith(expect.objectContaining({ id: ALTA_ID }));
     expect(pend.lista).toEqual([expect.objectContaining({ ruta: m.firmarSubida.mock.calls[0][0] })]);
   });
 
   test("con 40 archivos no firma más", async () => {
-    m.usoAlta.mockResolvedValueOnce({ archivos: 40, bytes: 0 });
+    m.usoAlta.mockResolvedValueOnce({ archivos: 40, bytes: 0, rutas: [] });
     expect(await pedirSubidaAction(TOKEN, PEDIDO)).toEqual({ ok: false, error: expect.stringMatching(/40 archivos o 1 GB/) });
     expect(m.firmarSubida).not.toHaveBeenCalled();
   });
 
   test("no se fía del tamaño declarado: cada firma cuenta 50 MB", async () => {
     // Declara 10 MB, pero solo quedan 49 MB libres.
-    m.usoAlta.mockResolvedValueOnce({ archivos: 3, bytes: GB - 49 * 1024 * 1024 });
+    m.usoAlta.mockResolvedValueOnce({ archivos: 3, bytes: GB - 49 * 1024 * 1024, rutas: [] });
     expect((await pedirSubidaAction(TOKEN, PEDIDO)).ok).toBe(false);
     expect(m.firmarSubida).not.toHaveBeenCalled();
   });
@@ -287,26 +287,11 @@ describe("cupo por alta y quitar archivos", () => {
     expect(await pedirSubidaAction(TOKEN, PEDIDO)).toEqual({ ok: false, error: expect.stringMatching(/Demasiados archivos seguidos/) });
   });
 
-  test("al confirmar la subida deja de contar como pendiente", async () => {
-    const r = await pedirSubidaAction(TOKEN, PEDIDO);
-    expect(r.ok).toBe(true);
-    const ruta = (r as { ruta: string }).ruta;
-    expect(await confirmarSubidaAction(TOKEN, ruta)).toEqual({ ok: true });
-    expect(pend.lista).toEqual([expect.objectContaining({ ruta, subida: true })]);
-  });
-
-  test("confirmar: solo con token activo y rutas de su alta", async () => {
-    m.getAltaPorToken.mockResolvedValueOnce(null);
-    expect((await confirmarSubidaAction(TOKEN, RUTA_LOGO)).ok).toBe(false);
-    expect((await confirmarSubidaAction(TOKEN, `99999999-2222-4333-8444-555555555555/diseno/${UUID}-logo.svg`)).ok).toBe(false);
-    expect(m.modificarPendientes).not.toHaveBeenCalled();
-  });
-
   test("sin la columna de pendientes: se firma con el tope de antes (bucket y tamaño declarado)", async () => {
     pend.columna = false;
-    m.usoAlta.mockResolvedValueOnce({ archivos: 39, bytes: GB - PEDIDO.tamano });
+    m.usoAlta.mockResolvedValueOnce({ archivos: 39, bytes: GB - PEDIDO.tamano, rutas: [] });
     expect((await pedirSubidaAction(TOKEN, PEDIDO)).ok).toBe(true);
-    m.usoAlta.mockResolvedValueOnce({ archivos: 40, bytes: 0 });
+    m.usoAlta.mockResolvedValueOnce({ archivos: 40, bytes: 0, rutas: [] });
     expect((await pedirSubidaAction(TOKEN, PEDIDO)).ok).toBe(false);
   });
 
@@ -361,14 +346,29 @@ describe("cupo por alta y quitar archivos", () => {
     expect(m.borrarArchivos).not.toHaveBeenCalled();
   });
 
-  test("al enviar y al quitar, los archivos dejan de estar pendientes", async () => {
-    pend.lista = [{ ruta: RUTA_LOGO, firmada: new Date().toISOString(), expira: new Date(Date.now() + 3600e3).toISOString() }];
-    expect((await enviarAltaAction(TOKEN, respuestas(), [LOGO])).ok).toBe(true);
-    expect(pend.lista).toEqual([expect.objectContaining({ ruta: RUTA_LOGO, subida: true })]);
-    const otra = `${ALTA_ID}/diseno/${UUID}-foto.jpg`;
-    pend.lista = [{ ruta: otra, firmada: new Date().toISOString(), expira: new Date(Date.now() + 3600e3).toISOString() }];
-    await quitarArchivoAction(TOKEN, otra);
-    expect(pend.lista).toEqual([expect.objectContaining({ ruta: otra, subida: true })]);
+  test("quitar borra el archivo pero NO libera su reserva (la URL firmada sigue valiendo)", async () => {
+    m.usoAlta.mockResolvedValueOnce({ archivos: 38, bytes: 0, rutas: [] });
+    const r = await pedirSubidaAction(TOKEN, PEDIDO);
+    expect(r.ok).toBe(true);
+    const ruta = (r as { ruta: string }).ruta;
+    await quitarArchivoAction(TOKEN, ruta);
+    expect(m.borrarArchivos).toHaveBeenCalledWith([ruta]);
+    expect(pend.lista).toEqual([expect.objectContaining({ ruta })]);
+    // Con 39 en el bucket cabría una más si la reserva se hubiera liberado; no se ha liberado.
+    m.usoAlta.mockResolvedValueOnce({ archivos: 39, bytes: 0, rutas: [] });
+    expect(await pedirSubidaAction(TOKEN, PEDIDO)).toEqual({ ok: false, error: expect.stringMatching(/40 archivos o 1 GB/) });
+  });
+
+  test("enviar tampoco libera reservas: solo cuentan por tamaño real cuando el archivo aparece en el bucket", async () => {
+    const r = await pedirSubidaAction(TOKEN, { campo: "logo", nombre: "logo.svg", tamano: 10, tipo: "" });
+    const ruta = (r as { ruta: string }).ruta;
+    expect((await enviarAltaAction(TOKEN, respuestas(), [{ campo: "logo", ruta, nombre: "logo.svg" }])).ok).toBe(true);
+    expect(pend.lista).toEqual([expect.objectContaining({ ruta })]);
+    // 39 + esa reserva sin subir: lleno. Si el bucket ya la lista, cuenta una sola vez y cabe otra.
+    m.usoAlta.mockResolvedValueOnce({ archivos: 39, bytes: 0, rutas: [] });
+    expect((await pedirSubidaAction(TOKEN, PEDIDO)).ok).toBe(false);
+    m.usoAlta.mockResolvedValueOnce({ archivos: 39, bytes: 0, rutas: [ruta] });
+    expect((await pedirSubidaAction(TOKEN, PEDIDO)).ok).toBe(true);
   });
 });
 

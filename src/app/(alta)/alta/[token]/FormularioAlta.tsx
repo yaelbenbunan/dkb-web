@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransiti
 import { aceptAttr, CAMPOS_ARCHIVO, validarArchivo, type NombreCampoArchivo } from "@/lib/altas/archivos";
 import { CAMPOS_ALTA, SECCIONES_ALTA, cumpleCondicion, leerRespuestasAlta, type CampoAlta, type RespuestasAlta } from "@/lib/altas/preguntas";
 import { borrarBorrador, guardarBorrador, interpretarBorrador, leerBorradorCrudo } from "@/lib/altas/borrador";
-import { confirmarSubidaAction, enviarAltaAction, pedirSubidaAction, quitarArchivoAction } from "./acciones";
+import { enviarAltaAction, pedirSubidaAction, quitarArchivoAction } from "./acciones";
 
 export interface ArchivoInicial {
   campo: NombreCampoArchivo;
@@ -165,8 +165,6 @@ export function FormularioAlta({
         }
         await subir(firmada.url, archivo, (progreso) => actualizarArchivo(clave, { progreso }));
         actualizarArchivo(clave, { estado: "listo", progreso: 100, ruta: firmada.ruta });
-        // Deja de contar como firma pendiente en el cupo del alta.
-        void confirmarSubidaAction(token, firmada.ruta).catch(() => undefined);
       } catch {
         actualizarArchivo(clave, { estado: "error", error: "No se pudo subir. Comprueba la conexión y vuelve a intentarlo." });
       }

@@ -26,9 +26,9 @@ create table if not exists public.alta_clientes (
   creada_por uuid references public.ventas_usuarias(id) on delete set null
 );
 
--- Firmas de subida aún sin confirmar ([{ruta, firmada, expira, subida?}]):
--- cuentan en el tope de 40 archivos / 1 GB (a 50 MB cada una) y para el límite
--- de 15 firmas cada 10 minutos. Va con alter para que el SQL se pueda volver a
+-- Reservas de subida ([{ruta, firmada, expira}]): cada firma cuenta 50 MB en
+-- el tope de 40 archivos / 1 GB hasta que caduca (2 h), salvo que su archivo
+-- ya esté en el bucket, y sirve para el límite de 15 firmas cada 10 minutos. Va con alter para que el SQL se pueda volver a
 -- ejecutar sobre una tabla creada con la versión anterior de este archivo.
 alter table public.alta_clientes
   add column if not exists subidas_pendientes jsonb not null default '[]'::jsonb;
@@ -56,10 +56,17 @@ on conflict (id) do update
       file_size_limit = excluded.file_size_limit,
       allowed_mime_types = excluded.allowed_mime_types;
 
+-- Contador de revisión de subidas_pendientes: el servidor escribe la lista
+-- solo si la revisión sigue siendo la que leyó (y la incrementa), para que
+-- dos firmas a la vez no se pisen. Al final y con alter, como la columna
+-- anterior: el archivo se puede volver a ejecutar entero.
+alter table public.alta_clientes
+  add column if not exists pendientes_rev integer not null default 0;
+
 commit;
 
--- Comprobación: debe devolver 10 columnas de alta_clientes (la última,
--- subidas_pendientes jsonb), rls = true y
+-- Comprobación: debe devolver 11 columnas de alta_clientes (las dos últimas,
+-- subidas_pendientes jsonb y pendientes_rev integer), rls = true y
 -- el bucket con public = false y file_size_limit = 52428800.
 select column_name, data_type
 from information_schema.columns

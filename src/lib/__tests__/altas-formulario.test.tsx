@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-const m = vi.hoisted(() => ({ enviarAltaAction: vi.fn(), pedirSubidaAction: vi.fn(), quitarArchivoAction: vi.fn(), confirmarSubidaAction: vi.fn() }));
+const m = vi.hoisted(() => ({ enviarAltaAction: vi.fn(), pedirSubidaAction: vi.fn(), quitarArchivoAction: vi.fn() }));
 vi.mock("@/app/(alta)/alta/[token]/acciones", () => m);
 
 import { FormularioAlta } from "@/app/(alta)/alta/[token]/FormularioAlta";

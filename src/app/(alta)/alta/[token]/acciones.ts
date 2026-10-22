@@ -26,7 +26,7 @@ import {
   usoAlta,
   type AltaCliente,
 } from "@/lib/altas/db";
-import { marcarSubidas, reservarFirma } from "@/lib/altas/pendientes";
+import { reservarFirma } from "@/lib/altas/pendientes";
 import { CAMPOS_ALTA, leerRespuestasAlta } from "@/lib/altas/preguntas";
 import { esFormatoTokenAlta } from "@/lib/altas/token";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
@@ -53,23 +53,14 @@ function nombreVisible(nombre: unknown): string {
   return limpio.slice(0, 200) || "archivo";
 }
 
-/** Deja de contar esas rutas como firmas pendientes. Sin que pueda fallar nada. */
-async function soltarPendientes(altaId: string, rutas: string[]): Promise<void> {
-  if (!rutas.length) return;
-  try {
-    await modificarPendientes(altaId, (lista) => ({ ok: true, pendientes: marcarSubidas(lista, rutas) }));
-  } catch (error) {
-    console.error("[altas] no se pudieron soltar las firmas pendientes", error);
-  }
-}
-
 export type SubidaFirmada = { ok: true; ruta: string; url: string } | { ok: false; error: string };
 
 /**
  * Firma la subida directa de UN archivo al bucket privado, si el token vale,
  * el archivo es de un tipo y tamaño permitidos para ese campo, y caben en el
- * cupo del alta (40 archivos, 1 GB) lo que ya hay en el bucket más las firmas
- * pendientes, contadas a 50 MB cada una. Como mucho 15 firmas cada 10 minutos.
+ * cupo del alta (40 archivos, 1 GB) lo que ya hay en el bucket más las
+ * reservas sin subir aún, a 50 MB cada una hasta que caducan (ver
+ * pendientes.ts). Como mucho 15 firmas cada 10 minutos.
  */
 export async function pedirSubidaAction(token: string, archivo: { campo: string; nombre: string; tamano: number; tipo: string }): Promise<SubidaFirmada> {
   if (!archivo || typeof archivo !== "object") return { ok: false, error: "Archivo no válido." };
@@ -90,17 +81,8 @@ export async function pedirSubidaAction(token: string, archivo: { campo: string;
   return firmada.ok ? { ok: true, ruta, url: firmada.url } : firmada;
 }
 
-/** El navegador avisa de que la subida terminó: deja de ser una firma pendiente. */
-export async function confirmarSubidaAction(token: string, ruta: string): Promise<ResultadoAccion> {
-  const alta = await altaActiva(token);
-  if (!alta) return NO_VALIDO;
-  if (!rutaEsDelAlta(ruta, alta.id)) return { ok: false, error: "Archivo no válido." };
-  await soltarPendientes(alta.id, [ruta]);
-  return { ok: true };
-}
-
 type ArchivoEnviado = { campo: string; ruta: string; nombre: string };
-type Leidos = { ok: true; archivos: ArchivoAlta[]; nuevas: string[]; quitados: string[] } | { ok: false; error: string };
+type Leidos = { ok: true; archivos: ArchivoAlta[]; quitados: string[] } | { ok: false; error: string };
 
 /**
  * Comprueba la lista de archivos que manda el navegador frente a lo guardado.
@@ -115,7 +97,6 @@ async function leerArchivos(alta: AltaCliente, lista: unknown, conocidas: unknow
   const conoce = Array.isArray(conocidas) ? new Set(conocidas.filter((r): r is string => typeof r === "string")) : new Set(guardados.keys());
   const vistas = new Set<string>();
   const archivos: ArchivoAlta[] = [];
-  const nuevas: string[] = [];
   for (const item of lista as ArchivoEnviado[]) {
     if (!item || typeof item !== "object" || !esCampoArchivo(item.campo) || typeof item.ruta !== "string") {
       return { ok: false, error: "La lista de archivos no es válida." };
@@ -137,7 +118,6 @@ async function leerArchivos(alta: AltaCliente, lista: unknown, conocidas: unknow
       return { ok: false, error: `«${nombre}» pesa más de 50 MB. Para archivos grandes, pega un enlace de Drive o WeTransfer.` };
     }
     archivos.push({ campo: item.campo, ruta: item.ruta, nombre, tamano: info.tamano, tipo: info.tipo });
-    nuevas.push(item.ruta);
   }
   // Lo guardado que esta pestaña no conocía se queda.
   for (const a of alta.archivos) if (!vistas.has(a.ruta) && !conoce.has(a.ruta)) archivos.push(a);
@@ -153,7 +133,7 @@ async function leerArchivos(alta: AltaCliente, lista: unknown, conocidas: unknow
     }
   }
   const siguen = new Set(archivos.map((a) => a.ruta));
-  return { ok: true, archivos, nuevas, quitados: alta.archivos.map((a) => a.ruta).filter((r) => !siguen.has(r)) };
+  return { ok: true, archivos, quitados: alta.archivos.map((a) => a.ruta).filter((r) => !siguen.has(r)) };
 }
 
 /** Guarda el formulario (sustituye un envío anterior) y avisa a Dinkbit. */
@@ -181,7 +161,6 @@ export async function enviarAltaAction(token: string, respuestas: unknown, archi
     } catch (error) {
       console.error("[altas] no se pudieron borrar los archivos quitados", error);
     }
-    await soltarPendientes(alta.id, leidos.nuevas);
     try {
       await avisarAltaEnviada({ id: alta.id, cliente: alta.cliente, primeraVez: !alta.enviada_en, archivos: leidos.archivos.length });
     } catch (error) {
@@ -202,7 +181,8 @@ export async function quitarArchivoAction(token: string, ruta: string): Promise<
   if (!alta) return NO_VALIDO;
   if (!rutaEsDelAlta(ruta, alta.id)) return { ok: false, error: "Archivo no válido." };
   if (alta.archivos.some((a) => a.ruta === ruta)) return { ok: true };
+  // Su reserva NO se libera: la URL firmada sigue valiendo hasta que caduca y
+  // con ella se podría volver a subir. Cuenta hasta entonces.
   await borrarArchivos([ruta]);
-  await soltarPendientes(alta.id, [ruta]);
   return { ok: true };
 }

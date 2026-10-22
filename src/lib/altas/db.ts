@@ -2,7 +2,7 @@ import "server-only";
 import { getSupabaseAdmin } from "../supabase-admin";
 import { ErrorLectura, FALTA_EN_LA_BASE, tolerarMigracionPendiente } from "../ventas/db";
 import { BUCKET_ALTAS, CAMPOS_ARCHIVO, type ArchivoAlta } from "./archivos";
-import { leerPendientes, type FirmaPendiente } from "./pendientes";
+import { leerPendientes, type FirmaPendiente, type UsoBucket } from "./pendientes";
 import type { RespuestasAlta } from "./preguntas";
 import { esFormatoTokenAlta } from "./token";
 
@@ -28,8 +28,9 @@ export interface AltaCliente {
   enviada_en: string | null;
   created_at: string;
   creada_por: string | null;
-  /** Firmas de subida sin confirmar (ver pendientes.ts). Sin la columna, no viene. */
+  /** Reservas de subida (ver pendientes.ts) y su contador de revisión. Sin la columna, no vienen. */
   subidas_pendientes?: unknown;
+  pendientes_rev?: number;
 }
 
 export type Escritura = { ok: true } | { ok: false; error: string };
@@ -135,20 +136,20 @@ let avisadoSinColumna = false;
 function sinColumna(contexto: string, mensaje: string) {
   if (avisadoSinColumna) return;
   avisadoSinColumna = true;
-  console.error(`[altas/db] ${contexto}: falta la columna subidas_pendientes (${SQL_ALTAS}); el tope solo mira el bucket.`, mensaje);
+  console.error(`[altas/db] ${contexto}: faltan las columnas subidas_pendientes / pendientes_rev (${SQL_ALTAS}); el tope solo mira el bucket.`, mensaje);
 }
 
 export type CambioPendientes = { ok: true; pendientes: FirmaPendiente[] } | { ok: false; error: string };
 export type ResultadoPendientes = { estado: "ok" } | { estado: "rechazo"; error: string } | { estado: "sin_columna" } | { estado: "error" };
 
 /**
- * Lee las firmas pendientes del alta, aplica `cambio` y lo escribe solo si la
- * lista no ha cambiado entretanto (escritura condicional sobre el valor leído).
- * Si otra petición se ha adelantado, vuelve a leer: hasta 3 intentos.
+ * Lee las reservas del alta y su revisión, aplica `cambio` y escribe solo si
+ * nadie ha escrito entretanto (`pendientes_rev` sigue igual; se incrementa).
+ * Si otra petición se ha adelantado, vuelve a leer y lo intenta una vez más.
  */
 export async function modificarPendientes(altaId: string, cambio: (lista: FirmaPendiente[]) => CambioPendientes): Promise<ResultadoPendientes> {
-  for (let intento = 0; intento < 3; intento++) {
-    const leida = await sb().from(TABLA).select("subidas_pendientes").eq("id", altaId).maybeSingle();
+  for (let intento = 0; intento < 2; intento++) {
+    const leida = await sb().from(TABLA).select("subidas_pendientes, pendientes_rev").eq("id", altaId).maybeSingle();
     if (leida.error) {
       if (leida.error.code && FALTA_EN_LA_BASE.has(leida.error.code)) {
         sinColumna("modificarPendientes", leida.error.message);
@@ -158,14 +159,16 @@ export async function modificarPendientes(altaId: string, cambio: (lista: FirmaP
       return { estado: "error" };
     }
     if (!leida.data) return { estado: "error" };
-    const bruto = (leida.data as { subidas_pendientes: unknown }).subidas_pendientes ?? [];
-    const r = cambio(leerPendientes(bruto) ?? []);
+    const fila = leida.data as { subidas_pendientes: unknown; pendientes_rev: unknown };
+    const rev = Number(fila.pendientes_rev);
+    if (!Number.isInteger(rev)) return { estado: "error" };
+    const r = cambio(leerPendientes(fila.subidas_pendientes ?? []) ?? []);
     if (!r.ok) return { estado: "rechazo", error: r.error };
     const escrita = await sb()
       .from(TABLA)
-      .update({ subidas_pendientes: r.pendientes })
+      .update({ subidas_pendientes: r.pendientes, pendientes_rev: rev + 1 })
       .eq("id", altaId)
-      .eq("subidas_pendientes", JSON.stringify(bruto))
+      .eq("pendientes_rev", rev)
       .select("id");
     if (escrita.error) {
       if (escrita.error.code && FALTA_EN_LA_BASE.has(escrita.error.code)) {
@@ -196,24 +199,28 @@ export async function firmarSubida(ruta: string): Promise<{ ok: true; url: strin
  * Lo que ocupa de verdad el alta en el bucket: lo guardado más lo subido y aún
  * no enviado. Si el listado falla, cuenta solo lo guardado (y lo deja en el log).
  */
-export async function usoAlta(alta: Pick<AltaCliente, "id" | "archivos">): Promise<{ archivos: number; bytes: number }> {
+export async function usoAlta(alta: Pick<AltaCliente, "id" | "archivos">): Promise<UsoBucket> {
   const secciones = [...new Set(Object.values(CAMPOS_ARCHIVO).map((c) => c.seccion))];
   try {
-    let archivos = 0;
+    const rutas: string[] = [];
     let bytes = 0;
     for (const seccion of secciones) {
       const r = await sb().storage.from(BUCKET_ALTAS).list(`${alta.id}/${seccion}`, { limit: 1000 });
       if (r.error) throw new Error(r.error.message);
       for (const o of r.data ?? []) {
         if (!o.id) continue; // carpetas
-        archivos += 1;
+        rutas.push(`${alta.id}/${seccion}/${o.name}`);
         bytes += Number((o.metadata as { size?: number } | null)?.size ?? 0);
       }
     }
-    return { archivos, bytes };
+    return { archivos: rutas.length, bytes, rutas };
   } catch (error) {
     console.error("[altas/db] usoAlta: se cuenta solo lo guardado.", error);
-    return { archivos: alta.archivos.length, bytes: alta.archivos.reduce((n, a) => n + (Number(a.tamano) || 0), 0) };
+    return {
+      archivos: alta.archivos.length,
+      bytes: alta.archivos.reduce((n, a) => n + (Number(a.tamano) || 0), 0),
+      rutas: alta.archivos.map((a) => a.ruta),
+    };
   }
 }
 
