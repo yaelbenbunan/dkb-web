@@ -107,7 +107,7 @@ export default async function TableroPage({
           ocultos={{ mias: mias ? "1" : undefined, atrasados: atrasados ? "1" : undefined, q: q || undefined }}
         />
 
-        <Tablero slug={slug} leads={leads} ahora={ahora} filtrosLista={{ mias, atrasados, q }} />
+        <Tablero slug={slug} leads={leads} ahora={ahora} filtrosLista={{ mias, atrasados, q }} puedeEliminar={usuaria.rol === "admin"} />
       </div>
     </div>
   );

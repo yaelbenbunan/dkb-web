@@ -32,7 +32,7 @@ import {
   type ColumnaId,
   type ColumnaTablero,
 } from "@/lib/ventas/tablero";
-import { moverLeadAction } from "../../../acciones-leads";
+import { eliminarLeadTableroAction, moverLeadAction } from "../../../acciones-leads";
 import { FaseEtiqueta } from "../../../_componentes/FaseEtiqueta";
 import { Mensaje } from "../../../_componentes/Mensaje";
 import { botonSecundario } from "../../../_componentes/estilos";
@@ -84,17 +84,25 @@ export function Tablero({
   leads,
   ahora,
   filtrosLista,
+  puedeEliminar = false,
 }: {
   slug: string;
   leads: TarjetaLead[];
   ahora: Ahora;
   filtrosLista: { mias: boolean; atrasados: boolean; q: string };
+  /** Solo admin: añade «Eliminar lead…» al menú «⋯». */
+  puedeEliminar?: boolean;
 }) {
   // Mientras la acción está en marcha se enseña la fase nueva; al terminar manda
   // lo que devuelva el servidor: si falló, la tarjeta vuelve sola a su columna.
-  const [visibles, moverEnPantalla] = useOptimistic(leads, (estado: TarjetaLead[], mov: { id: string; fase: Fase }) =>
+  const [movidos, moverEnPantalla] = useOptimistic(leads, (estado: TarjetaLead[], mov: { id: string; fase: Fase }) =>
     estado.map((l) => (l.id === mov.id ? { ...l, fase: mov.fase } : l)),
   );
+  // Borrados en esta visita: la tarjeta se va al confirmar, sin esperar a que
+  // el servidor mande la lista nueva. Si el borrado falla, vuelve.
+  const [eliminados, setEliminados] = useState<ReadonlySet<string>>(new Set());
+  const [eliminando, setEliminando] = useState<TarjetaLead | null>(null);
+  const visibles = eliminados.size > 0 ? movidos.filter((l) => !eliminados.has(l.id)) : movidos;
   const [aviso, setAviso] = useState<ResultadoAccion | null>(null);
   const [arrastrando, setArrastrando] = useState<string | null>(null);
   const [sobre, setSobre] = useState<ColumnaId | null>(null);
@@ -133,6 +141,30 @@ export function Tablero({
       setAviso(res.ok ? { ok: true, mensaje: `«${lead.negocio}» → ${FASE_LABELS[fase]}` } : { ok: false, error: `«${lead.negocio}» no se ha movido: ${res.error}` });
       setEnMarcha((s) => {
         if (!s.has(lead.id)) return s;
+        const n = new Set(s);
+        n.delete(lead.id);
+        return n;
+      });
+    });
+  }
+
+  function eliminar(lead: TarjetaLead) {
+    setEliminando(null);
+    setAviso(null);
+    setEliminados((s) => new Set(s).add(lead.id));
+    startTransition(async () => {
+      let res: ResultadoAccion;
+      try {
+        res = await eliminarLeadTableroAction(slug, lead.id);
+      } catch {
+        res = { ok: false, error: "No se pudo eliminar. Revisa la conexión y vuelve a intentarlo." };
+      }
+      if (res.ok) {
+        setAviso({ ok: true, mensaje: `«${lead.negocio}» eliminado` });
+        return;
+      }
+      setAviso({ ok: false, error: `«${lead.negocio}» no se ha eliminado: ${res.error}` });
+      setEliminados((s) => {
         const n = new Set(s);
         n.delete(lead.id);
         return n;
@@ -240,6 +272,7 @@ export function Tablero({
                     }}
                     onMover={(fase) => mover(lead, fase)}
                     onDescartar={() => abrirDescarte(lead)}
+                    onEliminar={puedeEliminar ? () => setEliminando(lead) : undefined}
                     onRegistrarRef={(el) => registrarRef(lead.id, el)}
                     portalRef={portalRef}
                   />
@@ -264,6 +297,8 @@ export function Tablero({
           onCancelar={cerrarDescarte}
         />
       )}
+
+      {eliminando && <ConfirmarEliminar negocio={eliminando.negocio} onConfirmar={() => eliminar(eliminando)} onCancelar={() => setEliminando(null)} />}
     </div>
   );
 }
@@ -279,6 +314,7 @@ function Tarjeta({
   onTerminarArrastre,
   onMover,
   onDescartar,
+  onEliminar,
   onRegistrarRef,
   portalRef,
 }: {
@@ -292,6 +328,7 @@ function Tarjeta({
   onTerminarArrastre: () => void;
   onMover: (fase: Fase) => void;
   onDescartar: () => void;
+  onEliminar?: () => void;
   onRegistrarRef: (el: HTMLElement | null) => void;
   portalRef: RefObject<HTMLDivElement | null>;
 }) {
@@ -483,6 +520,7 @@ function Tarjeta({
           deshabilitado={moviendo}
           onMover={onMover}
           onDescartar={onDescartar}
+          onEliminar={onEliminar}
           portalRef={portalRef}
         />
       </div>
@@ -496,6 +534,7 @@ function MenuAcciones({
   deshabilitado,
   onMover,
   onDescartar,
+  onEliminar,
   portalRef,
 }: {
   negocio: string;
@@ -503,6 +542,7 @@ function MenuAcciones({
   deshabilitado: boolean;
   onMover: (fase: Fase) => void;
   onDescartar: () => void;
+  onEliminar?: () => void;
   portalRef: RefObject<HTMLDivElement | null>;
 }) {
   const [abierto, setAbierto] = useState(false);
@@ -640,6 +680,19 @@ function MenuAcciones({
       >
         Descartar…
       </button>
+      {onEliminar && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            cerrar();
+            onEliminar();
+          }}
+          style={{ ...itemMenu, color: "#b91c1c", borderTop: "1px solid #f1f5f9", borderRadius: 0, marginTop: 2, paddingTop: 8 }}
+        >
+          Eliminar lead…
+        </button>
+      )}
     </>
   );
 
@@ -865,6 +918,67 @@ function SelectorDescarte({ negocio, onElegir, onCancelar }: { negocio: string; 
         <button type="button" onClick={onCancelar} style={{ ...botonSecundario, alignSelf: "flex-end" }}>
           Cancelar
         </button>
+      </div>
+    </div>
+  );
+}
+
+function ConfirmarEliminar({ negocio, onConfirmar, onCancelar }: { negocio: string; onConfirmar: () => void; onCancelar: () => void }) {
+  // El foco empieza en «Cancelar»: un Intro sin mirar no debe borrar nada.
+  const cancelar = useRef<HTMLButtonElement>(null);
+  const contenedor = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    cancelar.current?.focus();
+    const tecla = (e: globalThis.KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onCancelar();
+        return;
+      }
+      if (e.key !== "Tab" || !contenedor.current) return;
+      const focales = Array.from(contenedor.current.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"));
+      if (focales.length === 0) return;
+      const primerBoton = focales[0];
+      const ultimoBoton = focales[focales.length - 1];
+      if (e.shiftKey && document.activeElement === primerBoton) {
+        e.preventDefault();
+        ultimoBoton.focus();
+      } else if (!e.shiftKey && document.activeElement === ultimoBoton) {
+        e.preventDefault();
+        primerBoton.focus();
+      }
+    };
+    window.addEventListener("keydown", tecla);
+    return () => window.removeEventListener("keydown", tecla);
+  }, [onCancelar]);
+
+  return (
+    <div
+      onClick={(e) => e.target === e.currentTarget && onCancelar()}
+      style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16 }}
+    >
+      <div
+        ref={contenedor}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="titulo-eliminar"
+        aria-describedby="texto-eliminar"
+        style={{ background: "#fff", borderRadius: 14, padding: "18px 20px", width: "100%", maxWidth: 360, boxShadow: "0 20px 40px rgba(15, 23, 42, 0.25)", display: "flex", flexDirection: "column", gap: 12 }}
+      >
+        <h2 id="titulo-eliminar" style={{ margin: 0, fontSize: 16, color: "#0f172a", overflowWrap: "anywhere" }}>
+          ¿Eliminar «{negocio}»?
+        </h2>
+        <p id="texto-eliminar" style={{ margin: 0, fontSize: 13, color: "#7f1d1d", lineHeight: 1.4 }}>
+          Se borra con todo su historial, sus conversaciones de WhatsApp y sus tareas. No se puede deshacer y deja de contar en el resumen y el embudo.
+        </p>
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <button type="button" ref={cancelar} onClick={onCancelar} style={botonSecundario}>
+            Cancelar
+          </button>
+          <button type="button" onClick={onConfirmar} style={{ ...botonSecundario, background: "#b91c1c", color: "#fff", borderColor: "transparent" }}>
+            Eliminar definitivamente
+          </button>
+        </div>
       </div>
     </div>
   );

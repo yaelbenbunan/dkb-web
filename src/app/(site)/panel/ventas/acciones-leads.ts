@@ -188,6 +188,19 @@ export async function eliminarLeadAction(slug: string, leadId: string, _prev: Re
   redirect(`/panel/ventas/${slug}/leads`);
 }
 
+/** Tablero → «⋯» → «Eliminar lead». Mismo borrado que la ficha; la
+ *  confirmación la pide el diálogo y la tarjeta desaparece sin cambiar de página. */
+export async function eliminarLeadTableroAction(slug: string, leadId: string): Promise<ResultadoAccion> {
+  const acceso = await accesoALead(slug, leadId, "tablero");
+  if (!acceso.ok) return acceso;
+  if (acceso.usuaria.rol !== "admin") return { ok: false, error: "Solo un admin puede eliminar leads." };
+  const res = await eliminarLeads(acceso.marca.id, [leadId]);
+  if (!res.ok) return res;
+  if (res.borrados === 0) return NO_ENCONTRADO;
+  refrescar(slug);
+  return { ok: true };
+}
+
 /** Ficha → bloque «Origen»: canal, campaña, etiquetas y consentimiento. */
 export async function actualizarOrigenLeadAction(slug: string, leadId: string, _prev: ResultadoAccion | null, fd: FormData): Promise<ResultadoAccion> {
   const acceso = await accesoALead(slug, leadId);

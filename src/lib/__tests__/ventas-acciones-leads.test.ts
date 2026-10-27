@@ -57,6 +57,7 @@ import {
   cambiarFaseAction,
   moverLeadAction,
   eliminarLeadAction,
+  eliminarLeadTableroAction,
   actualizarOrigenLeadAction,
   archivarLeadAction,
 } from "@/app/(site)/panel/ventas/acciones-leads";
@@ -281,6 +282,47 @@ describe("eliminarLeadAction", () => {
     m.getLead.mockResolvedValue({ ...LEAD, negocio: "Bar Paco" });
     m.eliminarLeads.mockResolvedValue({ ok: true, borrados: 0 });
     expect(await eliminarLeadAction("hydrup", "l1", null, confirmacion("Bar Paco"))).toEqual({ ok: false, error: "Lead no encontrado." });
+  });
+});
+
+describe("eliminarLeadTableroAction", () => {
+  const ADMIN = { id: "a1", rol: "admin", activa: true };
+
+  test("solo admin: una comercial o una clienta no borran", async () => {
+    for (const rol of ["comercial", "cliente"]) {
+      m.accesoMarcaAccion.mockResolvedValue({ ok: true, usuaria: { id: "u1", rol, activa: true }, marca: MARCA });
+      expect(await eliminarLeadTableroAction("hydrup", "l1")).toEqual({ ok: false, error: "Solo un admin puede eliminar leads." });
+    }
+    expect(m.eliminarLeads).not.toHaveBeenCalled();
+  });
+
+  test("comprueba el acceso a la sección del tablero", async () => {
+    m.accesoMarcaAccion.mockResolvedValue({ ok: true, usuaria: ADMIN, marca: MARCA });
+    m.eliminarLeads.mockResolvedValue({ ok: true, borrados: 1 });
+    await eliminarLeadTableroAction("hydrup", "l1");
+    expect(m.accesoMarcaAccion).toHaveBeenCalledWith("hydrup", "tablero");
+  });
+
+  test("lead de otra marca: no encontrado", async () => {
+    m.accesoMarcaAccion.mockResolvedValue({ ok: true, usuaria: ADMIN, marca: MARCA });
+    m.getLead.mockResolvedValue({ ...LEAD, marca_id: "m2" });
+    expect(await eliminarLeadTableroAction("hydrup", "l1")).toEqual({ ok: false, error: "Lead no encontrado." });
+    expect(m.eliminarLeads).not.toHaveBeenCalled();
+  });
+
+  test("borra con la marca del lead y se queda en el tablero", async () => {
+    m.accesoMarcaAccion.mockResolvedValue({ ok: true, usuaria: ADMIN, marca: MARCA });
+    m.eliminarLeads.mockResolvedValue({ ok: true, borrados: 1 });
+    expect(await eliminarLeadTableroAction("hydrup", "l1")).toEqual({ ok: true });
+    expect(m.eliminarLeads).toHaveBeenCalledWith("m1", ["l1"]);
+    expect(m.redirect).not.toHaveBeenCalled();
+    expect(m.revalidatePath).toHaveBeenCalled();
+  });
+
+  test("si la base no borra nada, se dice", async () => {
+    m.accesoMarcaAccion.mockResolvedValue({ ok: true, usuaria: ADMIN, marca: MARCA });
+    m.eliminarLeads.mockResolvedValue({ ok: true, borrados: 0 });
+    expect(await eliminarLeadTableroAction("hydrup", "l1")).toEqual({ ok: false, error: "Lead no encontrado." });
   });
 });
 
