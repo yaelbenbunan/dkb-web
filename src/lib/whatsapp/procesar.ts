@@ -14,7 +14,7 @@ import {
   vincularLead,
   type Conversacion,
 } from "./db";
-import { opcionesAutorespuesta, REMITENTE, textoAutorespuesta } from "./autorespuesta";
+import { REMITENTE } from "./autorespuesta";
 import {
   decidir,
   extraerAvisosCuenta,
@@ -387,9 +387,8 @@ const FASE_RECONSTRUIDA: Fase = "nuevo";
  * Elige la secuencia que sirve al anuncio del lead, la arranca y devuelve su
  * primer mensaje. Devuelve `null` si ninguna secuencia activa sirve a este
  * anuncio o si la que sirve no parsea (forma inválida en la base, p.ej. tras
- * un cambio manual): en ambos casos el llamador cae al RESPALDO de
- * `autorespuesta.ts`, que NO es la fuente — es la garantía de que el canal
- * nunca se queda mudo si alguien archiva o rompe una secuencia por error.
+ * un cambio manual): en ambos casos el llamador pasa la conversación a una
+ * persona sin mandar nada (desde el 27-10-2026 ya no hay respaldo en código).
  *
  * `marca` y `remitente` siempre tienen valor. `negocio`/`contacto`/`ciudad`
  * salen de `leadDatos` cuando el lead se resolvió en esta vuelta (ronda de
@@ -412,7 +411,7 @@ function arrancarSecuencia(
 
   const parseada = parsearSecuencia(elegida.pasos);
   if (!parseada.ok) {
-    console.error(`[whatsapp] la secuencia "${elegida.id}" no parsea, se usa el respaldo: ${parseada.error}`);
+    console.error(`[whatsapp] la secuencia "${elegida.id}" no parsea, se pasa a humana: ${parseada.error}`);
     return null;
   }
 
@@ -450,7 +449,7 @@ function arrancarSecuencia(
 /**
  * Si la secuencia que arrancaría este primer contacto crea el lead al pasar el
  * filtro (`difiereLead`). Mismo criterio de elección que `arrancarSecuencia`;
- * una secuencia que no parsea no difiere nada (cae al respaldo, y ahí el lead
+ * una secuencia que no parsea no difiere nada (pasa a humana, y ahí el lead
  * se crea como siempre).
  */
 function secuenciaDiferida(secuencias: SecuenciaRow[], anuncio: string | null): boolean {
@@ -976,10 +975,9 @@ function nombreNuevo(existente: Conversacion | null, nombrePerfil: string | null
  *   leído y `yaEnEstePaso`), ninguna crea un segundo lead (búsqueda justo
  *   antes de crear y `vincularOReleer`) y ninguna la entrega a una persona
  *   por error.
- * - La respuesta al respaldo de `autorespuesta.ts` (Dinkbit, anuncio sin
- *   secuencia: el respaldo limpia el puntero). El respaldo solo sale cuando
- *   no hay secuencia que sirva —ni siquiera la general—, así que esa
- *   respuesta sigue acabando en `humana` con su nota, como antes.
+ * - La respuesta a un respaldo enviado antes del 27-10-2026, cuando un clic
+ *   de anuncio de Dinkbit sin secuencia recibía el saludo fijo de
+ *   `autorespuesta.ts`: sigue acabando en `humana` con su nota, como antes.
  * Una secuencia terminada o entregada deja `secuencia_id`, así que no entra.
  */
 export function primerContactoPendiente(c: Conversacion | null): boolean {
@@ -1413,14 +1411,14 @@ async function procesarMensaje(
     // Cargar, elegir Y arrancar la secuencia van en su propio try: un fallo
     // en cualquiera de los tres (Supabase al listar, una fila con forma
     // inválida al parsear, o el propio motor al arrancar) no debe impedir el
-    // RESPALDO de abajo — deja `arrancada` en null y cae a la autorespuesta
-    // en código, igual que si ninguna secuencia sirviera al anuncio.
+    // paso a humana de abajo — deja `arrancada` en null, igual que si
+    // ninguna secuencia sirviera al anuncio.
     let arrancada: SecuenciaArrancada | null = null;
     try {
       const secuencias = secuenciasCargadas ?? (await deps.listSecuencias(marcaId));
       arrancada = arrancarSecuencia(secuencias, anuncio, marcaNombre, leadDatos);
     } catch (e) {
-      console.error("[whatsapp] fallo cargando o arrancando la secuencia de la marca, se usa el respaldo", mensaje.waId, e);
+      console.error("[whatsapp] fallo cargando o arrancando la secuencia de la marca, se pasa a humana", mensaje.waId, e);
     }
 
     // Lead tras el filtro que no llega a arrancar (secuencia rota, o el motor
@@ -1600,15 +1598,14 @@ async function procesarMensaje(
             }
           }
         }
-      } else if (!mensaje.referral || marca.slug !== MARCA_DINKBIT_SLUG) {
-        // El respaldo de `autorespuesta.ts` habla de clínicas y firma Paula:
-        // es el guion de Dinkbit, no sirve para otra marca. Sin secuencia
-        // propia que conteste, la conversación pasa a una persona en vez de
-        // mandarle al cliente de otra marca un texto que no es el suyo.
-        // Y tampoco sirve sin anuncio, ni en Dinkbit: el respaldo es la
-        // garantía de que un clic PAGADO no quede sin respuesta; a quien
-        // escribe por primera vez sin anuncio y sin secuencia general que lo
-        // atienda le contesta una persona (ver `decidir`).
+      } else {
+        // Sin secuencia que conteste, la conversación pasa a una persona y no
+        // se manda nada. Vale para todas las marcas, Dinkbit incluida y con o
+        // sin anuncio: hasta el 27-10-2026 un clic de anuncio de Dinkbit sin
+        // secuencia recibía un respaldo fijo en código (el saludo de Growth
+        // para clínicas), y un anuncio de proveedores deportivos acabó
+        // preguntando a un distribuidor por sus pacientes. Mejor callar y que
+        // conteste una persona que mandar un guion que no es el suyo.
         console.warn(
           mensaje.referral
             ? "[whatsapp] la marca no tiene secuencia para este anuncio, se pasa a humana sin autorespuesta"
@@ -1622,78 +1619,6 @@ async function procesarMensaje(
         } catch (e) {
           console.error("[whatsapp] fallo pasando a humana la conversación sin secuencia", mensaje.waId, e);
         }
-      } else {
-        // RESPALDO, NO la fuente: solo se manda si ninguna secuencia activa
-        // sirve a este anuncio, si la que sirve no parsea, o si arrancarla
-        // falló (capturado arriba). El canal no puede quedarse mudo porque
-        // alguien archive una secuencia por error. Solo para Dinkbit (ver la
-        // rama de arriba).
-        const texto = textoAutorespuesta({ anuncio });
-
-        // Se limpia el puntero de la secuencia que traía la conversación de
-        // antes, ANTES de enviar (Hallazgo 4, ronda de arreglos 3; el orden,
-        // ronda B1 arreglo 3). Los botones que estamos a punto de mandar son
-        // los GENÉRICOS del respaldo, no los de ningún guion: si
-        // `secuencia_id`/`paso_actual` sobreviven, la pulsación siguiente
-        // vuelve a entrar por la rama `guardar_respuesta` (que solo mira que
-        // los dos tengan valor) y se avanza por índice la secuencia VIEJA —
-        // el caso real es un teléfono que clicó el anuncio de psicología hace
-        // semanas y hoy clica otro sin mapear: recibiría copy de psicología y
-        // se le guardaría un `problema_principal` que no es el que pulsó.
-        //
-        // Va ANTES del envío a propósito: si estuviera después, un fallo al
-        // enviar o al guardar el saliente saltaría al `catch` de fuera sin
-        // limpiar nada y el puntero viejo seguiría ahí — o sea, el mismo
-        // fallo que esta limpieza existe para evitar. Adelantarla no cuesta
-        // nada: el puntero viejo no sirve para mandar el respaldo.
-        //
-        // `datos` entra también en la limpieza: sin eso queda colgando el
-        // `problema_principal` de otro sector, mientras que la rama que sí
-        // arranca secuencia escribe `datos` de la secuencia nueva. Y sigue
-        // condicionado a que haya algo que limpiar, para no gastar una
-        // escritura en el caso normal (primer contacto, sin puntero).
-        if (conversacion.secuencia_id || conversacion.paso_actual) {
-          try {
-            await deps.actualizarConversacion(conversacion.id, {
-              secuenciaId: null,
-              pasoActual: null,
-              datos: {},
-              // Y la espera de la secuencia anterior, por el mismo motivo que
-              // al re-arrancar: si no, el panel seguiría enseñando como «parada
-              // esperando» una conversación que acaba de recibir el respaldo.
-              reanudarEn: null,
-            });
-            conversacion = { ...conversacion, secuencia_id: null, paso_actual: null, datos: {} };
-          } catch (e) {
-            // Best-effort como el resto de la fase B, pero aquí el coste de
-            // seguir es real: si no se pudo limpiar, el respaldo se manda
-            // igualmente (mejor eso que dejar al lead sin respuesta) y queda
-            // registrado que el puntero viejo sobrevivió.
-            console.error(
-              "[whatsapp] fallo limpiando el puntero de la secuencia al caer al respaldo",
-              mensaje.waId,
-              e,
-            );
-          }
-        }
-
-        // Con botones en vez de texto: la respuesta del lead vuelve como
-        // `button_reply` y `entrante.ts` la guarda igual que un texto, así que
-        // queda en su ficha. Es además lo que más sube la tasa de respuesta.
-        const opciones = opcionesAutorespuesta(anuncio);
-        const resultado = await mensajero.enviarBotones(mensaje.waId, texto, opciones);
-        await deps.guardarSaliente({
-          conversacionId: conversacion.id,
-          wamid: resultado.ok ? resultado.wamid : null,
-          texto,
-          botones: opciones,
-          origen: "bot",
-          // Un fallo de ENVÍO no tumba el procesado: el saliente queda con su
-          // error para que se vea en la bandeja (esto no lanza, es un
-          // resultado tipado de `enviarTexto`/`enviarBotones`).
-          error: resultado.ok ? undefined : resultado.error,
-        });
-
       }
     } catch (e) {
       // Este catch es para un fallo al ENVIAR o GUARDAR el primer mensaje.

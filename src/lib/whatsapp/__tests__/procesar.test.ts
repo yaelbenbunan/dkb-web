@@ -665,7 +665,7 @@ function depsFalsas(
 
 describe("procesarWebhook", () => {
   it("un mensaje de anuncio crea lead, deja la conversación en bot y envía un texto", async () => {
-    const { deps, conversaciones, salientes } = depsFalsas();
+    const { deps, conversaciones, salientes } = depsFalsas({ secuencias: [{ id: "s-general", estado: "activa", anuncios: [], pasos: SECUENCIA_MINIMA }] });
 
     const resultado = await procesarWebhook({ cuerpo: sobreDeAnuncio(), deps });
 
@@ -679,7 +679,7 @@ describe("procesarWebhook", () => {
   });
 
   it("un reintento con el mismo wamid no envía una segunda vez", async () => {
-    const { deps, salientes } = depsFalsas();
+    const { deps, salientes } = depsFalsas({ secuencias: [{ id: "s-general", estado: "activa", anuncios: [], pasos: SECUENCIA_MINIMA }] });
 
     await procesarWebhook({ cuerpo: sobreDeAnuncio(), deps });
     const segundo = await procesarWebhook({ cuerpo: sobreDeAnuncio(), deps });
@@ -701,7 +701,7 @@ describe("procesarWebhook", () => {
   });
 
   it("un fallo de envío no rompe el procesado", async () => {
-    const { deps, salientes } = depsFalsas({ enviar: async () => ({ ok: false, error: "Authorization Error" }) });
+    const { deps, salientes } = depsFalsas({ ...{ secuencias: [{ id: "s-general", estado: "activa", anuncios: [], pasos: SECUENCIA_MINIMA }] }, enviar: async () => ({ ok: false, error: "Authorization Error" }) });
 
     await expect(procesarWebhook({ cuerpo: sobreDeAnuncio(), deps })).resolves.toEqual({ procesados: 1 });
     expect(salientes[0].error).toBe("Authorization Error");
@@ -726,7 +726,7 @@ describe("procesarWebhook", () => {
   // previa. No debe crear un lead nuevo, y sí debe dejar rastro en su ficha
   // (Hallazgo 2 de la ronda de arreglos 1: "responder" no registraba nada).
   it("responder reutiliza el lead existente, no crea uno nuevo y registra actividad", async () => {
-    const { deps, leadsPorTelefono, conversaciones } = depsFalsas();
+    const { deps, leadsPorTelefono, conversaciones } = depsFalsas({ secuencias: [{ id: "s-general", estado: "activa", anuncios: [], pasos: SECUENCIA_MINIMA }] });
     leadsPorTelefono.set("660415514", { id: "lead-preexistente" });
     const crearLeadDeWhatsAppSpy = vi.spyOn(deps, "crearLeadDeWhatsApp");
 
@@ -829,7 +829,7 @@ describe("procesarWebhook", () => {
   // (guardar el saliente, tras un envío que sí pudo tener éxito) es fase B:
   // nunca debe tumbar el procesado, solo queda registrado.
   it("si guardarSaliente lanza tras un envío con éxito, procesarWebhook no lanza y queda logueado", async () => {
-    const { deps } = depsFalsas();
+    const { deps } = depsFalsas({ secuencias: [{ id: "s-general", estado: "activa", anuncios: [], pasos: SECUENCIA_MINIMA }] });
     deps.guardarSaliente = async () => {
       throw new Error("fallo guardando el saliente");
     };
@@ -949,47 +949,43 @@ describe("procesarWebhook", () => {
     expect(salientes[0].botones).toEqual(["Faltan pacientes", "No vuelven", "Boca a boca"]);
   });
 
-  it("cae en la autorespuesta en código si ninguna secuencia sirve", async () => {
-    // Nunca mudo: si alguien archiva la secuencia, el lead sigue recibiendo algo.
-    const { deps, salientes } = depsFalsas({ secuencias: [] });
+  it("sin secuencia que sirva al anuncio, pasa a humana sin mandar nada (también en Dinkbit)", async () => {
+    // Hasta el 27-10-2026 aquí salía un respaldo fijo (el saludo de Growth
+    // para clínicas) y le llegó a un distribuidor que venía de otro anuncio.
+    const { deps, salientes, conversaciones } = depsFalsas({ secuencias: [] });
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps });
 
-    expect(salientes[0].texto).toContain("Growth");
-    expect(salientes[0].botones).toEqual(["Faltan pacientes", "No se quedan", "Solo boca a boca"]);
+    expect(salientes).toHaveLength(0);
+    expect(conversaciones.get(`${MARCA.id}:34660415514`)?.estado).toBe("humana");
+    warnSpy.mockRestore();
   });
 
-  it("al caer al respaldo limpia el puntero de la secuencia anterior", async () => {
-    // Hallazgo 4: el mismo teléfono clicó hace semanas el anuncio de
-    // psicología (quedó `secuencia_id` + `paso_actual`) y no contestó. Hoy
-    // clica otro anuncio que ninguna secuencia sirve → respaldo. Si el
-    // puntero viejo sobrevive, la pulsación siguiente se interpreta contra el
-    // guion de PSICOLOGÍA: el lead recibe copy de consultas de psicología y
-    // se le guarda un `problema_principal` que no es el que pulsó.
+  it("un clic de otro anuncio sin secuencia no avanza el guion anterior ni manda nada", async () => {
+    // El mismo teléfono clicó el anuncio de psicología (quedó el puntero) y
+    // hoy clica otro que ninguna secuencia sirve: pasa a una persona, y la
+    // pulsación siguiente de un botón viejo no avanza el guion de psicología.
     const { deps, conversaciones, salientes } = depsFalsas({
       secuencias: [{ id: "s-psico", estado: "activa", anuncios: ["AD-PSICO"], pasos: SECUENCIA_PSICOLOGIA }],
     });
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     await procesarWebhook({ cuerpo: sobreDeAnuncio("AD-PSICO"), deps });
     const conv = [...conversaciones.values()][0];
     expect(conv.secuencia_id).toBe("s-psico");
-    expect(conv.paso_actual).toBe("inicio");
 
-    // Otro anuncio, sin secuencia que lo sirva: respaldo. `id` propio porque
-    // `sobreDeAnuncio` reusa siempre el mismo wamid y la idempotencia cortaría
-    // el segundo mensaje.
     const segundoClic = sobreConMensajes([
       mensajeDeAnuncio({ id: "wamid.ANUNCIO.2", referral: { source_id: "AD-SIN-MAPEAR", headline: "Otra campaña" } }),
     ]);
     await procesarWebhook({ cuerpo: segundoClic, deps });
-    expect(salientes[1].texto).toContain("Growth");
-    expect(conv.secuencia_id).toBeNull();
-    expect(conv.paso_actual).toBeNull();
+    expect(salientes).toHaveLength(1);
+    expect(conv.estado).toBe("humana");
 
-    // Y la pulsación de un botón del respaldo no avanza el guion de psicología.
     await procesarWebhook({ cuerpo: sobrePulsacion("opcion_2", "Vienen 1 vez y ya"), deps });
-    expect(salientes).toHaveLength(2);
+    expect(salientes).toHaveLength(1);
     expect(conv.datos.problema_principal).toBeUndefined();
+    warnSpy.mockRestore();
   });
 
   it("una variable sin valor deja el hueco visible y sigue", async () => {
@@ -1385,43 +1381,6 @@ describe("procesarWebhook", () => {
     expect(actividades[0].nota).toBe(
       "El lead respondió: «Ahora no». La secuencia quedó esperando 7 días: no hay envío automático que la reanude, la retoma una persona.",
     );
-  });
-
-  // Arreglo 3 (Minor): 72d0cc9 hizo que el respaldo limpie el puntero, pero
-  // DESPUÉS de enviar. Si el envío o `guardarSaliente` lanzan, se sale por el
-  // `catch` de fuera sin limpiar y la conversación se queda con el puntero
-  // viejo: la pulsación siguiente avanza la secuencia equivocada, que es justo
-  // el fallo que 72d0cc9 arreglaba. `datos` entra también en la limpieza: sin
-  // eso el respaldo deja colgando el `problema_principal` de otro sector.
-  it("al caer al respaldo limpia puntero y datos aunque el guardado del saliente falle", async () => {
-    const { deps, conversaciones } = depsFalsas({ secuencias: [] });
-    const conv = await deps.crearConversacion({
-      marcaId: MARCA.id,
-      waId: "34660415514",
-      leadId: "lead-viejo",
-      estado: "bot",
-      ventanaHasta: new Date(Date.now() + 1000 * 60 * 60),
-    });
-    // Puntero y dato del clic de hace semanas, de la secuencia de otro sector.
-    await deps.actualizarConversacion(conv.id, {
-      secuenciaId: "s-psico",
-      pasoActual: "inicio",
-      datos: { problema_principal: "Pocas primeras consultas" },
-    });
-    deps.guardarSaliente = async () => {
-      throw new Error("fallo guardando el saliente");
-    };
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
-    await expect(procesarWebhook({ cuerpo: sobreDeAnuncio("AD-SIN-MAPEAR"), deps })).resolves.toEqual({
-      procesados: 1,
-    });
-
-    const guardada = conversaciones.get(`${MARCA.id}:34660415514`);
-    expect(guardada?.secuencia_id).toBeNull();
-    expect(guardada?.paso_actual).toBeNull();
-    expect(guardada?.datos).toEqual({});
-    errorSpy.mockRestore();
   });
 
   /* Ronda C: lo que encontró la review de la ronda B --------------------- */
@@ -1987,7 +1946,7 @@ describe("procesarWebhook por marca", () => {
   });
 
   it("los salientes del bot se guardan con origen bot", async () => {
-    const { deps, salientes } = depsFalsas();
+    const { deps, salientes } = depsFalsas({ secuencias: [{ id: "s-general", estado: "activa", anuncios: [], pasos: SECUENCIA_MINIMA }] });
     await procesarWebhook({ cuerpo: sobreDeAnuncio(), deps });
     expect(salientes.map((s) => s.origen)).toEqual(["bot"]);
   });

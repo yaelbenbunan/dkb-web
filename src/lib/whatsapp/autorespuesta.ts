@@ -2,6 +2,11 @@
  * Texto de la autorespuesta del canal de WhatsApp: vive en un único sitio
  * para poder cambiar la redacción sin tocar la lógica de `procesar.ts`.
  *
+ * YA NO SE ENVÍA desde el 27-10-2026: `procesar.ts` pasa a humana, sin mandar
+ * nada, todo primer contacto que ninguna secuencia atiende. Aquí sigue
+ * `REMITENTE`, y `CUERPO`/`OPCIONES` como referencia de las plantillas de
+ * `ventas/secuencias-plantilla.ts`.
+ *
  * Saluda, dice a qué viene en una frase y pregunta el problema con botones.
  * Deliberadamente corto: cada línea de más antes de la pregunta es una línea
  * en la que el lead puede abandonar. Tampoco repite el titular del anuncio
