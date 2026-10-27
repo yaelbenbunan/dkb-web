@@ -11,6 +11,7 @@ import {
   nombreDeContacto,
   reclamarPaso,
   setEstadoMensaje,
+  ultimaPreguntaDelBot,
   vincularLead,
   type Conversacion,
 } from "./db";
@@ -119,6 +120,8 @@ export interface Deps {
   guardarEco: typeof guardarEco;
   guardarSaliente: typeof guardarSaliente;
   setEstadoMensaje: typeof setEstadoMensaje;
+  /** Para retomar una secuencia terminada (ver `retomarUltimaPregunta`). */
+  ultimaPreguntaDelBot: typeof ultimaPreguntaDelBot;
   /** `negocio`/`contacto`/`ciudad` van aquí (ronda de arreglos 1, tarea 7)
    *  para poder rellenar `ContextoSimulacion.valores` con los datos reales
    *  del lead cuando existen: sin esto, `{{contacto}}` saldría en blanco
@@ -292,6 +295,7 @@ function depsReales(): Deps {
     guardarEco,
     guardarSaliente,
     setEstadoMensaje,
+    ultimaPreguntaDelBot,
     async buscarLeadPorTelefono(marcaId, telefono) {
       const lead = await buscarLeadPorContacto(marcaId, { telefono });
       return lead ? leadEncontrado(lead) : null;
@@ -1074,6 +1078,55 @@ async function crearConversacionOReleer(
  * `procesarWebhook`): todo lo que se envía aquí sale por ESE número, nunca por
  * el de otra marca del mismo lote.
  */
+/**
+ * El contacto pulsa otro botón de la última pregunta del bot cuando la
+ * secuencia ya había terminado (p. ej. «¡Quiero pedir!» y, después, «Tengo
+ * más dudas» en el mismo mensaje). Sin esto el botón solo se guardaba y nadie
+ * contestaba hasta que lo viera una persona. Ahora la conversación vuelve a
+ * esa pregunta y el botón se procesa como si fuera la primera respuesta.
+ *
+ * Solo si todo encaja: conversación en `humana` con una secuencia terminada
+ * (`paso_actual` vacío), sin anuncio, un botón que contesta justo al ÚLTIMO
+ * mensaje con botones del bot, ninguna persona ha escrito después y un único
+ * paso de la secuencia lleva exactamente esos botones. En cualquier otro caso
+ * (o si algo falla al comprobarlo) la conversación sigue como estaba.
+ */
+async function retomarUltimaPregunta(deps: Deps, conversacion: Conversacion, mensaje: MensajeEntrante): Promise<Conversacion> {
+  if (
+    conversacion.estado !== "humana" ||
+    !conversacion.secuencia_id ||
+    conversacion.paso_actual !== null ||
+    conversacion.reanudar_en ||
+    mensaje.referral ||
+    !mensaje.respondeA
+  ) {
+    return conversacion;
+  }
+  const indice = indiceDeBoton(mensaje.botonId);
+  if (indice === null) return conversacion;
+  try {
+    const pregunta = await deps.ultimaPreguntaDelBot(conversacion.id);
+    if (!pregunta || pregunta.wamid !== mensaje.respondeA || indice >= pregunta.botones.length) return conversacion;
+    const fila = (await deps.listSecuencias(conversacion.marca_id)).find((x) => x.id === conversacion.secuencia_id);
+    const parseada = fila ? parsearSecuencia(fila.pasos) : null;
+    if (!parseada?.ok) return conversacion;
+    const iguales = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((t, i) => t === b[i]);
+    const pasos = Object.entries(parseada.secuencia.pasos).filter(([, paso]) =>
+      iguales(
+        paso.botones.map((b) => b.texto),
+        pregunta.botones,
+      ),
+    );
+    if (pasos.length !== 1) return conversacion;
+    const [pasoId] = pasos[0];
+    await deps.actualizarConversacion(conversacion.id, { estado: "bot", pasoActual: pasoId });
+    return { ...conversacion, estado: "bot", paso_actual: pasoId };
+  } catch (e) {
+    console.error("[whatsapp] no se pudo retomar la última pregunta, se deja en humana", mensaje.waId, e);
+    return conversacion;
+  }
+}
+
 async function procesarMensaje(
   marca: Marca,
   mensajero: MensajeroWhatsApp,
@@ -1166,6 +1219,10 @@ async function procesarMensaje(
       if (releido && releido.id === c.lead_id) resolverLead(releido);
     }
   };
+
+  if (conversacionExistente && !pendiente) {
+    conversacionExistente = await retomarUltimaPregunta(deps, conversacionExistente, mensaje);
+  }
 
   const decision = decidir({
     mensaje,

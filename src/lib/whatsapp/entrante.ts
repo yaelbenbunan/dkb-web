@@ -19,6 +19,9 @@ export interface MensajeEntrante {
   // Id del botón o de la opción de lista que pulsó el lead (`opcion_1`,
   // `opcion_2`...), o `null` si escribió a mano. Ver `botonDelMensaje`.
   botonId: string | null;
+  // wamid del mensaje al que contesta (`context.id`): en un botón pulsado, el
+  // mensaje que llevaba ese botón. Opcional para no tocar cada fixture.
+  respondeA?: string | null;
   tipo: string;
   recibidoEn: Date;
   // Id del número de la empresa que recibió el mensaje (`metadata.phone_number_id`).
@@ -253,6 +256,7 @@ export function extraerMensajes(cuerpo: unknown): MensajeEntrante[] {
         waId: m.from,
         texto,
         botonId,
+        respondeA: esObjeto(m.context) && typeof m.context.id === "string" ? m.context.id : null,
         tipo,
         recibidoEn,
         numeroId: numeroIdDe(valor),

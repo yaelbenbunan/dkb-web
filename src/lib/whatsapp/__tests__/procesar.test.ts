@@ -573,6 +573,16 @@ function depsFalsas(
     async setEstadoMensaje(wamid, estado) {
       estadosSeteados.push({ wamid, estado });
     },
+    // Como la consulta real: recorre los salientes de la conversación del más
+    // nuevo al más viejo y se para en el primero que no es del bot.
+    async ultimaPreguntaDelBot(conversacionId) {
+      for (const m of [...salientes].reverse()) {
+        if (m.conversacionId !== conversacionId) continue;
+        if (m.origen !== "bot") return null;
+        if (m.botones && m.botones.length > 0) return m.wamid ? { wamid: m.wamid, botones: [...m.botones] } : null;
+      }
+      return null;
+    },
     async buscarLeadPorTelefono(_marcaId, telefono) {
       const lead = leadsPorTelefono.get(telefono);
       return lead ? conDatosCompletos(lead) : null;
@@ -3425,5 +3435,75 @@ describe("lead tras el filtro: fallos, exclusiones y reinicios (fix round 1)", (
     await procesarWebhook({ cuerpo: enHydrup(textoLibre("wamid.R3", WA, "x".repeat(400))), deps });
 
     expect(leadsCreados[0]?.negocio).toHaveLength(150);
+  });
+});
+
+/* Otro botón de la última pregunta, con la secuencia ya terminada ---------- */
+
+describe("retomar la última pregunta", () => {
+  const SECUENCIA_PEDIDO: Secuencia = {
+    version: 1,
+    inicio: "animas",
+    pasos: {
+      animas: {
+        tipo: "mensaje",
+        texto: "¿Te animas?",
+        botones: [
+          { texto: "Quiero pedir", ruta: { ir_a: "enlace", avisar: true } },
+          { texto: "Tengo dudas", ruta: { ir_a: "paula", avisar: true } },
+        ],
+      },
+      enlace: { tipo: "mensaje", texto: "Aquí tienes el enlace.", botones: [], ruta: { terminar: true } },
+      paula: { tipo: "mensaje", texto: "Te escribe Paula.", botones: [], ruta: { terminar: true } },
+    },
+  };
+  const pulsacion = (wamid: string, botonId: string, titulo: string, contexto: string) =>
+    sobreConMensajes([
+      {
+        id: wamid,
+        from: "34660415514",
+        timestamp: "1790000100",
+        type: "interactive",
+        context: { from: "34600000000", id: contexto },
+        interactive: { type: "button_reply", button_reply: { id: botonId, title: titulo } },
+      },
+    ]);
+  const empezar = async () => {
+    const f = depsFalsas({ secuencias: [{ id: "s-pedido", estado: "activa", anuncios: [], pasos: SECUENCIA_PEDIDO }] });
+    await procesarWebhook({ cuerpo: sobreDeAnuncio("AD1"), deps: f.deps });
+    const pregunta = f.salientes[0].wamid as string;
+    await procesarWebhook({ cuerpo: pulsacion("wamid.P1", "opcion_1", "Quiero pedir", pregunta), deps: f.deps });
+    return { ...f, pregunta, conv: () => f.conversaciones.get(`${MARCA.id}:34660415514`) };
+  };
+
+  it("tras terminar, otro botón de esa pregunta sigue por su rama", async () => {
+    const { deps, salientes, pregunta, conv } = await empezar();
+    expect(salientes.map((m) => m.texto)).toEqual(["¿Te animas?", "Aquí tienes el enlace."]);
+    expect(conv()?.estado).toBe("humana");
+
+    await procesarWebhook({ cuerpo: pulsacion("wamid.P2", "opcion_2", "Tengo dudas", pregunta), deps });
+
+    expect(salientes.map((m) => m.texto)).toEqual(["¿Te animas?", "Aquí tienes el enlace.", "Te escribe Paula."]);
+    expect(salientes[2].origen).toBe("bot");
+    expect(conv()?.estado).toBe("humana");
+  });
+
+  it("si alguien del equipo ya ha escrito, el botón no reabre el bot", async () => {
+    const { deps, salientes, pregunta, conv } = await empezar();
+    await deps.guardarSaliente({ conversacionId: conv()!.id, wamid: "wamid.PANEL", texto: "Hola, soy Paula", origen: "panel" });
+
+    await procesarWebhook({ cuerpo: pulsacion("wamid.P2", "opcion_2", "Tengo dudas", pregunta), deps });
+
+    expect(salientes.map((m) => m.texto)).toEqual(["¿Te animas?", "Aquí tienes el enlace.", "Hola, soy Paula"]);
+    expect(conv()?.estado).toBe("humana");
+  });
+
+  it("un botón de un mensaje que no es la última pregunta no reabre el bot", async () => {
+    const { deps, salientes, conv } = await empezar();
+
+    await procesarWebhook({ cuerpo: pulsacion("wamid.P2", "opcion_2", "Tengo dudas", "wamid.OTRO"), deps });
+
+    expect(salientes).toHaveLength(2);
+    expect(conv()?.estado).toBe("humana");
   });
 });

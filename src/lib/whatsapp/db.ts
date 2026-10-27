@@ -580,6 +580,32 @@ export async function guardarSaliente(input: {
   if (conv.error) console.error(`[whatsapp/db] guardarSaliente (conversación): ${conv.error.message}`);
 }
 
+/**
+ * La última pregunta con botones que mandó el bot en la conversación, si
+ * después nadie del equipo ha escrito (ni desde el panel ni desde el móvil).
+ * Sirve para retomar la secuencia cuando el contacto pulsa otro botón de esa
+ * pregunta después de que la secuencia terminara. `null` si no la hay o si una
+ * persona ya ha intervenido: entonces la conversación es suya.
+ */
+export async function ultimaPreguntaDelBot(conversacionId: string): Promise<{ wamid: string; botones: string[] } | null> {
+  const r = await db()
+    .from("ventas_mensajes")
+    .select("wamid, payload, origen")
+    .eq("conversacion_id", conversacionId)
+    .eq("direccion", "saliente")
+    .order("created_at", { ascending: false })
+    .limit(20);
+  if (r.error) throw new Error(`[whatsapp/db] ultimaPreguntaDelBot: ${r.error.message}`);
+  for (const m of (r.data ?? []) as Array<{ wamid: string | null; payload: unknown; origen: string | null }>) {
+    if (m.origen !== "bot") return null;
+    const botones = (m.payload as { botones?: unknown } | null)?.botones;
+    if (Array.isArray(botones) && botones.length > 0) {
+      return m.wamid ? { wamid: m.wamid, botones: botones.filter((b): b is string => typeof b === "string") } : null;
+    }
+  }
+  return null;
+}
+
 const COLUMNAS_MENSAJE = "id, direccion, wamid, texto, estado, error, payload, created_at";
 let avisadoSinOrigen = false;
 
