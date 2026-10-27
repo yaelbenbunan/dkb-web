@@ -5,6 +5,7 @@ import { FASE_LABELS, ORIGEN_LABELS, TIPO_NEGOCIO_LABELS, esFase, flujoDeMarca }
 import { ahoraMadrid, formatoSeguimiento } from "@/lib/ventas/metricas";
 import { filtrarPorOrigen, leerFiltroOrigen, opcionesOrigen } from "@/lib/ventas/filtros-origen";
 import { estadoSeguimiento } from "@/lib/ventas/tablero";
+import { isLeadEmailable } from "@/lib/lead-emailable";
 import { FiltrosOrigen } from "../../../_componentes/FiltrosOrigen";
 import { FaseEtiqueta } from "../../../_componentes/FaseEtiqueta";
 import { MarcaCabecera } from "../../../_componentes/MarcaCabecera";
@@ -14,13 +15,16 @@ import { BotonesLeads } from "./BotonesLeads";
 const FECHA_ENTRADA = new Intl.DateTimeFormat("es-ES", { day: "2-digit", month: "2-digit", year: "2-digit", timeZone: "Europe/Madrid" });
 const secundario = { fontSize: 12, color: "#64748b" } as const;
 const texto = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+/** Se le puede mandar un mailing comercial: la misma regla que usa el envío de campañas. */
+const admiteMailing = (l: { email: string | null; consentimiento?: boolean | null; email_estado?: string | null }) =>
+  isLeadEmailable({ email: l.email, consent: l.consentimiento ?? null, email_status: l.email_estado ?? null });
 
 export default async function LeadsPage({
   params,
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ fase?: string; mias?: string; q?: string; canal?: string; campana?: string; etiqueta?: string; archivados?: string }>;
+  searchParams: Promise<{ fase?: string; mias?: string; q?: string; canal?: string; campana?: string; etiqueta?: string; archivados?: string; mailing?: string }>;
 }) {
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const { usuaria, marca } = await requireAccesoMarca(slug, "leads");
@@ -29,6 +33,8 @@ export default async function LeadsPage({
   const q = (sp.q ?? "").trim().toLowerCase();
   const origen = leerFiltroOrigen(sp);
   const archivados = sp.archivados === "1";
+  // Los archivados no reciben campañas: en esa vista el filtro no aplica.
+  const mailing = sp.mailing === "1" && !archivados;
 
   const [cargados, usuarias, enArchivo] = await Promise.all([
     listLeads(marca.id, { fase, asignadaA: mias ? usuaria.id : undefined, archivados }),
@@ -38,14 +44,17 @@ export default async function LeadsPage({
   const opciones = opcionesOrigen(cargados);
   const todos = filtrarPorOrigen(cargados, origen);
   const nombres = Object.fromEntries(usuarias.map((u) => [u.id, u.nombre]));
-  const leads = q
+  const buscados = q
     ? todos.filter((l) => [l.negocio, l.ciudad, l.contacto, l.email, l.telefono, l.canal, l.campana, l.origen_detalle].some((v) => v?.toLowerCase().includes(q)))
     : todos;
+  const conMailing = buscados.filter(admiteMailing);
+  const conEmail = buscados.filter((l) => texto(l.email)).length;
+  const leads = mailing ? conMailing : buscados;
   const ahora = ahoraMadrid();
 
   const filtro = (extra: Record<string, string | undefined>) => {
     const p = new URLSearchParams();
-    const valores = { fase, mias: mias ? "1" : undefined, q: q || undefined, ...origen, archivados: archivados ? "1" : undefined, ...extra };
+    const valores = { fase, mias: mias ? "1" : undefined, q: q || undefined, ...origen, archivados: archivados ? "1" : undefined, mailing: mailing ? "1" : undefined, ...extra };
     Object.entries(valores).forEach(([k, v]) => v && p.set(k, v));
     const s = p.toString();
     return `/panel/ventas/${slug}/leads${s ? `?${s}` : ""}`;
@@ -71,13 +80,23 @@ export default async function LeadsPage({
             <Link key={f} href={filtro({ fase: f })} style={chip(fase === f)}>{FASE_LABELS[f]}</Link>
           ))}
           <Link href={filtro({ mias: mias ? undefined : "1" })} style={chip(mias)}>Solo mías</Link>
-          <Link href={filtro({ archivados: archivados ? undefined : "1" })} style={chip(archivados)}>
+          {!archivados && (
+            <Link
+              href={filtro({ mailing: mailing ? undefined : "1" })}
+              style={chip(mailing)}
+              title="Consentimiento «sí», con email y sin rebotes ni quejas"
+            >
+              Mailing comercial ({conMailing.length})
+            </Link>
+          )}
+          <Link href={filtro({ archivados: archivados ? undefined : "1", mailing: undefined })} style={chip(archivados)}>
             {archivados ? "Ver activos" : `Archivados (${enArchivo?.length ?? 0})`}
           </Link>
           <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <form action={`/panel/ventas/${slug}/leads`}>
               {fase && <input type="hidden" name="fase" value={fase} />}
               {mias && <input type="hidden" name="mias" value="1" />}
+              {mailing && <input type="hidden" name="mailing" value="1" />}
               <input name="q" defaultValue={q} placeholder="Buscar negocio, ciudad, campaña…" style={{ padding: "6px 10px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 13 }} />
             </form>
             <BotonesLeads slug={slug} />
@@ -87,8 +106,14 @@ export default async function LeadsPage({
           accion={`/panel/ventas/${slug}/leads`}
           valores={origen}
           opciones={opciones}
-          ocultos={{ fase, mias: mias ? "1" : undefined, q: q || undefined, archivados: archivados ? "1" : undefined }}
+          ocultos={{ fase, mias: mias ? "1" : undefined, q: q || undefined, archivados: archivados ? "1" : undefined, mailing: mailing ? "1" : undefined }}
         />
+
+        {mailing && (
+          <p style={{ margin: 0, fontSize: 13, color: "#334155", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "8px 12px" }}>
+            <strong>{conMailing.length}</strong> de {conEmail} leads con email admiten un mailing comercial: tienen el consentimiento marcado como «sí» y su correo no ha rebotado ni nos ha marcado como spam. Los que no lo tienen se pueden pedir y marcar en la ficha, en «Origen».
+          </p>
+        )}
 
         <section style={{ ...tarjeta, padding: 0, overflowX: "auto" }}>
           <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 1280 }}>
