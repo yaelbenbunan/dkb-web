@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { claveQuiz, informeQuiz, notaQuiz, resumenQuiz, valoresQuiz, type CampoQuiz } from "../ventas/quiz";
 import { claveDatoLead, parsearSecuencia, validarSecuencia, type Secuencia } from "../ventas/secuencias";
 import { iniciarSimulacion, responderBoton, responderTexto, type EstadoSimulacion } from "../ventas/simulador";
-import { PLANTILLAS, SECUENCIA_QUIZ_SALUD_A } from "../ventas/secuencias-plantilla";
+import {
+  PLANTILLAS,
+  SECUENCIA_QUIZ_SALUD_A,
+  SECUENCIA_QUIZ_SALUD_B,
+  SECUENCIA_QUIZ_SALUD_C,
+} from "../ventas/secuencias-plantilla";
 
 const datos = (valores: Partial<Record<CampoQuiz, string>>): Record<string, string> =>
   Object.fromEntries(Object.entries(valores).map(([campo, valor]) => [claveQuiz(campo as CampoQuiz), valor as string]));
@@ -120,8 +125,20 @@ describe("validarSecuencia con quiz", () => {
   });
 });
 
-describe("plantilla «Chequeo de salud digital (variante A)»", () => {
-  const s = SECUENCIA_QUIZ_SALUD_A;
+/** Respuestas de cada pregunta por campo: el orden de los pasos cambia entre
+ *  variantes, las opciones no. */
+const RESPUESTA = {
+  quiz_visibilidad: "Solo ficha Google",
+  quiz_captacion: "Boca a boca",
+  quiz_atencion: "En minutos",
+} as const;
+
+describe.each([
+  ["A", SECUENCIA_QUIZ_SALUD_A, ["quiz_visibilidad", "quiz_captacion", "quiz_atencion"]],
+  ["B", SECUENCIA_QUIZ_SALUD_B, ["quiz_atencion", "quiz_captacion", "quiz_visibilidad"]],
+  ["C", SECUENCIA_QUIZ_SALUD_C, ["quiz_captacion", "quiz_visibilidad", "quiz_atencion"]],
+] as const)("plantilla del chequeo, variante %s", (_v, s, orden) => {
+  const respuestas = orden.map((campo) => RESPUESTA[campo]);
 
   it("se ofrece al crear una secuencia, parsea y no tiene avisos", () => {
     expect(PLANTILLAS.some((p) => p.secuencia === s)).toBe(true);
@@ -129,7 +146,7 @@ describe("plantilla «Chequeo de salud digital (variante A)»", () => {
     expect(validarSecuencia(s)).toEqual([]);
   });
 
-  it("cada pregunta guarda siempre en el mismo campo, con un botón por opción", () => {
+  it("pregunta los cuatro datos en su orden, con un botón por opción", () => {
     const campos = ["p1", "p2", "p3", "p4"].map((id) => {
       const botones = s.pasos[id].botones;
       const campo = botones[0].guardar_en_lead?.campo;
@@ -137,11 +154,13 @@ describe("plantilla «Chequeo de salud digital (variante A)»", () => {
       expect(new Set(botones.map((b) => b.guardar_en_lead?.valor)).size, id).toBe(3);
       return campo;
     });
-    expect(campos).toEqual(["quiz_visibilidad", "quiz_captacion", "quiz_atencion", "quiz_temperatura"]);
+    expect(campos).toEqual([...orden, "quiz_temperatura"]);
+    expect(s.pasos.p1.texto).toContain("Paula García");
+    expect(s.pasos.p1.texto).toContain("dinkbit.es/privacidad");
   });
 
-  it("al terminar crea el lead y manda el informe con la nota, sin huecos", () => {
-    const e = pulsar(s, ["Solo ficha Google", "Boca a boca", "En minutos", "Ya mismo"]);
+  it("las mismas respuestas dan la misma nota que en cualquier otra variante", () => {
+    const e = pulsar(s, [...respuestas, "Ya mismo"]);
     expect(e.crearLead).toBe(true);
     expect(e.pasoActual).toBe("informe_ya");
     expect(e.faltanVariables).toEqual([]);
@@ -151,23 +170,19 @@ describe("plantilla «Chequeo de salud digital (variante A)»", () => {
   });
 
   it("cada temperatura lleva a su cierre", () => {
-    expect(pulsar(s, ["Web y ficha Google", "Google / mi web", "En minutos", "En 1-3 meses"]).pasoActual).toBe(
-      "informe_pronto",
-    );
-    expect(pulsar(s, ["Nada o casi nada", "Boca a boca", "Al día siguiente", "Solo estoy mirando"]).pasoActual).toBe(
-      "informe_mirando",
-    );
+    expect(pulsar(s, [...respuestas, "En 1-3 meses"]).pasoActual).toBe("informe_pronto");
+    expect(pulsar(s, [...respuestas, "Solo estoy mirando"]).pasoActual).toBe("informe_mirando");
   });
 
   it("pedir llamada avisa a la comercial y mueve el lead a interesado", () => {
-    const e = pulsar(s, ["Solo ficha Google", "Boca a boca", "En minutos", "Ya mismo", "Llamadme hoy"]);
+    const e = pulsar(s, [...respuestas, "Ya mismo", "Llamadme hoy"]);
     expect(e.avisos).toContain("Avisar a la comercial");
     expect(e.fase).toBe("interesado");
     expect(e.conversacion.at(-1)?.texto).toContain("Te llamo hoy");
   });
 
   it("«Solo estoy mirando» recoge la web escrita y avisa", () => {
-    const mirando = pulsar(s, ["Nada o casi nada", "Boca a boca", "Al día siguiente", "Solo estoy mirando"]);
+    const mirando = pulsar(s, [...respuestas, "Solo estoy mirando"]);
     const e = responderTexto(s, mirando, "minegocio.es", CTX);
     expect(e.datos.web).toBe("minegocio.es");
     expect(e.avisos).toContain("Avisar a la comercial");
