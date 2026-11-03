@@ -20,6 +20,12 @@ const buscarLeadPorContactoMock = vi.fn();
 const crearLeadsMock = vi.fn();
 const listExclusionesMock = vi.fn();
 
+const avisosEmail = vi.hoisted(() => [] as Array<{ leadId: string; nota: string | null }>);
+vi.mock("../aviso-email", () => ({
+  enviarAvisoLead: async (leadId: string, nota: string | null) => {
+    avisosEmail.push({ leadId, nota });
+  },
+}));
 vi.mock("../../ventas/db", () => ({
   getMarcaPorSlug: (...args: unknown[]) => getMarcaPorSlugMock(...args),
   registrarActividad: (...args: unknown[]) => registrarActividadMock(...args),
@@ -3219,6 +3225,7 @@ describe("lead tras el filtro", () => {
   });
 
   it("el chequeo de salud digital crea el lead al terminar, le manda su informe y deja el resumen en la ficha", async () => {
+    avisosEmail.length = 0;
     const { deps, salientes, leadsCreados, actividades, conversaciones } = depsFalsas({
       secuencias: [{ ...FILTRO_HYDRUP, id: "s-quiz", anuncios: ["AD-Q"], pasos: SECUENCIA_QUIZ_SALUD_A }],
     });
@@ -3241,6 +3248,11 @@ describe("lead tras el filtro", () => {
     const nota = actividades.find((a) => a.tipo === "nota")?.nota;
     expect(nota).toContain("Chequeo de salud digital: 50/100");
     expect(nota).toContain("quiere empezar ya");
+    // Terminar el quiz no es pedir llamada: todavía no hay correo.
+    expect(avisosEmail).toHaveLength(0);
+
+    await procesarWebhook({ cuerpo: enHydrup(pulsar("wamid.Q5", 1, "Llamadme hoy")), deps });
+    expect(avisosEmail).toEqual([{ leadId: "lead-1", nota: expect.stringContaining("Llamadme hoy") }]);
   });
 
   it("una secuencia sin crear_lead sigue creando el lead con el primer mensaje", async () => {

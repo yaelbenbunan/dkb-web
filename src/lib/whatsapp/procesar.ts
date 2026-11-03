@@ -62,6 +62,7 @@ import {
 import { clasificarLeads } from "../ventas/leads-csv";
 import { claveDatoLead, difiereLead, MAX_DATO_LEAD, parsearSecuencia } from "../ventas/secuencias";
 import { resumenQuiz } from "../ventas/quiz";
+import { enviarAvisoLead } from "./aviso-email";
 import {
   iniciarSimulacion,
   responderBoton,
@@ -910,6 +911,12 @@ async function avisarComercial(
 ): Promise<void> {
   try {
     const frase = fraseDeAviso(cambios);
+    // Pasa a una persona: además de la nota, un correo al momento (solo
+    // Dinkbit, ver aviso-email.ts) para que un «Llamadme hoy» no espere a que
+    // alguien abra el panel.
+    if (cambios.avisos && cambios.avisos.length > 0) {
+      await enviarAvisoLead(leadId, notaAvisoComercial(frase, cambios.respuestaLead));
+    }
     const resultado = await registrarActividad({
       leadId,
       usuariaId: null,
