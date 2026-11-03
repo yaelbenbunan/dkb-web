@@ -4,7 +4,7 @@ import type { MensajeroWhatsApp, ResultadoEnvio } from "../mensajero";
 import type { Marca, SecuenciaRow } from "../../ventas/db";
 import type { Secuencia } from "../../ventas/secuencias";
 import type { Fase, TipoNegocio } from "../../ventas/dominio";
-import { SECUENCIA_DENTAL, SECUENCIA_PSICOLOGIA } from "../../ventas/secuencias-plantilla";
+import { SECUENCIA_DENTAL, SECUENCIA_PSICOLOGIA, SECUENCIA_QUIZ_SALUD_A } from "../../ventas/secuencias-plantilla";
 
 // `procesar.ts` llama directamente (fuera de `Deps`) a `getMarcaPorSlug` y
 // `registrarActividad` de `ventas/db.ts` — son wiring de dominio, no del
@@ -3216,6 +3216,31 @@ describe("lead tras el filtro", () => {
     await procesarWebhook({ cuerpo: nombreDelNegocio(), deps });
 
     expect(leadsCreados).toEqual([expect.objectContaining({ origen: "anuncio", anuncio: "AD-F", negocio: "Clínica Sonrisas" })]);
+  });
+
+  it("el chequeo de salud digital crea el lead al terminar, le manda su informe y deja el resumen en la ficha", async () => {
+    const { deps, salientes, leadsCreados, actividades, conversaciones } = depsFalsas({
+      secuencias: [{ ...FILTRO_HYDRUP, id: "s-quiz", anuncios: ["AD-Q"], pasos: SECUENCIA_QUIZ_SALUD_A }],
+    });
+    const anuncio = mensajeDeAnuncio({ id: "wamid.Q0", from: WA, referral: { source_id: "AD-Q", headline: "Chequeo" } });
+
+    await procesarWebhook({ cuerpo: enHydrup(anuncio), deps });
+    await procesarWebhook({ cuerpo: enHydrup(pulsar("wamid.Q1", 2, "Solo ficha Google")), deps });
+    await procesarWebhook({ cuerpo: enHydrup(pulsar("wamid.Q2", 1, "Boca a boca")), deps });
+    await procesarWebhook({ cuerpo: enHydrup(pulsar("wamid.Q3", 1, "En minutos")), deps });
+    expect(leadsCreados).toHaveLength(0);
+
+    await procesarWebhook({ cuerpo: enHydrup(pulsar("wamid.Q4", 1, "Ya mismo")), deps });
+
+    expect(leadsCreados).toEqual([expect.objectContaining({ origen: "anuncio", anuncio: "AD-Q" })]);
+    const informe = salientes.at(-1);
+    expect(informe?.texto).toContain("*Tu salud digital: 50/100*");
+    expect(informe?.texto).not.toContain("{{");
+    expect(informe?.botones).toEqual(["Llamadme hoy", "Mejor mañana", "Prefiero por aquí"]);
+    expect(conversaciones.get(CONV)?.paso_actual).toBe("informe_ya");
+    const nota = actividades.find((a) => a.tipo === "nota")?.nota;
+    expect(nota).toContain("Chequeo de salud digital: 50/100");
+    expect(nota).toContain("quiere empezar ya");
   });
 
   it("una secuencia sin crear_lead sigue creando el lead con el primer mensaje", async () => {

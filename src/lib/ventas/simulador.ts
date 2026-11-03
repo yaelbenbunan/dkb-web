@@ -9,6 +9,7 @@
  */
 
 import type { Fase } from "./dominio";
+import { valoresQuiz } from "./quiz";
 import { claveDatoLead, MAX_DATO_LEAD, renderizarTexto, type Ruta, type Secuencia } from "./secuencias";
 
 const AVISO_AVISAR = "Avisar a la comercial";
@@ -55,7 +56,9 @@ function entrarEnPaso(s: Secuencia, id: string, estado: EstadoSimulacion, ctx: C
     };
   }
 
-  const { texto, faltan } = renderizarTexto(paso.texto, ctx.valores);
+  // El resultado del quiz sale de lo que el contacto ha ido pulsando, no del
+  // contexto: se calcula al entrar en el paso, con los datos de este momento.
+  const { texto, faltan } = renderizarTexto(paso.texto, { ...ctx.valores, ...valoresQuiz(estado.datos) });
   const entrada: EntradaConversacion = {
     de: "marca",
     texto,

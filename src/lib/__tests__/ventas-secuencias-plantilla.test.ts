@@ -139,8 +139,8 @@ describe("secuenciaDePlantilla", () => {
 });
 
 describe("PLANTILLAS", () => {
-  it("ofrece las dos con un nombre para el selector del panel", () => {
-    expect(PLANTILLAS.map((p) => p.clave)).toEqual(["dental", "psicologia"]);
+  it("ofrece las tres con un nombre para el selector del panel", () => {
+    expect(PLANTILLAS.map((p) => p.clave)).toEqual(["dental", "psicologia", "quiz-salud-a"]);
     for (const plantilla of PLANTILLAS) {
       expect(plantilla.nombre.length).toBeGreaterThan(0);
     }

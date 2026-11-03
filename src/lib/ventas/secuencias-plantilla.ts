@@ -169,6 +169,132 @@ export const SECUENCIA_PSICOLOGIA: Secuencia = {
   },
 };
 
+/**
+ * Chequeo de salud digital, variante A (tono cercano, orden Visibilidad →
+ * Captación → Atención → Temperatura). Es la que acompaña al anuncio «Haz un
+ * chequeo gratis de la salud digital de tu negocio»: la promesa del anuncio
+ * es literalmente lo que recibe al terminar.
+ *
+ * Las demás variantes del A/B se sacan duplicando esta y cambiando orden y
+ * tono, NUNCA las opciones: cada botón guarda su nivel con `guardar_en_lead`
+ * en un campo `quiz_*`, y es eso lo que hace comparables las variantes (ver
+ * `quiz.ts`).
+ *
+ * - La bienvenida y la primera pregunta van en el MISMO mensaje: un «Empezar»
+ *   antes sería un clic más donde se pierde gente.
+ * - El lead se crea al contestar la última pregunta (`crear_lead` en los tres
+ *   botones de `p4`): quien abandona a medias no entra en el CRM.
+ * - El informe (`{{quiz_informe}}`) se arma con las respuestas al entrar en
+ *   `informe_*`, y hay uno por temperatura porque cambia el cierre.
+ * - `avisar` va en los botones del cierre y no en los pasos `cierre_*`, por el
+ *   orden de `aplicarRuta` (ver la cabecera de este fichero).
+ */
+export const SECUENCIA_QUIZ_SALUD_A: Secuencia = {
+  version: 1,
+  inicio: "p1",
+  pasos: {
+    p1: {
+      tipo: "mensaje",
+      texto:
+        "¡Hola! 👋 Soy Paula García, de Dinkbit. Vamos con tu chequeo de salud digital: son 4 preguntas y al final te mando tu informe con nota.\n\n" +
+        "*1/4 · Si alguien busca tu negocio en Google ahora mismo, ¿qué encuentra?*\n\n" +
+        "_Tus respuestas solo las usamos para preparar tu informe: dinkbit.es/privacidad_",
+      botones: [
+        { texto: "Web y ficha Google", guardar_en_lead: { campo: "quiz_visibilidad", valor: "verde" }, ruta: { ir_a: "p2" } },
+        { texto: "Solo ficha Google", guardar_en_lead: { campo: "quiz_visibilidad", valor: "amarillo" }, ruta: { ir_a: "p2" } },
+        { texto: "Nada o casi nada", guardar_en_lead: { campo: "quiz_visibilidad", valor: "rojo" }, ruta: { ir_a: "p2" } },
+      ],
+    },
+    p2: {
+      tipo: "mensaje",
+      texto: "Apuntado ✅\n\n*2/4 · ¿Por dónde te llegan la mayoría de clientes?*",
+      botones: [
+        { texto: "Boca a boca", guardar_en_lead: { campo: "quiz_captacion", valor: "rojo" }, ruta: { ir_a: "p3" } },
+        { texto: "Google / mi web", guardar_en_lead: { campo: "quiz_captacion", valor: "verde" }, ruta: { ir_a: "p3" } },
+        { texto: "Redes o anuncios", guardar_en_lead: { campo: "quiz_captacion", valor: "amarillo" }, ruta: { ir_a: "p3" } },
+      ],
+    },
+    p3: {
+      tipo: "mensaje",
+      texto: "*3/4 · Te escribe alguien preguntando precio. ¿Cuándo le contestas normalmente?*",
+      botones: [
+        { texto: "En minutos", guardar_en_lead: { campo: "quiz_atencion", valor: "verde" }, ruta: { ir_a: "p4" } },
+        { texto: "En unas horas", guardar_en_lead: { campo: "quiz_atencion", valor: "amarillo" }, ruta: { ir_a: "p4" } },
+        { texto: "Al día siguiente", guardar_en_lead: { campo: "quiz_atencion", valor: "rojo" }, ruta: { ir_a: "p4" } },
+      ],
+    },
+    p4: {
+      tipo: "mensaje",
+      texto: "Última 🙌\n\n*4/4 · Si el informe te muestra mejoras, ¿cuándo te gustaría ponerte con ello?*",
+      botones: [
+        { texto: "Ya mismo", guardar_en_lead: { campo: "quiz_temperatura", valor: "ya" }, ruta: { crear_lead: true, ir_a: "informe_ya" } },
+        { texto: "En 1-3 meses", guardar_en_lead: { campo: "quiz_temperatura", valor: "pronto" }, ruta: { crear_lead: true, ir_a: "informe_pronto" } },
+        { texto: "Solo estoy mirando", guardar_en_lead: { campo: "quiz_temperatura", valor: "mirando" }, ruta: { crear_lead: true, ir_a: "informe_mirando" } },
+      ],
+    },
+
+    informe_ya: {
+      tipo: "mensaje",
+      texto: "{{quiz_informe}}\n\n¿Te explico en 10 minutos cómo arreglar lo que está en rojo? Sin compromiso.",
+      botones: [
+        { texto: "Llamadme hoy", ruta: { avisar: true, fase: "interesado", ir_a: "cierre_hoy" } },
+        { texto: "Mejor mañana", ruta: { avisar: true, fase: "interesado", ir_a: "cierre_manana" } },
+        { texto: "Prefiero por aquí", ruta: { avisar: true, fase: "interesado", ir_a: "cierre_aqui" } },
+      ],
+    },
+    informe_pronto: {
+      tipo: "mensaje",
+      texto: "{{quiz_informe}}\n\nCuando quieras te explico cómo arreglarlo, son 10 minutos.",
+      botones: [
+        { texto: "Sí, llamadme", ruta: { avisar: true, fase: "interesado", ir_a: "cierre_hoy" } },
+        { texto: "Prefiero por aquí", ruta: { avisar: true, fase: "interesado", ir_a: "cierre_aqui" } },
+        { texto: "Más adelante", ruta: { avisar: true, fase: "volver_a_llamar", ir_a: "cierre_mas_adelante" } },
+      ],
+    },
+    // Sin botones: lo que escriba (el enlace de su web, o «no tengo») es la
+    // respuesta, y la ruta propia del paso avisa a Paula con ella.
+    informe_mirando: {
+      tipo: "mensaje",
+      texto:
+        "{{quiz_informe}}\n\n¡Perfecto! Si quieres, mándame el enlace de tu web y te digo gratis 3 cosas que mejoraría 👇",
+      botones: [],
+      guardar_respuesta_en: "web",
+      ruta: { avisar: true, ir_a: "cierre_web" },
+    },
+
+    cierre_hoy: {
+      tipo: "mensaje",
+      texto: "¡Hecho! Te llamo hoy. Si te va mejor a una hora concreta, dímela por aquí 😊",
+      botones: [],
+      ruta: { terminar: true },
+    },
+    cierre_manana: {
+      tipo: "mensaje",
+      texto: "¡Perfecto! Te llamo mañana. Si te va mejor a una hora concreta, dímela por aquí 😊",
+      botones: [],
+      ruta: { terminar: true },
+    },
+    cierre_aqui: {
+      tipo: "mensaje",
+      texto: "¡Genial! Cuéntame: ¿qué te gustaría mejorar primero? Te contesto en un rato.",
+      botones: [],
+      ruta: { terminar: true },
+    },
+    cierre_mas_adelante: {
+      tipo: "mensaje",
+      texto: "¡Sin problema! Te escribo más adelante. Si antes te surge cualquier duda, escríbeme por aquí.",
+      botones: [],
+      ruta: { terminar: true },
+    },
+    cierre_web: {
+      tipo: "mensaje",
+      texto: "¡Gracias! Le echo un vistazo y te escribo con las 3 mejoras.",
+      botones: [],
+      ruta: { terminar: true },
+    },
+  },
+};
+
 export interface Plantilla {
   clave: string;
   nombre: string;
@@ -179,6 +305,7 @@ export interface Plantilla {
 export const PLANTILLAS: Plantilla[] = [
   { clave: "dental", nombre: "Captación clínicas dentales", secuencia: SECUENCIA_DENTAL },
   { clave: "psicologia", nombre: "Captación consultas de psicología", secuencia: SECUENCIA_PSICOLOGIA },
+  { clave: "quiz-salud-a", nombre: "Chequeo de salud digital (variante A)", secuencia: SECUENCIA_QUIZ_SALUD_A },
 ];
 
 /**

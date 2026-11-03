@@ -16,6 +16,7 @@
 
 import { z } from "zod";
 import { esFaseDescarte, FASES, TIPOS_NEGOCIO, type Fase } from "./dominio";
+import { AREAS_QUIZ, CAMPOS_QUIZ, esCampoQuiz, valoresDeCampoQuiz, VARIABLES_QUIZ } from "./quiz";
 
 /** Variables siempre disponibles; cada marca puede añadir las suyas. */
 export const VARIABLES_BASE = ["negocio", "contacto", "ciudad", "marca", "remitente"] as const;
@@ -38,8 +39,9 @@ export interface Ruta {
   crear_lead?: boolean;
 }
 
-/** Campos del lead que puede rellenar un botón. */
-export const CAMPOS_LEAD_BOTON = ["tipo_negocio", "cargo"] as const;
+/** Campos del lead que puede rellenar un botón. Los `quiz_*` son las
+ *  respuestas del chequeo de salud digital (ver `quiz.ts`). */
+export const CAMPOS_LEAD_BOTON = ["tipo_negocio", "cargo", ...CAMPOS_QUIZ] as const;
 /** Campos del lead que puede rellenar una respuesta escrita. */
 export const CAMPOS_LEAD_RESPUESTA = ["negocio", "cargo"] as const;
 export type CampoLeadBoton = (typeof CAMPOS_LEAD_BOTON)[number];
@@ -227,7 +229,7 @@ function rutasDelPaso(paso: Paso): Ruta[] {
  */
 export function validarSecuencia(s: Secuencia, variablesExtra: string[] = []): Aviso[] {
   const avisos: Aviso[] = [];
-  const variablesValidas = new Set<string>([...VARIABLES_BASE, ...variablesExtra]);
+  const variablesValidas = new Set<string>([...VARIABLES_BASE, ...VARIABLES_QUIZ, ...variablesExtra]);
   const idsPasos = new Set(Object.keys(s.pasos));
 
   // 1. El inicio existe entre los pasos.
@@ -289,6 +291,13 @@ export function validarSecuencia(s: Secuencia, variablesExtra: string[] = []): A
           grave: true,
         });
       }
+      if (g && esCampoQuiz(g.campo) && !valoresDeCampoQuiz(g.campo).includes(g.valor)) {
+        avisos.push({
+          paso: id,
+          mensaje: `El botón «${boton.texto}» guarda en el quiz un valor que no existe («${g.valor}»).`,
+          grave: true,
+        });
+      }
     }
 
     // 12. `campo_lead` solo se usa con una respuesta escrita (paso sin botones).
@@ -307,6 +316,28 @@ export function validarSecuencia(s: Secuencia, variablesExtra: string[] = []): A
         mensaje: "Solo el primer paso puede ser una plantilla: el resto va dentro de la ventana de 24 horas.",
         grave: false,
       });
+    }
+  }
+
+  // 14. Un paso que enseña el resultado del quiz necesita que la secuencia
+  // pregunte las tres áreas que puntúan: sin alguna, la nota no se puede
+  // calcular y al contacto le llegaría el hueco «{{quiz_informe}}» tal cual.
+  const usaQuiz = Object.entries(s.pasos).filter(([, paso]) =>
+    variablesEnTexto(paso.texto).some((v) => (VARIABLES_QUIZ as readonly string[]).includes(v)),
+  );
+  if (usaQuiz.length > 0) {
+    const preguntadas = new Set<string | undefined>(
+      Object.values(s.pasos).flatMap((paso) => paso.botones.map((b) => b.guardar_en_lead?.campo)),
+    );
+    const faltan = AREAS_QUIZ.filter((area) => !preguntadas.has(`quiz_${area}`));
+    if (faltan.length > 0) {
+      for (const [id] of usaQuiz) {
+        avisos.push({
+          paso: id,
+          mensaje: `Este paso enseña el resultado del quiz, pero ningún botón guarda ${faltan.join(", ")}: la nota no se podría calcular.`,
+          grave: true,
+        });
+      }
     }
   }
 

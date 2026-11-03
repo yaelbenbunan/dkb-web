@@ -16,12 +16,29 @@ import {
   type Ruta,
   type Secuencia,
 } from "@/lib/ventas/secuencias";
+import { esCampoQuiz, valoresDeCampoQuiz, VARIABLES_QUIZ, type CampoQuiz } from "@/lib/ventas/quiz";
 import { Mensaje } from "../../../../_componentes/Mensaje";
 import { botonPrimario, botonSecundario, campo, etiqueta, tarjeta, titulo } from "../../../../_componentes/estilos";
 import { Simulador } from "./Simulador";
 
 type Pestana = "editar" | "simular";
 type EstadoSecuencia = SecuenciaRow["estado"];
+
+const CAMPO_QUIZ_LABELS: Record<CampoQuiz, string> = {
+  quiz_visibilidad: "Quiz · Visibilidad",
+  quiz_captacion: "Quiz · Captación",
+  quiz_atencion: "Quiz · Atención",
+  quiz_temperatura: "Quiz · Cuándo empezar",
+};
+
+const VALOR_QUIZ_LABELS: Record<string, string> = {
+  verde: "🟢 Verde",
+  amarillo: "🟡 Amarillo",
+  rojo: "🔴 Rojo",
+  ya: "Ya mismo",
+  pronto: "En 1-3 meses",
+  mirando: "Solo mirando",
+};
 
 const ESTADO_LABELS: Record<EstadoSecuencia, string> = { borrador: "Borrador", activa: "Activa", archivada: "Archivada" };
 const ESTADO_COLORES: Record<EstadoSecuencia, { bg: string; text: string }> = {
@@ -206,15 +223,30 @@ function GuardarEnLeadEditor({
           disabled={disabled}
           onChange={(e) => {
             const campo = e.target.value as CampoLeadBoton | "";
-            onChange(campo ? { campo, valor: campo === "tipo_negocio" ? "otro" : boton.texto } : undefined);
+            const valor =
+              campo === "tipo_negocio" ? "otro" : campo && esCampoQuiz(campo) ? valoresDeCampoQuiz(campo)[0] : boton.texto;
+            onChange(campo ? { campo, valor } : undefined);
           }}
           style={campo}
         >
           <option value="">— Nada —</option>
           <option value="tipo_negocio">Tipo de negocio</option>
           <option value="cargo">Cargo</option>
+          {(Object.keys(CAMPO_QUIZ_LABELS) as CampoQuiz[]).map((c) => (
+            <option key={c} value={c}>{CAMPO_QUIZ_LABELS[c]}</option>
+          ))}
         </select>
       </label>
+      {g && esCampoQuiz(g.campo) && (
+        <label style={{ ...etiqueta, flex: "1 1 160px" }}>
+          Respuesta
+          <select value={g.valor} disabled={disabled} onChange={(e) => onChange({ campo: g.campo, valor: e.target.value })} style={campo}>
+            {valoresDeCampoQuiz(g.campo).map((v) => (
+              <option key={v} value={v}>{VALOR_QUIZ_LABELS[v] ?? v}</option>
+            ))}
+          </select>
+        </label>
+      )}
       {g?.campo === "tipo_negocio" && (
         <label style={{ ...etiqueta, flex: "1 1 160px" }}>
           Tipo
@@ -498,7 +530,7 @@ export function EditorSecuencia({
                   <div>
                     <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>Variables disponibles (pulsa para insertarla):</span>
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
-                      {VARIABLES_BASE.map((v) => (
+                      {[...VARIABLES_BASE, ...VARIABLES_QUIZ].map((v) => (
                         <button key={v} type="button" disabled={!editable} onClick={() => insertarVariable(v)} style={chipVariable}>
                           {`{{${v}}}`}
                         </button>

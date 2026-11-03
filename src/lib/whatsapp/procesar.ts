@@ -61,6 +61,7 @@ import {
 } from "../ventas/db";
 import { clasificarLeads } from "../ventas/leads-csv";
 import { claveDatoLead, difiereLead, MAX_DATO_LEAD, parsearSecuencia } from "../ventas/secuencias";
+import { resumenQuiz } from "../ventas/quiz";
 import {
   iniciarSimulacion,
   responderBoton,
@@ -511,6 +512,8 @@ function notaDelFiltro(datos: Record<string, string>): string {
   if (p.negocio) partes.push(`Negocio: «${p.negocio}»`);
   if (p.tipo_negocio) partes.push(`Tipo de negocio: ${TIPO_NEGOCIO_LABELS[p.tipo_negocio]}`);
   if (p.cargo) partes.push(`Cargo: «${p.cargo}»`);
+  const quiz = resumenQuiz(datos);
+  if (quiz) partes.push(quiz);
   const yaDichas = new Set([p.negocio, p.cargo].filter(Boolean));
   const otras = Object.entries(datos)
     .filter(([clave, valor]) => !clave.startsWith("lead.") && !yaDichas.has(valor.trim()))
