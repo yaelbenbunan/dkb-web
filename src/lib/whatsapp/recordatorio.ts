@@ -1,7 +1,8 @@
 import "server-only";
 import { CONTACT_INFO } from "../contact-info";
 import { MARCA_DINKBIT_SLUG } from "../ventas/dominio";
-import { getMarcaPorSlug } from "../ventas/db";
+import { getMarcaPorSlug, listSecuencias } from "../ventas/db";
+import { parsearSecuencia, usaQuiz } from "../ventas/secuencias";
 import { cerrarRecordatorio, listConversacionesEnBot, listMensajes, reclamarRecordatorio } from "./db";
 import { crearMensajero, type ResultadoEnvio } from "./mensajero";
 import { ventanaAbierta } from "./ventana";
@@ -52,6 +53,27 @@ export const RECORDATORIOS: ReadonlyArray<{ horas: number; texto: string }> = [
   },
 ];
 
+/**
+ * Los mismos dos avisos para quien llegó al chequeo de salud digital y no
+ * contestó la primera pregunta. Los de arriba ofrecen la demo de Growth, que
+ * a quien pidió su nota no le dice nada. Los botones de la primera pregunta
+ * siguen pulsables en WhatsApp, así que el primero le manda a ellos.
+ */
+export const RECORDATORIOS_QUIZ: ReadonlyArray<{ horas: number; texto: string }> = [
+  {
+    horas: 3,
+    texto:
+      "Hola de nuevo 👋 Tu chequeo de salud digital sigue a medias: son 4 preguntas y en 1 minuto tienes tu nota y tus mejoras. " +
+      "Pulsa una respuesta del mensaje de arriba y seguimos 👆",
+  },
+  {
+    horas: 8,
+    texto:
+      "Soy Paula otra vez, y es la última vez que insisto 🙂 Si ahora no es buen momento, dime qué día te viene mejor y te escribo entonces. " +
+      "Y si prefieres verlo hablando, contesta a este mensaje y te llamo.",
+  },
+];
+
 /** La hora que marca el reloj en Madrid, no en el servidor (que va en UTC). */
 export function enHorario(ahora: Date): boolean {
   const hora = Number(
@@ -86,12 +108,13 @@ function esRecordatorio(payload: unknown): boolean {
 export function recordatorioPendiente(
   mensajes: MensajeParaRecordatorio[],
   ahora: Date,
+  recordatorios: ReadonlyArray<{ horas: number; texto: string }> = RECORDATORIOS,
 ): { numero: number; texto: string } | null {
   const [saludo, ...resto] = mensajes.filter((m) => m.direccion === "saliente");
   if (!saludo || saludo.estado === "fallido" || esRecordatorio(saludo.payload)) return null;
   if (!resto.every((m) => esRecordatorio(m.payload))) return null;
 
-  const siguiente = RECORDATORIOS[resto.length];
+  const siguiente = recordatorios[resto.length];
   if (!siguiente) return null;
 
   const enviadoEn = new Date(saludo.created_at).getTime();
@@ -108,7 +131,12 @@ export function recordatorioPendiente(
 
 export interface DepsRecordatorio {
   getMarca(): Promise<{ id: string } | null>;
-  listCandidatas(marcaId: string, ahora: Date): Promise<Array<{ id: string; wa_id: string; ventana_hasta: string | null }>>;
+  listCandidatas(
+    marcaId: string,
+    ahora: Date,
+  ): Promise<Array<{ id: string; wa_id: string; ventana_hasta: string | null; secuencia_id?: string | null }>>;
+  /** Ids de las secuencias de la marca que son un chequeo (`usaQuiz`). */
+  secuenciasQuiz(marcaId: string): Promise<Set<string>>;
   listMensajes(conversacionId: string): Promise<MensajeParaRecordatorio[]>;
   /** Apunta el recordatorio ANTES de enviarlo. `null` si otra pasada ya lo
    *  había apuntado: es lo que impide mandarlo dos veces. */
@@ -122,6 +150,14 @@ export function depsReales(): DepsRecordatorio {
   return {
     getMarca: () => getMarcaPorSlug(MARCA_DINKBIT_SLUG),
     listCandidatas: listConversacionesEnBot,
+    async secuenciasQuiz(marcaId) {
+      const ids = new Set<string>();
+      for (const fila of await listSecuencias(marcaId)) {
+        const parseada = parsearSecuencia(fila.pasos);
+        if (parseada.ok && usaQuiz(parseada.secuencia)) ids.add(fila.id);
+      }
+      return ids;
+    },
     listMensajes,
     reclamar: reclamarRecordatorio,
     enviarTexto: (waId, texto) => mensajero.enviarTexto(waId, texto),
@@ -139,12 +175,22 @@ export async function enviarRecordatoriosPendientes(
   const marca = await deps.getMarca();
   if (!marca) return resultado;
 
-  for (const conversacion of await deps.listCandidatas(marca.id, ahora)) {
+  const candidatas = await deps.listCandidatas(marca.id, ahora);
+  if (candidatas.length === 0) return resultado;
+  // Si no se pueden leer las secuencias, se sigue con los textos de siempre:
+  // un fallo aquí no puede dejar a todas las conversaciones sin recordatorio.
+  const deQuiz = await deps.secuenciasQuiz(marca.id).catch((e) => {
+    console.error("[whatsapp/recordatorio] no se pudieron leer las secuencias", e);
+    return new Set<string>();
+  });
+
+  for (const conversacion of candidatas) {
     // Cada conversación por separado: un fallo con una no puede dejar sin
     // recordatorio a las demás.
     try {
       if (!ventanaAbierta(conversacion.ventana_hasta, ahora)) continue;
-      const pendiente = recordatorioPendiente(await deps.listMensajes(conversacion.id), ahora);
+      const textos = conversacion.secuencia_id && deQuiz.has(conversacion.secuencia_id) ? RECORDATORIOS_QUIZ : RECORDATORIOS;
+      const pendiente = recordatorioPendiente(await deps.listMensajes(conversacion.id), ahora, textos);
       if (!pendiente) continue;
 
       const mensajeId = await deps.reclamar(conversacion.id, pendiente.numero, pendiente.texto);

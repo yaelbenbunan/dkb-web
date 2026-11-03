@@ -3,6 +3,7 @@ import {
   enHorario,
   enviarRecordatoriosPendientes,
   RECORDATORIOS,
+  RECORDATORIOS_QUIZ,
   recordatorioPendiente,
   type DepsRecordatorio,
   type MensajeParaRecordatorio,
@@ -106,10 +107,14 @@ interface ConvFalsa {
   id: string;
   wa_id: string;
   ventana_hasta: string | null;
+  secuencia_id?: string | null;
   mensajes: MensajeParaRecordatorio[];
 }
 
-function depsFalsas(convs: ConvFalsa[], opts: { enviar?: DepsRecordatorio["enviarTexto"]; marca?: { id: string } | null } = {}) {
+function depsFalsas(
+  convs: ConvFalsa[],
+  opts: { enviar?: DepsRecordatorio["enviarTexto"]; marca?: { id: string } | null; quiz?: string[] | "falla" } = {},
+) {
   const enviados: Array<{ waId: string; texto: string }> = [];
   const reclamados = new Set<string>();
   const cerrados: Array<{ mensajeId: string; wamid: string | null; error?: string }> = [];
@@ -119,6 +124,10 @@ function depsFalsas(convs: ConvFalsa[], opts: { enviar?: DepsRecordatorio["envia
     },
     async listCandidatas() {
       return convs;
+    },
+    async secuenciasQuiz() {
+      if (opts.quiz === "falla") throw new Error("boom");
+      return new Set(opts.quiz ?? []);
     },
     async listMensajes(id) {
       return convs.find((c) => c.id === id)?.mensajes ?? [];
@@ -150,6 +159,26 @@ describe("enviarRecordatoriosPendientes", () => {
     expect(await enviarRecordatoriosPendientes(deps, MEDIODIA)).toEqual({ enviados: 1, fallidos: 0 });
     expect(enviados).toEqual([{ waId: "34600111222", texto: PRIMERO.texto }]);
     expect(cerrados).toEqual([{ mensajeId: "msg-600111222", wamid: "wamid.34600111222", error: undefined }]);
+  });
+
+  it("a quien está en el chequeo le recuerda el chequeo, no la demo", async () => {
+    const enQuiz: ConvFalsa = { ...pendiente("1"), secuencia_id: "s-quiz" };
+    const otra: ConvFalsa = { ...pendiente("2"), secuencia_id: "s-dental" };
+    const { deps, enviados } = depsFalsas([enQuiz, otra], { quiz: ["s-quiz"] });
+
+    await enviarRecordatoriosPendientes(deps, MEDIODIA);
+    expect(enviados).toEqual([
+      { waId: "341", texto: RECORDATORIOS_QUIZ[0].texto },
+      { waId: "342", texto: PRIMERO.texto },
+    ]);
+    expect(RECORDATORIOS_QUIZ[0].texto).not.toContain("calendly");
+  });
+
+  it("si no puede leer las secuencias, manda los recordatorios de siempre", async () => {
+    const { deps, enviados } = depsFalsas([{ ...pendiente("1"), secuencia_id: "s-quiz" }], { quiz: "falla" });
+
+    await enviarRecordatoriosPendientes(deps, MEDIODIA);
+    expect(enviados).toEqual([{ waId: "341", texto: PRIMERO.texto }]);
   });
 
   it("de noche no manda nada, ni siquiera mira las conversaciones", async () => {

@@ -224,6 +224,12 @@ export function siguientesPasos(s: Secuencia, id: string): string[] {
   return destinos;
 }
 
+/** Si la secuencia es un chequeo de salud digital: algún botón guarda una
+ *  respuesta del quiz (ver `quiz.ts`). */
+export function usaQuiz(s: Secuencia): boolean {
+  return Object.values(s.pasos).some((paso) => paso.botones.some((b) => b.guardar_en_lead && esCampoQuiz(b.guardar_en_lead.campo)));
+}
+
 /** Si la secuencia crea el lead al pasar el filtro (alguna ruta con
  *  `crear_lead`) en vez de con el primer mensaje. */
 export function difiereLead(s: Secuencia): boolean {
