@@ -460,6 +460,8 @@ export async function guardarSecuencia(input: {
   secuenciaId: string;
   nombre: string;
   pasosJson: unknown;
+  /** Los anuncios que sirve; `undefined` los deja como estaban. */
+  anuncios?: string[];
 }): Promise<Escritura> {
   const nombre = input.nombre.trim();
   if (!nombre) return { ok: false, error: "Ponle nombre a la secuencia." };
@@ -473,8 +475,35 @@ export async function guardarSecuencia(input: {
   const avisos = validarSecuencia(parsed.secuencia);
   const grave = avisos.some((a) => a.grave);
 
-  const patch: { nombre: string; pasos: unknown; estado?: "borrador" } = { nombre, pasos: parsed.secuencia };
+  const patch: { nombre: string; pasos: unknown; estado?: "borrador"; anuncios?: string[] } = {
+    nombre,
+    pasos: parsed.secuencia,
+  };
   if (grave && existente.estado === "activa") patch.estado = "borrador";
+
+  const anunciosCambian =
+    input.anuncios !== undefined && input.anuncios.join(",") !== (existente.anuncios ?? []).join(",");
+  if (anunciosCambian) {
+    // En una activa, cambiar sus anuncios no puede dejar dos activas sirviendo
+    // al mismo lead: `activarSecuencia` archiva a la otra al activar, pero
+    // aquí nadie la archivaría y ganaría la que caiga primera en el array.
+    if (existente.estado === "activa" && !patch.estado) {
+      const otras = await listSecuencias(input.marca.id);
+      const choca = otras.find(
+        (o) => o.id !== input.secuenciaId && o.estado === "activa" && compitenPorAnuncios(input.anuncios, o.anuncios),
+      );
+      if (choca) {
+        return {
+          ok: false,
+          error:
+            input.anuncios!.length === 0
+              ? `«${choca.nombre}» ya es la secuencia por defecto (sin anuncios): asígnale anuncios a esta, o archiva aquella.`
+              : `«${choca.nombre}» está activa y ya sirve a uno de esos anuncios: quítalo de allí primero.`,
+        };
+      }
+    }
+    patch.anuncios = input.anuncios;
+  }
 
   return actualizarSecuencia(input.secuenciaId, patch);
 }

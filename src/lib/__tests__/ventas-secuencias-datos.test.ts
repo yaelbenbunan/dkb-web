@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { secuenciaVacia } from "../ventas/secuencias";
+import { parsearAnuncios, secuenciaVacia } from "../ventas/secuencias";
 
 const m = vi.hoisted(() => ({
   getSecuencia: vi.fn(),
@@ -36,6 +36,66 @@ beforeEach(() => {
   m.actualizarSecuencia.mockResolvedValue({ ok: true });
   m.crearSecuencia.mockResolvedValue({ ok: true, id: "s2" });
   m.listSecuencias.mockResolvedValue([]);
+});
+
+describe("parsearAnuncios", () => {
+  test("acepta comas, espacios y saltos de línea, y quita repetidos", () => {
+    expect(parsearAnuncios(" 120252271546570343, 120252271546580343\n120252271546570343 ")).toEqual({
+      ok: true,
+      anuncios: ["120252271546570343", "120252271546580343"],
+    });
+  });
+
+  test("vacío es la secuencia por defecto", () => {
+    expect(parsearAnuncios("  ")).toEqual({ ok: true, anuncios: [] });
+  });
+
+  test("rechaza lo que no es un ID de Meta", () => {
+    expect(parsearAnuncios("120252271546570343, anuncio-dental").ok).toBe(false);
+  });
+});
+
+describe("guardarSecuencia con anuncios", () => {
+  const AD = "120252271546570343";
+
+  test("sin el campo no toca los anuncios", async () => {
+    m.getSecuencia.mockResolvedValue(fila({ anuncios: [AD] }));
+    await guardarSecuencia({ marca: MARCA, usuaria: USUARIA, secuenciaId: "s1", nombre: "X", pasosJson: secuenciaVacia() });
+    expect(m.actualizarSecuencia.mock.calls[0][1]).not.toHaveProperty("anuncios");
+  });
+
+  test("en un borrador se guardan sin mirar las demás", async () => {
+    m.getSecuencia.mockResolvedValue(fila());
+    const r = await guardarSecuencia({ marca: MARCA, usuaria: USUARIA, secuenciaId: "s1", nombre: "X", pasosJson: secuenciaVacia(), anuncios: [AD] });
+    expect(r).toEqual({ ok: true });
+    expect(m.actualizarSecuencia.mock.calls[0][1]).toMatchObject({ anuncios: [AD] });
+    expect(m.listSecuencias).not.toHaveBeenCalled();
+  });
+
+  test("en una activa no deja quitar un anuncio a otra activa", async () => {
+    m.getSecuencia.mockResolvedValue(fila({ estado: "activa", anuncios: ["999999999"] }));
+    m.listSecuencias.mockResolvedValue([fila({ id: "s2", nombre: "Quiz B", estado: "activa", anuncios: [AD] })]);
+    const r = await guardarSecuencia({ marca: MARCA, usuaria: USUARIA, secuenciaId: "s1", nombre: "X", pasosJson: secuenciaVacia(), anuncios: [AD] });
+    expect(r).toEqual({ ok: false, error: expect.stringContaining("Quiz B") });
+    expect(m.actualizarSecuencia).not.toHaveBeenCalled();
+  });
+
+  test("en una activa no deja dos secuencias por defecto", async () => {
+    m.getSecuencia.mockResolvedValue(fila({ estado: "activa", anuncios: [AD] }));
+    m.listSecuencias.mockResolvedValue([fila({ id: "s2", nombre: "Dental", estado: "activa", anuncios: [] })]);
+    const r = await guardarSecuencia({ marca: MARCA, usuaria: USUARIA, secuenciaId: "s1", nombre: "X", pasosJson: secuenciaVacia(), anuncios: [] });
+    expect(r).toEqual({ ok: false, error: expect.stringContaining("por defecto") });
+  });
+
+  test("en una activa sí deja anuncios que nadie más sirve", async () => {
+    m.getSecuencia.mockResolvedValue(fila({ estado: "activa", anuncios: ["999999999"] }));
+    m.listSecuencias.mockResolvedValue([
+      fila({ id: "s2", estado: "activa", anuncios: [] }),
+      fila({ id: "s3", estado: "archivada", anuncios: [AD] }),
+    ]);
+    const r = await guardarSecuencia({ marca: MARCA, usuaria: USUARIA, secuenciaId: "s1", nombre: "X", pasosJson: secuenciaVacia(), anuncios: [AD] });
+    expect(r).toEqual({ ok: true });
+  });
 });
 
 describe("guardarSecuencia", () => {

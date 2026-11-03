@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requireUsuaria } from "@/lib/ventas/auth";
 import { actualizarSecuencia, crearSecuencia, getMarcaPorSlug, getSecuencia } from "@/lib/ventas/db";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
+import { parsearAnuncios } from "@/lib/ventas/secuencias";
 import { secuenciaDePlantilla } from "@/lib/ventas/secuencias-plantilla";
 import { activarSecuencia, duplicarSecuencia, guardarSecuencia } from "@/lib/ventas/servicios";
 
@@ -59,7 +60,23 @@ export async function guardarSecuenciaAction(
     return { ok: false, error: "El formulario no tiene un JSON válido: recarga la página e inténtalo de nuevo." };
   }
 
-  const res = await guardarSecuencia({ marca, usuaria, secuenciaId, nombre: String(fd.get("nombre") ?? ""), pasosJson });
+  // Un formulario sin el campo (una pestaña abierta antes de que existiera) no
+  // toca los anuncios; uno con el campo vacío sí: la deja por defecto.
+  let anuncios: string[] | undefined;
+  if (fd.has("anuncios")) {
+    const leidos = parsearAnuncios(String(fd.get("anuncios") ?? ""));
+    if (!leidos.ok) return leidos;
+    anuncios = leidos.anuncios;
+  }
+
+  const res = await guardarSecuencia({
+    marca,
+    usuaria,
+    secuenciaId,
+    nombre: String(fd.get("nombre") ?? ""),
+    pasosJson,
+    anuncios,
+  });
   if (!res.ok) return res;
   refrescar(slug, secuenciaId);
   return { ok: true, mensaje: "Secuencia guardada." };

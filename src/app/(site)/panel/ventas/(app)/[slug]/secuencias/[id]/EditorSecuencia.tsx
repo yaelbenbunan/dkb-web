@@ -273,6 +273,7 @@ export function EditorSecuencia({
   nombreInicial,
   estadoInicial,
   secuenciaInicial,
+  anunciosIniciales,
   editable,
   marcaNombre,
   usuariaNombre,
@@ -282,11 +283,13 @@ export function EditorSecuencia({
   nombreInicial: string;
   estadoInicial: EstadoSecuencia;
   secuenciaInicial: Secuencia;
+  anunciosIniciales: string[];
   editable: boolean;
   marcaNombre: string;
   usuariaNombre: string;
 }) {
   const [nombre, setNombre] = useState(nombreInicial);
+  const [anuncios, setAnuncios] = useState(anunciosIniciales.join(", "));
   const [secuencia, setSecuencia] = useState<Secuencia>(secuenciaInicial);
   const [seleccionado, setSeleccionado] = useState<string>(secuenciaInicial.inicio);
   const [pestana, setPestana] = useState<Pestana>("editar");
@@ -421,6 +424,21 @@ export function EditorSecuencia({
             )}
           </>
         )}
+        <label style={{ ...etiqueta, flex: "1 1 100%" }}>
+          IDs de anuncio de Meta (separados por comas)
+          <input
+            name="anuncios"
+            value={anuncios}
+            onChange={(e) => setAnuncios(e.target.value)}
+            disabled={!editable}
+            placeholder="Vacío: secuencia por defecto de la marca"
+            style={campo}
+          />
+          <span style={{ fontSize: 12, fontWeight: 400, color: "#64748b" }}>
+            Quien entre desde uno de estos anuncios recibe esta secuencia. Ojo: al duplicar un anuncio en Meta cambia su ID y
+            hay que añadir el nuevo aquí.
+          </span>
+        </label>
         <Mensaje resultado={rGuardar} />
         <Mensaje resultado={rActivar} />
       </form>

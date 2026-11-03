@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireAccesoMarca } from "@/lib/ventas/auth";
-import { listSecuencias, type SecuenciaRow } from "@/lib/ventas/db";
+import { datosResultadosSecuencias, listSecuencias, type SecuenciaRow } from "@/lib/ventas/db";
+import { conPorcentaje, resultadosPorSecuencia, type ResultadoSecuencia } from "@/lib/ventas/metricas-secuencias";
 import { formatoFechaHora } from "@/lib/ventas/metricas";
 import { parsearSecuencia } from "@/lib/ventas/secuencias";
 import { MarcaCabecera } from "../../../_componentes/MarcaCabecera";
@@ -29,11 +30,37 @@ function EstadoEtiqueta({ estado }: { estado: SecuenciaRow["estado"] }) {
   );
 }
 
+/** Resultados de la variante; con el quiz, también cuántos lo terminan y su nota media. */
+function Resultados({ r }: { r: ResultadoSecuencia | undefined }) {
+  if (!r) return <span style={{ color: "#94a3b8" }}>Sin conversaciones</span>;
+  const lineas = [
+    `${r.empezaron} empezaron`,
+    ...(r.terminaronQuiz > 0 ? [`${conPorcentaje(r.terminaronQuiz, r.empezaron)} terminaron el quiz`] : []),
+    `${conPorcentaje(r.conComercial, r.empezaron)} con comercial`,
+    `${conPorcentaje(r.clientes, r.empezaron)} clientes`,
+    ...(r.notaMedia !== null ? [`Nota media ${r.notaMedia}/100`] : []),
+  ];
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 2, fontSize: 13, whiteSpace: "nowrap" }}>
+      {lineas.map((l) => (
+        <span key={l}>{l}</span>
+      ))}
+    </div>
+  );
+}
+
 export default async function SecuenciasPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const { usuaria, marca } = await requireAccesoMarca(slug, "secuencias");
   const admin = usuaria.rol === "admin";
   const filas = await listSecuencias(marca.id);
+  // Si la lectura falla, la lista se enseña igual, sin resultados.
+  const resultados = await datosResultadosSecuencias(marca.id)
+    .then(({ conversaciones, faseDeLead }) => resultadosPorSecuencia(conversaciones, faseDeLead))
+    .catch((e) => {
+      console.error("[ventas] resultados de secuencias", e);
+      return new Map<string, ResultadoSecuencia>();
+    });
 
   return (
     <div>
@@ -44,12 +71,13 @@ export default async function SecuenciasPage({ params }: { params: Promise<{ slu
         </p>
 
         <section style={{ ...tarjeta, padding: 0, overflowX: "auto" }}>
-          <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 640 }}>
+          <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 820 }}>
             <thead>
               <tr>
                 <th style={th}>Nombre</th>
                 <th style={th}>Estado</th>
                 <th style={th}>Pasos</th>
+                <th style={th}>Resultados</th>
                 <th style={th}>Última edición</th>
                 {admin && <th style={th}>Acciones</th>}
               </tr>
@@ -57,7 +85,7 @@ export default async function SecuenciasPage({ params }: { params: Promise<{ slu
             <tbody>
               {filas.length === 0 && (
                 <tr>
-                  <td style={{ ...td, color: "#64748b" }} colSpan={admin ? 5 : 4}>Todavía no hay secuencias.</td>
+                  <td style={{ ...td, color: "#64748b" }} colSpan={admin ? 6 : 5}>Todavía no hay secuencias.</td>
                 </tr>
               )}
               {filas.map((f) => {
@@ -74,6 +102,7 @@ export default async function SecuenciasPage({ params }: { params: Promise<{ slu
                     <td style={td}>
                       {nPasos !== null ? nPasos : <span style={{ color: "#b91c1c", fontWeight: 600 }}>Error en los datos guardados</span>}
                     </td>
+                    <td style={td}><Resultados r={resultados.get(f.id)} /></td>
                     <td style={td}>{formatoFechaHora(f.updated_at)}</td>
                     {admin && (
                       <td style={td}>

@@ -790,6 +790,35 @@ export async function listSecuencias(marcaId: string): Promise<SecuenciaRow[]> {
   );
 }
 
+/** Lo que hace falta de cada conversación de la marca que arrancó una
+ *  secuencia, y la fase de cada lead, para `resultadosPorSecuencia`. */
+export async function datosResultadosSecuencias(marcaId: string): Promise<{
+  conversaciones: Array<{ secuencia_id: string | null; estado: "bot" | "humana" | "cerrada"; lead_id: string | null; datos: Record<string, string> | null }>;
+  faseDeLead: Map<string, string>;
+}> {
+  const conversaciones = await todas(
+    (desde, hasta) =>
+      db()
+        .from("ventas_conversaciones")
+        .select("secuencia_id, estado, lead_id, datos")
+        .eq("marca_id", marcaId)
+        .not("secuencia_id", "is", null)
+        .order("id")
+        .range(desde, hasta) as PromiseLike<
+        Respuesta<Array<{ secuencia_id: string | null; estado: "bot" | "humana" | "cerrada"; lead_id: string | null; datos: Record<string, string> | null }>>
+      >,
+    "datosResultadosSecuencias",
+  );
+  const leads = await todas(
+    (desde, hasta) =>
+      db().from("ventas_leads").select("id, fase").eq("marca_id", marcaId).order("id").range(desde, hasta) as PromiseLike<
+        Respuesta<Array<{ id: string; fase: string }>>
+      >,
+    "datosResultadosSecuencias.leads",
+  );
+  return { conversaciones, faseDeLead: new Map(leads.map((l) => [l.id, l.fase])) };
+}
+
 export async function getSecuencia(id: string): Promise<SecuenciaRow | null> {
   const r = await db().from("ventas_secuencias").select("*").eq("id", id).maybeSingle();
   return comprobar(r as Respuesta<SecuenciaRow>, "getSecuencia");
@@ -815,7 +844,7 @@ export async function crearSecuencia(input: {
 
 export async function actualizarSecuencia(
   id: string,
-  patch: { nombre?: string; pasos?: unknown; estado?: string },
+  patch: { nombre?: string; pasos?: unknown; estado?: string; anuncios?: string[] },
 ): Promise<Escritura> {
   return escritura(
     await db()

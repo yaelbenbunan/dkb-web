@@ -150,6 +150,24 @@ export function parsearSecuencia(raw: unknown): { ok: true; secuencia: Secuencia
   return { ok: false, error: r.error.issues[0]?.message ?? "La secuencia no tiene una forma válida." };
 }
 
+/** Cuántos anuncios puede servir una secuencia como mucho. */
+export const MAX_ANUNCIOS = 20;
+const ID_ANUNCIO_RE = /^\d{6,30}$/;
+
+/**
+ * Lee los IDs de anuncio de Meta que se escriben en el editor (separados por
+ * comas, espacios o saltos de línea), sin repetir. Vacío es válido: es la
+ * secuencia por defecto de la marca, la que sirve a quien no viene de un
+ * anuncio asignado a otra.
+ */
+export function parsearAnuncios(texto: string): { ok: true; anuncios: string[] } | { ok: false; error: string } {
+  const anuncios = [...new Set(texto.split(/[\s,;]+/).filter(Boolean))];
+  const malo = anuncios.find((a) => !ID_ANUNCIO_RE.test(a));
+  if (malo) return { ok: false, error: `«${malo}» no parece un ID de anuncio de Meta: son solo números.` };
+  if (anuncios.length > MAX_ANUNCIOS) return { ok: false, error: `Como mucho ${MAX_ANUNCIOS} anuncios por secuencia.` };
+  return { ok: true, anuncios };
+}
+
 /** Punto de partida al crear una secuencia: un paso de plantilla con un botón. */
 export function secuenciaVacia(): Secuencia {
   return {
