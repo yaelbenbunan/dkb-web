@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { claveQuiz, informeQuiz, notaQuiz, resumenQuiz, valoresQuiz, type CampoQuiz } from "../ventas/quiz";
+import { claveQuiz, informeQuiz, NIVELES_QUIZ, notaQuiz, resumenQuiz, valoresQuiz, type CampoQuiz } from "../ventas/quiz";
 import { claveDatoLead, parsearSecuencia, validarSecuencia, type Secuencia } from "../ventas/secuencias";
 import { iniciarSimulacion, responderBoton, responderTexto, type EstadoSimulacion } from "../ventas/simulador";
 import {
@@ -51,26 +51,36 @@ describe("quiz: clave y nota", () => {
 });
 
 describe("quiz: informe", () => {
-  it("pone la nota, una línea por área y el tratamiento con las rojas primero", () => {
+  it("pone la nota, una línea por área y 3 mejoras: rojas, amarillas y verdes", () => {
     const informe = informeQuiz(datos({ quiz_visibilidad: "amarillo", quiz_captacion: "rojo", quiz_atencion: "verde" }));
     expect(informe).toContain("*Tu salud digital: 50/100* 🟡");
     expect(informe).toContain("🟡 *Visibilidad:*");
     expect(informe).toContain("🔴 *Captación:*");
     expect(informe).toContain("🟢 *Atención:*");
-    const tratamiento = (informe as string).split("*Tu tratamiento:*")[1];
-    expect(tratamiento.indexOf("1. Un canal")).toBeLessThan(tratamiento.indexOf("2. Que te encuentren"));
-    expect(tratamiento).not.toContain("Contestar en minutos");
+    const mejoras = (informe as string).split("*Tus 3 mejoras:*")[1];
+    expect(mejoras).toContain("1. Un canal");
+    expect(mejoras).toContain("2. Que te encuentren");
+    expect(mejoras).toContain("3. Automatizar las respuestas");
+    expect(mejoras).not.toContain("Contestar en minutos");
   });
 
-  it("todo en verde no inventa mejoras", () => {
-    const informe = informeQuiz(datos({ quiz_visibilidad: "verde", quiz_captacion: "verde", quiz_atencion: "verde" }));
-    expect(informe).toContain("vas muy bien");
-    expect(informe).not.toMatch(/\n1\. /);
+  it("siempre promete 3 mejoras, salga lo que salga", () => {
+    for (const v of NIVELES_QUIZ)
+      for (const c of NIVELES_QUIZ)
+        for (const a of NIVELES_QUIZ) {
+          const informe = informeQuiz(datos({ quiz_visibilidad: v, quiz_captacion: c, quiz_atencion: a })) as string;
+          expect(informe.match(/\n\d\. /g), `${v}/${c}/${a}`).toHaveLength(3);
+        }
   });
 
   it("el informe más largo cabe en un mensaje con botones junto a su cierre", () => {
     // WhatsApp corta el cuerpo de un mensaje interactivo en 1024 caracteres.
-    const peor = informeQuiz(datos({ quiz_visibilidad: "rojo", quiz_captacion: "amarillo", quiz_atencion: "rojo" })) as string;
+    const informes = NIVELES_QUIZ.flatMap((v) =>
+      NIVELES_QUIZ.flatMap((c) =>
+        NIVELES_QUIZ.map((a) => informeQuiz(datos({ quiz_visibilidad: v, quiz_captacion: c, quiz_atencion: a })) as string),
+      ),
+    );
+    const peor = informes.reduce((x, y) => (y.length > x.length ? y : x));
     for (const id of ["informe_ya", "informe_pronto", "informe_mirando"]) {
       const texto = SECUENCIA_QUIZ_SALUD_A.pasos[id].texto.replace("{{quiz_informe}}", peor);
       expect(texto.length, id).toBeLessThanOrEqual(1024);

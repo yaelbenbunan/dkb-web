@@ -218,7 +218,7 @@ const BOTONES_QUIZ: Record<CampoPregunta, Array<{ texto: string; valor: string }
 const PASOS_FINALES_QUIZ: Secuencia["pasos"] = {
   informe_ya: {
     tipo: "mensaje",
-    texto: "{{quiz_informe}}\n\n¿Te explico en 10 minutos cómo arreglar lo que está en rojo? Sin compromiso.",
+    texto: "{{quiz_informe}}\n\n¿Te explico en 10 minutos cómo poner en marcha estas 3 mejoras? Sin compromiso.",
     botones: [
       { texto: "Llamadme hoy", ruta: { avisar: true, fase: "interesado", ir_a: "cierre_hoy" } },
       { texto: "Mejor mañana", ruta: { avisar: true, fase: "interesado", ir_a: "cierre_manana" } },
@@ -227,7 +227,7 @@ const PASOS_FINALES_QUIZ: Secuencia["pasos"] = {
   },
   informe_pronto: {
     tipo: "mensaje",
-    texto: "{{quiz_informe}}\n\nCuando quieras te explico cómo arreglarlo, son 10 minutos.",
+    texto: "{{quiz_informe}}\n\nCuando quieras te explico cómo ponerlas en marcha, son 10 minutos.",
     botones: [
       { texto: "Sí, llamadme", ruta: { avisar: true, fase: "interesado", ir_a: "cierre_hoy" } },
       { texto: "Prefiero por aquí", ruta: { avisar: true, fase: "interesado", ir_a: "cierre_aqui" } },

@@ -82,11 +82,18 @@ const FRASES: Record<AreaQuiz, Record<NivelQuiz, string>> = {
   },
 };
 
-/** La mejora que se propone para un área que no está en verde. */
+/** La mejora que se propone para un área en rojo o en amarillo: arreglarla. */
 const TRATAMIENTO: Record<AreaQuiz, string> = {
   visibilidad: "Que te encuentren en Google, con una web y una ficha que den confianza.",
   captacion: "Un canal que te traiga clientes cada mes, no solo los recomendados.",
   atencion: "Contestar en minutos, también fuera de horario, sin vivir pendiente del móvil.",
+};
+
+/** La mejora para un área en verde: sacarle más partido a lo que ya funciona. */
+const POTENCIAR: Record<AreaQuiz, string> = {
+  visibilidad: "Sacarle más partido a Google: reseñas y contenido que te pongan por delante de tu competencia.",
+  captacion: "Hacer crecer el canal que ya te funciona, para que te traiga más clientes cuando tú quieras.",
+  atencion: "Automatizar las respuestas para mantener esa rapidez sin depender de ti.",
 };
 
 /** Cómo se ve cada respuesta en la ficha del lead. */
@@ -134,8 +141,9 @@ function nivelDeNota(nota: number): NivelQuiz {
 
 /**
  * El informe que recibe el contacto, en formato de WhatsApp (`*negrita*`).
- * El tratamiento lista las áreas en rojo y luego las amarillas, en el orden de
- * `AREAS_QUIZ`. `null` si falta alguna área.
+ * Siempre trae 3 mejoras, porque es lo que prometen los anuncios: una por
+ * área, primero las rojas, luego las amarillas (arreglarlas) y al final las
+ * verdes (potenciarlas), en el orden de `AREAS_QUIZ`. `null` si falta alguna área.
  */
 export function informeQuiz(datos: Record<string, string>): string | null {
   const n = niveles(datos);
@@ -143,14 +151,12 @@ export function informeQuiz(datos: Record<string, string>): string | null {
   if (!n || nota === null) return null;
 
   const lineas = AREAS_QUIZ.map((area) => `${EMOJI[n[area]]} *${NOMBRE_AREA[area]}:* ${FRASES[area][n[area]]}`);
-  const aMejorar = [
-    ...AREAS_QUIZ.filter((area) => n[area] === "rojo"),
-    ...AREAS_QUIZ.filter((area) => n[area] === "amarillo"),
-  ];
-  const tratamiento =
-    aMejorar.length > 0
-      ? `*Tu tratamiento:*\n${aMejorar.map((area, i) => `${i + 1}. ${TRATAMIENTO[area]}`).join("\n")}`
-      : "*Tu tratamiento:* vas muy bien. El siguiente paso es automatizar para crecer sin echarle más horas.";
+  const mejoras = (["rojo", "amarillo", "verde"] as const).flatMap((nivel) =>
+    AREAS_QUIZ.filter((area) => n[area] === nivel).map((area) =>
+      nivel === "verde" ? POTENCIAR[area] : TRATAMIENTO[area],
+    ),
+  );
+  const tratamiento = `*Tus 3 mejoras:*\n${mejoras.map((m, i) => `${i + 1}. ${m}`).join("\n")}`;
 
   return [`📋 *Tu salud digital: ${nota}/100* ${EMOJI[nivelDeNota(nota)]}`, lineas.join("\n"), tratamiento].join("\n\n");
 }
