@@ -319,7 +319,7 @@ export const SECUENCIA_QUIZ_SALUD_A: Secuencia = secuenciaQuiz(
     {
       campo: "quiz_visibilidad",
       texto:
-        "¡Hola! 👋 Soy Paula García, de Dinkbit. Vamos con tu chequeo de salud digital: son 4 preguntas y al final te mando tu informe con nota.\n\n" +
+        "¡Hola! 👋 Soy Paula, de Dinkbit. Vamos con tu chequeo de salud digital: son 4 preguntas y al final te mando tu informe con nota.\n\n" +
         "*1/4 · Si alguien busca tu negocio en Google ahora mismo, ¿qué encuentra?*\n\n" +
         PRIVACIDAD_QUIZ,
     },
@@ -335,7 +335,7 @@ export const SECUENCIA_QUIZ_SALUD_B: Secuencia = secuenciaQuiz(
     {
       campo: "quiz_atencion",
       texto:
-        "Hola, soy Paula García, de Dinkbit. Chequeo de salud digital: 4 preguntas, 1 minuto, y te mando tu nota.\n\n" +
+        "Hola, soy Paula, de Dinkbit. Chequeo de salud digital: 4 preguntas, 1 minuto, y te mando tu nota.\n\n" +
         "*1/4 · Te escribe alguien preguntando precio. ¿Cuándo le contestas?*\n\n" +
         PRIVACIDAD_QUIZ,
     },
@@ -351,7 +351,7 @@ export const SECUENCIA_QUIZ_SALUD_C: Secuencia = secuenciaQuiz(
     {
       campo: "quiz_captacion",
       texto:
-        "¡Hola! Soy Paula García, de Dinkbit. Vamos a ver si tu negocio aprueba en internet. Sin filtros: 4 preguntas y tu nota de 0 a 100.\n\n" +
+        "¡Hola! Soy Paula, de Dinkbit. Vamos a ver si tu negocio aprueba en internet. Sin filtros: 4 preguntas y tu nota de 0 a 100.\n\n" +
         "*1/4 · Seamos sinceros: ¿de dónde salen la mayoría de tus clientes?*\n\n" +
         PRIVACIDAD_QUIZ,
     },

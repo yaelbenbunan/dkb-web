@@ -155,7 +155,7 @@ describe.each([
       return campo;
     });
     expect(campos).toEqual([...orden, "quiz_temperatura"]);
-    expect(s.pasos.p1.texto).toContain("Paula García");
+    expect(s.pasos.p1.texto).toContain("Paula");
     expect(s.pasos.p1.texto).toContain("dinkbit.es/privacidad");
   });
 
