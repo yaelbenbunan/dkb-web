@@ -15,6 +15,24 @@ export interface MensajeroWhatsApp {
 /** Límites de los botones de respuesta rápida de WhatsApp. */
 export const MAX_BOTONES = 3;
 export const MAX_CARACTERES_BOTON = 20;
+/** WhatsApp corta el cuerpo de un mensaje con botones en 1024 caracteres. */
+export const MAX_CUERPO_BOTONES = 1024;
+
+/**
+ * Un texto con botones que no cabe en 1024 caracteres se manda en dos: todo
+ * menos el último párrafo como mensaje normal, y el último párrafo (la
+ * pregunta) con los botones. Así un informe largo llega entero y la pregunta
+ * sigue pegada a sus botones. Si el último párrafo tampoco cabe, se corta.
+ */
+export function partirCuerpoBotones(texto: string): { antes: string | null; cuerpo: string } {
+  if (texto.length <= MAX_CUERPO_BOTONES) return { antes: null, cuerpo: texto };
+  const corte = texto.trimEnd().lastIndexOf("\n\n");
+  if (corte <= 0) return { antes: null, cuerpo: texto.slice(0, MAX_CUERPO_BOTONES) };
+  return {
+    antes: texto.slice(0, corte).trimEnd(),
+    cuerpo: texto.slice(corte + 2).trim().slice(0, MAX_CUERPO_BOTONES),
+  };
+}
 
 /**
  * Comprueba los límites ANTES de llamar a Graph. Meta rechaza estos casos con
@@ -122,15 +140,20 @@ export function crearMensajero(config: ConfigMensajero = {}): MensajeroWhatsApp 
     enviarTexto(waId, texto) {
       return enviar({ messaging_product: "whatsapp", to: waId, type: "text", text: { body: texto } });
     },
-    enviarBotones(waId, texto, opciones) {
+    async enviarBotones(waId, texto, opciones) {
       comprobarBotones(opciones);
+      const { antes, cuerpo } = partirCuerpoBotones(texto);
+      if (antes) {
+        const previo = await enviar({ messaging_product: "whatsapp", to: waId, type: "text", text: { body: antes } });
+        if (!previo.ok) return previo;
+      }
       return enviar({
         messaging_product: "whatsapp",
         to: waId,
         type: "interactive",
         interactive: {
           type: "button",
-          body: { text: texto },
+          body: { text: cuerpo },
           action: {
             buttons: opciones.map((titulo, i) => ({
               type: "reply",

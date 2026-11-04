@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { crearMensajero, mensajeroSimulado } from "../mensajero";
+import { crearMensajero, mensajeroSimulado, partirCuerpoBotones } from "../mensajero";
 
 describe("mensajeroSimulado", () => {
   it("registra lo enviado y no llama a la red", async () => {
@@ -190,5 +190,44 @@ describe("exigirProduccion", () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ messages: [{ id: "w" }] }) });
     const m = crearMensajero({ token: "t", phoneNumberId: "1", fetchImpl: fetchMock, exigirProduccion: true });
     expect(await m.enviarTexto("34600", "hola")).toEqual({ ok: true, wamid: "w" });
+  });
+});
+
+describe("texto con botones de más de 1024 caracteres", () => {
+  const informe = `📋 Informe\n\n${"Una línea larga del informe. ".repeat(40)}`;
+  const cierre = "¿Te explico cómo ponerlas en marcha?";
+
+  it("lo que cabe no se parte", () => {
+    expect(partirCuerpoBotones("hola\n\nadiós")).toEqual({ antes: null, cuerpo: "hola\n\nadiós" });
+  });
+
+  it("deja con los botones solo el último párrafo y manda el resto entero", () => {
+    const { antes, cuerpo } = partirCuerpoBotones(`${informe}\n\n${cierre}`);
+    expect(antes).toBe(informe.trimEnd());
+    expect(cuerpo).toBe(cierre);
+  });
+
+  it("con 1025 caracteres no deja el informe a medias", () => {
+    const largo = `Cabecera\n\n${"x".repeat(990)}\n\n${cierre}`;
+    expect(largo.length).toBeGreaterThan(1024);
+    expect(partirCuerpoBotones(largo)).toEqual({ antes: `Cabecera\n\n${"x".repeat(990)}`, cuerpo: cierre });
+  });
+
+  it("manda primero el informe como texto y luego la pregunta con los botones", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ messages: [{ id: "wamid.X" }] }) });
+    const m = crearMensajero({ token: "tok", phoneNumberId: "123", fetchImpl: fetchMock });
+    const res = await m.enviarBotones("34600000000", `${informe}\n\n${cierre}`, ["Sí", "No"]);
+    expect(res.ok).toBe(true);
+    const cuerpos = fetchMock.mock.calls.map((c) => JSON.parse(c[1].body));
+    expect(cuerpos.map((b) => b.type)).toEqual(["text", "interactive"]);
+    expect(cuerpos[0].text.body).toBe(informe.trimEnd());
+    expect(cuerpos[1].interactive.body.text).toBe(cierre);
+  });
+
+  it("si falla el primer mensaje no manda los botones", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, json: async () => ({ error: { message: "caído" } }) });
+    const m = crearMensajero({ token: "tok", phoneNumberId: "123", fetchImpl: fetchMock });
+    expect(await m.enviarBotones("34600000000", `${informe}\n\n${cierre}`, ["Sí"])).toEqual({ ok: false, error: "caído" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

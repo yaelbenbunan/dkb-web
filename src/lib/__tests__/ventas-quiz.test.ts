@@ -57,11 +57,10 @@ describe("quiz: informe", () => {
     expect(informe).toContain("🟡 *Visibilidad:*");
     expect(informe).toContain("🔴 *Captación:*");
     expect(informe).toContain("🟢 *Atención:*");
-    const mejoras = (informe as string).split("*Tus 3 mejoras:*")[1];
-    expect(mejoras).toContain("1. Un canal");
-    expect(mejoras).toContain("2. Que te encuentren");
-    expect(mejoras).toContain("3. Automatizar las respuestas");
-    expect(mejoras).not.toContain("Contestar en minutos");
+    const mejoras = (informe as string).split("*Tus 3 mejoras para conseguir más clientes*")[1];
+    expect(mejoras).toContain("*1. Clientes que no dependan de la suerte.*");
+    expect(mejoras).toContain("*2. Una web que convenza.*");
+    expect(mejoras).toContain("*3. Rápido sin vivir pegado al móvil.*");
   });
 
   it("siempre promete 3 mejoras, salga lo que salga", () => {
@@ -69,12 +68,13 @@ describe("quiz: informe", () => {
       for (const c of NIVELES_QUIZ)
         for (const a of NIVELES_QUIZ) {
           const informe = informeQuiz(datos({ quiz_visibilidad: v, quiz_captacion: c, quiz_atencion: a })) as string;
-          expect(informe.match(/\n\d\. /g), `${v}/${c}/${a}`).toHaveLength(3);
+          expect(informe.match(/\n\*\d\. /g), `${v}/${c}/${a}`).toHaveLength(3);
         }
   });
 
-  it("el informe más largo cabe en un mensaje con botones junto a su cierre", () => {
-    // WhatsApp corta el cuerpo de un mensaje interactivo en 1024 caracteres.
+  it("el informe más largo cabe en un mensaje y su cierre va con los botones", () => {
+    // Un mensaje de texto admite 4096 caracteres; el de botones, 1024: el
+    // mensajero manda el informe aparte y el cierre con los botones.
     const informes = NIVELES_QUIZ.flatMap((v) =>
       NIVELES_QUIZ.flatMap((c) =>
         NIVELES_QUIZ.map((a) => informeQuiz(datos({ quiz_visibilidad: v, quiz_captacion: c, quiz_atencion: a })) as string),
@@ -83,7 +83,10 @@ describe("quiz: informe", () => {
     const peor = informes.reduce((x, y) => (y.length > x.length ? y : x));
     for (const id of ["informe_ya", "informe_pronto", "informe_mirando"]) {
       const texto = SECUENCIA_QUIZ_SALUD_A.pasos[id].texto.replace("{{quiz_informe}}", peor);
-      expect(texto.length, id).toBeLessThanOrEqual(1024);
+      const cierre = SECUENCIA_QUIZ_SALUD_A.pasos[id].texto.replace("{{quiz_informe}}\n\n", "");
+      expect(peor.length, id).toBeLessThanOrEqual(4096);
+      expect(texto.endsWith(`\n\n${cierre}`), id).toBe(true);
+      expect(cierre.length, id).toBeLessThanOrEqual(1024);
     }
   });
 });

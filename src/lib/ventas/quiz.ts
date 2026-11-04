@@ -82,18 +82,62 @@ const FRASES: Record<AreaQuiz, Record<NivelQuiz, string>> = {
   },
 };
 
-/** La mejora que se propone para un área en rojo o en amarillo: arreglarla. */
-const TRATAMIENTO: Record<AreaQuiz, string> = {
-  visibilidad: "Que te encuentren en Google, con una web y una ficha que den confianza.",
-  captacion: "Un canal que te traiga clientes cada mes, no solo los recomendados.",
-  atencion: "Contestar en minutos, también fuera de horario, sin vivir pendiente del móvil.",
-};
-
-/** La mejora para un área en verde: sacarle más partido a lo que ya funciona. */
-const POTENCIAR: Record<AreaQuiz, string> = {
-  visibilidad: "Sacarle más partido a Google: reseñas y contenido que te pongan por delante de tu competencia.",
-  captacion: "Hacer crecer el canal que ya te funciona, para que te traiga más clientes cuando tú quieras.",
-  atencion: "Automatizar las respuestas para mantener esa rapidez sin depender de ti.",
+/**
+ * La mejora que se propone para cada área según su nivel, explicada para
+ * alguien que no sabe de marketing: qué hacemos, por qué le importa y qué
+ * gana. En rojo y en amarillo es arreglar; en verde, sacarle más partido. Sin
+ * cifras ni plazos que no podamos garantizar.
+ */
+const MEJORAS: Record<AreaQuiz, Record<NivelQuiz, { titulo: string; texto: string }>> = {
+  visibilidad: {
+    rojo: {
+      titulo: "Que te encuentren en Google",
+      texto:
+        "Tu ficha de Google y una web sencilla con lo que haces, dónde estás y cómo contactarte. Es lo primero que mira un cliente: si no estás, llama al de al lado.",
+    },
+    amarillo: {
+      titulo: "Una web que convenza",
+      texto:
+        "Ya sales en Maps. Falta una página con tus servicios, fotos y opiniones para que quien te encuentra se decida por ti y no siga buscando.",
+    },
+    verde: {
+      titulo: "Ponerte por delante de tu competencia",
+      texto: "Ya sales en Google. Con más reseñas, fotos y novedades en tu ficha, Google te enseña antes que a los de al lado.",
+    },
+  },
+  captacion: {
+    rojo: {
+      titulo: "Clientes que no dependan de la suerte",
+      texto:
+        "El boca a boca es genial, pero no lo controlas. Un anuncio bien hecho en Google o Instagram te trae clientes nuevos el mes que tú decidas, y sabes cuánto te cuesta cada uno.",
+    },
+    amarillo: {
+      titulo: "Un canal que trabaje solo",
+      texto:
+        "Redes y anuncios paran cuando dejas de publicar o de pagar. Bien posicionado en Google, te llegan clientes también los meses que no puedes dedicarle tiempo.",
+    },
+    verde: {
+      titulo: "Más de lo que ya funciona",
+      texto: "Google ya te trae clientes. Con una campaña pequeña en los meses flojos subes el ritmo justo cuando lo necesitas.",
+    },
+  },
+  atencion: {
+    rojo: {
+      titulo: "Contestar antes que nadie",
+      texto:
+        "Quien pregunta un precio muchas veces escribe a varios negocios a la vez y se queda con el primero que responde. Con respuestas automáticas en WhatsApp contestas al momento, aunque estés trabajando o sea de noche.",
+    },
+    amarillo: {
+      titulo: "De horas a minutos",
+      texto:
+        "En unas horas el cliente ya ha preguntado a otro. Un mensaje automático con precios y horarios le contesta al instante, y tú sigues la conversación cuando puedas.",
+    },
+    verde: {
+      titulo: "Rápido sin vivir pegado al móvil",
+      texto:
+        "Ya contestas rápido, ¡bien! Automatizar las preguntas de siempre (precios, horarios, citas) te ahorra horas cada semana sin perder esa rapidez.",
+    },
+  },
 };
 
 /** Cómo se ve cada respuesta en la ficha del lead. */
@@ -142,8 +186,12 @@ function nivelDeNota(nota: number): NivelQuiz {
 /**
  * El informe que recibe el contacto, en formato de WhatsApp (`*negrita*`).
  * Siempre trae 3 mejoras, porque es lo que prometen los anuncios: una por
- * área, primero las rojas, luego las amarillas (arreglarlas) y al final las
- * verdes (potenciarlas), en el orden de `AREAS_QUIZ`. `null` si falta alguna área.
+ * área, primero las rojas, luego las amarillas y al final las verdes, en el
+ * orden de `AREAS_QUIZ`. `null` si falta alguna área.
+ *
+ * Con el cierre y los botones pasa de 1024 caracteres: el mensajero lo parte
+ * y manda el informe como mensaje normal y la pregunta con los botones
+ * (`partirCuerpoBotones`). Por eso el informe acaba siempre en párrafo.
  */
 export function informeQuiz(datos: Record<string, string>): string | null {
   const n = niveles(datos);
@@ -152,11 +200,12 @@ export function informeQuiz(datos: Record<string, string>): string | null {
 
   const lineas = AREAS_QUIZ.map((area) => `${EMOJI[n[area]]} *${NOMBRE_AREA[area]}:* ${FRASES[area][n[area]]}`);
   const mejoras = (["rojo", "amarillo", "verde"] as const).flatMap((nivel) =>
-    AREAS_QUIZ.filter((area) => n[area] === nivel).map((area) =>
-      nivel === "verde" ? POTENCIAR[area] : TRATAMIENTO[area],
-    ),
+    AREAS_QUIZ.filter((area) => n[area] === nivel).map((area) => MEJORAS[area][nivel]),
   );
-  const tratamiento = `*Tus 3 mejoras:*\n${mejoras.map((m, i) => `${i + 1}. ${m}`).join("\n")}`;
+  const tratamiento = [
+    "🚀 *Tus 3 mejoras para conseguir más clientes*",
+    ...mejoras.map((m, i) => `*${i + 1}. ${m.titulo}.* ${m.texto}`),
+  ].join("\n\n");
 
   return [`📋 *Tu salud digital: ${nota}/100* ${EMOJI[nivelDeNota(nota)]}`, lineas.join("\n"), tratamiento].join("\n\n");
 }
