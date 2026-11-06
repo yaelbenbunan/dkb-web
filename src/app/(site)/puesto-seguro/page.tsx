@@ -11,6 +11,8 @@ import {
   ALL_DEVICE_OPTIONS,
   KIT_TERMS,
   MIN_PAY,
+  ALL_DEVICES,
+  brandsText,
   type KitDevice,
 } from "@/lib/kit-digital-data";
 
@@ -20,7 +22,7 @@ function eur(n: number): string {
 
 export const metadata: Metadata = {
   title: "Ordenadores con el Kit Digital — dinkbit",
-  description: `Renueva tu equipo con el Bono del Kit Digital: cubre 1.000€ del precio y tú pagas desde ${MIN_PAY}€. Portátiles y sobremesas de Lenovo, Acer, Asus, Dell, Samsung y Apple, con tramitación, entrega y soporte incluidos.`,
+  description: `Renueva tu equipo con el Bono del Kit Digital: cubre 1.000€ del precio y tú pagas desde ${MIN_PAY}€. Portátiles y sobremesas de ${brandsText(ALL_DEVICES)}, con tramitación, entrega y soporte incluidos.`,
   alternates: { canonical: "/puesto-seguro" },
   openGraph: {
     type: "website",
@@ -203,7 +205,7 @@ export default function KitDigitalPage() {
             Portátiles y sobremesas
           </h2>
           <p className="mt-2 max-w-2xl text-fg-muted">
-            Equipos profesionales de Lenovo, Acer, Asus, Dell y Samsung. Todos con
+            Equipos profesionales de {brandsText(WINDOWS_DEVICES)}. Todos con
             el bono de 1.000€ ya descontado.
           </p>
         </div>

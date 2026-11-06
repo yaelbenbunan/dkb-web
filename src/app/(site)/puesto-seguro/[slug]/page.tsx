@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { Container } from "@/components/ui/Container";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { CONTACT_INFO } from "@/lib/contact-info";
@@ -54,7 +54,9 @@ export default async function DeviceDetail({
 }) {
   const { slug } = await params;
   const device = getDevice(slug);
-  if (!device) notFound();
+  // Equipo retirado del catálogo del proveedor (o slug inventado): al catálogo,
+  // para no dejar enlaces de anuncios o correos antiguos en un 404.
+  if (!device) redirect("/puesto-seguro");
 
   const label = deviceLabel(device);
   const related = ALL_DEVICES.filter(
