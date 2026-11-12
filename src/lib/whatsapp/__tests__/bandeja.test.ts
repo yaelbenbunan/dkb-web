@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { botonesDePayload, etiquetaOrigen, etiquetaVentana, extracto, esperaRespuesta, nombreConversacion, ordenarBandeja } from "../bandeja";
+import { botonesDePayload, etiquetaOrigen, etiquetaVentana, extracto, esperaRespuesta, nombreConversacion, ordenarBandeja, separarArchivadas } from "../bandeja";
 
 describe("extracto", () => {
   it("deja pasar los textos cortos", () => {
@@ -123,5 +123,37 @@ describe("ordenarBandeja", () => {
     ];
     expect(ordenarBandeja(entrada, ahora).map((x) => x.id)).toEqual(["e", "f", "g", "b", "d", "a", "c"]);
     expect(entrada.map((x) => x.id)).toEqual(["a", "b", "c", "d", "e", "f", "g"]);
+  });
+});
+
+describe("separarArchivadas", () => {
+  const ahora = new Date("2026-10-21T12:00:00Z");
+  const c = (id: string, ventana_hasta: string | null, espera = false) => ({
+    id,
+    ventana_hasta,
+    estado: espera ? ("humana" as const) : ("bot" as const),
+    ultima_direccion: espera ? ("entrante" as const) : null,
+  });
+
+  it("archiva las de ventana cerrada, también las que esperaban respuesta", () => {
+    const r = separarArchivadas(
+      [c("abierta", "2026-10-22T12:00:00Z"), c("cerrada", "2026-10-20T12:00:00Z"), c("cerrada-espera", "2026-10-20T12:00:00Z", true), c("sin-ventana", null)],
+      ahora,
+    );
+    expect(r.activas.map((x) => x.id)).toEqual(["abierta"]);
+    expect(r.archivadas.map((x) => x.id)).toEqual(["cerrada", "cerrada-espera", "sin-ventana"]);
+  });
+
+  it("vuelve a la bandeja cuando el cliente escribe y se reabre la ventana", () => {
+    const conv = c("x", "2026-10-20T12:00:00Z");
+    expect(separarArchivadas([conv], ahora).archivadas).toHaveLength(1);
+    const reabierta = { ...conv, ventana_hasta: "2026-10-22T11:00:00Z" };
+    expect(separarArchivadas([reabierta], ahora).activas).toHaveLength(1);
+  });
+
+  it("conserva el orden recibido en cada lista", () => {
+    const r = separarArchivadas([c("a", null), c("b", "2026-10-22T12:00:00Z"), c("c", null), c("d", "2026-10-22T13:00:00Z")], ahora);
+    expect(r.activas.map((x) => x.id)).toEqual(["b", "d"]);
+    expect(r.archivadas.map((x) => x.id)).toEqual(["a", "c"]);
   });
 });

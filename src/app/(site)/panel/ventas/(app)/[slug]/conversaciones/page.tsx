@@ -1,7 +1,7 @@
 import { requireAccesoMarca } from "@/lib/ventas/auth";
 import { evaluarAccesoMarca } from "@/lib/ventas/rutas";
 import { listLeads } from "@/lib/ventas/db";
-import { botonesDePayload, etiquetaOrigen, etiquetaVentana, esperaRespuesta, extracto, nombreConversacion, ordenarBandeja } from "@/lib/whatsapp/bandeja";
+import { botonesDePayload, etiquetaOrigen, etiquetaVentana, esperaRespuesta, extracto, nombreConversacion, ordenarBandeja, separarArchivadas } from "@/lib/whatsapp/bandeja";
 import { getConversacionPorId, listConversaciones, listMensajes } from "@/lib/whatsapp/db";
 import { ventanaAbierta } from "@/lib/whatsapp/ventana";
 import { MarcaCabecera } from "../../../_componentes/MarcaCabecera";
@@ -12,7 +12,7 @@ export default async function ConversacionesPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ c?: string }>;
+  searchParams: Promise<{ c?: string; vista?: string }>;
 }) {
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const { usuaria, marca } = await requireAccesoMarca(slug, "conversaciones");
@@ -21,7 +21,11 @@ export default async function ConversacionesPage({
   const nombres = new Map(leads.map((l) => [l.id, l.contacto || l.negocio]));
   const ahora = new Date();
 
-  const lista: TarjetaConversacion[] = ordenarBandeja(conversaciones, ahora).map((c) => ({
+  // Las de ventana cerrada van a «Archivadas» y vuelven solas cuando el cliente escribe.
+  const { activas, archivadas } = separarArchivadas(conversaciones, ahora);
+  const vista = sp.vista === "archivadas" ? "archivadas" : "bandeja";
+
+  const lista: TarjetaConversacion[] = ordenarBandeja(vista === "archivadas" ? archivadas : activas, ahora).map((c) => ({
     id: c.id,
     nombre: nombreConversacion(c.wa_id, c.lead_id, nombres, c.nombre_contacto),
     extracto: extracto(c.ultimo_texto),
@@ -60,7 +64,7 @@ export default async function ConversacionesPage({
     <div>
       <MarcaCabecera marca={marca} activa="conversaciones" rol={usuaria.rol} />
       {/* La agente solo atiende el chat: sin acceso a Leads, el enlace a la ficha la mandaría a un «sin permiso». */}
-      <Conversaciones slug={slug} conversaciones={lista} hilo={hilo} conFicha={evaluarAccesoMarca(usuaria, marca.id, "leads") === "ok"} />
+      <Conversaciones slug={slug} conversaciones={lista} hilo={hilo} vista={vista} totales={{ bandeja: activas.length, archivadas: archivadas.length }} conFicha={evaluarAccesoMarca(usuaria, marca.id, "leads") === "ok"} />
     </div>
   );
 }

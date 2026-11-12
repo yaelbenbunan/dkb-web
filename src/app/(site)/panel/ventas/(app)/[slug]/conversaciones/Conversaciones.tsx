@@ -20,6 +20,8 @@ export interface TarjetaConversacion {
   esperaRespuesta: boolean;
 }
 
+export type Vista = "bandeja" | "archivadas";
+
 export interface MensajeHilo {
   id: string;
   direccion: Mensaje["direccion"];
@@ -54,10 +56,15 @@ export function Conversaciones({
   conversaciones,
   hilo,
   conFicha,
+  vista = "bandeja",
+  totales,
 }: {
   slug: string;
   conversaciones: TarjetaConversacion[];
   hilo: Hilo | null;
+  /** «archivadas»: las de ventana cerrada. Vuelven a la bandeja cuando el cliente escribe. */
+  vista?: Vista;
+  totales?: { bandeja: number; archivadas: number };
   /** Si puede abrir la ficha del lead (la agente, no). */
   conFicha: boolean;
 }) {
@@ -83,19 +90,63 @@ export function Conversaciones({
   return (
     <div style={{ display: "grid", gridTemplateColumns: "minmax(240px, 320px) 1fr", gap: 16, alignItems: "start" }}>
       <section style={{ ...tarjeta, padding: 0, overflow: "hidden" }}>
-        <ListaConversaciones slug={slug} conversaciones={conversaciones} activaId={hilo?.id ?? null} />
+        {totales && <PestanasVista slug={slug} vista={vista} totales={totales} />}
+        <ListaConversaciones slug={slug} conversaciones={conversaciones} activaId={hilo?.id ?? null} vista={vista} />
       </section>
 
       <section style={{ ...tarjeta, minHeight: 400, display: "flex", flexDirection: "column" }}>
-        {hilo ? <HiloConversacion key={hilo.id} slug={slug} hilo={hilo} conFicha={conFicha} enviandoRef={enviandoRef} /> : <SinSeleccion vacio={conversaciones.length === 0} />}
+        {hilo ? <HiloConversacion key={hilo.id} slug={slug} hilo={hilo} conFicha={conFicha} enviandoRef={enviandoRef} /> : <SinSeleccion vacio={conversaciones.length === 0} vista={vista} />}
       </section>
     </div>
   );
 }
 
-function ListaConversaciones({ slug, conversaciones, activaId }: { slug: string; conversaciones: TarjetaConversacion[]; activaId: string | null }) {
+/** Enlace a la lista, manteniendo la pestaña (sin `vista` es la bandeja). */
+function hrefLista(slug: string, vista: Vista, conversacionId?: string): string {
+  const qs = new URLSearchParams();
+  if (vista === "archivadas") qs.set("vista", "archivadas");
+  if (conversacionId) qs.set("c", conversacionId);
+  const q = qs.toString();
+  return `/panel/ventas/${slug}/conversaciones${q ? `?${q}` : ""}`;
+}
+
+function PestanasVista({ slug, vista, totales }: { slug: string; vista: Vista; totales: { bandeja: number; archivadas: number } }) {
+  const pestana = (v: Vista, texto: string) => {
+    const activa = v === vista;
+    return (
+      <Link
+        href={hrefLista(slug, v)}
+        aria-current={activa ? "page" : undefined}
+        style={{
+          flex: 1,
+          textAlign: "center",
+          padding: "10px 8px",
+          fontSize: 13,
+          fontWeight: 700,
+          textDecoration: "none",
+          color: activa ? "#1d4ed8" : "#64748b",
+          borderBottom: activa ? "2px solid #1d4ed8" : "2px solid transparent",
+        }}
+      >
+        {texto}
+      </Link>
+    );
+  };
+  return (
+    <nav style={{ display: "flex", borderBottom: "1px solid #e2e8f0" }}>
+      {pestana("bandeja", `Bandeja (${totales.bandeja})`)}
+      {pestana("archivadas", `Archivadas (${totales.archivadas})`)}
+    </nav>
+  );
+}
+
+function ListaConversaciones({ slug, conversaciones, activaId, vista }: { slug: string; conversaciones: TarjetaConversacion[]; activaId: string | null; vista: Vista }) {
   if (conversaciones.length === 0) {
-    return <p style={{ margin: 0, padding: 16, fontSize: 14, color: "#64748b" }}>Todavía no hay conversaciones.</p>;
+    return (
+      <p style={{ margin: 0, padding: 16, fontSize: 14, color: "#64748b" }}>
+        {vista === "archivadas" ? "No hay conversaciones archivadas." : "No hay conversaciones abiertas. Las de ventana cerrada están en Archivadas."}
+      </p>
+    );
   }
   const esperando = conversaciones.filter((c) => c.esperaRespuesta).length;
   return (
@@ -110,7 +161,7 @@ function ListaConversaciones({ slug, conversaciones, activaId }: { slug: string;
         return (
           <li key={c.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
             <Link
-              href={`/panel/ventas/${slug}/conversaciones?c=${c.id}`}
+              href={hrefLista(slug, vista, c.id)}
               style={{
                 display: "block",
                 padding: "10px 14px",
@@ -136,10 +187,10 @@ function ListaConversaciones({ slug, conversaciones, activaId }: { slug: string;
   );
 }
 
-function SinSeleccion({ vacio }: { vacio: boolean }) {
+function SinSeleccion({ vacio, vista }: { vacio: boolean; vista: Vista }) {
   return (
     <p style={{ margin: "auto", fontSize: 14, color: "#64748b" }}>
-      {vacio ? "Todavía no hay conversaciones." : "Elige una conversación de la lista."}
+      {vacio ? (vista === "archivadas" ? "No hay conversaciones archivadas." : "No hay conversaciones abiertas.") : "Elige una conversación de la lista."}
     </p>
   );
 }

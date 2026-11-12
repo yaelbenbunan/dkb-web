@@ -109,3 +109,20 @@ export function ordenarBandeja<
   }
   return [...espera, ...abiertas, ...cerradas];
 }
+
+/**
+ * Archivadas = ventana de 24/72 h cerrada (o sin ventana), también las que
+ * esperaban respuesta: decisión de Yael (12/11/2026) para limpiar la bandeja.
+ * No se guarda en la base de datos: en cuanto el cliente vuelve a escribir se
+ * reabre la ventana y la conversación vuelve sola a la bandeja. Conserva el
+ * orden recibido en cada lista.
+ */
+export function separarArchivadas<T extends { ventana_hasta: string | null }>(
+  conversaciones: T[],
+  ahora: Date,
+): { activas: T[]; archivadas: T[] } {
+  const activas: T[] = [];
+  const archivadas: T[] = [];
+  for (const c of conversaciones) (ventanaAbierta(c.ventana_hasta, ahora) ? activas : archivadas).push(c);
+  return { activas, archivadas };
+}
