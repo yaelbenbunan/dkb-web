@@ -31,27 +31,53 @@ describe("telefonoConPatronSpam", () => {
   });
 });
 
+function form(telefono: string, campo = "phone"): FormData {
+  const fd = new FormData();
+  fd.set(campo, telefono);
+  return fd;
+}
+
 describe("esEnvioDeBot", () => {
   beforeEach(() => {
     checkBotIdMock.mockReset();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    delete process.env.ANTISPAM_BOTID;
   });
 
-  test("true cuando BotID dice que es un bot", async () => {
-    checkBotIdMock.mockResolvedValue({ isBot: true, isVerifiedBot: false });
-    expect(await esEnvioDeBot()).toBe(true);
+  test("rechaza el teléfono de los bots sin preguntar a BotID", async () => {
+    expect(await esEnvioDeBot(form("19428314176"))).toBe(true);
+    expect(await esEnvioDeBot(form("16905452717", "telefono"))).toBe(true);
+    expect(checkBotIdMock).not.toHaveBeenCalled();
   });
 
-  test("false para una persona", async () => {
-    checkBotIdMock.mockResolvedValue({ isBot: false, isVerifiedBot: false });
-    expect(await esEnvioDeBot()).toBe(false);
+  test("con BotID apagado (por defecto) deja pasar un teléfono normal", async () => {
+    checkBotIdMock.mockResolvedValue({ isBot: true });
+    expect(await esEnvioDeBot(form("+34636551531"))).toBe(false);
+    expect(checkBotIdMock).not.toHaveBeenCalled();
   });
 
-  test("si BotID falla deja pasar: perder un lead real es peor que colar un bot", async () => {
-    const err = vi.spyOn(console, "error").mockImplementation(() => {});
-    checkBotIdMock.mockImplementation(async () => {
-      throw new Error("caído");
+  describe("con ANTISPAM_BOTID=1", () => {
+    beforeEach(() => {
+      process.env.ANTISPAM_BOTID = "1";
     });
-    expect(await esEnvioDeBot()).toBe(false);
-    err.mockRestore();
+
+    test("true cuando BotID dice que es un bot", async () => {
+      checkBotIdMock.mockResolvedValue({ isBot: true, isVerifiedBot: false });
+      expect(await esEnvioDeBot(form("627505024"))).toBe(true);
+    });
+
+    test("false para una persona", async () => {
+      checkBotIdMock.mockResolvedValue({ isBot: false, isVerifiedBot: false });
+      expect(await esEnvioDeBot(form("627505024"))).toBe(false);
+    });
+
+    test("si BotID falla deja pasar: perder un lead real es peor que colar un bot", async () => {
+      const err = vi.spyOn(console, "error").mockImplementation(() => {});
+      checkBotIdMock.mockImplementation(async () => {
+        throw new Error("caído");
+      });
+      expect(await esEnvioDeBot(form("627505024"))).toBe(false);
+      err.mockRestore();
+    });
   });
 });

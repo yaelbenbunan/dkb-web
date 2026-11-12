@@ -68,8 +68,8 @@ export async function requestGrowth(formData: FormData): Promise<GrowthResult> {
     return { ok: false, error: "Datos inválidos. Revisa los campos." };
   }
 
-  // Va después de validar para no gastar una llamada a BotID en envíos rotos.
-  if (await esEnvioDeBot()) {
+  // Va después de validar: los envíos rotos ya se rechazan arriba.
+  if (await esEnvioDeBot(formData)) {
     return { ok: false, error: MENSAJE_BOT };
   }
 

@@ -35,8 +35,8 @@ export async function enviarSolicitudPack(fd: FormData): Promise<ResultadoSolici
   const leido = leerSolicitud(fd);
   if (!leido.ok) return { ok: false, error: "Revisa los campos marcados.", errores: leido.errores };
 
-  // Va después de validar para no gastar una llamada a BotID en envíos rotos.
-  if (await esEnvioDeBot()) return { ok: false, error: MENSAJE_BOT, whatsapp: WHATSAPP };
+  // Va después de validar: los envíos rotos ya se rechazan arriba.
+  if (await esEnvioDeBot(fd)) return { ok: false, error: MENSAJE_BOT, whatsapp: WHATSAPP };
 
   const s = leido.datos;
 

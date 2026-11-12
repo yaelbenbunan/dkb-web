@@ -76,8 +76,8 @@ export async function sendPreviewLead(
     return { ok: false, error: "Revisa los campos del formulario." };
   }
 
-  // Va después de validar para no gastar una llamada a BotID en envíos rotos.
-  if (await esEnvioDeBot()) {
+  // Va después de validar: los envíos rotos ya se rechazan arriba.
+  if (await esEnvioDeBot(formData)) {
     return { ok: false, error: MENSAJE_BOT };
   }
 

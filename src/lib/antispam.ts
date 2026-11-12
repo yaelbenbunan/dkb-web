@@ -11,17 +11,29 @@ import { checkBotId } from "botid/server";
  * buzón de otra persona, lo que acaba quemando el dominio de envío.
  */
 
-/** Mensaje para quien BotID toma por bot. Si es una persona, recargar suele bastar. */
+/** Mensaje para quien se toma por bot. Si es una persona, recargar suele bastar. */
 export const MENSAJE_BOT = "No hemos podido verificar el envío. Recarga la página e inténtalo de nuevo.";
 
 /**
- * BotID de Vercel (invisible, sin captcha). La página tiene que estar cubierta
- * por `initBotId` en `src/instrumentation-client.ts`, o toda petición se verá
- * como bot. En desarrollo y en tests siempre responde «humano».
+ * ¿Hay que rechazar este envío? Dos comprobaciones:
  *
- * Si BotID falla, deja pasar: perder un lead real es peor que colar un bot.
+ * 1. El teléfono con el patrón de los bots (ver `telefonoConPatronSpam`).
+ *    Barata, sin falsos positivos en los leads reales que tenemos.
+ * 2. Vercel BotID, SOLO si `ANTISPAM_BOTID=1`. Está apagado porque dinkbit.es
+ *    va detrás de Cloudflare y, así, BotID tomaba por bot a todo el mundo en
+ *    producción (12/11/2026; en la preview, sin Cloudflare, funcionaba). Para
+ *    encenderlo, el dominio tiene que apuntar a Vercel sin el proxy de
+ *    Cloudflare (nube gris), y probarlo en www.dinkbit.es antes de dejarlo.
+ *    Si BotID falla, deja pasar: perder un lead real es peor que colar un bot.
  */
-export async function esEnvioDeBot(): Promise<boolean> {
+export async function esEnvioDeBot(formData: FormData): Promise<boolean> {
+  const telefono = formData.get("phone") ?? formData.get("telefono");
+  if (typeof telefono === "string" && telefonoConPatronSpam(telefono)) {
+    console.warn("[antispam] envío bloqueado: teléfono con patrón de bot");
+    return true;
+  }
+
+  if (process.env.ANTISPAM_BOTID !== "1") return false;
   try {
     const verificacion = await checkBotId();
     // Las métricas de BotID del Firewall piden Observability Plus (de pago); este
