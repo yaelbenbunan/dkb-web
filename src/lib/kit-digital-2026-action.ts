@@ -7,6 +7,7 @@ import { kitDigital2026Lead, utmFromFormData } from "./web-lead-origin";
 import { sendLeadAutoresponder } from "./lead-autoresponder";
 import { kitDigital2026Autoresponder } from "./lead-emails";
 import { destinatariosAviso } from "./avisos-internos";
+import { esEnvioDeBot, MENSAJE_BOT } from "./antispam";
 
 const schema = z
   .object({
@@ -69,6 +70,11 @@ export async function requestKitDigital2026(
 
   if (!parsed.success) {
     return { ok: false, error: "Datos inválidos. Revisa los campos." };
+  }
+
+  // Va después de validar para no gastar una llamada a BotID en envíos rotos.
+  if (await esEnvioDeBot()) {
+    return { ok: false, error: MENSAJE_BOT };
   }
 
   const d = parsed.data;
@@ -135,6 +141,7 @@ export async function requestKitDigital2026(
   // escribirle otra vez a los dos minutos sobra y quema la lista.
   if (!saved.matched) {
     await sendLeadAutoresponder({
+      telefono: String(formData.get("phone") ?? ""),
       leadId: saved.id,
       to: d.email,
       mail: kitDigital2026Autoresponder({ name: d.name }),

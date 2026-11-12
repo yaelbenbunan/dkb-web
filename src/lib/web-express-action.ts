@@ -18,6 +18,7 @@ import {
   GOALS,
   PRACTICE_STAGE,
 } from "./web-express-landings";
+import { esEnvioDeBot, MENSAJE_BOT } from "./antispam";
 
 /**
  * Teléfono español: 9 dígitos que empiezan por 6, 7, 8 o 9, con prefijo +34
@@ -83,6 +84,11 @@ export async function requestWebExpress(formData: FormData): Promise<WebExpressR
     return { ok: false, error: first?.message ?? "Revisa los campos." };
   }
 
+  // Va después de validar para no gastar una llamada a BotID en envíos rotos.
+  if (await esEnvioDeBot()) {
+    return { ok: false, error: MENSAJE_BOT };
+  }
+
   const d = parsed.data;
 
   // El lead primero: si Resend falla después, no se pierde.
@@ -132,6 +138,7 @@ export async function requestWebExpress(formData: FormData): Promise<WebExpressR
   }
 
   await sendLeadAutoresponder({
+    telefono: String(formData.get("phone") ?? ""),
     leadId: saved.id,
     to: d.email,
     mail: webExpressAutoresponder({ name: d.name, timeSlot: d.timeSlot }),

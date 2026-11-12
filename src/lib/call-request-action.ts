@@ -6,6 +6,7 @@ import { createWebhookLead } from "./imagina-leads";
 import { callRequestLead, utmFromFormData } from "./web-lead-origin";
 import { consentFromFormData } from "./consent";
 import { destinatariosAviso } from "./avisos-internos";
+import { esEnvioDeBot, MENSAJE_BOT } from "./antispam";
 
 const callRequestSchema = z
   .object({
@@ -38,6 +39,11 @@ export async function sendCallRequest(
 
   if (!parsed.success) {
     return { ok: false, error: "Datos inválidos. Revisa los campos." };
+  }
+
+  // Va después de validar para no gastar una llamada a BotID en envíos rotos.
+  if (await esEnvioDeBot()) {
+    return { ok: false, error: MENSAJE_BOT };
   }
 
   // Persist every web lead to the CRM (best-effort, never throws) before the

@@ -13,6 +13,7 @@ import { consentFromFormData } from "./consent";
 import { sendLeadAutoresponder } from "./lead-autoresponder";
 import { contactAutoresponder } from "./lead-emails";
 import { destinatariosAviso } from "./avisos-internos";
+import { esEnvioDeBot, MENSAJE_BOT } from "./antispam";
 
 export async function sendContactEmail(
   formData: FormData,
@@ -42,6 +43,11 @@ export async function sendContactEmail(
       error: "Revisa los campos marcados.",
       fieldErrors,
     };
+  }
+
+  // Va después de validar para no gastar una llamada a BotID en envíos rotos.
+  if (await esEnvioDeBot()) {
+    return { ok: false, error: MENSAJE_BOT };
   }
 
   // Persist every web lead to the CRM (best-effort, never throws) before the
@@ -89,6 +95,7 @@ export async function sendContactEmail(
   // guardado y el equipo avisado, así que no se le devuelve un error a
   // quien acaba de rellenar el formulario.
   await sendLeadAutoresponder({
+    telefono: String(formData.get("phone") ?? ""),
     leadId: saved.id,
     to: email,
     mail: contactAutoresponder({ name }),

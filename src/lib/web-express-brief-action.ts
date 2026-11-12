@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { createWebhookLead, getLeadNotes, updateLeadField } from "./imagina-leads";
 import { briefBySlug, briefBlocks, type BriefField } from "./web-express-brief";
+import { esEnvioDeBot, MENSAJE_BOT } from "./antispam";
 
 /**
  * Guarda el cuestionario sobre el lead que ya existe en el CRM.
@@ -61,6 +62,11 @@ export async function submitWebExpressBrief(formData: FormData): Promise<BriefRe
   if (!parsed.success) {
     const first = parsed.error.issues[0];
     return { ok: false, error: first?.message ?? "Revisa los campos obligatorios." };
+  }
+
+  // Va después de validar para no gastar una llamada a BotID en envíos rotos.
+  if (await esEnvioDeBot()) {
+    return { ok: false, error: MENSAJE_BOT };
   }
 
   const brief = briefBySlug(parsed.data.slug);

@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import createMDX from "@next/mdx";
+import { withBotId } from "botid/next/config";
 
 const withMDX = createMDX({});
 
@@ -76,4 +77,6 @@ const config: NextConfig = {
   ],
 };
 
-export default withMDX(config);
+// BotID (antispam de formularios) necesita sus reescrituras hacia Vercel.
+// Ver src/instrumentation-client.ts y src/lib/antispam.ts.
+export default withBotId(withMDX(config));

@@ -10,6 +10,7 @@ import { growthAutoresponder } from "./lead-emails";
 import { sendMetaLead } from "./meta-capi";
 import { calcular, parseImporte, type CalcResult } from "./growth-calc";
 import { destinatariosAviso } from "./avisos-internos";
+import { esEnvioDeBot, MENSAJE_BOT } from "./antispam";
 
 /**
  * Los tres importes llegan como cadena. Cadena vacía = la opción "no lo sé" /
@@ -66,6 +67,12 @@ export async function requestGrowth(formData: FormData): Promise<GrowthResult> {
   if (!parsed.success) {
     return { ok: false, error: "Datos inválidos. Revisa los campos." };
   }
+
+  // Va después de validar para no gastar una llamada a BotID en envíos rotos.
+  if (await esEnvioDeBot()) {
+    return { ok: false, error: MENSAJE_BOT };
+  }
+
   const d = parsed.data;
 
   const inversion = parseImporte(d.inversion);
@@ -93,6 +100,7 @@ export async function requestGrowth(formData: FormData): Promise<GrowthResult> {
   // Best-effort de aquí abajo: el resultado ya es suyo y lo ha "pagado" con sus
   // datos. Que falle el correo o la conversión no puede quitárselo.
   await sendLeadAutoresponder({
+    telefono: String(formData.get("phone") ?? ""),
     leadId: saved.id,
     to: d.email,
     mail: growthAutoresponder({

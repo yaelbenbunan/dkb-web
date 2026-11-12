@@ -53,6 +53,17 @@ describe("sendLeadAutoresponder", () => {
     expect(sendMock.mock.calls[0][0].replyTo).toBe(CONTACT_INFO.email);
   });
 
+  test("no escribe a un teléfono con el patrón de los bots (email bombing)", async () => {
+    const res = await sendLeadAutoresponder({ leadId: "lead-1", to: "victima@b.com", mail, telefono: "19428314176" });
+    expect(res).toEqual({ ok: false, error: "telefono_sospechoso" });
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  test("con un teléfono normal envía", async () => {
+    const res = await sendLeadAutoresponder({ leadId: "lead-1", to: "a@b.com", mail, telefono: "+34636551531" });
+    expect(res.ok).toBe(true);
+  });
+
   test("sin leadId envía igual pero no intenta persistir estado", async () => {
     const res = await sendLeadAutoresponder({ to: "a@b.com", mail });
     expect(res.ok).toBe(true);

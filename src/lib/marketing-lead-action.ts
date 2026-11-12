@@ -8,6 +8,7 @@ import { consentFromFormData } from "./consent";
 import { sendLeadAutoresponder } from "./lead-autoresponder";
 import { marketingLandingAutoresponder } from "./lead-emails";
 import { destinatariosAviso } from "./avisos-internos";
+import { esEnvioDeBot, MENSAJE_BOT } from "./antispam";
 
 /**
  * Lead de las landings de captación (/marketing-clinicas y
@@ -55,6 +56,11 @@ export async function sendMarketingLead(
 
   if (!parsed.success) {
     return { ok: false, error: "Datos inválidos. Revisa los campos." };
+  }
+
+  // Va después de validar para no gastar una llamada a BotID en envíos rotos.
+  if (await esEnvioDeBot()) {
+    return { ok: false, error: MENSAJE_BOT };
   }
 
   // Persist every web lead to the CRM (best-effort, never throws) before the
@@ -110,6 +116,7 @@ export async function sendMarketingLead(
   // lead se queda solo con el teléfono para que le llamen.
   if (email) {
     await sendLeadAutoresponder({
+      telefono: String(formData.get("phone") ?? ""),
       leadId: saved.id,
       to: email,
       mail: marketingLandingAutoresponder({ name }),

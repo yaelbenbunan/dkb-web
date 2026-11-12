@@ -8,6 +8,7 @@ import { promoVeranoLead, utmFromFormData } from "./web-lead-origin";
 import { addOrUpdateMember } from "./mailchimp";
 import { buildPromoEmail } from "./promo-email";
 import { PROMO } from "./promo-config";
+import { esEnvioDeBot, MENSAJE_BOT } from "./antispam";
 
 const schema = z
   .object({
@@ -44,6 +45,11 @@ export async function subscribePromo(
   });
   if (!parsed.success) {
     return { ok: false, error: "Revisa tu nombre y email, y acepta las condiciones." };
+  }
+
+  // Va después de validar para no gastar una llamada a BotID en envíos rotos.
+  if (await esEnvioDeBot()) {
+    return { ok: false, error: MENSAJE_BOT };
   }
   const name = parsed.data.name;
   const email = parsed.data.email.trim().toLowerCase();

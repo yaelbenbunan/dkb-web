@@ -3,6 +3,7 @@ import { Resend } from "resend";
 import { renderBrandedEmail, type BrandedEmailInput } from "./email-layout";
 import { setLeadEmailSent } from "./imagina-leads";
 import { CONTACT_INFO } from "./contact-info";
+import { telefonoConPatronSpam } from "./antispam";
 
 /**
  * Manda el acuse de recibo al lead que acaba de rellenar un formulario y
@@ -18,7 +19,14 @@ export async function sendLeadAutoresponder(input: {
   leadId?: string | null;
   to: string;
   mail: BrandedEmailInput;
+  /** Teléfono del formulario. Con el patrón de los bots no se escribe: el email
+   *  suele ser de un tercero al que están llenando el buzón (ver antispam.ts). */
+  telefono?: string | null;
 }): Promise<{ ok: boolean; messageId?: string; error?: string }> {
+  if (telefonoConPatronSpam(input.telefono)) {
+    console.warn("[lead-autoresponder] teléfono con patrón de bot, no se envía el acuse");
+    return { ok: false, error: "telefono_sospechoso" };
+  }
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.CONTACT_EMAIL_FROM ?? "onboarding@resend.dev";
   if (!apiKey) return { ok: false, error: "resend_not_configured" };

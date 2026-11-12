@@ -6,6 +6,7 @@ import { sendMetaLead } from "./meta-capi";
 import { leerSolicitud, MARCA_PROVEEDORES_DEPORTIVOS_SLUG, notaSolicitudPack, PD_CAMPANA, PD_CANAL, type ErroresSolicitud } from "./proveedores-deportivos";
 import { crearLimitador, esEnvioBot } from "./ventas/formulario-web";
 import { recibirLeadFormulario } from "./ventas/servicios";
+import { esEnvioDeBot, MENSAJE_BOT } from "./antispam";
 
 export type ResultadoSolicitud =
   | { ok: true }
@@ -33,6 +34,10 @@ export async function enviarSolicitudPack(fd: FormData): Promise<ResultadoSolici
 
   const leido = leerSolicitud(fd);
   if (!leido.ok) return { ok: false, error: "Revisa los campos marcados.", errores: leido.errores };
+
+  // Va después de validar para no gastar una llamada a BotID en envíos rotos.
+  if (await esEnvioDeBot()) return { ok: false, error: MENSAJE_BOT, whatsapp: WHATSAPP };
+
   const s = leido.datos;
 
   let r: { status: number; body: Record<string, unknown> };

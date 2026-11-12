@@ -4,6 +4,7 @@ import { previewLeadSchema } from "./preview-validation";
 import { generateLeadId } from "./preview-lead-id";
 import { mintFollowupToken } from "./preview-followup-token";
 import { saveLead } from "./imagina-leads";
+import { esEnvioDeBot, MENSAJE_BOT } from "./antispam";
 
 interface PreviewLeadResult {
   ok: boolean;
@@ -73,6 +74,11 @@ export async function sendPreviewLead(
       parsed.error.issues.map((i) => ({ path: i.path, code: i.code })),
     );
     return { ok: false, error: "Revisa los campos del formulario." };
+  }
+
+  // Va después de validar para no gastar una llamada a BotID en envíos rotos.
+  if (await esEnvioDeBot()) {
+    return { ok: false, error: MENSAJE_BOT };
   }
 
   const leadId = generateLeadId();

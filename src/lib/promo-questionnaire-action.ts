@@ -8,6 +8,7 @@ import {
   createWebhookLead,
 } from "./imagina-leads";
 import type { PromoQuestionnaireInput } from "./promo-questionnaire";
+import { esEnvioDeBot, MENSAJE_BOT } from "./antispam";
 
 const schema = z
   .object({
@@ -44,6 +45,12 @@ export async function submitPromoQuestionnaire(
   if (!parsed.success) {
     return { ok: false, error: "Revisa los campos obligatorios." };
   }
+
+  // Va después de validar para no gastar una llamada a BotID en envíos rotos.
+  if (await esEnvioDeBot()) {
+    return { ok: false, error: MENSAJE_BOT };
+  }
+
   const d = parsed.data;
   const email = d.email.trim().toLowerCase();
 

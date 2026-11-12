@@ -11,6 +11,7 @@ import { sendMetaLead } from "./meta-capi";
 import { destinatariosAviso } from "./avisos-internos";
 import { headers, cookies } from "next/headers";
 import { WEB_299_ORIGIN, WEB_299_PRICE } from "./web-299";
+import { esEnvioDeBot, MENSAJE_BOT } from "./antispam";
 
 /**
  * Entrada de leads de la landing de 299€.
@@ -73,6 +74,11 @@ export async function requestWeb299(formData: FormData): Promise<Web299Result> {
     return { ok: false, error: first?.message ?? "Revisa los campos." };
   }
 
+  // Va después de validar para no gastar una llamada a BotID en envíos rotos.
+  if (await esEnvioDeBot()) {
+    return { ok: false, error: MENSAJE_BOT };
+  }
+
   const d = parsed.data;
 
   // El lead PRIMERO: si Resend falla después, el lead no se pierde. Es el mismo
@@ -114,6 +120,7 @@ export async function requestWeb299(formData: FormData): Promise<Web299Result> {
   }
 
   await sendLeadAutoresponder({
+    telefono: String(formData.get("phone") ?? ""),
     leadId: saved.id,
     to: d.email,
     mail: web299Autoresponder({ name: d.name }),
