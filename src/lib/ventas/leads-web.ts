@@ -22,7 +22,7 @@ import { ETIQUETA_KIT_DIGITAL, faseDesdeEstadoPanel, MARCA_DINKBIT_SLUG } from "
 
 /**
  * Los leads de la web de dinkbit (formularios, landings, webhooks, preview de
- * Imagina) se guardan en /panel/ventas, marca `dinkbit`. Antes iban a la tabla
+ * Imagina) se guardan en /panel, marca `dinkbit`. Antes iban a la tabla
  * `imagina_leads` del /panel viejo; ver la unificación del CRM
  * (docs/superpowers/specs/2026-10-15-crm-unificacion-leads-fases-design.md).
  *
@@ -191,7 +191,7 @@ async function avisarRespaldo(e: Entrada, motivo: string): Promise<void> {
       to,
       subject: "Lead guardado en la tabla vieja: revisar",
       text: [
-        "Un lead de la web no se pudo guardar en /panel/ventas y se guardó en la tabla vieja (imagina_leads), donde nadie lo trabaja.",
+        "Un lead de la web no se pudo guardar en /panel y se guardó en la tabla vieja (imagina_leads), donde nadie lo trabaja.",
         "",
         `Lead: ${quien}`,
         `Canal / campaña: ${[limpio(e.canal), limpio(e.campana)].filter(Boolean).join(" · ") || "—"}`,

@@ -1,0 +1,114 @@
+import Link from "next/link";
+import { requireAccesoMarca } from "@/lib/ventas/auth";
+import { listLeads, listUltimasNotas, listUsuarias } from "@/lib/ventas/db";
+import { TIPO_NEGOCIO_LABELS } from "@/lib/ventas/dominio";
+import { ahoraMadrid, formatoFechaHora } from "@/lib/ventas/metricas";
+import { filtrarPorOrigen, leerFiltroOrigen, opcionesOrigen } from "@/lib/ventas/filtros-origen";
+import { estadoSeguimiento, iniciales } from "@/lib/ventas/tablero";
+import { FiltrosOrigen } from "../../../_componentes/FiltrosOrigen";
+import { MarcaCabecera } from "../../../_componentes/MarcaCabecera";
+import { Tablero, type TarjetaLead } from "./Tablero";
+
+export default async function TableroPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ mias?: string; atrasados?: string; q?: string; canal?: string; campana?: string; etiqueta?: string }>;
+}) {
+  const [{ slug }, sp] = await Promise.all([params, searchParams]);
+  const { usuaria, marca } = await requireAccesoMarca(slug, "tablero");
+  const mias = sp.mias === "1";
+  const atrasados = sp.atrasados === "1";
+  const q = (sp.q ?? "").trim().toLowerCase();
+  const origen = leerFiltroOrigen(sp);
+  const ahora = ahoraMadrid();
+
+  const [cargados, usuarias, notas] = await Promise.all([
+    listLeads(marca.id, { asignadaA: mias ? usuaria.id : undefined }),
+    listUsuarias(),
+    listUltimasNotas(marca.id),
+  ]);
+  const nombres = new Map(usuarias.map((u) => [u.id, u.nombre]));
+  const opciones = opcionesOrigen(cargados);
+  const todos = filtrarPorOrigen(cargados, origen);
+
+  // Al cliente solo van datos planos del lead: nada de la marca (lleva el secreto del webhook).
+  const leads: TarjetaLead[] = todos
+    .filter((l) => !atrasados || estadoSeguimiento(l.proximo_seguimiento, l.proximo_seguimiento_hora ?? null, l.fase, ahora) === "atrasado")
+    .filter((l) => !q || [l.negocio, l.ciudad, l.contacto, l.email, l.telefono].some((v) => v?.toLowerCase().includes(q)))
+    .map((l) => {
+      const nombre = l.asignada_a ? nombres.get(l.asignada_a) : undefined;
+      const nota = notas.get(l.id);
+      return {
+        id: l.id,
+        negocio: l.negocio,
+        tipo: l.tipo_negocio ? TIPO_NEGOCIO_LABELS[l.tipo_negocio] : null,
+        ciudad: l.ciudad,
+        campana: l.campana ?? l.origen_detalle ?? null,
+        contacto: l.contacto,
+        telefono: l.telefono,
+        email: l.email,
+        fase: l.fase,
+        excluido: l.excluido,
+        proximo_seguimiento: l.proximo_seguimiento,
+        proximo_seguimiento_hora: l.proximo_seguimiento_hora ?? null,
+        created_at: l.created_at,
+        // DD/MM en hora de Madrid: los 5 primeros caracteres de «DD/MM/YYYY, HH:MM».
+        ultima_nota: nota ? { texto: nota.texto, fecha: formatoFechaHora(nota.fecha).slice(0, 5) } : null,
+        asignada: nombre ? { nombre, iniciales: iniciales(nombre) } : null,
+      };
+    });
+
+  const filtro = (extra: Record<string, string | undefined>) => {
+    const p = new URLSearchParams();
+    const valores = { mias: mias ? "1" : undefined, atrasados: atrasados ? "1" : undefined, q: q || undefined, ...origen, ...extra };
+    Object.entries(valores).forEach(([k, v]) => v && p.set(k, v));
+    const s = p.toString();
+    return `/panel/${slug}/tablero${s ? `?${s}` : ""}`;
+  };
+  const chip = (activo: boolean) =>
+    ({
+      padding: "4px 10px",
+      borderRadius: 999,
+      fontSize: 13,
+      textDecoration: "none",
+      border: `1px solid ${activo ? "#187bef" : "#cbd5e1"}`,
+      color: activo ? "#187bef" : "#475569",
+      background: activo ? "#eff6ff" : "#fff",
+    }) as const;
+
+  return (
+    <div>
+      <MarcaCabecera marca={marca} activa="tablero" rol={usuaria.rol} />
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+          <Link href={filtro({ mias: undefined, atrasados: undefined, q: undefined })} style={chip(!mias && !atrasados && !q)}>Todos</Link>
+          <Link href={filtro({ mias: mias ? undefined : "1" })} style={chip(mias)}>Solo mías</Link>
+          <Link href={filtro({ atrasados: atrasados ? undefined : "1" })} style={chip(atrasados)}>Seguimiento atrasado</Link>
+          <span style={{ fontSize: 13, color: "#64748b", marginLeft: 6 }}>{leads.length} leads</span>
+          <form action={`/panel/${slug}/tablero`} style={{ marginLeft: "auto" }}>
+            {mias && <input type="hidden" name="mias" value="1" />}
+            {atrasados && <input type="hidden" name="atrasados" value="1" />}
+            <input
+              name="q"
+              defaultValue={q}
+              placeholder="Buscar negocio, ciudad, contacto…"
+              aria-label="Buscar en el tablero"
+              style={{ padding: "6px 10px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 13 }}
+            />
+          </form>
+        </div>
+
+        <FiltrosOrigen
+          accion={`/panel/${slug}/tablero`}
+          valores={origen}
+          opciones={opciones}
+          ocultos={{ mias: mias ? "1" : undefined, atrasados: atrasados ? "1" : undefined, q: q || undefined }}
+        />
+
+        <Tablero slug={slug} leads={leads} ahora={ahora} filtrosLista={{ mias, atrasados, q }} puedeEliminar={usuaria.rol === "admin"} />
+      </div>
+    </div>
+  );
+}

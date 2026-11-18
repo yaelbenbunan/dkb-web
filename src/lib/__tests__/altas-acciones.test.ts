@@ -32,7 +32,7 @@ vi.mock("@/lib/altas/aviso", () => ({ avisarAltaEnviada: m.avisarAltaEnviada }))
 vi.mock("next/cache", () => ({ revalidatePath: m.revalidatePath }));
 
 import { enviarAltaAction, pedirSubidaAction, quitarArchivoAction } from "@/app/(alta)/alta/[token]/acciones";
-import { crearAltaAction, setAltaActivaAction } from "@/app/(site)/panel/ventas/acciones-altas";
+import { crearAltaAction, setAltaActivaAction } from "@/app/(site)/panel/acciones-altas";
 
 const TOKEN = "A".repeat(43);
 const ALTA_ID = "11111111-2222-4333-8444-555555555555";

@@ -13,28 +13,33 @@ import {
 } from "../ventas/rutas";
 
 describe("clasificarRutaPanel", () => {
-  test("separa ventas del panel de leads", () => {
-    expect(clasificarRutaPanel("/panel/ventas")).toBe("ventas");
-    expect(clasificarRutaPanel("/panel/ventas/hydrup/leads")).toBe("ventas");
-    expect(clasificarRutaPanel("/panel/ventas/login")).toBe("ventas-login");
-    expect(clasificarRutaPanel("/panel/login")).toBe("panel-login");
-    expect(clasificarRutaPanel("/panel/campanas")).toBe("panel");
+  test("el panel por persona en /panel; el viejo en /panel/antiguo", () => {
+    expect(clasificarRutaPanel("/panel")).toBe("ventas");
+    expect(clasificarRutaPanel("/panel/hydrup/leads")).toBe("ventas");
+    expect(clasificarRutaPanel("/panel/login")).toBe("ventas-login");
+    expect(clasificarRutaPanel("/panel/login/recuperar/vuelta")).toBe("ventas-login");
+    expect(clasificarRutaPanel("/panel/antiguo")).toBe("panel");
+    expect(clasificarRutaPanel("/panel/antiguo/campanas/3")).toBe("panel");
+    expect(clasificarRutaPanel("/panel/antiguo/login")).toBe("panel-login");
   });
 
-  test("una ruta que solo empieza igual no es de ventas", () => {
-    expect(clasificarRutaPanel("/panel/ventasx")).toBe("panel");
+  test("una ruta que solo empieza igual no es del panel", () => {
+    expect(clasificarRutaPanel("/panelx")).toBe("panel");
+    expect(clasificarRutaPanel("/panel/antiguox")).toBe("ventas");
+    expect(clasificarRutaPanel("/panel/loginx")).toBe("ventas");
   });
 });
 
 describe("destinoTrasLogin", () => {
-  test("solo deja volver a rutas de ventas", () => {
-    expect(destinoTrasLogin("/panel/ventas/hoy")).toBe("/panel/ventas/hoy");
-    expect(destinoTrasLogin("/panel/ventas?mes=2026-09")).toBe("/panel/ventas?mes=2026-09");
-    expect(destinoTrasLogin("https://evil.com")).toBe("/panel/ventas");
-    expect(destinoTrasLogin("//evil.com/panel/ventas")).toBe("/panel/ventas");
-    expect(destinoTrasLogin("/panel/campanas")).toBe("/panel/ventas");
-    expect(destinoTrasLogin("/panel/ventas/login")).toBe("/panel/ventas");
-    expect(destinoTrasLogin(null)).toBe("/panel/ventas");
+  test("solo deja volver a rutas del panel por persona", () => {
+    expect(destinoTrasLogin("/panel/hoy")).toBe("/panel/hoy");
+    expect(destinoTrasLogin("/panel?mes=2026-09")).toBe("/panel?mes=2026-09");
+    expect(destinoTrasLogin("https://evil.com")).toBe("/panel");
+    expect(destinoTrasLogin("//evil.com/panel")).toBe("/panel");
+    expect(destinoTrasLogin("/panel/antiguo/campanas")).toBe("/panel");
+    expect(destinoTrasLogin("/panel/login")).toBe("/panel");
+    expect(destinoTrasLogin("/otra")).toBe("/panel");
+    expect(destinoTrasLogin(null)).toBe("/panel");
   });
 });
 
@@ -156,8 +161,8 @@ describe("rol «agente» (solo conversaciones)", () => {
     expect(seccionesDeRol("agente")).toEqual(["conversaciones"]);
     expect(seccionesDeRol("cliente")).toEqual(["resumen", "tablero", "leads", "tareas", "conversaciones", "whatsapp"]);
     expect(seccionesDeRol("admin")).toBeNull();
-    expect(inicioDeMarca("agente", "dinkbit")).toBe("/panel/ventas/dinkbit/conversaciones");
-    expect(inicioDeMarca("cliente", "hydrup")).toBe("/panel/ventas/hydrup");
+    expect(inicioDeMarca("agente", "dinkbit")).toBe("/panel/dinkbit/conversaciones");
+    expect(inicioDeMarca("cliente", "hydrup")).toBe("/panel/hydrup");
   });
 
   test("qué roles van ligados a una marca", () => {

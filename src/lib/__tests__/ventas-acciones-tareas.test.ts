@@ -19,7 +19,7 @@ vi.mock("@/lib/ventas/db", () => ({
 }));
 vi.mock("next/cache", () => ({ revalidatePath: m.revalidatePath }));
 
-import { crearTareaAction, marcarTareaAction, reasignarTareaAction } from "@/app/(site)/panel/ventas/acciones-tareas";
+import { crearTareaAction, marcarTareaAction, reasignarTareaAction } from "@/app/(site)/panel/acciones-tareas";
 
 function fd(campos: Record<string, string>): FormData {
   const f = new FormData();

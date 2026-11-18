@@ -1,4 +1,4 @@
-/** Reglas de acceso de /panel/ventas. Puro: lo usan el proxy, el login y los tests. */
+/** Reglas de acceso de /panel. Puro: lo usan el proxy, el login y los tests. */
 
 export type RutaPanel = "ventas-login" | "ventas" | "panel-login" | "panel";
 
@@ -6,17 +6,24 @@ function bajo(pathname: string, base: string): boolean {
   return pathname === base || pathname.startsWith(`${base}/`);
 }
 
+/**
+ * Qué acceso protege cada dirección de /panel:
+ * - /panel/antiguo: el panel viejo, con la contraseña compartida (y su login).
+ * - el resto de /panel: el panel por persona, con Supabase Auth (y su login).
+ * Las direcciones de antes (/panel/ventas/…) las redirige next.config.
+ */
 export function clasificarRutaPanel(pathname: string): RutaPanel {
-  if (bajo(pathname, "/panel/ventas/login")) return "ventas-login";
-  if (bajo(pathname, "/panel/ventas")) return "ventas";
-  if (pathname.startsWith("/panel/login")) return "panel-login";
+  if (bajo(pathname, "/panel/antiguo/login")) return "panel-login";
+  if (bajo(pathname, "/panel/antiguo")) return "panel";
+  if (bajo(pathname, "/panel/login")) return "ventas-login";
+  if (bajo(pathname, "/panel")) return "ventas";
   return "panel";
 }
 
-/** A dónde volver tras iniciar sesión. Solo rutas internas de ventas: nunca
+/** A dónde volver tras iniciar sesión. Solo rutas internas del panel: nunca
  *  otra web (open redirect) ni el propio login. */
 export function destinoTrasLogin(raw: unknown): string {
-  const porDefecto = "/panel/ventas";
+  const porDefecto = "/panel";
   if (typeof raw !== "string" || !raw.startsWith("/") || raw.startsWith("//") || raw.includes("\\")) return porDefecto;
   const ruta = raw.split(/[?#]/)[0];
   return clasificarRutaPanel(ruta) === "ventas" ? raw : porDefecto;
@@ -74,7 +81,7 @@ export function rolConMarca(rol: string): boolean {
 /** Adónde va al entrar un rol ligado a marca: la primera sección que puede abrir. */
 export function inicioDeMarca(rol: string, slug: string): string {
   const primera = seccionesDeRol(rol)?.[0];
-  return !primera || primera === "resumen" ? `/panel/ventas/${slug}` : `/panel/ventas/${slug}/${primera}`;
+  return !primera || primera === "resumen" ? `/panel/${slug}` : `/panel/${slug}/${primera}`;
 }
 
 export function evaluarAccesoMarca(

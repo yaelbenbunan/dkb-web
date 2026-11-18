@@ -31,9 +31,21 @@ const config: NextConfig = {
     // proxy: quien solo tiene sesión de ventas no pasa por el login viejo.
     {
       source: "/panel/prospeccion",
-      destination: "/panel/ventas/dinkbit/prospeccion",
+      destination: "/panel/dinkbit/prospeccion",
       permanent: false,
     },
+    // El panel por persona pasó de /panel/ventas a /panel el 2026-11-18 (ya no
+    // es solo ventas: docs/superpowers/specs/2026-11-18-panel-espacios-design.md).
+    // Los correos ya enviados y los marcadores siguen funcionando. Temporales:
+    // una 308 se queda en la caché del navegador y ataría la ruta para siempre.
+    { source: "/panel/ventas", destination: "/panel", permanent: false },
+    { source: "/panel/ventas/:path*", destination: "/panel/:path*", permanent: false },
+    // Y el panel viejo, a /panel/antiguo, para dejarle /panel al nuevo.
+    ...["campanas", "calculadora", "agenda", "tablero", "pdf", "plantilla-leads"].map((seccion) => ({
+      source: `/panel/${seccion}/:path*`,
+      destination: `/panel/antiguo/${seccion}/:path*`,
+      permanent: false,
+    })),
     // «Plataformas a medida» deja de ofrecerse: dinkbit se queda con el
     // marketing de siempre. Su hueco lo ocupa GEO. La URL vieja estaba indexada,
     // así que 301 a desarrollo web, que es lo más parecido que sí se sigue

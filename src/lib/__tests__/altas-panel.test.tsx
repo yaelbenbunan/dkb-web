@@ -4,10 +4,10 @@ import { describe, expect, test, vi } from "vitest";
 const m = vi.hoisted(() => ({ getAltaPorId: vi.fn(), firmarDescargas: vi.fn(), requireUsuaria: vi.fn() }));
 vi.mock("@/lib/altas/db", () => ({ getAltaPorId: m.getAltaPorId, firmarDescargas: m.firmarDescargas }));
 vi.mock("@/lib/ventas/auth", () => ({ requireUsuaria: m.requireUsuaria }));
-vi.mock("@/app/(site)/panel/ventas/acciones-altas", () => ({ setAltaActivaAction: vi.fn(), crearAltaAction: vi.fn() }));
+vi.mock("@/app/(site)/panel/acciones-altas", () => ({ setAltaActivaAction: vi.fn(), crearAltaAction: vi.fn() }));
 vi.mock("next/navigation", () => ({ notFound: () => { throw new Error("NOT_FOUND"); } }));
 
-import AltaPage from "@/app/(site)/panel/ventas/(app)/altas/[id]/page";
+import AltaPage from "@/app/(site)/panel/(app)/altas/[id]/page";
 
 describe("panel: vista de un alta", () => {
   test("exige admin y solo enlaza URLs http(s); lo demás va como texto", async () => {

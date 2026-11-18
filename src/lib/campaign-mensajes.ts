@@ -3,7 +3,7 @@ import { CAMPAIGN_NOT_CLAIMABLE } from "./campaign-send";
 
 /**
  * Mensajes de error de campañas para quien usa el panel, compartidos por las
- * acciones del /panel viejo y las de /panel/ventas/<marca>/campanas.
+ * acciones del /panel viejo y las de /panel/<marca>/campanas.
  */
 
 export const AI_FAILURE_MESSAGE: Record<BlocksFailureReason, string> = {

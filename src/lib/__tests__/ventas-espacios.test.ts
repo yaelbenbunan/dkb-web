@@ -120,34 +120,34 @@ describe("ubicacion", () => {
   ];
 
   test("personal: Mi día y Tareas", () => {
-    expect(ubicacion("/panel/ventas/hoy", marcas)).toEqual({ espacio: "personal", menu: "hoy", migas: ["Mi día"] });
-    expect(ubicacion("/panel/ventas/tareas", marcas)).toEqual({ espacio: "personal", menu: "tareas", migas: ["Tareas"] });
+    expect(ubicacion("/panel/hoy", marcas)).toEqual({ espacio: "personal", menu: "hoy", migas: ["Mi día"] });
+    expect(ubicacion("/panel/tareas", marcas)).toEqual({ espacio: "personal", menu: "tareas", migas: ["Tareas"] });
   });
 
   test("dinkbit: el grupo de la sección", () => {
-    expect(ubicacion("/panel/ventas/dinkbit", marcas)).toEqual({ espacio: "dinkbit", menu: "dinkbit:leads", migas: ["Dinkbit", "Leads"] });
-    expect(ubicacion("/panel/ventas/dinkbit/leads/abc", marcas)).toEqual({ espacio: "dinkbit", menu: "dinkbit:leads", migas: ["Dinkbit", "Leads"] });
-    expect(ubicacion("/panel/ventas/dinkbit/whatsapp", marcas)).toEqual({ espacio: "dinkbit", menu: "dinkbit:conversaciones", migas: ["Dinkbit", "Conversaciones"] });
-    expect(ubicacion("/panel/ventas/dinkbit/campanas/1", marcas)).toEqual({ espacio: "dinkbit", menu: "dinkbit:captacion", migas: ["Dinkbit", "Captación"] });
-    expect(ubicacion("/panel/ventas/altas/xyz", marcas)).toEqual({ espacio: "dinkbit", menu: "altas", migas: ["Dinkbit", "Altas"] });
+    expect(ubicacion("/panel/dinkbit", marcas)).toEqual({ espacio: "dinkbit", menu: "dinkbit:leads", migas: ["Dinkbit", "Leads"] });
+    expect(ubicacion("/panel/dinkbit/leads/abc", marcas)).toEqual({ espacio: "dinkbit", menu: "dinkbit:leads", migas: ["Dinkbit", "Leads"] });
+    expect(ubicacion("/panel/dinkbit/whatsapp", marcas)).toEqual({ espacio: "dinkbit", menu: "dinkbit:conversaciones", migas: ["Dinkbit", "Conversaciones"] });
+    expect(ubicacion("/panel/dinkbit/campanas/1", marcas)).toEqual({ espacio: "dinkbit", menu: "dinkbit:captacion", migas: ["Dinkbit", "Captación"] });
+    expect(ubicacion("/panel/altas/xyz", marcas)).toEqual({ espacio: "dinkbit", menu: "altas", migas: ["Dinkbit", "Altas"] });
   });
 
   test("clientes: la lista y la carpeta de cada uno", () => {
-    expect(ubicacion("/panel/ventas/clientes", marcas)).toEqual({ espacio: "clientes", menu: "clientes", migas: ["Clientes", "Todos"] });
-    expect(ubicacion("/panel/ventas/hydrup", marcas)).toEqual({ espacio: "clientes", menu: "cliente:hydrup", migas: ["Clientes", "Hydrup", "Resumen"] });
-    expect(ubicacion("/panel/ventas/hydrup/conversaciones", marcas)).toEqual({
+    expect(ubicacion("/panel/clientes", marcas)).toEqual({ espacio: "clientes", menu: "clientes", migas: ["Clientes", "Todos"] });
+    expect(ubicacion("/panel/hydrup", marcas)).toEqual({ espacio: "clientes", menu: "cliente:hydrup", migas: ["Clientes", "Hydrup", "Resumen"] });
+    expect(ubicacion("/panel/hydrup/conversaciones", marcas)).toEqual({
       espacio: "clientes", menu: "cliente:hydrup", migas: ["Clientes", "Hydrup", "Conversaciones"],
     });
-    expect(ubicacion("/panel/ventas/hydrup/leads/123", marcas)).toEqual({ espacio: "clientes", menu: "cliente:hydrup", migas: ["Clientes", "Hydrup", "Tabla"] });
+    expect(ubicacion("/panel/hydrup/leads/123", marcas)).toEqual({ espacio: "clientes", menu: "cliente:hydrup", migas: ["Clientes", "Hydrup", "Tabla"] });
   });
 
   test("ajustes: usuarios y las condiciones de dinkbit", () => {
-    expect(ubicacion("/panel/ventas/usuarias", marcas)).toEqual({ espacio: "ajustes", menu: "usuarias", migas: ["Ajustes", "Usuarios"] });
-    expect(ubicacion("/panel/ventas/dinkbit/condiciones", marcas)).toEqual({ espacio: "ajustes", menu: "dinkbit:ajustes", migas: ["Ajustes", "Dinkbit"] });
+    expect(ubicacion("/panel/usuarias", marcas)).toEqual({ espacio: "ajustes", menu: "usuarias", migas: ["Ajustes", "Usuarios"] });
+    expect(ubicacion("/panel/dinkbit/condiciones", marcas)).toEqual({ espacio: "ajustes", menu: "dinkbit:ajustes", migas: ["Ajustes", "Dinkbit"] });
   });
 
   test("una marca que no está en la lista se nombra por su slug", () => {
-    expect(ubicacion("/panel/ventas/otra/tablero", marcas).migas).toEqual(["Clientes", "otra", "Tablero"]);
+    expect(ubicacion("/panel/otra/tablero", marcas).migas).toEqual(["Clientes", "otra", "Tablero"]);
   });
 });
 

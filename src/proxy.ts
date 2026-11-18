@@ -4,8 +4,8 @@ import { clasificarRutaPanel } from "@/lib/ventas/rutas";
 import { proxyVentas } from "@/lib/ventas/sesion-proxy";
 
 // Protege todo /panel. Dos accesos distintos (Next 16, convención "proxy"):
-// - /panel/ventas: login por persona con Supabase Auth (módulo de ventas B2B).
-// - resto de /panel: contraseña compartida con cookie firmada.
+// - /panel/antiguo: el panel viejo, con contraseña compartida y cookie firmada.
+// - el resto de /panel: login por persona con Supabase Auth.
 export async function proxy(req: NextRequest) {
   const ruta = clasificarRutaPanel(req.nextUrl.pathname);
   if (ruta === "ventas" || ruta === "ventas-login") return proxyVentas(req, ruta === "ventas-login");
@@ -15,7 +15,7 @@ export async function proxy(req: NextRequest) {
   if (await verifySessionToken(token)) return NextResponse.next();
 
   const url = req.nextUrl.clone();
-  url.pathname = "/panel/login";
+  url.pathname = "/panel/antiguo/login";
   url.searchParams.set("next", req.nextUrl.pathname);
   return NextResponse.redirect(url);
 }

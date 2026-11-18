@@ -112,7 +112,7 @@ describe("construirRecordatorio", () => {
     expect(c.text.indexOf("Dinkbit")).toBeLessThan(c.text.indexOf("Hydrup")); // por nombre
     expect(c.text).toContain("Llamar a Gym Sol");
     expect(c.text).toContain("Enviar presupuesto");
-    expect(c.html).toContain("https://www.dinkbit.es/panel/ventas/hoy");
+    expect(c.html).toContain("https://www.dinkbit.es/panel/hoy");
     expect(c.text).toContain("Hola Yael");
   });
 
@@ -123,8 +123,8 @@ describe("construirRecordatorio", () => {
 
   test("a una clienta la lleva a las tareas de su marca, no a «Mi día»", () => {
     const c = construirRecordatorio({ nombre: "Ana", rol: "cliente" }, pendientesDelDia([], [tarea()], AHORA), AHORA, "hydrup")!;
-    expect(c.html).toContain("https://www.dinkbit.es/panel/ventas/hydrup/tareas?de=yo");
-    expect(c.html).not.toContain("/panel/ventas/hoy");
+    expect(c.html).toContain("https://www.dinkbit.es/panel/hydrup/tareas?de=yo");
+    expect(c.html).not.toContain("/panel/hoy");
   });
 
   test("escapa lo que escriben las usuarias", () => {

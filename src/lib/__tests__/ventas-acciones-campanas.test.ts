@@ -56,7 +56,7 @@ import {
   guardarPlantillaCampanaAction,
   programarCampanaAction,
   subirImagenCampanaAction,
-} from "@/app/(site)/panel/ventas/acciones-campanas";
+} from "@/app/(site)/panel/acciones-campanas";
 
 const HYDRUP = { id: "m-hyd", slug: "hydrup", modulos: ["campanas"], campanas_remitentes: ["hola@hydrup.es"] };
 const usuaria = { id: "u1", rol: "comercial", activa: true };
@@ -141,7 +141,7 @@ describe("acciones", () => {
   test("enviar manda la campaña y refresca la pantalla de la marca", async () => {
     expect(await enviarCampanaAction("hydrup", "c1", "l1, l2")).toEqual({ ok: true, sent: 2, skipped: 0 });
     expect(m.sendCampaign).toHaveBeenCalledWith("c1", ["l1", "l2"]);
-    expect(m.revalidatePath).toHaveBeenCalledWith("/panel/ventas/hydrup/campanas", "layout");
+    expect(m.revalidatePath).toHaveBeenCalledWith("/panel/hydrup/campanas", "layout");
   });
 
   test("la prueba usa los remitentes de la marca", async () => {

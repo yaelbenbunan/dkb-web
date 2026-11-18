@@ -1,5 +1,5 @@
 /**
- * Validación de lo que llega de los formularios de /panel/ventas. Cada lector
+ * Validación de lo que llega de los formularios de /panel. Cada lector
  * recibe el FormData tal cual y devuelve datos limpios o el primer error en
  * español, listo para enseñarlo. Las server actions nunca escriben nada que
  * no haya pasado por aquí.
@@ -120,8 +120,13 @@ export interface NuevaMarca {
   slug: string;
 }
 
-/** Rutas fijas de /panel/ventas: una marca con ese slug quedaría tapada. */
-const SLUGS_RESERVADOS = ["hoy", "usuarias", "login", "altas", "clientes", "tareas"];
+/** Rutas fijas de /panel: una marca con ese slug quedaría tapada. */
+// También las del panel viejo y las que redirige next.config (`/panel/ventas`,
+// `/panel/campanas`…): la redirección se aplicaría antes que la marca.
+const SLUGS_RESERVADOS = [
+  "hoy", "usuarias", "login", "altas", "clientes", "tareas",
+  "antiguo", "ventas", "prospeccion", "campanas", "calculadora", "agenda", "tablero", "pdf", "plantilla-leads",
+];
 
 export function leerNuevaMarca(fd: FormData): Leido<NuevaMarca> {
   const nombre = campo(fd, "nombre");

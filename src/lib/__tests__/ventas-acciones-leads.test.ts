@@ -60,7 +60,7 @@ import {
   eliminarLeadTableroAction,
   actualizarOrigenLeadAction,
   archivarLeadAction,
-} from "@/app/(site)/panel/ventas/acciones-leads";
+} from "@/app/(site)/panel/acciones-leads";
 
 const USUARIA = { id: "u1", rol: "comercial", activa: true };
 const MARCA = { id: "m1", slug: "hydrup" };
@@ -120,7 +120,7 @@ describe("acciones de leads", () => {
 
   test("alta manual lleva a la ficha del lead", async () => {
     await expect(crearLeadManualAction("hydrup", null, fd({ negocio: "Gym", telefono: "600111222" }))).rejects.toThrow(
-      "NEXT_REDIRECT:/panel/ventas/hydrup/leads/l9",
+      "NEXT_REDIRECT:/panel/hydrup/leads/l9",
     );
   });
 
@@ -193,7 +193,7 @@ describe("acciones de leads", () => {
     test("delega con la usuaria de la sesión y refresca la marca", async () => {
       expect(await moverLeadAction("hydrup", "l1", "muestras")).toEqual({ ok: true });
       expect(m.moverLead).toHaveBeenCalledWith({ usuaria: USUARIA, leadId: "l1", fase: "muestras" });
-      expect(m.revalidatePath).toHaveBeenCalledWith("/panel/ventas/hydrup", "layout");
+      expect(m.revalidatePath).toHaveBeenCalledWith("/panel/hydrup", "layout");
     });
 
     test("si el servicio falla se devuelve su error y no se refresca", async () => {
@@ -273,7 +273,7 @@ describe("eliminarLeadAction", () => {
     m.accesoMarcaAccion.mockResolvedValue({ ok: true, usuaria: ADMIN, marca: MARCA });
     m.getLead.mockResolvedValue({ ...LEAD, negocio: "Bar Paco" });
     m.eliminarLeads.mockResolvedValue({ ok: true, borrados: 1 });
-    await expect(eliminarLeadAction("hydrup", "l1", null, confirmacion("  bar paco "))).rejects.toThrow("NEXT_REDIRECT:/panel/ventas/hydrup/leads");
+    await expect(eliminarLeadAction("hydrup", "l1", null, confirmacion("  bar paco "))).rejects.toThrow("NEXT_REDIRECT:/panel/hydrup/leads");
     expect(m.eliminarLeads).toHaveBeenCalledWith("m1", ["l1"]);
   });
 

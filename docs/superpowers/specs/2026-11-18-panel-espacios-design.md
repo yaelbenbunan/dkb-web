@@ -117,3 +117,14 @@ Los mismos datos que hoy (`pendientesDelDia`, el mismo filtro que el correo de l
 - Una función pura para el filtro de la vista de Tareas (ámbito y responsable).
 - Componentes: el menú no muestra Altas ni Ajustes a la comercial, y no muestra el menú de espacios a cliente ni agente.
 - `npm test`, typecheck y build antes de desplegar.
+
+## Cambio de direcciones (2026-11-18, a petición de Yael)
+
+«Ventas» es solo una parte del panel, así que el panel deja `/panel/ventas` y pasa a `/panel`. Esto sustituye a la tabla de «Las direcciones no cambian» de arriba:
+
+- El panel por persona (Supabase Auth) vive en `/panel/…`: `/panel/hoy`, `/panel/tareas`, `/panel/clientes`, `/panel/<slug>/…`, `/panel/login`.
+- El panel viejo (contraseña compartida) pasa a `/panel/antiguo/…`. Se retira en la fase 3.
+- `next.config.ts` redirige `/panel/ventas/…` → `/panel/…` y `/panel/{campanas,calculadora,agenda,tablero,pdf,plantilla-leads}/…` → `/panel/antiguo/…`, sin ser permanentes. Los correos ya enviados y los marcadores siguen funcionando.
+- Esos nombres quedan reservados como identificador de marca.
+- El nombre visible pasa de «Ventas B2B» a «Panel».
+- «¿Has olvidado tu contraseña?»: el enlace del correo vuelve a `/panel/login/recuperar/vuelta`, que tiene que estar en las «Redirect URLs» de Supabase Auth.

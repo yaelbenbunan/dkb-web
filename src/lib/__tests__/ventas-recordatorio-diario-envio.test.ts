@@ -68,9 +68,9 @@ describe("enviarRecordatoriosDiarios", () => {
     ]);
     expect(m.tareas).toHaveBeenCalledWith("k");
     expect(m.send.mock.calls.map((c) => c[0].to)).toEqual(["yael@x.es", "ana@hydrup.es", "paula@x.es"]);
-    expect(m.send.mock.calls[1][0].html).toContain("/panel/ventas/hydrup/tareas?de=yo");
+    expect(m.send.mock.calls[1][0].html).toContain("/panel/hydrup/tareas?de=yo");
     // La comercial va a «Mi día», como la admin.
-    expect(m.send.mock.calls[2][0].html).toContain("/panel/ventas/hoy");
+    expect(m.send.mock.calls[2][0].html).toContain("/panel/hoy");
   });
 
   test("a quien no tiene nada pendiente no le escribe", async () => {

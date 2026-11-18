@@ -9,7 +9,7 @@ const BUCKET = "imagina-previews";
 export { LEAD_STATUSES, type LeadStatus };
 
 /**
- * Las escrituras de leads van a /panel/ventas (marca dinkbit) desde la
+ * Las escrituras de leads van a /panel (marca dinkbit) desde la
  * unificación del CRM (2026-10-15). Se reexportan aquí con su nombre de siempre
  * para que los formularios no cambien; la versión sobre `imagina_leads` vive en
  * `imagina-leads-legacy.ts` como respaldo. Lo que queda en este fichero son las

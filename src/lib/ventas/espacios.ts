@@ -5,7 +5,7 @@
  *
  * Por debajo sigue siendo la misma tabla `ventas_marcas`: dinkbit es la marca
  * con slug `dinkbit` y toda otra marca es un cliente. Las direcciones
- * `/panel/ventas/<slug>/…` no cambian (las usan los correos y los avisos); lo
+ * `/panel/<slug>/…` no cambian (las usan los correos y los avisos); lo
  * que cambia es cómo se agrupan en el menú.
  *
  * Diseño: docs/superpowers/specs/2026-11-18-panel-espacios-design.md. Puro.
@@ -132,7 +132,7 @@ const FIJAS: Readonly<Record<string, Ubicacion>> = {
 
 /** Dónde estás, a partir de la dirección. Lo usan el menú lateral y la barra de arriba. */
 export function ubicacion(pathname: string, marcas: readonly { slug: string; nombre: string }[]): Ubicacion {
-  const partes = pathname.replace(/^\/panel\/ventas\/?/, "").split("/").filter(Boolean);
+  const partes = pathname.replace(/^\/panel\/?/, "").split("/").filter(Boolean);
   const [primera, segunda] = partes;
   if (!primera) return FIJAS.hoy;
   if (Object.hasOwn(FIJAS, primera)) return FIJAS[primera];

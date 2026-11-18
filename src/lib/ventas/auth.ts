@@ -38,8 +38,8 @@ export async function getUsuariaActual(): Promise<Usuaria | null> {
 export async function requireUsuaria(rol?: "admin" | "equipo"): Promise<Usuaria> {
   const usuaria = await getUsuariaActual();
   const acceso = evaluarAcceso(usuaria, rol);
-  if (acceso === "login") redirect("/panel/ventas/login");
-  if (acceso === "permiso") redirect("/panel/ventas?aviso=permiso");
+  if (acceso === "login") redirect("/panel/login");
+  if (acceso === "permiso") redirect("/panel?aviso=permiso");
   return usuaria as Usuaria;
 }
 
@@ -50,15 +50,15 @@ function veTodasLasMarcas(usuaria: Usuaria): boolean {
   return usuaria.rol === "admin" || usuaria.rol === "comercial";
 }
 
-/** Para páginas bajo /panel/ventas/[slug]: usuaria + marca, o redirige. */
+/** Para páginas bajo /panel/[slug]: usuaria + marca, o redirige. */
 export async function requireAccesoMarca(slug: string, seccion: SeccionMarca): Promise<{ usuaria: Usuaria; marca: Marca }> {
   const usuaria = await requireUsuaria();
   const marca = await getMarcaPorSlug(slug);
   if (!marca) {
-    if (!veTodasLasMarcas(usuaria)) redirect("/panel/ventas?aviso=permiso");
+    if (!veTodasLasMarcas(usuaria)) redirect("/panel?aviso=permiso");
     notFound();
   }
-  if (evaluarAccesoMarca(usuaria, marca.id, seccion) !== "ok") redirect("/panel/ventas?aviso=permiso");
+  if (evaluarAccesoMarca(usuaria, marca.id, seccion) !== "ok") redirect("/panel?aviso=permiso");
   return { usuaria, marca };
 }
 

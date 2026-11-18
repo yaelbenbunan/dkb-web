@@ -5,7 +5,7 @@ import { autenticarWebhook, recibirLeadAnuncio } from "@/lib/ventas/servicios";
 // Entrada de leads de anuncios para una marca del servicio de ventas B2B.
 // Zapier (Meta Lead Ads) o una landing hacen POST con el secreto de la marca en
 // `x-webhook-secret` (o `Authorization: Bearer`). El secreto está en
-// /panel/ventas/[slug]/condiciones.
+// /panel/[slug]/condiciones.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 

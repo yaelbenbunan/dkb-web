@@ -9,7 +9,7 @@ vi.mock("@/lib/ventas/auth", () => ({ accesoMarcaAccion: m.accesoMarcaAccion }))
 vi.mock("@/lib/whatsapp/conexion", () => ({ conectarNumero: m.conectarNumero }));
 vi.mock("next/cache", () => ({ revalidatePath: m.revalidatePath }));
 
-import { conectarWhatsAppAction } from "@/app/(site)/panel/ventas/(app)/[slug]/whatsapp/acciones";
+import { conectarWhatsAppAction } from "@/app/(site)/panel/(app)/[slug]/whatsapp/acciones";
 
 const MARCA = { id: "m1", slug: "hydrup" };
 const DATOS = { code: "abc", wabaId: "111", numeroId: "222" as string | null };
@@ -64,7 +64,7 @@ describe("conectarWhatsAppAction", () => {
   test("la clienta de la marca conecta con la marca de la URL", async () => {
     expect(await conectarWhatsAppAction("hydrup", DATOS)).toEqual({ ok: true, mensaje: "Conectado." });
     expect(m.conectarNumero).toHaveBeenCalledWith({ marcaId: "m1", code: "abc", wabaId: "111", numeroId: "222", historialActual: null });
-    expect(m.revalidatePath).toHaveBeenCalledWith("/panel/ventas/hydrup/whatsapp");
+    expect(m.revalidatePath).toHaveBeenCalledWith("/panel/hydrup/whatsapp");
   });
 
   test("el admin conecta con numeroId null", async () => {

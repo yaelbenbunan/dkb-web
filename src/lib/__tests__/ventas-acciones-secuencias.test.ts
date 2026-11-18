@@ -37,7 +37,7 @@ import {
   crearSecuenciaAction,
   duplicarSecuenciaAction,
   guardarSecuenciaAction,
-} from "@/app/(site)/panel/ventas/acciones-secuencias";
+} from "@/app/(site)/panel/acciones-secuencias";
 
 const ADMIN = { id: "a1", rol: "admin", activa: true };
 const MARCA = { id: "m1", slug: "hydrup" };
@@ -104,7 +104,7 @@ describe("acciones de secuencias", () => {
 
     test("crea con una secuencia vacía y va al editor", async () => {
       await expect(crearSecuenciaAction("hydrup", null, fd({ nombre: "Captación gimnasios" }))).rejects.toThrow(
-        "NEXT_REDIRECT:/panel/ventas/hydrup/secuencias/s9",
+        "NEXT_REDIRECT:/panel/hydrup/secuencias/s9",
       );
       expect(m.crearSecuencia).toHaveBeenCalledWith({ marcaId: "m1", nombre: "Captación gimnasios", pasos: SECUENCIA_VACIA, creadaPor: "a1" });
     });
@@ -172,7 +172,7 @@ describe("acciones de secuencias", () => {
 
     test("duplica y va al editor de la copia", async () => {
       await expect(duplicarSecuenciaAction("hydrup", "s1", null, fd({ nombre: "Copia" }))).rejects.toThrow(
-        "NEXT_REDIRECT:/panel/ventas/hydrup/secuencias/s9",
+        "NEXT_REDIRECT:/panel/hydrup/secuencias/s9",
       );
       expect(m.duplicarSecuencia).toHaveBeenCalledWith({ marca: MARCA, usuaria: ADMIN, secuenciaId: "s1", nombre: "Copia" });
     });

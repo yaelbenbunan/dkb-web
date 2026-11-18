@@ -4,7 +4,7 @@ const m = vi.hoisted(() => ({ accesoMarcaAccion: vi.fn(), getProspecto: vi.fn() 
 vi.mock("@/lib/ventas/auth", () => ({ accesoMarcaAccion: m.accesoMarcaAccion }));
 vi.mock("@/lib/prospeccion/db", () => ({ getProspecto: m.getProspecto }));
 
-import { GET } from "@/app/(site)/panel/ventas/(app)/[slug]/prospeccion/carta/[id]/route";
+import { GET } from "@/app/(site)/panel/(app)/[slug]/prospeccion/carta/[id]/route";
 
 const ID = "0a1b2c3d-0000-4000-8000-000000000001";
 const llamar = (slug = "dinkbit", id = ID) => GET(new Request("http://x"), { params: Promise.resolve({ slug, id }) });

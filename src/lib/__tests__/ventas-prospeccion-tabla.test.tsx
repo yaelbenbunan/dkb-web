@@ -11,7 +11,7 @@ const m = vi.hoisted(() => ({
   borrarBusquedaAction: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: m.refresh }) }));
-vi.mock("@/app/(site)/panel/ventas/acciones-prospeccion", () => ({
+vi.mock("@/app/(site)/panel/acciones-prospeccion", () => ({
   borrarBusquedaAction: m.borrarBusquedaAction,
   buscarEmailWebAction: m.buscarEmailWebAction,
   descartarAction: m.descartarAction,
@@ -22,7 +22,7 @@ vi.mock("@/app/(site)/panel/ventas/acciones-prospeccion", () => ({
   retirarConsentimientoAction: m.retirarConsentimientoAction,
 }));
 
-import { TablaProspectos } from "@/app/(site)/panel/ventas/(app)/[slug]/prospeccion/TablaProspectos";
+import { TablaProspectos } from "@/app/(site)/panel/(app)/[slug]/prospeccion/TablaProspectos";
 import type { ProspectRow } from "@/lib/prospeccion/tipos";
 
 type TablaProps = Parameters<typeof TablaProspectos>[0];

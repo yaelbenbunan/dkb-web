@@ -2,7 +2,7 @@ import "server-only";
 import { Resend } from "resend";
 import { destinatariosAviso } from "../avisos-internos";
 
-const PANEL_ALTAS = "https://www.dinkbit.es/panel/ventas/altas";
+const PANEL_ALTAS = "https://www.dinkbit.es/panel/altas";
 
 /** El nombre del cliente va en el asunto: fuera saltos de línea y control. */
 function enLinea(texto: string): string {

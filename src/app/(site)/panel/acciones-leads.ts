@@ -1,0 +1,224 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { accesoMarcaAccion } from "@/lib/ventas/auth";
+import { actualizarDatosLead, actualizarExtrasLead, asignarLead, eliminarLeads, getLead, getUsuaria, actualizarLeadWeb } from "@/lib/ventas/db";
+import { esFase, flujoDeMarca, type Fase } from "@/lib/ventas/dominio";
+import type { ResultadoAccion } from "@/lib/ventas/resultado";
+import { esAsignableEnMarca, type SeccionMarca } from "@/lib/ventas/rutas";
+import {
+  anadirNota,
+  cambiarFaseManual,
+  crearLeadManual,
+  importarLeadsCsv,
+  marcarMuestrasEnviadas,
+  moverLead,
+  previsualizarImportacion,
+  registrarLlamada,
+  type PreviaImportacion,
+  type ResultadoImportacion,
+} from "@/lib/ventas/servicios";
+import { leerCambioFase, leerDatosLead, leerExtrasLead, leerLlamada, leerNotaSeguimiento, leerOrigenLead } from "@/lib/ventas/validacion";
+
+const NO_ENCONTRADO = { ok: false, error: "Lead no encontrado." } as const;
+
+/** Acceso a la marca de la URL (según el rol) + el lead, que tiene que ser de
+ *  esa marca. Una clienta solo pasa en las secciones que ve en su marca. */
+async function accesoALead(slug: string, leadId: string, seccion: SeccionMarca = "leads") {
+  const acceso = await accesoMarcaAccion(slug, seccion);
+  if (!acceso.ok) return acceso;
+  const lead = await getLead(leadId);
+  if (!lead || lead.marca_id !== acceso.marca.id) return NO_ENCONTRADO;
+  return { ...acceso, lead };
+}
+
+const SIN_MUESTRAS = { ok: false as const, error: "Esta marca no trabaja con muestras." };
+const FASE_AJENA = { ok: false as const, error: "Esa fase no es de esta marca." };
+
+function esFaseDeMarca(fase: Fase, slug: string): boolean {
+  return flujoDeMarca(slug).fases.includes(fase);
+}
+
+function refrescar(slug: string) {
+  revalidatePath(`/panel/${slug}`, "layout");
+  revalidatePath("/panel/hoy");
+}
+
+export async function previsualizarLeadsAction(
+  slug: string,
+  csv: string,
+): Promise<{ ok: true; previa: PreviaImportacion } | { ok: false; error: string }> {
+  const acceso = await accesoMarcaAccion(slug, "leads");
+  if (!acceso.ok) return acceso;
+  return { ok: true, previa: await previsualizarImportacion({ marca: acceso.marca, csv }) };
+}
+
+export async function importarLeadsAction(slug: string, _prev: ResultadoImportacion | null, fd: FormData): Promise<ResultadoImportacion> {
+  const acceso = await accesoMarcaAccion(slug, "leads");
+  if (!acceso.ok) return { ok: false, error: acceso.error, errores: [] };
+  const res = await importarLeadsCsv({
+    marca: acceso.marca,
+    usuaria: acceso.usuaria,
+    csv: String(fd.get("csv") ?? ""),
+    nombreFichero: String(fd.get("nombre_fichero") ?? ""),
+    nombreLista: String(fd.get("nombre_lista") ?? ""),
+  });
+  if (res.ok) refrescar(slug);
+  return res;
+}
+
+export async function crearLeadManualAction(slug: string, _prev: ResultadoAccion | null, fd: FormData): Promise<ResultadoAccion> {
+  const acceso = await accesoMarcaAccion(slug, "leads");
+  if (!acceso.ok) return acceso;
+  const leido = leerDatosLead(fd);
+  if (!leido.ok) return leido;
+  const nota = String(fd.get("nota") ?? "").trim().slice(0, 2000);
+  const res = await crearLeadManual({ marca: acceso.marca, usuaria: acceso.usuaria, datos: leido.datos, nota });
+  if (!res.ok) return res;
+  refrescar(slug);
+  redirect(`/panel/${slug}/leads/${res.leadId}`);
+}
+
+export async function actualizarLeadAction(slug: string, leadId: string, _prev: ResultadoAccion | null, fd: FormData): Promise<ResultadoAccion> {
+  const acceso = await accesoALead(slug, leadId);
+  if (!acceso.ok) return acceso;
+  const leido = leerDatosLead(fd);
+  if (!leido.ok) return leido;
+  const res = await actualizarDatosLead(leadId, leido.datos);
+  if (!res.ok) return res;
+  // Solo si el formulario los trae y han cambiado: así guardar la ficha sigue
+  // funcionando aunque la base aún no tenga las columnas de socios y cargo.
+  const extras = leerExtrasLead(fd);
+  const cambian = extras.socios !== (acceso.lead.socios ?? "") || extras.cargo !== (acceso.lead.cargo ?? "");
+  const resExtras = fd.has("socios") && cambian ? await actualizarExtrasLead(leadId, extras) : ({ ok: true } as const);
+  refrescar(slug);
+  if (!resExtras.ok) return resExtras;
+  return { ok: true, mensaje: "Datos guardados." };
+}
+
+export async function asignarLeadAction(slug: string, leadId: string, usuariaId: string): Promise<ResultadoAccion> {
+  const acceso = await accesoALead(slug, leadId);
+  if (!acceso.ok) return acceso;
+  if (usuariaId) {
+    const destino = await getUsuaria(usuariaId);
+    if (!destino || !esAsignableEnMarca(destino, acceso.marca.id)) return { ok: false, error: "Ese usuario no existe o está desactivado." };
+  }
+  const res = await asignarLead(leadId, usuariaId || null);
+  if (!res.ok) return res;
+  refrescar(slug);
+  return { ok: true, mensaje: "Asignación guardada." };
+}
+
+export async function registrarLlamadaAction(slug: string, leadId: string, _prev: ResultadoAccion | null, fd: FormData): Promise<ResultadoAccion> {
+  const acceso = await accesoALead(slug, leadId);
+  if (!acceso.ok) return acceso;
+  const leido = leerLlamada(fd);
+  if (!leido.ok) return leido;
+  if (leido.datos.resultado === "pide_muestras" && !flujoDeMarca(acceso.marca.slug).conMuestras) return SIN_MUESTRAS;
+  const res = await registrarLlamada({ usuaria: acceso.usuaria, leadId, llamada: leido.datos });
+  if (!res.ok) return res;
+  refrescar(slug);
+  return { ok: true, mensaje: "Llamada registrada." };
+}
+
+export async function muestrasEnviadasAction(slug: string, leadId: string, _prev: ResultadoAccion | null, fd: FormData): Promise<ResultadoAccion> {
+  const acceso = await accesoALead(slug, leadId);
+  if (!acceso.ok) return acceso;
+  if (!flujoDeMarca(acceso.marca.slug).conMuestras) return SIN_MUESTRAS;
+  const leido = leerNotaSeguimiento(fd);
+  if (!leido.ok) return leido;
+  const res = await marcarMuestrasEnviadas({ usuaria: acceso.usuaria, leadId, datos: leido.datos });
+  if (!res.ok) return res;
+  refrescar(slug);
+  return { ok: true, mensaje: "Muestras apuntadas." };
+}
+
+export async function notaAction(slug: string, leadId: string, _prev: ResultadoAccion | null, fd: FormData): Promise<ResultadoAccion> {
+  const acceso = await accesoALead(slug, leadId);
+  if (!acceso.ok) return acceso;
+  const leido = leerNotaSeguimiento(fd);
+  if (!leido.ok) return leido;
+  const res = await anadirNota({ usuaria: acceso.usuaria, leadId, datos: leido.datos });
+  if (!res.ok) return res;
+  refrescar(slug);
+  return { ok: true, mensaje: "Nota añadida." };
+}
+
+export async function cambiarFaseAction(slug: string, leadId: string, _prev: ResultadoAccion | null, fd: FormData): Promise<ResultadoAccion> {
+  const acceso = await accesoALead(slug, leadId);
+  if (!acceso.ok) return acceso;
+  const leido = leerCambioFase(fd);
+  if (!leido.ok) return leido;
+  if (!esFaseDeMarca(leido.datos.fase, acceso.marca.slug)) return FASE_AJENA;
+  const res = await cambiarFaseManual({ usuaria: acceso.usuaria, leadId, cambio: leido.datos });
+  if (!res.ok) return res;
+  refrescar(slug);
+  return { ok: true, mensaje: "Fase cambiada." };
+}
+
+/** Tablero: arrastrar una tarjeta o pulsar «→». */
+export async function moverLeadAction(slug: string, leadId: string, fase: string): Promise<ResultadoAccion> {
+  const acceso = await accesoALead(slug, leadId, "tablero");
+  if (!acceso.ok) return acceso;
+  if (!esFase(fase)) return { ok: false, error: "Fase no válida." };
+  if (!esFaseDeMarca(fase, acceso.marca.slug)) return FASE_AJENA;
+  // moverLead vuelve a leer el lead antes de escribir: es a propósito, no un
+  // descuido, para achicar la ventana en la que dos movimientos simultáneos
+  // podrían duplicarse.
+  const res = await moverLead({ usuaria: acceso.usuaria, leadId, fase });
+  if (!res.ok) return res;
+  refrescar(slug);
+  return { ok: true };
+}
+
+/** Ficha → «Eliminar lead». Definitivo y solo de admin. */
+export async function eliminarLeadAction(slug: string, leadId: string, _prev: ResultadoAccion | null, fd: FormData): Promise<ResultadoAccion> {
+  const acceso = await accesoALead(slug, leadId);
+  if (!acceso.ok) return acceso;
+  if (acceso.usuaria.rol !== "admin") return { ok: false, error: "Solo un admin puede eliminar leads." };
+  const escrito = String(fd.get("confirmacion") ?? "").trim().toLowerCase();
+  if (escrito !== acceso.lead.negocio.trim().toLowerCase()) {
+    return { ok: false, error: "Escribe el nombre del negocio tal cual para confirmar." };
+  }
+  const res = await eliminarLeads(acceso.marca.id, [leadId]);
+  if (!res.ok) return res;
+  if (res.borrados === 0) return NO_ENCONTRADO;
+  refrescar(slug);
+  redirect(`/panel/${slug}/leads`);
+}
+
+/** Tablero → «⋯» → «Eliminar lead». Mismo borrado que la ficha; la
+ *  confirmación la pide el diálogo y la tarjeta desaparece sin cambiar de página. */
+export async function eliminarLeadTableroAction(slug: string, leadId: string): Promise<ResultadoAccion> {
+  const acceso = await accesoALead(slug, leadId, "tablero");
+  if (!acceso.ok) return acceso;
+  if (acceso.usuaria.rol !== "admin") return { ok: false, error: "Solo un admin puede eliminar leads." };
+  const res = await eliminarLeads(acceso.marca.id, [leadId]);
+  if (!res.ok) return res;
+  if (res.borrados === 0) return NO_ENCONTRADO;
+  refrescar(slug);
+  return { ok: true };
+}
+
+/** Ficha → bloque «Origen»: canal, campaña, etiquetas y consentimiento. */
+export async function actualizarOrigenLeadAction(slug: string, leadId: string, _prev: ResultadoAccion | null, fd: FormData): Promise<ResultadoAccion> {
+  const acceso = await accesoALead(slug, leadId);
+  if (!acceso.ok) return acceso;
+  const leido = leerOrigenLead(fd);
+  if (!leido.ok) return leido;
+  const res = await actualizarLeadWeb(leadId, leido.datos);
+  if (!res.ok) return res;
+  refrescar(slug);
+  return { ok: true, mensaje: "Origen guardado." };
+}
+
+/** Ficha → «Archivar» / «Desarchivar»: lo saca de la lista y del tablero sin borrarlo. */
+export async function archivarLeadAction(slug: string, leadId: string, archivado: boolean): Promise<ResultadoAccion> {
+  const acceso = await accesoALead(slug, leadId);
+  if (!acceso.ok) return acceso;
+  const res = await actualizarLeadWeb(leadId, { archivado });
+  if (!res.ok) return res;
+  refrescar(slug);
+  return { ok: true, mensaje: archivado ? "Lead archivado." : "Lead recuperado." };
+}

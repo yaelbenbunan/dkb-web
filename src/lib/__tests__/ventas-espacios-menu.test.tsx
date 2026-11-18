@@ -1,10 +1,10 @@
 import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-const ruta = vi.hoisted(() => ({ actual: "/panel/ventas/hoy" }));
+const ruta = vi.hoisted(() => ({ actual: "/panel/hoy" }));
 vi.mock("next/navigation", () => ({ usePathname: () => ruta.actual }));
 
-import { BarraUbicacion, MenuEspacios } from "@/app/(site)/panel/ventas/_componentes/EspaciosNav";
+import { BarraUbicacion, MenuEspacios } from "@/app/(site)/panel/_componentes/EspaciosNav";
 
 const clientes = [
   { slug: "hydrup", nombre: "Hydrup", pausada: false },
@@ -13,7 +13,7 @@ const clientes = [
 
 describe("MenuEspacios", () => {
   beforeEach(() => {
-    ruta.actual = "/panel/ventas/hoy";
+    ruta.actual = "/panel/hoy";
   });
 
   test("admin: Dinkbit con Altas, cada cliente y Ajustes", () => {
@@ -22,8 +22,8 @@ describe("MenuEspacios", () => {
     for (const texto of ["Mi día", "Tareas", "Leads", "Conversaciones", "Captación", "Altas", "Hydrup", "Nubosoft", "Todos los clientes", "Usuarios", "Ajustes de dinkbit"]) {
       expect(within(menu).getByRole("link", { name: new RegExp(texto) })).toBeInTheDocument();
     }
-    expect(screen.getByRole("link", { name: /Leads/ })).toHaveAttribute("href", "/panel/ventas/dinkbit/tablero");
-    expect(screen.getByRole("link", { name: /Hydrup/ })).toHaveAttribute("href", "/panel/ventas/hydrup");
+    expect(screen.getByRole("link", { name: /Leads/ })).toHaveAttribute("href", "/panel/dinkbit/tablero");
+    expect(screen.getByRole("link", { name: /Hydrup/ })).toHaveAttribute("href", "/panel/hydrup");
     expect(screen.getByText("pausada")).toBeInTheDocument();
   });
 
@@ -37,13 +37,13 @@ describe("MenuEspacios", () => {
   });
 
   test("resalta dónde estás: el grupo de dinkbit o la carpeta del cliente", () => {
-    ruta.actual = "/panel/ventas/dinkbit/prospeccion";
+    ruta.actual = "/panel/dinkbit/prospeccion";
     const { unmount } = render(<MenuEspacios clientes={clientes} esAdmin />);
     expect(screen.getByRole("link", { name: /Captación/ })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: /Leads/ })).not.toHaveAttribute("aria-current");
     unmount();
 
-    ruta.actual = "/panel/ventas/hydrup/conversaciones";
+    ruta.actual = "/panel/hydrup/conversaciones";
     render(<MenuEspacios clientes={clientes} esAdmin />);
     expect(screen.getByRole("link", { name: /Hydrup/ })).toHaveAttribute("aria-current", "page");
     // «Conversaciones» del menú es la de dinkbit: no se enciende en un cliente.
@@ -53,7 +53,7 @@ describe("MenuEspacios", () => {
 
 describe("BarraUbicacion", () => {
   test("dice el espacio y la ruta", () => {
-    ruta.actual = "/panel/ventas/hydrup/tablero";
+    ruta.actual = "/panel/hydrup/tablero";
     render(<BarraUbicacion clientes={clientes} />);
     expect(screen.getByText("CLIENTES")).toBeInTheDocument();
     expect(screen.getByText("Clientes › Hydrup › Tablero")).toBeInTheDocument();

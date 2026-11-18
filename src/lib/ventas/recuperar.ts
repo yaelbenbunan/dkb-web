@@ -2,17 +2,17 @@
  * «¿Has olvidado tu contraseña?» del panel. Puro: lo usan las acciones y los tests.
  *
  * El flujo: la usuaria pide el enlace → Supabase manda el correo de
- * recuperación → el enlace vuelve a `/panel/ventas/login/recuperar/vuelta` con
+ * recuperación → el enlace vuelve a `/panel/login/recuperar/vuelta` con
  * un `code` → se canjea por una sesión → pone la contraseña nueva en
- * `/panel/ventas/login/nueva`.
+ * `/panel/login/nueva`.
  *
  * Supabase solo vuelve a direcciones de su lista «Redirect URLs»
  * (Authentication → URL Configuration). Si la dirección no está, el enlace
  * acaba en la «Site URL» y no se puede poner la contraseña.
  */
 
-export const RUTA_VUELTA = "/panel/ventas/login/recuperar/vuelta";
-export const RUTA_NUEVA = "/panel/ventas/login/nueva";
+export const RUTA_VUELTA = "/panel/login/recuperar/vuelta";
+export const RUTA_NUEVA = "/panel/login/nueva";
 const PRODUCCION = "https://www.dinkbit.es";
 
 /**

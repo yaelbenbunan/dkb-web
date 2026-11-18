@@ -34,19 +34,19 @@ describe("requireUsuaria", () => {
 
   test("sin sesión redirige al login", async () => {
     getUserMock.mockResolvedValue({ data: { user: null } });
-    await expect(requireUsuaria()).rejects.toThrow("NEXT_REDIRECT:/panel/ventas/login");
+    await expect(requireUsuaria()).rejects.toThrow("NEXT_REDIRECT:/panel/login");
   });
 
   test("sesión válida pero sin perfil activo redirige al login", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "u1" } } });
     getUsuariaMock.mockResolvedValue({ ...ACTIVA, activa: false });
-    await expect(requireUsuaria()).rejects.toThrow("NEXT_REDIRECT:/panel/ventas/login");
+    await expect(requireUsuaria()).rejects.toThrow("NEXT_REDIRECT:/panel/login");
   });
 
   test("una comercial no pasa donde se pide admin", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "u1" } } });
     getUsuariaMock.mockResolvedValue(ACTIVA);
-    await expect(requireUsuaria("admin")).rejects.toThrow("NEXT_REDIRECT:/panel/ventas?aviso=permiso");
+    await expect(requireUsuaria("admin")).rejects.toThrow("NEXT_REDIRECT:/panel?aviso=permiso");
   });
 
   test("devuelve la usuaria cuando todo cuadra", async () => {
@@ -107,9 +107,9 @@ describe("helpers por marca", () => {
     test("la clienta es redirigida igual en la página, exista o no la marca", async () => {
       sesionDe({ id: "u1", rol: "cliente", activa: true, marca_id: "m1" });
       getMarcaPorSlugMock.mockResolvedValue({ id: "m2", slug: "dinkbit" });
-      await expect(requireAccesoMarca("dinkbit", "leads")).rejects.toThrow("NEXT_REDIRECT:/panel/ventas?aviso=permiso");
+      await expect(requireAccesoMarca("dinkbit", "leads")).rejects.toThrow("NEXT_REDIRECT:/panel?aviso=permiso");
       getMarcaPorSlugMock.mockResolvedValue(null);
-      await expect(requireAccesoMarca("nada", "leads")).rejects.toThrow("NEXT_REDIRECT:/panel/ventas?aviso=permiso");
+      await expect(requireAccesoMarca("nada", "leads")).rejects.toThrow("NEXT_REDIRECT:/panel?aviso=permiso");
     });
     test("admin y comercial siguen viendo el 404 en la página", async () => {
       getMarcaPorSlugMock.mockResolvedValue(null);
@@ -125,7 +125,7 @@ describe("helpers por marca", () => {
     test("clienta en sección prohibida: redirige al panel con aviso", async () => {
       sesionDe({ id: "u1", rol: "cliente", activa: true, marca_id: "m1" });
       getMarcaPorSlugMock.mockResolvedValue({ id: "m1", slug: "hydrup" });
-      await expect(requireAccesoMarca("hydrup", "condiciones")).rejects.toThrow("NEXT_REDIRECT:/panel/ventas?aviso=permiso");
+      await expect(requireAccesoMarca("hydrup", "condiciones")).rejects.toThrow("NEXT_REDIRECT:/panel?aviso=permiso");
     });
   });
 });

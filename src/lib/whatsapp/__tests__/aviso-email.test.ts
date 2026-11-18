@@ -18,6 +18,6 @@ describe("construirAvisoLead", () => {
     expect(c.subject).toBe("WhatsApp: Clínica Sonrisas espera respuesta");
     expect(c.text).toContain("611222333");
     expect(c.text).toContain("Llamadme hoy");
-    expect(c.html).toContain("/panel/ventas/dinkbit/leads/l1");
+    expect(c.html).toContain("/panel/dinkbit/leads/l1");
   });
 });

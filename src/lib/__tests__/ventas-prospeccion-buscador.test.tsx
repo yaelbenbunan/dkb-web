@@ -3,11 +3,11 @@ import { describe, expect, test, vi } from "vitest";
 
 const m = vi.hoisted(() => ({ refresh: vi.fn(), buscarAction: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: m.refresh }) }));
-vi.mock("@/app/(site)/panel/ventas/acciones-prospeccion", () => ({
+vi.mock("@/app/(site)/panel/acciones-prospeccion", () => ({
   buscarAction: m.buscarAction,
 }));
 
-import { Buscador } from "@/app/(site)/panel/ventas/(app)/[slug]/prospeccion/Buscador";
+import { Buscador } from "@/app/(site)/panel/(app)/[slug]/prospeccion/Buscador";
 
 describe("Buscador de Prospección", () => {
   test("cita Overture (fuentes, licencias y enlace a la atribución) y OpenStreetMap", () => {

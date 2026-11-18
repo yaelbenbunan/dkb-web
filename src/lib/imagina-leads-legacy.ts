@@ -10,7 +10,7 @@ import type { BulkLeadInput, LeadRow, ManualLeadInput, SaveLeadInput, WebhookLea
  * Las escrituras de leads tal como eran antes de la unificación del CRM
  * (2026-10-15): sobre la tabla `imagina_leads` del /panel viejo.
  *
- * Ya no son el camino normal: las altas van a /panel/ventas (marca dinkbit) en
+ * Ya no son el camino normal: las altas van a /panel (marca dinkbit) en
  * `ventas/leads-web.ts`. Se conservan como RESPALDO —si un formulario llega
  * antes de que se ejecute la migración, el lead no se pierde— y para los leads
  * que todavía solo están aquí (correos enviados antes de migrar).

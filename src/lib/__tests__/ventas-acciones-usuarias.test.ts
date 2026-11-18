@@ -21,7 +21,7 @@ vi.mock("@/lib/ventas/db", () => ({
 }));
 vi.mock("next/cache", () => ({ revalidatePath: m.revalidatePath }));
 
-import { crearUsuariaAction, setUsuariaActivaAction, cambiarPasswordAction, cambiarRolAction } from "@/app/(site)/panel/ventas/acciones-usuarias";
+import { crearUsuariaAction, setUsuariaActivaAction, cambiarPasswordAction, cambiarRolAction } from "@/app/(site)/panel/acciones-usuarias";
 
 const ADMIN = { id: "a1", rol: "admin", activa: true };
 
@@ -122,7 +122,7 @@ describe("cambiarRolAction", () => {
     const r = await cambiarRolAction("u2", { rol: "agente", marca_id: MARCA_ID });
     expect(r).toEqual({ ok: true, mensaje: "Rol cambiado." });
     expect(m.setRolUsuaria).toHaveBeenCalledWith("u2", { rol: "agente", marca_id: MARCA_ID });
-    expect(m.revalidatePath).toHaveBeenCalledWith("/panel/ventas/usuarias");
+    expect(m.revalidatePath).toHaveBeenCalledWith("/panel/usuarias");
   });
 
   test("a comercial se le quita la marca aunque llegue", async () => {

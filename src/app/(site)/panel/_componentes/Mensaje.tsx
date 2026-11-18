@@ -1,4 +1,4 @@
-import type { ResultadoAccion } from "@/lib/panel-resultado";
+import type { ResultadoAccion } from "@/lib/ventas/resultado";
 
 export function Mensaje({ resultado }: { resultado: ResultadoAccion | null }) {
   if (!resultado) return null;

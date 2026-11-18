@@ -20,7 +20,7 @@ vi.mock("@/lib/whatsapp/mensajero", () => ({ crearMensajero: m.crearMensajero })
 vi.mock("@/lib/whatsapp/numeros", () => ({ mensajeroDeMarca: m.mensajeroDeMarca }));
 vi.mock("next/cache", () => ({ revalidatePath: m.revalidatePath }));
 
-import { responder } from "@/app/(site)/panel/ventas/(app)/[slug]/conversaciones/acciones";
+import { responder } from "@/app/(site)/panel/(app)/[slug]/conversaciones/acciones";
 
 const MARCA = { id: "m1", slug: "hydrup" };
 const ABIERTA = new Date(Date.now() + 3_600_000).toISOString();

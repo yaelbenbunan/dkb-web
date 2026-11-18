@@ -3,9 +3,9 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const acciones = vi.hoisted(() => ({ moverLeadAction: vi.fn(), eliminarLeadTableroAction: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn(), prefetch: vi.fn() }) }));
-vi.mock("@/app/(site)/panel/ventas/acciones-leads", () => acciones);
+vi.mock("@/app/(site)/panel/acciones-leads", () => acciones);
 
-import { Tablero, type TarjetaLead } from "@/app/(site)/panel/ventas/(app)/[slug]/tablero/Tablero";
+import { Tablero, type TarjetaLead } from "@/app/(site)/panel/(app)/[slug]/tablero/Tablero";
 
 const lead: TarjetaLead = {
   id: "l1",

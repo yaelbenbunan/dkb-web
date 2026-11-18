@@ -16,7 +16,7 @@ const permitir = crearLimitador({ max: 5, ventanaMs: 10 * 60 * 1000 });
 const WHATSAPP = `${CONTACT_INFO.socials.whatsapp}?text=${encodeURIComponent("Hola, quiero el Pack Campaña + CRM")}`;
 
 /**
- * Solicitudes de la landing de proveedores deportivos → lead en /panel/ventas.
+ * Solicitudes de la landing de proveedores deportivos → lead en /panel.
  *
  * Mismo orden que el resto de formularios: el lead primero y la conversión a
  * Meta después, y solo si el lead se guardó (sin lead, no hay conversión que

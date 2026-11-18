@@ -40,7 +40,7 @@ export function construirAvisoLead(input: {
       : "Ha pasado a una persona en WhatsApp.",
     bullets: input.nota ? [input.nota] : undefined,
     bulletsLabel: input.nota ? "Lo que ha pasado" : undefined,
-    cta: { label: "Abrir su ficha", url: `${BRAND.siteUrl}/panel/ventas/${MARCA_DINKBIT_SLUG}/leads/${input.leadId}` },
+    cta: { label: "Abrir su ficha", url: `${BRAND.siteUrl}/panel/${MARCA_DINKBIT_SLUG}/leads/${input.leadId}` },
   });
 }
 

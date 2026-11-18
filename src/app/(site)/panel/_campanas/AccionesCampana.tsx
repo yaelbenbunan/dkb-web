@@ -6,12 +6,12 @@ type Resultado = { ok: boolean; error?: string };
 
 /**
  * Lo que el asistente de campañas necesita del servidor. Las pantallas son las
- * mismas en el /panel viejo y en /panel/ventas/<marca>/campanas; cambia quién
+ * mismas en el /panel viejo y en /panel/<marca>/campanas; cambia quién
  * las sirve: el /panel viejo pasa sus server actions de siempre, y ventas
  * unas que comprueban la marca, el permiso y el módulo antes de cada cosa.
  */
 export interface AccionesCampana {
-  /** Lista de campañas: `/panel/campanas` o `/panel/ventas/<slug>/campanas`. */
+  /** Lista de campañas: `/panel/antiguo/campanas` o `/panel/<slug>/campanas`. */
   rutaBase: string;
   /** Remitentes que puede elegir esta marca; el primero es el de por defecto. */
   remitentes: string[];

@@ -1,6 +1,4 @@
-/** Estilos compartidos del CRM de leads (/panel): los mismos tonos que el
- *  panel de ventas, pero copiados aparte a propósito — son apps distintas
- *  dentro del mismo repo y el de ventas puede cambiar sin avisar. */
+/** Estilos compartidos del panel de ventas: los mismos tonos que el panel de leads. */
 
 export const tarjeta = { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "16px 20px" } as const;
 

@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { ventasAuthConfig } from "./auth-config";
 
 /**
- * Parte del proxy para /panel/ventas: refresca la sesión de Supabase (reescribe
+ * Parte del proxy para /panel: refresca la sesión de Supabase (reescribe
  * sus cookies si ha caducado el token) y manda al login a quien no la tenga.
  * Es solo la primera barrera: cada página y cada acción vuelve a comprobar la
  * usuaria y su perfil con `requireUsuaria`.
@@ -35,7 +35,7 @@ export async function proxyVentas(req: NextRequest, esLogin: boolean): Promise<N
 
 function alLogin(req: NextRequest): NextResponse {
   const url = req.nextUrl.clone();
-  url.pathname = "/panel/ventas/login";
+  url.pathname = "/panel/login";
   url.search = "";
   url.searchParams.set("next", req.nextUrl.pathname + req.nextUrl.search);
   return NextResponse.redirect(url);

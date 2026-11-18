@@ -131,8 +131,8 @@ export function construirRecordatorio(
   const subject = `Tienes ${total} ${total === 1 ? "pendiente" : "pendientes"} hoy`;
   const url =
     usuaria.rol === "cliente" && slugMarcaCliente
-      ? `${BRAND.siteUrl}/panel/ventas/${slugMarcaCliente}/tareas?de=yo`
-      : `${BRAND.siteUrl}/panel/ventas/hoy`;
+      ? `${BRAND.siteUrl}/panel/${slugMarcaCliente}/tareas?de=yo`
+      : `${BRAND.siteUrl}/panel/hoy`;
   const nombrePila = usuaria.nombre.trim().split(/\s+/)[0] || "";
   const saludo = nombrePila ? `Hola ${nombrePila}` : "Hola";
   const intro = `Esto es lo que tienes asignado para hoy (${formatoSeguimiento(ahora.fecha, null)}) o que se ha quedado atrasado.`;

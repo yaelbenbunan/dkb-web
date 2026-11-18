@@ -29,7 +29,7 @@ import {
   crearExclusionAction,
   borrarExclusionAction,
   regenerarSecretoAction,
-} from "@/app/(site)/panel/ventas/acciones-marcas";
+} from "@/app/(site)/panel/acciones-marcas";
 
 function fd(campos: Record<string, string>) {
   const f = new FormData();
@@ -64,7 +64,7 @@ describe("acciones de marcas", () => {
   });
 
   test("crear marca lleva a sus condiciones", async () => {
-    await expect(crearMarcaAction(null, fd({ nombre: "Hydrup", slug: "" }))).rejects.toThrow("NEXT_REDIRECT:/panel/ventas/hydrup/condiciones");
+    await expect(crearMarcaAction(null, fd({ nombre: "Hydrup", slug: "" }))).rejects.toThrow("NEXT_REDIRECT:/panel/hydrup/condiciones");
     expect(m.crearMarca).toHaveBeenCalledWith({ nombre: "Hydrup", slug: "hydrup" });
   });
 

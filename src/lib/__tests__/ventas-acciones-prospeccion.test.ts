@@ -34,7 +34,7 @@ vi.mock("@/lib/prospeccion/enriquecer", () => ({ enriquecerProspecto: m.enriquec
 vi.mock("@/lib/prospeccion/enviar", () => ({ enviarProspectos: m.enviarProspectos }));
 vi.mock("@/lib/prospeccion/busqueda", () => ({ buscarNegocios: m.buscarNegocios, buscarEmpresasNuevas: m.buscarEmpresasNuevas }));
 
-import * as acciones from "@/app/(site)/panel/ventas/acciones-prospeccion";
+import * as acciones from "@/app/(site)/panel/acciones-prospeccion";
 
 const SIN_PERMISO = { ok: false, error: "No tienes permiso para esto." };
 const SIN_PROSPECCION = { ok: false, error: "Esta marca no tiene prospección." };
@@ -147,7 +147,7 @@ describe("con acceso", () => {
     expect(m.db.crearBusqueda).toHaveBeenCalledWith("overture", { categoria: "Restaurantes", clave: "restaurantes", ciudad: "Madrid", fuente: "overture" });
     expect(m.db.cerrarBusqueda).toHaveBeenCalledWith("s1", { status: "lista", total: 2 });
     expect(r).toEqual({ ok: true, searchId: "s1", mensaje: "2 empresas nuevas (Overture Maps)." });
-    expect(m.revalidatePath).toHaveBeenCalledWith("/panel/ventas/dinkbit/prospeccion");
+    expect(m.revalidatePath).toHaveBeenCalledWith("/panel/dinkbit/prospeccion");
   });
 
   test("buscarAction separa las que ya tenías de las repetidas en los datos, y dice las que quedan", async () => {
@@ -251,7 +251,7 @@ describe("consentimiento", () => {
       mensaje: "Consentimiento guardado: ya se le puede escribir a info@bar.es.",
     });
     expect(m.db.registrarConsentimiento).toHaveBeenCalledWith("p1", { email: "info@bar.es", nota: "llamada", por: "u1" });
-    expect(m.revalidatePath).toHaveBeenCalledWith("/panel/ventas/dinkbit/prospeccion");
+    expect(m.revalidatePath).toHaveBeenCalledWith("/panel/dinkbit/prospeccion");
   });
 
   test("registrarConsentimientoAction sin email válido no guarda nada", async () => {
@@ -314,7 +314,7 @@ describe("pasarAlEmbudoAction", () => {
     expect(await acciones.pasarAlEmbudoAction("dinkbit", "p1")).toEqual({ ok: true, mensaje: "Pasada al embudo de dinkbit." });
     expect(m.pasarProspectoAlEmbudo).toHaveBeenCalledWith({ marca: DINKBIT, usuaria: COMERCIAL, prospecto });
     expect(m.db.enlazarLead).toHaveBeenCalledWith("p1", "lead1", { conConsentimiento: false });
-    expect(m.revalidatePath).toHaveBeenCalledWith("/panel/ventas/dinkbit", "layout");
+    expect(m.revalidatePath).toHaveBeenCalledWith("/panel/dinkbit", "layout");
   });
 
   test("con consentimiento vigente se pasa justo tras la llamada, sin correo previo", async () => {

@@ -13,7 +13,7 @@ describe("sin analítica en /alta", () => {
     expect(esRutaSinAnalitica("/alta")).toBe(true);
     expect(esRutaSinAnalitica("/altavoz")).toBe(false);
     expect(esRutaSinAnalitica("/")).toBe(false);
-    expect(esRutaSinAnalitica("/panel/ventas/altas")).toBe(false);
+    expect(esRutaSinAnalitica("/panel/altas")).toBe(false);
     expect(esRutaSinAnalitica(null)).toBe(false);
   });
 
