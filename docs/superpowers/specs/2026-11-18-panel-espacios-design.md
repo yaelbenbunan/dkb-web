@@ -20,7 +20,7 @@ Mi día            ← portada
 Tareas            ← todas, con filtro por ámbito
 DINKBIT (azul)    Leads · Conversaciones · Captación · Altas
 CLIENTES (gris)   una entrada por cliente + «Todos los clientes»
-Ajustes (admin)   Usuarios
+Ajustes (admin)   Usuarios · Ajustes de dinkbit
 ```
 
 - **Fase 1 (este documento): menú y espacios.** Sin cambios en la base de datos.
@@ -63,7 +63,7 @@ El login sigue llevando a `/panel/ventas`, que acaba en Mi día. El formulario d
   - Captación → `/panel/ventas/dinkbit/secuencias`
   - Altas → `/panel/ventas/altas` (solo admin)
 - **Clientes**, en gris: una entrada por cliente activo o pausado, con su punto de color, y «Todos los clientes».
-- **Ajustes** (solo admin): Usuarios.
+- **Ajustes** (solo admin): Usuarios y Ajustes de dinkbit.
 - Abajo: nombre, rol y «Salir».
 
 En móvil el menú se pone encima del contenido (fila con `flex-wrap`), sin cajón ni JavaScript extra.
@@ -84,7 +84,7 @@ Una barra encima del contenido dice dónde estás (`Dinkbit › Leads`, `Cliente
 | Conversaciones | Conversaciones · WhatsApp |
 | Captación | Secuencias · Mailing · Prospección |
 
-Condiciones no aparece en Dinkbit: son las comisiones de los clientes de ventas.
+En Dinkbit, Condiciones no está en ningún grupo: allí no hay comisiones, pero sí los módulos, las exclusiones y el webhook. Se abre desde Ajustes como «Ajustes de dinkbit» (`/panel/ventas/dinkbit/condiciones`, sin pestañas).
 
 **En un cliente:** una sola fila (ya no está el menú de Dinkbit compitiendo): Resumen · Tablero · Tabla · Tareas · Conversaciones · Secuencias · Mailing (si tiene el módulo) · Condiciones · WhatsApp. El enlace «← Panel» pasa a «← Clientes». En la fase 2 se añaden «Datos del alta» y «Archivos».
 
