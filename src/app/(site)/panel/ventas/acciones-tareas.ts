@@ -13,6 +13,7 @@ const USUARIA_NO_VALIDA = { ok: false, error: "Ese usuario no existe o está des
 function refrescar(slug: string) {
   revalidatePath(`/panel/ventas/${slug}/tareas`);
   revalidatePath("/panel/ventas/hoy");
+  revalidatePath("/panel/ventas/tareas");
 }
 
 async function responsableValida(usuariaId: string | null, marcaId: string): Promise<boolean> {

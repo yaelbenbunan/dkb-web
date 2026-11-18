@@ -14,12 +14,15 @@ export function FilaTarea({
   usuarias,
   responsable,
   atrasada,
+  ambito,
 }: {
   slug: string;
   tarea: TareaVista;
   usuarias: { id: string; nombre: string }[];
   responsable: string | null;
   atrasada: boolean;
+  /** En la vista global de Tareas: de quién es (Dinkbit o el cliente), con su color. */
+  ambito?: { nombre: string; color: string };
 }) {
   const [pendiente, empezar] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +47,9 @@ export function FilaTarea({
         <span aria-hidden="true" style={{ width: 13 }} />
       )}
       <span style={{ fontSize: 11, fontWeight: 700, color: "#475569", background: "#f1f5f9", borderRadius: 4, padding: "2px 6px" }}>{ETIQUETA[tarea.tipo]}</span>
+      {ambito && (
+        <span style={{ fontSize: 12, fontWeight: 600, color: "#1f2937", borderLeft: `4px solid ${ambito.color}`, paddingLeft: 6 }}>{ambito.nombre}</span>
+      )}
       <span style={{ flex: "1 1 220px", fontSize: 14, textDecoration: tarea.hecha ? "line-through" : "none" }}>
         {tarea.leadId ? (
           <Link href={`/panel/ventas/${slug}/leads/${tarea.leadId}`} style={{ color: "#187bef", fontWeight: 600, textDecoration: "none" }}>{tarea.titulo}</Link>

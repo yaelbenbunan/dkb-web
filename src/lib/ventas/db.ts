@@ -676,6 +676,28 @@ export async function listTareasMarca(marcaId: string, opciones: { hechasDesde?:
   }, "listTareasMarca");
 }
 
+export type TareaConMarcaYLead = TareaManual & { marca: { nombre: string; slug: string } | null; lead: { negocio: string } | null };
+
+/** Las tareas manuales pendientes de todas las marcas, para la vista global de Tareas. */
+export async function listTareasPendientesTodas(): Promise<TareaConMarcaYLead[]> {
+  // Sin la tabla de tareas, la vista sale vacía en vez de romperse.
+  return tolerarMigracionPendiente<TareaConMarcaYLead[]>(
+    () =>
+      todas(
+        (d, h) =>
+          db()
+            .from("ventas_tareas")
+            .select("*, marca:ventas_marcas(nombre,slug), lead:ventas_leads(negocio)")
+            .is("hecha_at", null)
+            .order("created_at")
+            .range(d, h) as PromiseLike<Respuesta<TareaConMarcaYLead[]>>,
+        "listTareasPendientesTodas",
+      ),
+    () => [],
+    "listTareasPendientesTodas",
+  );
+}
+
 export async function listTareasUsuaria(usuariaId: string): Promise<(TareaManual & { marca: { nombre: string; slug: string } | null })[]> {
   type Fila = TareaManual & { marca: { nombre: string; slug: string } | null };
   // Sin la tabla de tareas, «Mi día» enseña los seguimientos y ninguna tarea.

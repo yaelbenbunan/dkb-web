@@ -3,22 +3,10 @@ import Link from "next/link";
 import type { Marca } from "@/lib/ventas/db";
 import type { Rol } from "@/lib/ventas/dominio";
 import { MODULO_CAMPANAS, tieneModulo } from "@/lib/ventas/campanas";
-import { rolConMarca, seccionesDeRol, tieneProspeccion } from "@/lib/ventas/rutas";
+import { esMarcaPropia, pestanasVisibles, TEXTO_SECCION } from "@/lib/ventas/espacios";
+import { rolConMarca, type SeccionMarca } from "@/lib/ventas/rutas";
 
-const PESTANAS = [
-  { clave: "resumen", texto: "Resumen", ruta: "" },
-  { clave: "tablero", texto: "Tablero", ruta: "/tablero" },
-  { clave: "leads", texto: "Tabla", ruta: "/leads" },
-  { clave: "tareas", texto: "Tareas", ruta: "/tareas" },
-  { clave: "secuencias", texto: "Secuencias", ruta: "/secuencias" },
-  { clave: "conversaciones", texto: "Conversaciones", ruta: "/conversaciones" },
-  { clave: "whatsapp", texto: "WhatsApp", ruta: "/whatsapp" },
-  { clave: "campanas", texto: "Mailing", ruta: "/campanas" },
-  { clave: "prospeccion", texto: "Prospección", ruta: "/prospeccion" },
-  { clave: "condiciones", texto: "Condiciones", ruta: "/condiciones" },
-] as const;
-
-export type Pestana = (typeof PESTANAS)[number]["clave"];
+export type Pestana = SeccionMarca;
 
 /**
  * Logo de cada marca, por slug, para fondo claro y sin margen alrededor. Con
@@ -34,19 +22,17 @@ const LOGOS_MARCA: Record<string, { src: string; ancho: number; alto: number }> 
 const ALTO_LOGO = 30;
 
 export function MarcaCabecera({ marca, activa, rol }: { marca: Marca; activa: Pestana; rol: Rol }) {
-  // La clienta y la agente solo ven las secciones que el servidor les deja abrir.
-  const secciones = seccionesDeRol(rol) as readonly string[] | null;
-  const porRol = secciones ? PESTANAS.filter((p) => secciones.includes(p.clave)) : PESTANAS;
-  // Campañas es un módulo de pago: la pestaña solo aparece si la marca lo tiene.
-  // Prospección solo en las marcas que la tienen (hoy, dinkbit).
-  const visibles = porRol.filter(
-    (p) => (p.clave !== "campanas" || tieneModulo(marca, MODULO_CAMPANAS)) && (p.clave !== "prospeccion" || tieneProspeccion(marca.slug)),
-  );
+  // Dinkbit: solo las pestañas del grupo del menú lateral en el que estás.
+  // Un cliente: todas en una fila. La clienta y la agente: las suyas.
+  // Mailing solo con el módulo de campañas; Prospección solo donde la hay.
+  const visibles = pestanasVisibles({ slug: marca.slug, rol, activa, conCampanas: tieneModulo(marca, MODULO_CAMPANAS) });
   const logo = LOGOS_MARCA[marca.slug];
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        {!rolConMarca(rol) && <Link href="/panel/ventas" style={{ fontSize: 13, color: "#64748b", textDecoration: "none" }}>← Panel</Link>}
+        {!rolConMarca(rol) && !esMarcaPropia(marca.slug) && (
+          <Link href="/panel/ventas/clientes" style={{ fontSize: 13, color: "#64748b", textDecoration: "none" }}>← Clientes</Link>
+        )}
         <h1 style={{ margin: 0, fontSize: 24, lineHeight: 1, display: "flex" }}>
           {logo ? (
             <Image
@@ -77,22 +63,23 @@ export function MarcaCabecera({ marca, activa, rol }: { marca: Marca; activa: Pe
           </span>
         )}
       </div>
-      <nav style={{ display: "flex", gap: 4, borderBottom: "1px solid #e2e8f0" }}>
-        {visibles.map((p) => (
+      <nav aria-label="Secciones" style={{ display: "flex", flexWrap: "wrap", gap: 4, borderBottom: "1px solid #e2e8f0" }}>
+        {visibles.map((clave) => (
           <Link
-            key={p.clave}
-            href={`/panel/ventas/${marca.slug}${p.ruta}`}
+            key={clave}
+            href={`/panel/ventas/${marca.slug}${clave === "resumen" ? "" : `/${clave}`}`}
+            aria-current={clave === activa ? "page" : undefined}
             style={{
               padding: "8px 14px",
               fontSize: 14,
               fontWeight: 600,
               textDecoration: "none",
-              color: p.clave === activa ? "#187bef" : "#64748b",
-              borderBottom: `2px solid ${p.clave === activa ? "#187bef" : "transparent"}`,
+              color: clave === activa ? "#187bef" : "#64748b",
+              borderBottom: `2px solid ${clave === activa ? "#187bef" : "transparent"}`,
               marginBottom: -1,
             }}
           >
-            {p.texto}
+            {TEXTO_SECCION[clave]}
           </Link>
         ))}
       </nav>

@@ -73,6 +73,8 @@ describe("leerNuevaMarca", () => {
   test("rechaza los identificadores que ya son rutas del panel", () => {
     expect(leerNuevaMarca(fd({ nombre: "Hoy", slug: "" }))).toEqual({ ok: false, error: "Ese identificador está reservado: elige otro." });
     expect(leerNuevaMarca(fd({ nombre: "X", slug: "usuarias" }))).toMatchObject({ ok: false });
+    expect(leerNuevaMarca(fd({ nombre: "Clientes", slug: "" }))).toMatchObject({ ok: false });
+    expect(leerNuevaMarca(fd({ nombre: "X", slug: "tareas" }))).toMatchObject({ ok: false });
   });
 });
 

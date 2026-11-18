@@ -1,9 +1,9 @@
 "use client";
 
 import { useActionState } from "react";
-import { crearMarcaAction } from "../acciones-marcas";
-import { Mensaje } from "../_componentes/Mensaje";
-import { botonPrimario, campo, etiqueta, tarjeta } from "../_componentes/estilos";
+import { crearMarcaAction } from "../../acciones-marcas";
+import { Mensaje } from "../../_componentes/Mensaje";
+import { botonPrimario, campo, etiqueta, tarjeta } from "../../_componentes/estilos";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
 
 export function NuevaMarcaForm() {
