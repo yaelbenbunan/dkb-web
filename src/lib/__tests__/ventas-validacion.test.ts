@@ -239,3 +239,13 @@ describe("leerCambioRol", () => {
     expect(leerCambioRol(null)).toMatchObject({ ok: false });
   });
 });
+
+describe("slugLibre", () => {
+  test("del nombre; si está cogido o reservado, con número", async () => {
+    const { slugLibre } = await import("../ventas/validacion");
+    expect(slugLibre("Nubosoft", [])).toBe("nubosoft");
+    expect(slugLibre("Nubosoft", ["nubosoft", "nubosoft-2"])).toBe("nubosoft-3");
+    expect(slugLibre("Clientes", [])).toBe("clientes-2");
+    expect(slugLibre("¡¡!!", [])).toBe("cliente");
+  });
+});

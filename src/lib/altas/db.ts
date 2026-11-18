@@ -31,6 +31,9 @@ export interface AltaCliente {
   /** Reservas de subida (ver pendientes.ts) y su contador de revisión. Sin la columna, no vienen. */
   subidas_pendientes?: unknown;
   pendientes_rev?: number;
+  /** La ficha de cliente (ventas_marcas) creada desde esta alta. Falta sin
+   *  docs/sql/2026-11-18-panel-fichas-clientes.sql. */
+  marca_id?: string | null;
 }
 
 export type Escritura = { ok: true } | { ok: false; error: string };
@@ -79,6 +82,31 @@ export async function getAltaPorId(id: string): Promise<AltaCliente | null> {
     "getAltaPorId",
   );
   return fila ? normalizar(fila) : null;
+}
+
+/** El alta de la que salió la ficha de un cliente. Sin la columna `marca_id`, ninguna. */
+export async function getAltaPorMarca(marcaId: string): Promise<AltaCliente | null> {
+  if (typeof marcaId !== "string" || !UUID_RE.test(marcaId)) return null;
+  const fila = await tolerarMigracionPendiente(
+    async () => leer(await sb().from(TABLA).select("*").eq("marca_id", marcaId).maybeSingle(), "getAltaPorMarca") as AltaCliente | null,
+    () => null,
+    "getAltaPorMarca",
+  );
+  return fila ? normalizar(fila) : null;
+}
+
+/** Une un alta con la ficha de cliente creada desde ella. Solo si aún no tenía una. */
+export async function vincularAltaMarca(altaId: string, marcaId: string): Promise<Escritura> {
+  const r = await sb().from(TABLA).update({ marca_id: marcaId }).eq("id", altaId).is("marca_id", null).select("id");
+  if (r.error) {
+    if (r.error.code && FALTA_EN_LA_BASE.has(r.error.code)) {
+      console.error("[altas/db] vincularAltaMarca:", r.error.message);
+      return { ok: false, error: "Falta ejecutar en Supabase docs/sql/2026-11-18-panel-fichas-clientes.sql." };
+    }
+    return falloEscritura(r.error, "vincularAltaMarca");
+  }
+  if (!r.data?.length) return { ok: false, error: "Esta alta ya tiene ficha de cliente." };
+  return { ok: true };
 }
 
 export type ListaAltas = { estado: "ok"; altas: AltaCliente[] } | { estado: "falta_migracion" };

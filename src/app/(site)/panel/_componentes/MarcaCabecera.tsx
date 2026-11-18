@@ -3,8 +3,10 @@ import Link from "next/link";
 import type { Marca } from "@/lib/ventas/db";
 import type { Rol } from "@/lib/ventas/dominio";
 import { MODULO_CAMPANAS, tieneModulo } from "@/lib/ventas/campanas";
-import { esMarcaPropia, pestanasVisibles, TEXTO_SECCION } from "@/lib/ventas/espacios";
+import { getUsuariaActual } from "@/lib/ventas/auth";
+import { cabeceraMarca, esMarcaPropia, rutaSeccion, TEXTO_SECCION } from "@/lib/ventas/espacios";
 import { rolConMarca, type SeccionMarca } from "@/lib/ventas/rutas";
+import { BotonAnclar } from "./BotonAnclar";
 
 export type Pestana = SeccionMarca;
 
@@ -21,16 +23,43 @@ const LOGOS_MARCA: Record<string, { src: string; ancho: number; alto: number }> 
 // densidad sigue reduciéndose (nunca se estira, que es lo que lo pixelaba).
 const ALTO_LOGO = 30;
 
-export function MarcaCabecera({ marca, activa, rol }: { marca: Marca; activa: Pestana; rol: Rol }) {
-  // Dinkbit: solo las pestañas del grupo del menú lateral en el que estás.
-  // Un cliente: todas en una fila. La clienta y la agente: las suyas.
-  // Mailing solo con el módulo de campañas; Prospección solo donde la hay.
-  const visibles = pestanasVisibles({ slug: marca.slug, rol, activa, conCampanas: tieneModulo(marca, MODULO_CAMPANAS) });
+function Pestana({ href, activa, texto, grande }: { href: string; activa: boolean; texto: string; grande: boolean }) {
+  return (
+    <Link
+      href={href}
+      aria-current={activa ? "page" : undefined}
+      style={{
+        padding: grande ? "9px 14px" : "6px 12px",
+        fontSize: grande ? 15 : 13,
+        fontWeight: 600,
+        textDecoration: "none",
+        borderRadius: grande ? 0 : 999,
+        color: grande ? (activa ? "#187bef" : "#64748b") : activa ? "#fff" : "#475569",
+        background: grande ? "transparent" : activa ? "#0f172a" : "#fff",
+        border: grande ? "none" : `1px solid ${activa ? "#0f172a" : "#cbd5e1"}`,
+        borderBottom: grande ? `2px solid ${activa ? "#187bef" : "transparent"}` : undefined,
+        marginBottom: grande ? -1 : 0,
+      }}
+    >
+      {texto}
+    </Link>
+  );
+}
+
+/**
+ * La cabecera de una marca: logo, «Anclar en mi menú» (en los clientes) y las
+ * pestañas en dos niveles (lib/ventas/espacios.ts, `cabeceraMarca`).
+ */
+export async function MarcaCabecera({ marca, activa, rol }: { marca: Marca; activa: Pestana; rol: Rol }) {
+  const { grupos, secciones } = cabeceraMarca({ slug: marca.slug, rol, activa, conCampanas: tieneModulo(marca, MODULO_CAMPANAS) });
+  const esCliente = !rolConMarca(rol) && !esMarcaPropia(marca.slug);
+  const usuaria = esCliente ? await getUsuariaActual() : null;
+  const anclados = usuaria?.clientes_anclados;
   const logo = LOGOS_MARCA[marca.slug];
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        {!rolConMarca(rol) && !esMarcaPropia(marca.slug) && (
+        {esCliente && (
           <Link href="/panel/clientes" style={{ fontSize: 13, color: "#64748b", textDecoration: "none" }}>← Clientes</Link>
         )}
         <h1 style={{ margin: 0, fontSize: 24, lineHeight: 1, display: "flex" }}>
@@ -62,27 +91,27 @@ export function MarcaCabecera({ marca, activa, rol }: { marca: Marca; activa: Pe
             {marca.estado === "pausada" ? "Pausada" : "Finalizada"}
           </span>
         )}
+        {/* Sin la migración no viene la lista: el botón no aparece. */}
+        {esCliente && Array.isArray(anclados) && (
+          <span style={{ marginLeft: "auto" }}>
+            <BotonAnclar marcaId={marca.id} anclado={anclados.includes(marca.id)} />
+          </span>
+        )}
       </div>
-      <nav aria-label="Secciones" style={{ display: "flex", flexWrap: "wrap", gap: 4, borderBottom: "1px solid #e2e8f0" }}>
-        {visibles.map((clave) => (
-          <Link
-            key={clave}
-            href={`/panel/${marca.slug}${clave === "resumen" ? "" : `/${clave}`}`}
-            aria-current={clave === activa ? "page" : undefined}
-            style={{
-              padding: "8px 14px",
-              fontSize: 14,
-              fontWeight: 600,
-              textDecoration: "none",
-              color: clave === activa ? "#187bef" : "#64748b",
-              borderBottom: `2px solid ${clave === activa ? "#187bef" : "transparent"}`,
-              marginBottom: -1,
-            }}
-          >
-            {TEXTO_SECCION[clave]}
-          </Link>
-        ))}
-      </nav>
+      {grupos.length > 0 && (
+        <nav aria-label="Secciones" style={{ display: "flex", flexWrap: "wrap", gap: 4, borderBottom: "1px solid #e2e8f0" }}>
+          {grupos.map((g) => (
+            <Pestana key={g.clave} href={rutaSeccion(marca.slug, g.seccion)} activa={g.activo} texto={g.texto} grande />
+          ))}
+        </nav>
+      )}
+      {secciones.length > 0 && (
+        <nav aria-label="Vistas" style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {secciones.map((clave) => (
+            <Pestana key={clave} href={rutaSeccion(marca.slug, clave)} activa={clave === activa} texto={TEXTO_SECCION[clave]} grande={false} />
+          ))}
+        </nav>
+      )}
     </div>
   );
 }

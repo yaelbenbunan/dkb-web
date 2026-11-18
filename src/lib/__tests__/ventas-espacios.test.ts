@@ -1,10 +1,13 @@
 import { describe, expect, test } from "vitest";
 import {
+  alternarAnclado,
+  cabeceraMarca,
+  clientesDelMenu,
   colorDeCliente,
   esMarcaPropia,
   filtrarTareasGlobal,
   grupoDeSeccion,
-  pestanasVisibles,
+  rutaSeccion,
   separarPorEspacio,
   ubicacion,
 } from "../ventas/espacios";
@@ -18,59 +21,79 @@ describe("esMarcaPropia", () => {
 });
 
 describe("grupoDeSeccion", () => {
-  test("cada sección de dinkbit cae en su grupo del menú", () => {
-    expect(grupoDeSeccion("resumen")).toBe("leads");
-    expect(grupoDeSeccion("tablero")).toBe("leads");
-    expect(grupoDeSeccion("leads")).toBe("leads");
-    expect(grupoDeSeccion("tareas")).toBe("leads");
-    expect(grupoDeSeccion("conversaciones")).toBe("conversaciones");
-    expect(grupoDeSeccion("whatsapp")).toBe("conversaciones");
-    expect(grupoDeSeccion("secuencias")).toBe("captacion");
-    expect(grupoDeSeccion("campanas")).toBe("captacion");
-    expect(grupoDeSeccion("prospeccion")).toBe("captacion");
-    expect(grupoDeSeccion("condiciones")).toBeNull();
+  test("dinkbit: Leads, WhatsApp y Captación", () => {
+    expect(grupoDeSeccion("dinkbit", "tablero")?.clave).toBe("leads");
+    expect(grupoDeSeccion("dinkbit", "tareas")?.clave).toBe("leads");
+    expect(grupoDeSeccion("dinkbit", "whatsapp")?.clave).toBe("whatsapp");
+    expect(grupoDeSeccion("dinkbit", "secuencias")?.clave).toBe("whatsapp");
+    expect(grupoDeSeccion("dinkbit", "prospeccion")?.clave).toBe("captacion");
+    expect(grupoDeSeccion("dinkbit", "condiciones")).toBeNull();
+  });
+  test("un cliente: Ficha, Tareas, Leads, WhatsApp y Entrada de leads", () => {
+    expect(grupoDeSeccion("hydrup", "ficha")?.clave).toBe("ficha");
+    expect(grupoDeSeccion("hydrup", "tareas")?.clave).toBe("tareas");
+    expect(grupoDeSeccion("hydrup", "campanas")?.clave).toBe("leads");
+    expect(grupoDeSeccion("hydrup", "secuencias")?.clave).toBe("whatsapp");
+    expect(grupoDeSeccion("hydrup", "condiciones")?.texto).toBe("Entrada de leads");
   });
 });
 
-describe("pestanasVisibles", () => {
+describe("rutaSeccion", () => {
+  test("el resumen es la raíz de la marca", () => {
+    expect(rutaSeccion("hydrup", "resumen")).toBe("/panel/hydrup");
+    expect(rutaSeccion("hydrup", "ficha")).toBe("/panel/hydrup/ficha");
+  });
+});
+
+describe("cabeceraMarca", () => {
   const base = { conCampanas: true };
+  const claves = (c: ReturnType<typeof cabeceraMarca>) => c.grupos.map((g) => g.clave);
 
-  test("en dinkbit, solo las pestañas del grupo en el que estás", () => {
-    expect(pestanasVisibles({ ...base, slug: "dinkbit", rol: "admin", activa: "tablero" })).toEqual(["resumen", "tablero", "leads", "tareas"]);
-    expect(pestanasVisibles({ ...base, slug: "dinkbit", rol: "comercial", activa: "whatsapp" })).toEqual(["conversaciones", "whatsapp"]);
-    expect(pestanasVisibles({ ...base, slug: "dinkbit", rol: "admin", activa: "prospeccion" })).toEqual(["secuencias", "campanas", "prospeccion"]);
+  test("un cliente: los cinco grupos y, en Leads o WhatsApp, sus secciones", () => {
+    const c = cabeceraMarca({ ...base, slug: "hydrup", rol: "admin", activa: "tablero" });
+    expect(claves(c)).toEqual(["ficha", "tareas", "leads", "whatsapp", "entrada"]);
+    expect(c.grupos.find((g) => g.activo)?.clave).toBe("leads");
+    expect(c.secciones).toEqual(["resumen", "tablero", "leads", "campanas"]);
+    expect(cabeceraMarca({ ...base, slug: "hydrup", rol: "admin", activa: "secuencias" }).secciones).toEqual(["conversaciones", "whatsapp", "secuencias"]);
   });
 
-  test("dinkbit sin el módulo de campañas no enseña Mailing", () => {
-    expect(pestanasVisibles({ slug: "dinkbit", rol: "admin", activa: "secuencias", conCampanas: false })).toEqual(["secuencias", "prospeccion"]);
+  test("un grupo de una sola sección no lleva segundo nivel", () => {
+    expect(cabeceraMarca({ ...base, slug: "hydrup", rol: "comercial", activa: "ficha" }).secciones).toEqual([]);
   });
 
-  test("las Condiciones de dinkbit son una página suelta de Ajustes: sin pestañas", () => {
-    expect(pestanasVisibles({ ...base, slug: "dinkbit", rol: "admin", activa: "condiciones" })).toEqual([]);
+  test("cada grupo lleva a su primera sección visible", () => {
+    const c = cabeceraMarca({ ...base, slug: "hydrup", rol: "admin", activa: "ficha" });
+    expect(Object.fromEntries(c.grupos.map((g) => [g.clave, g.seccion]))).toEqual({
+      ficha: "ficha", tareas: "tareas", leads: "resumen", whatsapp: "conversaciones", entrada: "condiciones",
+    });
   });
 
-  test("ningún grupo de dinkbit enseña Condiciones", () => {
-    for (const activa of ["tablero", "whatsapp", "secuencias"] as const) {
-      expect(pestanasVisibles({ ...base, slug: "dinkbit", rol: "admin", activa })).not.toContain("condiciones");
-    }
+  test("Mailing solo con el módulo; Prospección nunca en un cliente", () => {
+    expect(cabeceraMarca({ slug: "hydrup", rol: "admin", activa: "resumen", conCampanas: false }).secciones).toEqual(["resumen", "tablero", "leads"]);
   });
 
-  test("un cliente: una sola fila, sin Prospección, Mailing solo con el módulo", () => {
-    expect(pestanasVisibles({ ...base, slug: "hydrup", rol: "admin", activa: "tablero" })).toEqual([
-      "resumen", "tablero", "leads", "tareas", "conversaciones", "secuencias", "campanas", "condiciones", "whatsapp",
-    ]);
-    expect(pestanasVisibles({ slug: "hydrup", rol: "comercial", activa: "resumen", conCampanas: false })).not.toContain("campanas");
+  test("dinkbit: sin primer nivel (lo hace el menú lateral), solo las secciones del grupo", () => {
+    const c = cabeceraMarca({ ...base, slug: "dinkbit", rol: "admin", activa: "whatsapp" });
+    expect(c.grupos).toEqual([]);
+    expect(c.secciones).toEqual(["conversaciones", "whatsapp", "secuencias"]);
+    expect(cabeceraMarca({ ...base, slug: "dinkbit", rol: "comercial", activa: "prospeccion" }).secciones).toEqual(["campanas", "prospeccion"]);
   });
 
-  test("la clienta y la agente siguen con sus secciones de siempre", () => {
-    expect(pestanasVisibles({ ...base, slug: "hydrup", rol: "cliente", activa: "resumen" })).toEqual([
-      "resumen", "tablero", "leads", "tareas", "conversaciones", "whatsapp",
-    ]);
-    expect(pestanasVisibles({ ...base, slug: "hydrup", rol: "agente", activa: "conversaciones" })).toEqual(["conversaciones"]);
+  test("las Condiciones de dinkbit son una página suelta de Ajustes", () => {
+    expect(cabeceraMarca({ ...base, slug: "dinkbit", rol: "admin", activa: "condiciones" })).toEqual({ grupos: [], secciones: [] });
   });
 
-  test("una clienta de dinkbit (si la hubiera) no se queda con los grupos: ve sus secciones", () => {
-    expect(pestanasVisibles({ ...base, slug: "dinkbit", rol: "agente", activa: "conversaciones" })).toEqual(["conversaciones"]);
+  test("la clienta: sin Ficha ni Entrada de leads, y solo sus secciones", () => {
+    const c = cabeceraMarca({ ...base, slug: "hydrup", rol: "cliente", activa: "conversaciones" });
+    expect(claves(c)).toEqual(["tareas", "leads", "whatsapp"]);
+    expect(c.secciones).toEqual(["conversaciones", "whatsapp"]);
+    expect(cabeceraMarca({ ...base, slug: "hydrup", rol: "cliente", activa: "resumen" }).secciones).toEqual(["resumen", "tablero", "leads"]);
+  });
+
+  test("la agente: solo Conversaciones, sin pestañas de más", () => {
+    const c = cabeceraMarca({ ...base, slug: "hydrup", rol: "agente", activa: "conversaciones" });
+    expect(claves(c)).toEqual(["whatsapp"]);
+    expect(c.secciones).toEqual([]);
   });
 });
 
@@ -122,23 +145,23 @@ describe("ubicacion", () => {
   test("personal: Mi día y Tareas", () => {
     expect(ubicacion("/panel/hoy", marcas)).toEqual({ espacio: "personal", menu: "hoy", migas: ["Mi día"] });
     expect(ubicacion("/panel/tareas", marcas)).toEqual({ espacio: "personal", menu: "tareas", migas: ["Tareas"] });
+    expect(ubicacion("/panel", marcas).menu).toBe("hoy");
   });
 
-  test("dinkbit: el grupo de la sección", () => {
-    expect(ubicacion("/panel/dinkbit", marcas)).toEqual({ espacio: "dinkbit", menu: "dinkbit:leads", migas: ["Dinkbit", "Leads"] });
-    expect(ubicacion("/panel/dinkbit/leads/abc", marcas)).toEqual({ espacio: "dinkbit", menu: "dinkbit:leads", migas: ["Dinkbit", "Leads"] });
-    expect(ubicacion("/panel/dinkbit/whatsapp", marcas)).toEqual({ espacio: "dinkbit", menu: "dinkbit:conversaciones", migas: ["Dinkbit", "Conversaciones"] });
-    expect(ubicacion("/panel/dinkbit/campanas/1", marcas)).toEqual({ espacio: "dinkbit", menu: "dinkbit:captacion", migas: ["Dinkbit", "Captación"] });
+  test("dinkbit: el grupo y la sección", () => {
+    expect(ubicacion("/panel/dinkbit/tablero", marcas)).toEqual({ espacio: "dinkbit", menu: "dinkbit:leads", migas: ["Dinkbit", "Leads", "Tablero"] });
+    expect(ubicacion("/panel/dinkbit/leads/abc", marcas).migas).toEqual(["Dinkbit", "Leads", "Tabla"]);
+    expect(ubicacion("/panel/dinkbit/secuencias/7", marcas)).toEqual({ espacio: "dinkbit", menu: "dinkbit:whatsapp", migas: ["Dinkbit", "WhatsApp", "Secuencias"] });
+    expect(ubicacion("/panel/dinkbit/campanas", marcas).menu).toBe("dinkbit:captacion");
     expect(ubicacion("/panel/altas/xyz", marcas)).toEqual({ espacio: "dinkbit", menu: "altas", migas: ["Dinkbit", "Altas"] });
   });
 
   test("clientes: la lista y la carpeta de cada uno", () => {
     expect(ubicacion("/panel/clientes", marcas)).toEqual({ espacio: "clientes", menu: "clientes", migas: ["Clientes", "Todos"] });
-    expect(ubicacion("/panel/hydrup", marcas)).toEqual({ espacio: "clientes", menu: "cliente:hydrup", migas: ["Clientes", "Hydrup", "Resumen"] });
-    expect(ubicacion("/panel/hydrup/conversaciones", marcas)).toEqual({
-      espacio: "clientes", menu: "cliente:hydrup", migas: ["Clientes", "Hydrup", "Conversaciones"],
-    });
-    expect(ubicacion("/panel/hydrup/leads/123", marcas)).toEqual({ espacio: "clientes", menu: "cliente:hydrup", migas: ["Clientes", "Hydrup", "Tabla"] });
+    expect(ubicacion("/panel/hydrup/ficha", marcas)).toEqual({ espacio: "clientes", menu: "cliente:hydrup", migas: ["Clientes", "Hydrup", "Ficha"] });
+    expect(ubicacion("/panel/hydrup", marcas).migas).toEqual(["Clientes", "Hydrup", "Leads", "Resumen"]);
+    expect(ubicacion("/panel/hydrup/whatsapp", marcas).migas).toEqual(["Clientes", "Hydrup", "WhatsApp", "Conexión"]);
+    expect(ubicacion("/panel/hydrup/condiciones", marcas).migas).toEqual(["Clientes", "Hydrup", "Entrada de leads"]);
   });
 
   test("ajustes: usuarios y las condiciones de dinkbit", () => {
@@ -147,7 +170,22 @@ describe("ubicacion", () => {
   });
 
   test("una marca que no está en la lista se nombra por su slug", () => {
-    expect(ubicacion("/panel/otra/tablero", marcas).migas).toEqual(["Clientes", "otra", "Tablero"]);
+    expect(ubicacion("/panel/otra/tareas", marcas).migas).toEqual(["Clientes", "otra", "Tareas"]);
+  });
+});
+
+describe("clientesDelMenu y alternarAnclado", () => {
+  const clientes = [{ id: "a" }, { id: "b" }, { id: "c" }];
+  test("solo los anclados, en el orden de la lista", () => {
+    expect(clientesDelMenu(clientes, ["c", "a", "zzz"])).toEqual({ lista: [{ id: "a" }, { id: "c" }], conAnclaje: true });
+    expect(clientesDelMenu(clientes, [])).toEqual({ lista: [], conAnclaje: true });
+  });
+  test("sin la migración, todos", () => {
+    expect(clientesDelMenu(clientes, undefined)).toEqual({ lista: clientes, conAnclaje: false });
+  });
+  test("anclar y soltar", () => {
+    expect(alternarAnclado(["a"], "b")).toEqual(["a", "b"]);
+    expect(alternarAnclado(["a", "b"], "a")).toEqual(["b"]);
   });
 });
 

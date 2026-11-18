@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { accesoMarcaAccion } from "@/lib/ventas/auth";
-import { actualizarTarea, crearTarea, getLead, getTarea, getUsuaria } from "@/lib/ventas/db";
+import { actualizarTarea, crearTarea, crearTareasProyecto, getLead, getTarea, getUsuaria, listTareasProyecto } from "@/lib/ventas/db";
+import { elegirDePlantilla, nombreServicio, servicio } from "@/lib/ventas/proyectos";
 import type { ResultadoAccion } from "@/lib/ventas/resultado";
 import { esAsignableEnMarca } from "@/lib/ventas/rutas";
 import { leerNuevaTarea } from "@/lib/ventas/validacion";
@@ -74,4 +75,24 @@ export async function reasignarTareaAction(slug: string, tareaId: string, usuari
   if (!res.ok) return res;
   refrescar(slug);
   return { ok: true };
+}
+
+/**
+ * Añade al cliente las tareas marcadas de la plantilla de un servicio. Solo el
+ * equipo: la clienta ve sus tareas, pero no monta los proyectos.
+ */
+export async function crearTareasPlantillaAction(slug: string, claveServicio: string, marcadas: unknown): Promise<ResultadoAccion> {
+  const acceso = await accesoMarcaAccion(slug, "tareas");
+  if (!acceso.ok) return acceso;
+  if (acceso.usuaria.rol !== "admin" && acceso.usuaria.rol !== "comercial") return { ok: false, error: "Solo el equipo puede añadir proyectos." };
+  if (typeof claveServicio !== "string" || !servicio(claveServicio)) return { ok: false, error: "Servicio no válido." };
+  if (!Array.isArray(marcadas)) return { ok: false, error: "Valor no válido." };
+  const existentes = await listTareasProyecto(acceso.marca.id);
+  if (existentes.estado !== "ok") return { ok: false, error: "Falta ejecutar en Supabase docs/sql/2026-11-18-panel-fichas-clientes.sql." };
+  const nuevas = elegirDePlantilla(claveServicio, marcadas, existentes.tareas);
+  if (!nuevas.length) return { ok: false, error: "Marca al menos una tarea." };
+  const res = await crearTareasProyecto(acceso.marca.id, acceso.usuaria.id, nuevas);
+  if (!res.ok) return res;
+  refrescar(slug);
+  return { ok: true, mensaje: `${nuevas.length} ${nuevas.length === 1 ? "tarea añadida" : "tareas añadidas"} a ${nombreServicio(claveServicio)}.` };
 }

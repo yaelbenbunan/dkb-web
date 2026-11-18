@@ -123,7 +123,7 @@ export interface NuevaMarca {
 /** Rutas fijas de /panel: una marca con ese slug quedaría tapada. */
 // También las del panel viejo y las que redirige next.config (`/panel/ventas`,
 // `/panel/campanas`…): la redirección se aplicaría antes que la marca.
-const SLUGS_RESERVADOS = [
+export const SLUGS_RESERVADOS: readonly string[] = [
   "hoy", "usuarias", "login", "altas", "clientes", "tareas",
   "antiguo", "ventas", "prospeccion", "campanas", "calculadora", "agenda", "tablero", "pdf", "plantilla-leads",
 ];
@@ -142,6 +142,18 @@ export function leerNuevaMarca(fd: FormData): Leido<NuevaMarca> {
     }),
     { nombre, slug },
   );
+}
+
+/**
+ * Un identificador libre para un cliente nuevo a partir de su nombre (al crear
+ * la ficha desde un alta, sin preguntar): el slug del nombre y, si está cogido
+ * o reservado, con -2, -3…
+ */
+export function slugLibre(nombre: string, ocupados: readonly string[]): string {
+  const base = slugify(nombre).slice(0, 36).replace(/-+$/, "") || "cliente";
+  const usados = new Set([...ocupados, ...SLUGS_RESERVADOS]);
+  if (!usados.has(base)) return base;
+  for (let n = 2; ; n++) if (!usados.has(`${base}-${n}`)) return `${base}-${n}`;
 }
 
 export interface Condiciones {

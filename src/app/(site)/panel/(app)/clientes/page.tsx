@@ -11,6 +11,7 @@ import { EmbudoVista } from "../../_componentes/EmbudoVista";
 import { SelectorMes } from "../../_componentes/SelectorMes";
 import { tarjeta } from "../../_componentes/estilos";
 import { NuevaMarcaForm } from "./NuevaMarcaForm";
+import { BotonAnclar } from "../../_componentes/BotonAnclar";
 
 function Cifra({ texto, valor, alerta = false }: { texto: string; valor: number; alerta?: boolean }) {
   return (
@@ -41,14 +42,15 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
         <SelectorMes mes={mes} ruta="/panel/clientes" />
       </div>
       {paneles.length === 0 && <p style={{ color: "#64748b" }}>Todavía no hay ningún cliente activo.</p>}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(360px, 100%), 1fr))", gap: 16 }}>
         {paneles.map(({ marca, embudo, resumen }) => (
           <section key={marca.id} style={{ ...tarjeta, display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-              <Link href={`/panel/${marca.slug}?mes=${mes}`} style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", textDecoration: "none" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <Link href={`/panel/${marca.slug}/ficha`} style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", textDecoration: "none" }}>
                 {marca.nombre}
               </Link>
               {marca.estado === "pausada" && <span style={{ fontSize: 12, color: "#92400e" }}>Pausada</span>}
+              {Array.isArray(usuaria.clientes_anclados) && <BotonAnclar marcaId={marca.id} anclado={usuaria.clientes_anclados.includes(marca.id)} />}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
               <Cifra texto="Leads nuevos" valor={resumen.leadsNuevos} />

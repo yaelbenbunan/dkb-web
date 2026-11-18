@@ -48,6 +48,7 @@ export function esAsignableEnMarca(usuaria: { rol: string; activa: boolean; marc
 }
 
 export type SeccionMarca =
+  | "ficha"
   | "resumen"
   | "tablero"
   | "leads"

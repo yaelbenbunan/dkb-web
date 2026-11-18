@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { COLOR_DINKBIT, colorDeCliente, ubicacion, type Espacio } from "@/lib/ventas/espacios";
 
 export interface ClienteMenu {
+  id: string;
   slug: string;
   nombre: string;
   pausada: boolean;
@@ -58,7 +59,7 @@ function Titulo({ color, texto }: { color: string; texto: string }) {
 }
 
 /** El menú lateral de admin y comercial: lo personal, Dinkbit, Clientes y Ajustes. */
-export function MenuEspacios({ clientes, esAdmin }: { clientes: ClienteMenu[]; esAdmin: boolean }) {
+export function MenuEspacios({ clientes, esAdmin, conAnclaje = false }: { clientes: ClienteMenu[]; esAdmin: boolean; conAnclaje?: boolean }) {
   const pathname = usePathname() ?? "";
   const { menu } = ubicacion(pathname, [{ slug: "dinkbit", nombre: "dinkbit" }, ...clientes]);
   const grupo = { display: "flex", flexDirection: "column", gap: 2 } as const;
@@ -73,15 +74,20 @@ export function MenuEspacios({ clientes, esAdmin }: { clientes: ClienteMenu[]; e
       <div style={grupo}>
         <Titulo color="#3b82f6" texto="DINKBIT · LO NUESTRO" />
         <Entrada href="/panel/dinkbit/tablero" activa={menu === "dinkbit:leads"}>Leads</Entrada>
-        <Entrada href="/panel/dinkbit/conversaciones" activa={menu === "dinkbit:conversaciones"}>Conversaciones</Entrada>
-        <Entrada href="/panel/dinkbit/secuencias" activa={menu === "dinkbit:captacion"}>Captación</Entrada>
+        <Entrada href="/panel/dinkbit/conversaciones" activa={menu === "dinkbit:whatsapp"}>WhatsApp</Entrada>
+        <Entrada href="/panel/dinkbit/campanas" activa={menu === "dinkbit:captacion"}>Captación</Entrada>
         {esAdmin && <Entrada href="/panel/altas" activa={menu === "altas"}>Altas</Entrada>}
       </div>
 
       <div style={grupo}>
-        <Titulo color="#94a3b8" texto="CLIENTES" />
+        <Titulo color="#94a3b8" texto={conAnclaje ? "MIS CLIENTES" : "CLIENTES"} />
+        {conAnclaje && clientes.length === 0 && (
+          <p style={{ margin: "2px 10px 4px", fontSize: 12, color: "#94a3b8", lineHeight: 1.4 }}>
+            Ancla tus clientes desde su ficha con «Anclar en mi menú».
+          </p>
+        )}
         {clientes.map((c) => (
-          <Entrada key={c.slug} href={`/panel/${c.slug}`} activa={menu === `cliente:${c.slug}`}>
+          <Entrada key={c.slug} href={`/panel/${c.slug}/ficha`} activa={menu === `cliente:${c.slug}`}>
             <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: "50%", background: colorDeCliente(c.slug), flex: "none" }} />
             <span style={{ flex: 1 }}>{c.nombre}</span>
             {c.pausada && <span style={{ fontSize: 11, color: "#fcd34d" }}>pausada</span>}

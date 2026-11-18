@@ -33,6 +33,9 @@ export interface Usuaria {
   marca_id: string | null;
   activa: boolean;
   created_at: string;
+  /** Los clientes que ancla en su menú. Falta mientras no se ejecute
+   *  docs/sql/2026-11-18-panel-fichas-clientes.sql. */
+  clientes_anclados?: string[] | null;
 }
 
 export interface Marca {
@@ -48,6 +51,9 @@ export interface Marca {
   skus_b2b: string[];
   webhook_secret: string;
   created_at: string;
+  /** Servicios contratados (claves de lib/ventas/proyectos.ts). Falta sin
+   *  docs/sql/2026-11-18-panel-fichas-clientes.sql. */
+  servicios?: string[] | null;
   /** Servicios opcionales encendidos (hoy solo `campanas`). Sin la migración
    *  (docs/sql/2026-10-16-ventas-campanas.sql), la fila no lo trae. */
   modulos?: string[] | null;
@@ -724,6 +730,61 @@ export async function listTareasUsuaria(usuariaId: string): Promise<(TareaManual
 export async function getTarea(id: string): Promise<TareaManual | null> {
   const r = await db().from("ventas_tareas").select("*").eq("id", id).maybeSingle();
   return comprobar(r as Respuesta<TareaManual>, "getTarea");
+}
+
+export const SQL_FICHAS = "docs/sql/2026-11-18-panel-fichas-clientes.sql";
+const FALTA_FICHAS = { ok: false, error: `Falta ejecutar en Supabase ${SQL_FICHAS}.` } as const;
+
+/** Para escrituras que dependen de la migración de fichas: si falta, lo dice en vez de un error genérico. */
+function escrituraFichas(r: { error: { message: string; code?: string } | null }, contexto: string): Escritura {
+  if (r.error?.code && FALTA_EN_LA_BASE.has(r.error.code)) {
+    console.error(`[ventas/db] ${contexto}:`, r.error.message);
+    return FALTA_FICHAS;
+  }
+  return escritura(r, contexto);
+}
+
+export async function setClientesAnclados(usuariaId: string, anclados: string[]): Promise<Escritura> {
+  return escrituraFichas(await db().from("ventas_usuarias").update({ clientes_anclados: anclados }).eq("id", usuariaId), "setClientesAnclados");
+}
+
+export async function setServiciosMarca(marcaId: string, servicios: string[]): Promise<Escritura> {
+  return escrituraFichas(await db().from("ventas_marcas").update({ servicios }).eq("id", marcaId), "setServiciosMarca");
+}
+
+export type TareasProyecto = { estado: "ok"; tareas: TareaManual[] } | { estado: "falta_migracion" };
+
+/** Todas las tareas de proyecto de una marca, hechas o no. */
+export async function listTareasProyecto(marcaId: string): Promise<TareasProyecto> {
+  return tolerarMigracionPendiente<TareasProyecto>(
+    async () => ({
+      estado: "ok",
+      tareas: await todas(
+        (d, h) =>
+          db()
+            .from("ventas_tareas")
+            .select("*")
+            .eq("marca_id", marcaId)
+            .not("proyecto", "is", null)
+            .order("orden")
+            .range(d, h) as PromiseLike<Respuesta<TareaManual[]>>,
+        "listTareasProyecto",
+      ),
+    }),
+    () => ({ estado: "falta_migracion" }),
+    "listTareasProyecto",
+  );
+}
+
+/** Un lote de tareas de la plantilla de un servicio. */
+export async function crearTareasProyecto(
+  marcaId: string,
+  creadaPor: string,
+  tareas: { proyecto: string; fase: string; titulo: string; orden: number }[],
+): Promise<Escritura> {
+  if (!tareas.length) return { ok: true };
+  const filas = tareas.map((t) => ({ marca_id: marcaId, creada_por: creadaPor, proyecto: t.proyecto, fase: t.fase, titulo: t.titulo, orden: t.orden }));
+  return escrituraFichas(await db().from("ventas_tareas").insert(filas), "crearTareasProyecto");
 }
 
 export async function crearTarea(t: {

@@ -45,6 +45,12 @@ export default async function AltasPage() {
                         <span style={{ color: "#b45309", fontWeight: 600 }}>Pendiente</span>
                       )}
                       {!a.activa && <div style={{ fontSize: 12, color: "#b91c1c" }}>Enlace desactivado</div>}
+                      {a.enviada_en && a.marca_id && <div style={{ fontSize: 12, color: "#475569" }}>Ficha de cliente creada</div>}
+                      {a.enviada_en && a.marca_id === null && (
+                        <Link href={`/panel/altas/${a.id}`} style={{ display: "block", fontSize: 12, color: "#1557b8", fontWeight: 700 }}>
+                          Crear ficha de cliente →
+                        </Link>
+                      )}
                     </td>
                     <td style={td}>{a.activa ? <CopiarEnlace enlace={enlaceAlta(a.token)} /> : <span style={{ color: "#64748b" }}>—</span>}</td>
                     <td style={td}>

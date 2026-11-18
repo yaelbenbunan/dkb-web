@@ -18,69 +18,97 @@ export function esMarcaPropia(slug: string): boolean {
   return slug === MARCA_DINKBIT_SLUG;
 }
 
-export type GrupoDinkbit = "leads" | "conversaciones" | "captacion";
+export interface Grupo {
+  clave: string;
+  texto: string;
+  /** La primera es adonde lleva el grupo. */
+  secciones: readonly SeccionMarca[];
+}
 
-/** Las secciones de dinkbit, agrupadas como en el menú lateral. Condiciones no
- *  está en ningún grupo: en dinkbit son ajustes (módulos, exclusiones, webhook). */
-export const GRUPOS_DINKBIT: Readonly<Record<GrupoDinkbit, { texto: string; secciones: readonly SeccionMarca[] }>> = {
-  leads: { texto: "Leads", secciones: ["resumen", "tablero", "leads", "tareas"] },
-  conversaciones: { texto: "Conversaciones", secciones: ["conversaciones", "whatsapp"] },
-  captacion: { texto: "Captación", secciones: ["secuencias", "campanas", "prospeccion"] },
-};
+/**
+ * Las secciones de dinkbit, agrupadas como en el menú lateral. Condiciones no
+ * está en ningún grupo: en dinkbit son ajustes (módulos, exclusiones, webhook)
+ * y se abre desde Ajustes.
+ */
+export const GRUPOS_DINKBIT: readonly Grupo[] = [
+  { clave: "leads", texto: "Leads", secciones: ["resumen", "tablero", "leads", "tareas"] },
+  { clave: "whatsapp", texto: "WhatsApp", secciones: ["conversaciones", "whatsapp", "secuencias"] },
+  { clave: "captacion", texto: "Captación", secciones: ["campanas", "prospeccion"] },
+];
 
-/** Las pestañas de un cliente, en una sola fila y en este orden. */
-const ORDEN_CLIENTE: readonly SeccionMarca[] = [
-  "resumen",
-  "tablero",
-  "leads",
-  "tareas",
-  "conversaciones",
-  "secuencias",
-  "campanas",
-  "condiciones",
-  "whatsapp",
+/**
+ * La carpeta de un cliente: primer nivel de pestañas (los grupos) y, si el
+ * grupo tiene varias, un segundo nivel. WhatsApp junta la bandeja, la
+ * conexión del número y las secuencias.
+ */
+export const GRUPOS_CLIENTE: readonly Grupo[] = [
+  { clave: "ficha", texto: "Ficha", secciones: ["ficha"] },
+  { clave: "tareas", texto: "Tareas", secciones: ["tareas"] },
+  { clave: "leads", texto: "Leads", secciones: ["resumen", "tablero", "leads", "campanas"] },
+  { clave: "whatsapp", texto: "WhatsApp", secciones: ["conversaciones", "whatsapp", "secuencias"] },
+  { clave: "entrada", texto: "Entrada de leads", secciones: ["condiciones"] },
 ];
 
 export const TEXTO_SECCION: Readonly<Record<SeccionMarca, string>> = {
+  ficha: "Ficha",
   resumen: "Resumen",
   tablero: "Tablero",
   leads: "Tabla",
   tareas: "Tareas",
   secuencias: "Secuencias",
   conversaciones: "Conversaciones",
-  whatsapp: "WhatsApp",
+  whatsapp: "Conexión",
   campanas: "Mailing",
   prospeccion: "Prospección",
-  condiciones: "Condiciones",
+  condiciones: "Entrada de leads",
 };
 
-export function grupoDeSeccion(seccion: SeccionMarca): GrupoDinkbit | null {
-  for (const [grupo, { secciones }] of Object.entries(GRUPOS_DINKBIT) as [GrupoDinkbit, (typeof GRUPOS_DINKBIT)[GrupoDinkbit]][]) {
-    if (secciones.includes(seccion)) return grupo;
-  }
-  return null;
+export function gruposDe(slug: string): readonly Grupo[] {
+  return esMarcaPropia(slug) ? GRUPOS_DINKBIT : GRUPOS_CLIENTE;
+}
+
+export function grupoDeSeccion(slug: string, seccion: SeccionMarca): Grupo | null {
+  return gruposDe(slug).find((g) => g.secciones.includes(seccion)) ?? null;
+}
+
+/** La dirección de una sección de una marca. */
+export function rutaSeccion(slug: string, seccion: SeccionMarca): string {
+  return seccion === "resumen" ? `/panel/${slug}` : `/panel/${slug}/${seccion}`;
+}
+
+export interface Cabecera {
+  /** Primer nivel: vacío en dinkbit para admin y comercial (lo hace el menú lateral). */
+  grupos: { clave: string; texto: string; seccion: SeccionMarca; activo: boolean }[];
+  /** Segundo nivel: las secciones del grupo activo, si tiene más de una. */
+  secciones: SeccionMarca[];
 }
 
 /**
- * Qué pestañas enseña la cabecera de una marca.
+ * Las pestañas de la cabecera de una marca.
  *
- * - Dinkbit, para admin y comercial: solo las del grupo en el que estás (el
- *   menú lateral ya lleva a cada grupo). Sus Condiciones (módulos, exclusiones,
- *   webhook) se abren desde Ajustes, sin pestañas.
- * - Un cliente: todas en una fila.
- * - La clienta y la agente: sus secciones de siempre (`SECCIONES_POR_ROL`).
+ * - Un cliente: los grupos de `GRUPOS_CLIENTE` y, debajo, las secciones del activo.
+ * - Dinkbit, para admin y comercial: solo las secciones del grupo (el menú
+ *   lateral lleva a cada grupo). Sus Condiciones van sueltas, sin pestañas.
+ * - La clienta y la agente: lo mismo, recortado a sus secciones (`SECCIONES_POR_ROL`).
  *
  * Y siempre: Mailing solo con el módulo de campañas, Prospección solo donde la hay.
  */
-export function pestanasVisibles(opciones: { slug: string; rol: string; activa: SeccionMarca; conCampanas: boolean }): SeccionMarca[] {
+export function cabeceraMarca(opciones: { slug: string; rol: string; activa: SeccionMarca; conCampanas: boolean }): Cabecera {
   const { slug, rol, activa, conCampanas } = opciones;
   const porRol = seccionesDeRol(rol);
-  let lista: readonly SeccionMarca[];
-  if (porRol) lista = ORDEN_CLIENTE.filter((s) => porRol.includes(s));
-  // Condiciones de dinkbit (módulos, exclusiones, webhook) se abre desde Ajustes: página suelta, sin pestañas.
-  else if (esMarcaPropia(slug)) lista = activa === "condiciones" ? [] : GRUPOS_DINKBIT[grupoDeSeccion(activa) ?? "leads"].secciones;
-  else lista = ORDEN_CLIENTE;
-  return lista.filter((s) => (s !== "campanas" || conCampanas) && (s !== "prospeccion" || tieneProspeccion(slug)));
+  const visible = (s: SeccionMarca) =>
+    (!porRol || porRol.includes(s)) && (s !== "campanas" || conCampanas) && (s !== "prospeccion" || tieneProspeccion(slug));
+  const grupos = gruposDe(slug)
+    .map((g) => ({ ...g, secciones: g.secciones.filter(visible) }))
+    .filter((g) => g.secciones.length > 0);
+  const actual = grupos.find((g) => g.secciones.includes(activa)) ?? null;
+  const conMenuLateral = esMarcaPropia(slug) && !porRol;
+  return {
+    grupos: conMenuLateral
+      ? []
+      : grupos.map((g) => ({ clave: g.clave, texto: g.texto, seccion: g.secciones[0], activo: g.clave === actual?.clave })),
+    secciones: actual && actual.secciones.length > 1 ? [...actual.secciones] : [],
+  };
 }
 
 /** Reparte una lista entre lo nuestro y lo de los clientes. Sin marca conocida, a clientes: que no se pierda. */
@@ -138,13 +166,12 @@ export function ubicacion(pathname: string, marcas: readonly { slug: string; nom
   if (Object.hasOwn(FIJAS, primera)) return FIJAS[primera];
 
   const seccion: SeccionMarca = segunda && Object.hasOwn(TEXTO_SECCION, segunda) ? (segunda as SeccionMarca) : "resumen";
-  if (esMarcaPropia(primera)) {
-    if (seccion === "condiciones") return { espacio: "ajustes", menu: "dinkbit:ajustes", migas: ["Ajustes", "Dinkbit"] };
-    const grupo = grupoDeSeccion(seccion) ?? "leads";
-    return { espacio: "dinkbit", menu: `dinkbit:${grupo}`, migas: ["Dinkbit", GRUPOS_DINKBIT[grupo].texto] };
-  }
+  if (esMarcaPropia(primera) && seccion === "condiciones") return { espacio: "ajustes", menu: "dinkbit:ajustes", migas: ["Ajustes", "Dinkbit"] };
+  const grupo = grupoDeSeccion(primera, seccion) ?? gruposDe(primera)[0];
+  const detalle = grupo.secciones.length > 1 ? [grupo.texto, TEXTO_SECCION[seccion]] : [grupo.texto];
+  if (esMarcaPropia(primera)) return { espacio: "dinkbit", menu: `dinkbit:${grupo.clave}`, migas: ["Dinkbit", ...detalle] };
   const nombre = marcas.find((m) => m.slug === primera)?.nombre ?? primera;
-  return { espacio: "clientes", menu: `cliente:${primera}`, migas: ["Clientes", nombre, TEXTO_SECCION[seccion]] };
+  return { espacio: "clientes", menu: `cliente:${primera}`, migas: ["Clientes", nombre, ...detalle] };
 }
 
 /** Colores para distinguir a los clientes en el menú. Ninguno es el azul de dinkbit. */
@@ -156,4 +183,20 @@ export function colorDeCliente(slug: string): string {
   let h = 0;
   for (const c of slug) h = (h * 31 + c.charCodeAt(0)) >>> 0;
   return COLORES_CLIENTE[h % COLORES_CLIENTE.length];
+}
+
+/**
+ * Los clientes que salen en el menú lateral de una persona: los que ha
+ * anclado, en el orden de la lista. Sin la columna `clientes_anclados`
+ * (migración pendiente, `anclados` llega undefined), todos.
+ */
+export function clientesDelMenu<T extends { id: string }>(clientes: readonly T[], anclados: readonly string[] | null | undefined): { lista: T[]; conAnclaje: boolean } {
+  if (!Array.isArray(anclados)) return { lista: [...clientes], conAnclaje: false };
+  const set = new Set(anclados);
+  return { lista: clientes.filter((c) => set.has(c.id)), conAnclaje: true };
+}
+
+/** Anclar o soltar un cliente: la lista nueva, sin repetidos. */
+export function alternarAnclado(anclados: readonly string[], id: string): string[] {
+  return anclados.includes(id) ? anclados.filter((x) => x !== id) : [...new Set([...anclados, id])];
 }

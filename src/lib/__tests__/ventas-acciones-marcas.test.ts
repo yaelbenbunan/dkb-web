@@ -63,8 +63,8 @@ describe("acciones de marcas", () => {
     expect(m.regenerarSecretoWebhook).not.toHaveBeenCalled();
   });
 
-  test("crear marca lleva a sus condiciones", async () => {
-    await expect(crearMarcaAction(null, fd({ nombre: "Hydrup", slug: "" }))).rejects.toThrow("NEXT_REDIRECT:/panel/hydrup/condiciones");
+  test("crear un cliente lleva a su ficha", async () => {
+    await expect(crearMarcaAction(null, fd({ nombre: "Hydrup", slug: "" }))).rejects.toThrow("NEXT_REDIRECT:/panel/hydrup/ficha");
     expect(m.crearMarca).toHaveBeenCalledWith({ nombre: "Hydrup", slug: "hydrup" });
   });
 

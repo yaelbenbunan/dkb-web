@@ -7,8 +7,8 @@ vi.mock("next/navigation", () => ({ usePathname: () => ruta.actual }));
 import { BarraUbicacion, MenuEspacios } from "@/app/(site)/panel/_componentes/EspaciosNav";
 
 const clientes = [
-  { slug: "hydrup", nombre: "Hydrup", pausada: false },
-  { slug: "nubosoft", nombre: "Nubosoft", pausada: true },
+  { id: "h", slug: "hydrup", nombre: "Hydrup", pausada: false },
+  { id: "n", slug: "nubosoft", nombre: "Nubosoft", pausada: true },
 ];
 
 describe("MenuEspacios", () => {
@@ -19,11 +19,11 @@ describe("MenuEspacios", () => {
   test("admin: Dinkbit con Altas, cada cliente y Ajustes", () => {
     render(<MenuEspacios clientes={clientes} esAdmin />);
     const menu = screen.getByRole("navigation", { name: "Menú del panel" });
-    for (const texto of ["Mi día", "Tareas", "Leads", "Conversaciones", "Captación", "Altas", "Hydrup", "Nubosoft", "Todos los clientes", "Usuarios", "Ajustes de dinkbit"]) {
+    for (const texto of ["Mi día", "Tareas", "Leads", "WhatsApp", "Captación", "Altas", "Hydrup", "Nubosoft", "Todos los clientes", "Usuarios", "Ajustes de dinkbit"]) {
       expect(within(menu).getByRole("link", { name: new RegExp(texto) })).toBeInTheDocument();
     }
     expect(screen.getByRole("link", { name: /Leads/ })).toHaveAttribute("href", "/panel/dinkbit/tablero");
-    expect(screen.getByRole("link", { name: /Hydrup/ })).toHaveAttribute("href", "/panel/hydrup");
+    expect(screen.getByRole("link", { name: /Hydrup/ })).toHaveAttribute("href", "/panel/hydrup/ficha");
     expect(screen.getByText("pausada")).toBeInTheDocument();
   });
 
@@ -46,8 +46,17 @@ describe("MenuEspacios", () => {
     ruta.actual = "/panel/hydrup/conversaciones";
     render(<MenuEspacios clientes={clientes} esAdmin />);
     expect(screen.getByRole("link", { name: /Hydrup/ })).toHaveAttribute("aria-current", "page");
-    // «Conversaciones» del menú es la de dinkbit: no se enciende en un cliente.
-    expect(screen.getByRole("link", { name: /^Conversaciones$/ })).not.toHaveAttribute("aria-current");
+    // «WhatsApp» del menú es el de dinkbit: no se enciende en un cliente.
+    expect(screen.getByRole("link", { name: /^WhatsApp$/ })).not.toHaveAttribute("aria-current");
+  });
+});
+
+describe("MenuEspacios · clientes anclados", () => {
+  test("con anclaje, «Mis clientes»; sin ninguno, cómo anclarlos", () => {
+    render(<MenuEspacios clientes={[]} conAnclaje esAdmin />);
+    expect(screen.getByText("MIS CLIENTES")).toBeInTheDocument();
+    expect(screen.getByText(/Ancla tus clientes desde su ficha/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Todos los clientes" })).toBeInTheDocument();
   });
 });
 
@@ -56,6 +65,6 @@ describe("BarraUbicacion", () => {
     ruta.actual = "/panel/hydrup/tablero";
     render(<BarraUbicacion clientes={clientes} />);
     expect(screen.getByText("CLIENTES")).toBeInTheDocument();
-    expect(screen.getByText("Clientes › Hydrup › Tablero")).toBeInTheDocument();
+    expect(screen.getByText("Clientes › Hydrup › Leads › Tablero")).toBeInTheDocument();
   });
 });

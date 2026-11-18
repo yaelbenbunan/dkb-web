@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { listMarcas, type Usuaria } from "@/lib/ventas/db";
 import { ROL_LABELS } from "@/lib/ventas/dominio";
-import { esMarcaPropia } from "@/lib/ventas/espacios";
+import { clientesDelMenu, esMarcaPropia } from "@/lib/ventas/espacios";
 import { rolConMarca } from "@/lib/ventas/rutas";
 import { ventasLogout } from "../login/actions";
 import { BarraUbicacion, MenuEspacios, type ClienteMenu } from "./EspaciosNav";
@@ -50,7 +50,9 @@ export async function VentasShell({ usuaria, children }: { usuaria: Usuaria; chi
   const clientes: ClienteMenu[] = (await listMarcas())
     .filter((m) => m.estado !== "finalizada" && !esMarcaPropia(m.slug))
     .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
-    .map((m) => ({ slug: m.slug, nombre: m.nombre, pausada: m.estado === "pausada" }));
+    .map((m) => ({ id: m.id, slug: m.slug, nombre: m.nombre, pausada: m.estado === "pausada" }));
+  // Cada persona ve en el menú los clientes que ha anclado; sin la migración, todos.
+  const menu = clientesDelMenu(clientes, usuaria.clientes_anclados);
 
   return (
     <div style={fondo}>
@@ -59,7 +61,7 @@ export async function VentasShell({ usuaria, children }: { usuaria: Usuaria; chi
           <div style={{ padding: "0 10px" }}>
             <Image src="/img/logo/dinkbit.svg" alt="dinkbit" width={80} height={24} priority style={{ height: 24, width: 80 }} />
           </div>
-          <MenuEspacios clientes={clientes} esAdmin={usuaria.rol === "admin"} />
+          <MenuEspacios clientes={menu.lista} conAnclaje={menu.conAnclaje} esAdmin={usuaria.rol === "admin"} />
           <div style={{ marginTop: "auto", padding: "12px 10px 0", borderTop: "1px solid #1e293b" }}>
             <Salir usuaria={usuaria} />
           </div>

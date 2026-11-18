@@ -128,3 +128,17 @@ Los mismos datos que hoy (`pendientesDelDia`, el mismo filtro que el correo de l
 - Esos nombres quedan reservados como identificador de marca.
 - El nombre visible pasa de «Ventas B2B» a «Panel».
 - «¿Has olvidado tu contraseña?»: el enlace del correo vuelve a `/panel/login/recuperar/vuelta`, que tiene que estar en las «Redirect URLs» de Supabase Auth.
+
+## Fase 2: fichas de cliente (2026-11-18, a petición de Yael)
+
+SQL: `docs/sql/2026-11-18-panel-fichas-clientes.sql` (se ejecuta a mano; el código funciona sin él y avisa en pantalla).
+
+- **Clientes anclados.** Cada persona ancla sus clientes («Anclar en mi menú», en la cabecera del cliente y en «Todos los clientes»); el menú lateral enseña «Mis clientes». Columna `ventas_usuarias.clientes_anclados`. Sin la migración, el menú enseña todos.
+- **Crear ficha de cliente.** En un alta enviada, el botón crea el cliente (`ventas_marcas`) con el nombre del alta, los une (`alta_clientes.marca_id`), lo ancla a quien lo crea y abre su ficha. A un cliente que existía antes se le puede unir un alta enviada desde su ficha.
+- **Pestañas de un cliente**, en dos niveles (`cabeceraMarca` en `lib/ventas/espacios.ts`):
+  - **Ficha**: servicios contratados (`ventas_marcas.servicios`) y todo lo del alta (datos fiscales, logos, archivos), con el mismo componente que la página del alta.
+  - **Tareas**: «Proyectos», con las tareas de la plantilla de cada servicio contratado (`lib/ventas/proyectos.ts`: Web, Redes sociales, Campañas Meta, Ventas B2B; borrador para revisar). Se elige el servicio, se desmarca lo que no aplique y se añade el lote (`ventas_tareas.proyecto/fase/orden`). Debajo, las tareas sueltas de siempre.
+  - **Leads**: Resumen · Tablero · Tabla (· Mailing con el módulo).
+  - **WhatsApp**: Conversaciones · Conexión · Secuencias.
+  - **Entrada de leads** (antes Condiciones): el enlace de los anuncios con su secreto. Condiciones, estado, módulos y exclusiones quedan plegados para admin.
+- **Dinkbit**: menú Leads · WhatsApp · Captación (Mailing, Prospección) · Altas. Secuencias pasa a WhatsApp.

@@ -39,6 +39,10 @@ export interface TareaManual {
   created_at: string;
   /** Falta en las filas mientras no se ejecute docs/sql/2026-10-13-ventas-tareas-notas.sql. */
   notas?: string | null;
+  /** Tareas de proyecto (plantilla de un servicio). Faltan sin docs/sql/2026-11-18-panel-fichas-clientes.sql. */
+  proyecto?: string | null;
+  fase?: string | null;
+  orden?: number | null;
 }
 
 export interface LeadDeTarea {
