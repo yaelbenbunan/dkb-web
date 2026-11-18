@@ -2,7 +2,7 @@ import { requireUsuaria } from "@/lib/ventas/auth";
 import { VentasShell } from "../_componentes/VentasShell";
 
 export const metadata = {
-  title: "Ventas B2B — dinkbit",
+  title: "Panel — dinkbit",
   robots: { index: false, follow: false },
 };
 export const dynamic = "force-dynamic";
