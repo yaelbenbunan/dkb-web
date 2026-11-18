@@ -52,6 +52,15 @@ export const SERVICIOS: readonly Servicio[] = [
     ],
   },
   {
+    clave: "google_ads",
+    nombre: "Campañas Google Ads",
+    fases: [
+      { nombre: "Arranque", tareas: ["Acceso a la cuenta de Google Ads", "Forma de pago", "Etiqueta de Google y conversiones"] },
+      { nombre: "Configuración", tareas: ["Palabras clave y negativas", "Anuncios y recursos", "Aprobación del cliente"] },
+      { nombre: "Lanzamiento", tareas: ["Presupuesto y pujas", "Publicar las campañas", "Revisión a los 7 días"] },
+    ],
+  },
+  {
     clave: "ventas_b2b",
     nombre: "Ventas B2B",
     fases: [

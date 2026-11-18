@@ -46,7 +46,7 @@ export const GRUPOS_CLIENTE: readonly Grupo[] = [
   { clave: "tareas", texto: "Tareas", secciones: ["tareas"] },
   { clave: "leads", texto: "Leads", secciones: ["resumen", "tablero", "leads", "campanas"] },
   { clave: "whatsapp", texto: "WhatsApp", secciones: ["conversaciones", "whatsapp", "secuencias"] },
-  { clave: "entrada", texto: "Entrada de leads", secciones: ["condiciones"] },
+  { clave: "integraciones", texto: "Integraciones", secciones: ["condiciones"] },
 ];
 
 export const TEXTO_SECCION: Readonly<Record<SeccionMarca, string>> = {
@@ -60,7 +60,7 @@ export const TEXTO_SECCION: Readonly<Record<SeccionMarca, string>> = {
   whatsapp: "Conexión",
   campanas: "Mailing",
   prospeccion: "Prospección",
-  condiciones: "Entrada de leads",
+  condiciones: "Integraciones",
 };
 
 export function gruposDe(slug: string): readonly Grupo[] {

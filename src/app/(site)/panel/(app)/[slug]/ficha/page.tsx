@@ -76,7 +76,7 @@ export default async function FichaPage({ params }: { params: Promise<{ slug: st
                 </>
               )}
             </p>
-            {sinFicha.length > 0 && <VincularAlta marcaId={marca.id} altas={sinFicha.map((a) => ({ id: a.id, cliente: a.cliente }))} />}
+            {sinFicha.length > 0 && <VincularAlta marcaId={marca.id} cliente={marca.nombre} altas={sinFicha.map((a) => ({ id: a.id, cliente: a.cliente }))} />}
           </section>
         )}
       </div>

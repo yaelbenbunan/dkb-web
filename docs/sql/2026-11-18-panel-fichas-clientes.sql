@@ -15,7 +15,7 @@ alter table public.ventas_usuarias
   add column if not exists clientes_anclados uuid[] not null default '{}';
 
 -- 2. Los servicios contratados por cada cliente (web, rrss, campanas_meta,
---    ventas_b2b…). De ellos salen las plantillas de tareas. La lista vive en el
+--    google_ads, ventas_b2b…). De ellos salen las plantillas de tareas. La lista vive en el
 --    código (src/lib/ventas/proyectos.ts): aquí solo se guardan las claves.
 alter table public.ventas_marcas
   add column if not exists servicios text[] not null default '{}';

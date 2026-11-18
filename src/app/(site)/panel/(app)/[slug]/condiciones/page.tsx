@@ -48,7 +48,7 @@ export default async function CondicionesPage({ params }: { params: Promise<{ sl
     );
   }
 
-  // Un cliente: «Entrada de leads». Lo que se usa es el enlace de los anuncios
+  // Un cliente: «Integraciones». Lo que se usa es el enlace de los anuncios
   // con su secreto; condiciones, módulos y exclusiones quedan plegados para admin.
   return (
     <div>

@@ -137,8 +137,8 @@ SQL: `docs/sql/2026-11-18-panel-fichas-clientes.sql` (se ejecuta a mano; el cód
 - **Crear ficha de cliente.** En un alta enviada, el botón crea el cliente (`ventas_marcas`) con el nombre del alta, los une (`alta_clientes.marca_id`), lo ancla a quien lo crea y abre su ficha. A un cliente que existía antes se le puede unir un alta enviada desde su ficha.
 - **Pestañas de un cliente**, en dos niveles (`cabeceraMarca` en `lib/ventas/espacios.ts`):
   - **Ficha**: servicios contratados (`ventas_marcas.servicios`) y todo lo del alta (datos fiscales, logos, archivos), con el mismo componente que la página del alta.
-  - **Tareas**: «Proyectos», con las tareas de la plantilla de cada servicio contratado (`lib/ventas/proyectos.ts`: Web, Redes sociales, Campañas Meta, Ventas B2B; borrador para revisar). Se elige el servicio, se desmarca lo que no aplique y se añade el lote (`ventas_tareas.proyecto/fase/orden`). Debajo, las tareas sueltas de siempre.
+  - **Tareas**: «Proyectos», con las tareas de la plantilla de cada servicio contratado (`lib/ventas/proyectos.ts`: Web, Redes sociales, Campañas Meta, Campañas Google Ads, Ventas B2B; borrador para revisar). Se elige el servicio, se desmarca lo que no aplique y se añade el lote (`ventas_tareas.proyecto/fase/orden`). Debajo, las tareas sueltas de siempre.
   - **Leads**: Resumen · Tablero · Tabla (· Mailing con el módulo).
   - **WhatsApp**: Conversaciones · Conexión · Secuencias.
-  - **Entrada de leads** (antes Condiciones): el enlace de los anuncios con su secreto. Condiciones, estado, módulos y exclusiones quedan plegados para admin.
+  - **Integraciones** (antes Condiciones): el enlace de los anuncios con su secreto. Condiciones, estado, módulos y exclusiones quedan plegados para admin.
 - **Dinkbit**: menú Leads · WhatsApp · Captación (Mailing, Prospección) · Altas. Secuencias pasa a WhatsApp.

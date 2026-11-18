@@ -29,12 +29,12 @@ describe("grupoDeSeccion", () => {
     expect(grupoDeSeccion("dinkbit", "prospeccion")?.clave).toBe("captacion");
     expect(grupoDeSeccion("dinkbit", "condiciones")).toBeNull();
   });
-  test("un cliente: Ficha, Tareas, Leads, WhatsApp y Entrada de leads", () => {
+  test("un cliente: Ficha, Tareas, Leads, WhatsApp e Integraciones", () => {
     expect(grupoDeSeccion("hydrup", "ficha")?.clave).toBe("ficha");
     expect(grupoDeSeccion("hydrup", "tareas")?.clave).toBe("tareas");
     expect(grupoDeSeccion("hydrup", "campanas")?.clave).toBe("leads");
     expect(grupoDeSeccion("hydrup", "secuencias")?.clave).toBe("whatsapp");
-    expect(grupoDeSeccion("hydrup", "condiciones")?.texto).toBe("Entrada de leads");
+    expect(grupoDeSeccion("hydrup", "condiciones")?.texto).toBe("Integraciones");
   });
 });
 
@@ -51,7 +51,7 @@ describe("cabeceraMarca", () => {
 
   test("un cliente: los cinco grupos y, en Leads o WhatsApp, sus secciones", () => {
     const c = cabeceraMarca({ ...base, slug: "hydrup", rol: "admin", activa: "tablero" });
-    expect(claves(c)).toEqual(["ficha", "tareas", "leads", "whatsapp", "entrada"]);
+    expect(claves(c)).toEqual(["ficha", "tareas", "leads", "whatsapp", "integraciones"]);
     expect(c.grupos.find((g) => g.activo)?.clave).toBe("leads");
     expect(c.secciones).toEqual(["resumen", "tablero", "leads", "campanas"]);
     expect(cabeceraMarca({ ...base, slug: "hydrup", rol: "admin", activa: "secuencias" }).secciones).toEqual(["conversaciones", "whatsapp", "secuencias"]);
@@ -64,7 +64,7 @@ describe("cabeceraMarca", () => {
   test("cada grupo lleva a su primera sección visible", () => {
     const c = cabeceraMarca({ ...base, slug: "hydrup", rol: "admin", activa: "ficha" });
     expect(Object.fromEntries(c.grupos.map((g) => [g.clave, g.seccion]))).toEqual({
-      ficha: "ficha", tareas: "tareas", leads: "resumen", whatsapp: "conversaciones", entrada: "condiciones",
+      ficha: "ficha", tareas: "tareas", leads: "resumen", whatsapp: "conversaciones", integraciones: "condiciones",
     });
   });
 
@@ -83,7 +83,7 @@ describe("cabeceraMarca", () => {
     expect(cabeceraMarca({ ...base, slug: "dinkbit", rol: "admin", activa: "condiciones" })).toEqual({ grupos: [], secciones: [] });
   });
 
-  test("la clienta: sin Ficha ni Entrada de leads, y solo sus secciones", () => {
+  test("la clienta: sin Ficha ni Integraciones, y solo sus secciones", () => {
     const c = cabeceraMarca({ ...base, slug: "hydrup", rol: "cliente", activa: "conversaciones" });
     expect(claves(c)).toEqual(["tareas", "leads", "whatsapp"]);
     expect(c.secciones).toEqual(["conversaciones", "whatsapp"]);
@@ -161,7 +161,7 @@ describe("ubicacion", () => {
     expect(ubicacion("/panel/hydrup/ficha", marcas)).toEqual({ espacio: "clientes", menu: "cliente:hydrup", migas: ["Clientes", "Hydrup", "Ficha"] });
     expect(ubicacion("/panel/hydrup", marcas).migas).toEqual(["Clientes", "Hydrup", "Leads", "Resumen"]);
     expect(ubicacion("/panel/hydrup/whatsapp", marcas).migas).toEqual(["Clientes", "Hydrup", "WhatsApp", "Conexión"]);
-    expect(ubicacion("/panel/hydrup/condiciones", marcas).migas).toEqual(["Clientes", "Hydrup", "Entrada de leads"]);
+    expect(ubicacion("/panel/hydrup/condiciones", marcas).migas).toEqual(["Clientes", "Hydrup", "Integraciones"]);
   });
 
   test("ajustes: usuarios y las condiciones de dinkbit", () => {
