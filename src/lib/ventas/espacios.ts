@@ -91,16 +91,20 @@ export interface Cabecera {
  *   lateral lleva a cada grupo). Sus Condiciones van sueltas, sin pestañas.
  * - La clienta y la agente: lo mismo, recortado a sus secciones (`SECCIONES_POR_ROL`).
  *
- * Y siempre: Mailing solo con el módulo de campañas, Prospección solo donde la hay.
+ * Y siempre: Mailing solo con el módulo de campañas, Prospección solo donde la
+ * hay, y WhatsApp solo con el servicio marcado en la ficha (`conWhatsApp`).
  */
-export function cabeceraMarca(opciones: { slug: string; rol: string; activa: SeccionMarca; conCampanas: boolean }): Cabecera {
-  const { slug, rol, activa, conCampanas } = opciones;
+export function cabeceraMarca(opciones: { slug: string; rol: string; activa: SeccionMarca; conCampanas: boolean; conWhatsApp?: boolean }): Cabecera {
+  const { slug, rol, activa, conCampanas, conWhatsApp = true } = opciones;
   const porRol = seccionesDeRol(rol);
   const visible = (s: SeccionMarca) =>
     (!porRol || porRol.includes(s)) && (s !== "campanas" || conCampanas) && (s !== "prospeccion" || tieneProspeccion(slug));
   const grupos = gruposDe(slug)
     .map((g) => ({ ...g, secciones: g.secciones.filter(visible) }))
-    .filter((g) => g.secciones.length > 0);
+    .filter((g) => g.secciones.length > 0)
+    // WhatsApp es un servicio: el equipo solo ve la pestaña en los clientes que lo
+    // tienen marcado. La clienta y la agente, que entran a eso, la ven siempre.
+    .filter((g) => g.clave !== "whatsapp" || conWhatsApp || !!porRol);
   const actual = grupos.find((g) => g.secciones.includes(activa)) ?? null;
   const conMenuLateral = esMarcaPropia(slug) && !porRol;
   return {
@@ -194,6 +198,16 @@ export function clientesDelMenu<T extends { id: string }>(clientes: readonly T[]
   if (!Array.isArray(anclados)) return { lista: [...clientes], conAnclaje: false };
   const set = new Set(anclados);
   return { lista: clientes.filter((c) => set.has(c.id)), conAnclaje: true };
+}
+
+/**
+ * ¿Enseña la marca la pestaña WhatsApp? Dinkbit, siempre. Un cliente, si tiene
+ * marcado el servicio en su ficha. Sin la columna `servicios` (migración
+ * pendiente), como antes: sí.
+ */
+export function tieneWhatsApp(marca: { slug: string; servicios?: string[] | null }, servicioWhatsApp: string): boolean {
+  if (esMarcaPropia(marca.slug) || !Array.isArray(marca.servicios)) return true;
+  return marca.servicios.includes(servicioWhatsApp);
 }
 
 /** Anclar o soltar un cliente: la lista nueva, sin repetidos. */

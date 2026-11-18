@@ -4,7 +4,8 @@ import type { Marca } from "@/lib/ventas/db";
 import type { Rol } from "@/lib/ventas/dominio";
 import { MODULO_CAMPANAS, tieneModulo } from "@/lib/ventas/campanas";
 import { getUsuariaActual } from "@/lib/ventas/auth";
-import { cabeceraMarca, esMarcaPropia, rutaSeccion, TEXTO_SECCION } from "@/lib/ventas/espacios";
+import { cabeceraMarca, esMarcaPropia, rutaSeccion, TEXTO_SECCION, tieneWhatsApp } from "@/lib/ventas/espacios";
+import { SERVICIO_WHATSAPP } from "@/lib/ventas/proyectos";
 import { rolConMarca, type SeccionMarca } from "@/lib/ventas/rutas";
 import { BotonAnclar } from "./BotonAnclar";
 
@@ -51,7 +52,13 @@ function Pestana({ href, activa, texto, grande }: { href: string; activa: boolea
  * pestañas en dos niveles (lib/ventas/espacios.ts, `cabeceraMarca`).
  */
 export async function MarcaCabecera({ marca, activa, rol }: { marca: Marca; activa: Pestana; rol: Rol }) {
-  const { grupos, secciones } = cabeceraMarca({ slug: marca.slug, rol, activa, conCampanas: tieneModulo(marca, MODULO_CAMPANAS) });
+  const { grupos, secciones } = cabeceraMarca({
+    slug: marca.slug,
+    rol,
+    activa,
+    conCampanas: tieneModulo(marca, MODULO_CAMPANAS),
+    conWhatsApp: tieneWhatsApp(marca, SERVICIO_WHATSAPP),
+  });
   const esCliente = !rolConMarca(rol) && !esMarcaPropia(marca.slug);
   const usuaria = esCliente ? await getUsuariaActual() : null;
   const anclados = usuaria?.clientes_anclados;

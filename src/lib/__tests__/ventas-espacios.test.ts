@@ -9,6 +9,7 @@ import {
   grupoDeSeccion,
   rutaSeccion,
   separarPorEspacio,
+  tieneWhatsApp,
   ubicacion,
 } from "../ventas/espacios";
 
@@ -88,6 +89,21 @@ describe("cabeceraMarca", () => {
     expect(claves(c)).toEqual(["tareas", "leads", "whatsapp"]);
     expect(c.secciones).toEqual(["conversaciones", "whatsapp"]);
     expect(cabeceraMarca({ ...base, slug: "hydrup", rol: "cliente", activa: "resumen" }).secciones).toEqual(["resumen", "tablero", "leads"]);
+  });
+
+  test("WhatsApp solo en los clientes con el servicio marcado", () => {
+    const sin = cabeceraMarca({ ...base, slug: "hydrup", rol: "admin", activa: "ficha", conWhatsApp: false });
+    expect(claves(sin)).toEqual(["ficha", "tareas", "leads", "integraciones"]);
+    expect(claves(cabeceraMarca({ ...base, slug: "hydrup", rol: "admin", activa: "ficha", conWhatsApp: true }))).toContain("whatsapp");
+    // La clienta y la agente entran a sus conversaciones aunque no esté marcado.
+    expect(claves(cabeceraMarca({ ...base, slug: "hydrup", rol: "agente", activa: "conversaciones", conWhatsApp: false }))).toEqual(["whatsapp"]);
+  });
+
+  test("tieneWhatsApp: dinkbit siempre; un cliente, con el servicio; sin la migración, sí", () => {
+    expect(tieneWhatsApp({ slug: "dinkbit", servicios: [] }, "whatsapp")).toBe(true);
+    expect(tieneWhatsApp({ slug: "hydrup", servicios: ["web"] }, "whatsapp")).toBe(false);
+    expect(tieneWhatsApp({ slug: "hydrup", servicios: ["web", "whatsapp"] }, "whatsapp")).toBe(true);
+    expect(tieneWhatsApp({ slug: "hydrup" }, "whatsapp")).toBe(true);
   });
 
   test("la agente: solo Conversaciones, sin pestañas de más", () => {

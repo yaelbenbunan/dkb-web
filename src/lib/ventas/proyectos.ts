@@ -61,6 +61,14 @@ export const SERVICIOS: readonly Servicio[] = [
     ],
   },
   {
+    clave: "whatsapp",
+    nombre: "Integración con WhatsApp",
+    fases: [
+      { nombre: "Arranque", tareas: ["Número de WhatsApp Business del cliente", "Conectar el número en el panel", "Plantillas de mensajes aprobadas por Meta"] },
+      { nombre: "Puesta en marcha", tareas: ["Secuencia de bienvenida", "Prueba con un lead real", "Explicar la bandeja al cliente"] },
+    ],
+  },
+  {
     clave: "ventas_b2b",
     nombre: "Ventas B2B",
     fases: [
@@ -71,6 +79,9 @@ export const SERVICIOS: readonly Servicio[] = [
 ];
 
 const POR_CLAVE = new Map(SERVICIOS.map((s) => [s.clave, s]));
+
+/** El servicio que enseña la pestaña WhatsApp de un cliente (Conversaciones, Conexión, Secuencias). */
+export const SERVICIO_WHATSAPP = "whatsapp";
 
 export function servicio(clave: string): Servicio | null {
   return POR_CLAVE.get(clave) ?? null;

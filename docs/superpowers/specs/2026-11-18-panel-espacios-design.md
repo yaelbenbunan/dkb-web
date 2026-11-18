@@ -139,6 +139,6 @@ SQL: `docs/sql/2026-11-18-panel-fichas-clientes.sql` (se ejecuta a mano; el cód
   - **Ficha**: servicios contratados (`ventas_marcas.servicios`) y todo lo del alta (datos fiscales, logos, archivos), con el mismo componente que la página del alta.
   - **Tareas**: «Proyectos», con las tareas de la plantilla de cada servicio contratado (`lib/ventas/proyectos.ts`: Web, Redes sociales, Campañas Meta, Campañas Google Ads, Ventas B2B; borrador para revisar). Se elige el servicio, se desmarca lo que no aplique y se añade el lote (`ventas_tareas.proyecto/fase/orden`). Debajo, las tareas sueltas de siempre.
   - **Leads**: Resumen · Tablero · Tabla (· Mailing con el módulo).
-  - **WhatsApp**: Conversaciones · Conexión · Secuencias.
+  - **WhatsApp**: Conversaciones · Conexión · Secuencias. Solo con el servicio «Integración con WhatsApp» marcado en la ficha (la clienta y la agente lo ven siempre).
   - **Integraciones** (antes Condiciones): el enlace de los anuncios con su secreto. Condiciones, estado, módulos y exclusiones quedan plegados para admin.
 - **Dinkbit**: menú Leads · WhatsApp · Captación (Mailing, Prospección) · Altas. Secuencias pasa a WhatsApp.
